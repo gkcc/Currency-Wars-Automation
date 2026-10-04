@@ -1,0 +1,31 @@
+# Public source only. Local state and screenshot-derived assets stay private.
+/debug/
+/docs/
+/tools/shop_reader_resources/
+/gui/bin/
+/gui/target/
+/gui/gen/
+/gui/build.py
+/gui/capture_window.py
+/gui/test_*
+/tools/test_currency_wars_gui.py
+/tools/test_currency_wars_runner.py
+/tools/currency_wars_gui.py
+/tools/currency_wars_help_capture.py
+/tools/currency_wars_loot.py
+/.venv/
+**/__pycache__/
+*.py[cod]
+*.log
+*.jsonl
+*.env
+.env*
+*.sqlite*
+*.db
+*.lock.tmp
+node_modules/
+target/
+dist/
+# Add new public data files deliberately, rather than publishing runtime JSON.
+*.json
+!/gui/tauri.conf.json

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "货币战争一条龙",
+  "version": "0.1.0",
+  "identifier": "local.currencywars.desktop",
+  "build": { "frontendDist": "ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{ "label": "main", "title": "货币战争 · 一条龙", "width": 1140, "height": 790, "minWidth": 940, "minHeight": 660, "create": false }],
+    "security": { "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost" }
+  },
+  "bundle": { "active": false, "targets": [] }
+}

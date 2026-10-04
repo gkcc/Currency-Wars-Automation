@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>货币战争 · 一条龙</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<aside class="sidebar">
+  <div class="brand"><span class="brand-icon">CW</span><div>货币战争<small>一条龙助手</small></div></div>
+  <nav aria-label="主要页面">
+    <button class="nav active" data-page="overview"><span>◈</span>运行概览</button>
+    <button class="nav" data-page="strategy"><span>◇</span>战略与流程</button>
+    <button class="nav" data-page="preview"><span>▣</span>观察画面</button>
+    <button class="nav" data-page="logs"><span>≡</span>日志与错误</button>
+    <button class="nav" data-page="message"><span>✉</span>给助手留言</button>
+  </nav>
+  <div class="sidebar-bottom"><span class="dot" id="connection-dot"></span><span id="connection-text">等待执行器</span><small>晋升目标 170<br>奖励进度以实机核验为准</small></div>
+</aside>
+<main>
+  <header><div><p class="eyebrow">CURRENCY WARS</p><h1>一条龙</h1><p class="subtitle">固定流程在本地运行，需要战略判断时等待助手。</p></div><div id="mode" class="badge">未连接执行器</div></header>
+  <div id="test-banner" hidden>界面测试模式 · 不注册全局输入监听 · 不操作游戏</div>
+  <p id="update-status" class="source">更新状态待读取。</p>
+  <section class="page active" id="overview">
+    <div class="metrics">
+      <article class="metric"><span>当前关卡</span><strong id="metric-stage">未知</strong><small id="mode-label">本局模式待读取</small></article>
+      <article class="metric"><span>最近核验晋升</span><strong><i id="metric-promotion">未知</i><em>/ 170</em></strong><div class="progress"><i id="promotion-bar"></i></div></article>
+      <article class="metric"><span>金币</span><strong id="metric-coins">未知</strong><small>当前资源以新画面为准</small></article>
+      <article class="metric"><span>生命值</span><strong id="metric-health">未知</strong><small id="rank-label">职级：未知</small></article>
+    </div>
+    <p class="source" id="source">尚无当前游戏数据</p>
+    <article class="card current-card"><div class="section-head"><span class="status-icon">▶</span><div><h2>正在做什么</h2><p id="phase">等待开始</p></div><span class="mini-tag" id="execution-tag">本地流程</span></div><p id="reason" class="body-text">本地执行器尚未启动。</p></article>
+    <article class="card decision-card"><div class="section-head"><span class="status-icon amber">◇</span><div><h2>下一步与战略判断</h2><p id="next-label">等待执行器报告下一步</p></div></div><p id="decision-reason" class="body-text">启动后会显示真实的判断内容与简短原因。</p><p class="source" id="decision-age">暂停后必须明确点击继续自动才恢复。</p></article>
+    <div class="target-strip"><span class="target-mark">◎</span><div><strong>长期奖励</strong><p id="targets">创业指南 · 优势布局 · 羁绊链路 · 预期收益 · 数据银行：待核验</p></div></div>
+  </section>
+  <section class="page" id="strategy"><div class="card"><h2>已运行流程</h2><div id="steps" class="steps">等待执行器提供已执行步骤。</div></div><div class="card"><h2>本局攻略与装备追踪</h2><pre id="strategy-content">资料待读取。</pre></div><p class="source">本次流程完成只表示运行额度结束，完整活动奖励另行核验。</p></section>
+  <section class="page" id="preview"><div class="section-head"><h2>观察画面</h2><button id="refresh-preview" class="small-button">重新读取</button></div><p class="source" id="preview-source">只显示当前执行器归属的观察画面，不能视为直播。</p><div class="preview-frame"><img id="preview-image" hidden alt="执行器最近核验的游戏画面"><p id="preview-empty">尚无当前执行器的已核验画面</p></div></section>
+  <section class="page" id="logs"><div class="section-head"><h2>日志与错误</h2><span class="mini-tag">保留最近 100 条</span></div><div id="log-content" class="log-content">暂无日志。</div><details class="diagnostics"><summary>运行诊断</summary><pre id="diagnostics">执行器身份尚未确认。</pre></details></section>
+  <section class="page" id="message"><div class="card"><h2>给助手留言</h2><p class="body-text">收到助手的实际确认后，才显示已读或回复。</p><textarea id="message-input" maxlength="2000" placeholder="告诉助手需要调整的目标或当前问题…"></textarea><div class="message-row"><span id="message-result" class="source"></span><button id="message-send" class="primary">发送留言</button></div></div><div id="message-records" class="card">暂无留言。</div></section>
+  <footer class="control-bar"><div class="controls"><button id="start" class="primary" disabled>开始一条龙</button><button id="pause">暂停</button><button id="takeover" class="takeover">手动接管 <kbd>F8</kbd></button><button id="stop" class="stop">停止本次流程</button></div><p id="receipt" class="receipt" aria-live="polite">执行器正在核验，开始暂不可用。</p><div class="control-info"><span id="input-state">输入监听正在初始化</span><span>默认一局 · 最长 120 分钟</span></div></footer>
+</main><script src="app.js"></script>
+</body></html>

@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.ico binary
+*.png binary
+# The safety entrypoint pins the exact source bytes, including line endings.
+tools/currency_wars_control.py -text whitespace=cr-at-eol

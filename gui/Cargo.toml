@@ -1,0 +1,36 @@
+[package]
+name = "currency-wars-gui"
+version = "0.1.0"
+edition = "2021"
+description = "货币战争一条龙 Rust desktop control panel"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = "=2.6.3"
+
+[dependencies]
+tauri = "=2.11.5"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+base64 = "=0.22.1"
+sha2 = "=0.10.9"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_System_Pipes", "Win32_System_SystemInformation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_Input_XboxController"] }
+
+[profile.dev]
+debug = 0
+incremental = false
+strip = "symbols"
+
+[profile.test]
+debug = 0
+incremental = false
+
+[profile.release]
+debug = 0
+strip = "symbols"
+lto = false
