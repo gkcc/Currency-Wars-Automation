@@ -27,6 +27,8 @@ def main():
     parser.add_argument('--project-dir')
     parser.add_argument('--debug-port')
     parser.add_argument('--skip-update', action='store_true')
+    parser.add_argument('--start', action='store_true')
+    parser.add_argument('--floating',action='store_true',help='Open the same GUI as a compact always-on-top control panel')
     args=parser.parse_args()
     binary=Path(args.binary) if args.binary else PROJECT/'gui/bin/currency-wars-gui.exe'
     if not binary.is_file():raise RuntimeError('Rust/Tauri executable has not been built')
@@ -54,6 +56,8 @@ def main():
             if args.test_mode:command.append('--test-mode')
             if args.test_runner:command+=['--test-runner',args.test_runner]
             if args.debug_port:command+=['--debug-port',args.debug_port]
+            if args.start:command.append('--start')
+            if args.floating:command.append('--floating')
             with (runtime/'native.stdout.log').open('wb') as output,(runtime/'native.stderr.log').open('wb') as error:
                 lease.children([],complete=False)
                 artifacts.protect_children(runtime,[],complete=False)

@@ -15,6 +15,7 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import subprocess
 import tempfile
 import time
 import uuid
@@ -117,6 +118,83 @@ def read_marker(path, *, root=None, purpose=None):
 def _owned(value):
     if value['pid'] != os.getpid() or process_identity(os.getpid()) != ('active', value['process_identity']):
         raise ArtifactError('Only the actual current owner may modify or remove this runtime')
+
+
+def _windows_user_sid():
+    from ctypes import wintypes as w
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    security = ctypes.WinDLL('advapi32', use_last_error=True)
+    kernel.GetCurrentProcess.restype = w.HANDLE
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    kernel.LocalFree.argtypes = [w.LPVOID]
+    kernel.LocalFree.restype = w.LPVOID
+    security.OpenProcessToken.argtypes = [w.HANDLE, w.DWORD, ctypes.POINTER(w.HANDLE)]
+    security.OpenProcessToken.restype = w.BOOL
+    security.GetTokenInformation.argtypes = [w.HANDLE, ctypes.c_int, w.LPVOID, w.DWORD, ctypes.POINTER(w.DWORD)]
+    security.GetTokenInformation.restype = w.BOOL
+    security.ConvertSidToStringSidW.argtypes = [w.LPVOID, ctypes.POINTER(w.LPWSTR)]
+    security.ConvertSidToStringSidW.restype = w.BOOL
+    token, text = w.HANDLE(), w.LPWSTR()
+    try:
+        if not security.OpenProcessToken(kernel.GetCurrentProcess(), 8, ctypes.byref(token)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        size = w.DWORD()
+        security.GetTokenInformation(token, 1, None, 0, ctypes.byref(size))
+        if not size.value or size.value > 65536:
+            raise ArtifactError('Current Windows user SID size could not be verified')
+        data = ctypes.create_string_buffer(size.value)
+        if not security.GetTokenInformation(token, 1, data, size, ctypes.byref(size)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        sid = ctypes.cast(data, ctypes.POINTER(w.LPVOID)).contents.value
+        if not security.ConvertSidToStringSidW(sid, ctypes.byref(text)):
+            raise ctypes.WinError(ctypes.get_last_error())
+        result = text.value
+        if not result or len(result) > 184 or not re.fullmatch(r'S-1-(?:[0-9]+-)*[0-9]+', result):
+            raise ArtifactError('Current Windows user SID could not be verified')
+        return result
+    finally:
+        if text:
+            kernel.LocalFree(ctypes.cast(text, w.LPVOID))
+        if token:
+            kernel.CloseHandle(token)
+
+
+def prepare_elevated_ipc_access(path, *, root=None, expected_run_id):
+    """Keep one new runtime private to its initiating user across RunAs.
+
+    OWNER RIGHTS alone follows an elevated child's Administrators owner.
+    An explicit initiating-user ACE also covers that child's new files.
+    """
+    path = Path(path)
+    declared_root = default_root() if root is None else Path(root)
+    marker = read_marker(path, root=declared_root)
+    _owned(marker)
+    if (marker['run_id'] != expected_run_id or not marker['purpose'].startswith('currency-wars-runner-')
+            or marker['children_incomplete'] or marker['protected_children']):
+        raise ArtifactError('IPC access must be prepared for the original new worker before launching children')
+    if os.name != 'nt':
+        raise ArtifactError('Elevated IPC access requires Windows')
+    from ctypes import wintypes as w
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.GetSystemDirectoryW.argtypes = [w.LPWSTR, w.UINT]
+    kernel.GetSystemDirectoryW.restype = w.UINT
+    system = ctypes.create_unicode_buffer(32768)
+    length = kernel.GetSystemDirectoryW(system, len(system))
+    if not 0 < length < len(system):
+        raise ArtifactError('Windows system directory could not be verified')
+    sid = _windows_user_sid()
+    if read_marker(path, root=declared_root) != marker:
+        raise ArtifactError('Runtime provenance changed before IPC access setup')
+    _owned(marker)
+    result = subprocess.run([str(Path(system.value) / 'icacls.exe'), str(path), '/grant',
+                             '*' + sid + ':(OI)(CI)F'], capture_output=True, timeout=10,
+                            creationflags=subprocess.CREATE_NO_WINDOW)
+    if result.returncode:
+        raise ArtifactError('Current-user runtime IPC access setup failed: ' + str(result.returncode))
+    if read_marker(path, root=declared_root) != marker:
+        raise ArtifactError('Runtime provenance changed during IPC access setup')
+    _owned(marker)
+    return {'user_sid': sid, 'scope': 'this owned runtime and its inherited child files'}
 
 
 def _dead(record):
@@ -227,6 +305,41 @@ if os.environ.get('CW_ARTIFACTS_STANDALONE') != '1':
             spec = importlib.util.spec_from_file_location('_currency_wars_installed_artifacts', helper)
             installed = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(installed)
-            for name in ('ArtifactError', 'default_root', 'process_identity', 'read_marker', 'protect_children', 'scratch_directory'):
+            for name in ('ArtifactError', 'default_root', 'process_identity', 'read_marker'):
                 globals()[name] = getattr(installed, name)
+
+            _installed_leases = {}
+
+            @contextlib.contextmanager
+            def scratch_directory(purpose='run', *, root=None):
+                if root is not None:
+                    installed.sweep_stale(root=root, purpose=purpose)
+                owned = installed.create_owned_directory(purpose, root=root)
+                key = os.path.normcase(str(owned.path))
+                _installed_leases[key] = owned
+                try:
+                    yield owned.path
+                finally:
+                    try:
+                        owned.close()
+                    finally:
+                        _installed_leases.pop(key, None)
+
+            def protect_children(path, children, *, root=None, complete=None, expected_run_id=None):
+                key = os.path.normcase(os.path.abspath(path))
+                owned = _installed_leases.get(key)
+                if owned is None:
+                    return installed.protect_children(path, children, root=root, complete=complete,
+                                                      expected_run_id=expected_run_id)
+                declared_root = default_root() if root is None else Path(root)
+                if os.path.normcase(os.path.abspath(declared_root)) != os.path.normcase(str(owned.root)):
+                    raise ArtifactError('Runtime root changed during child registration')
+                if expected_run_id is not None and expected_run_id != owned._value['run_id']:
+                    raise ArtifactError('Runtime identity changed')
+                # Never adopt a separately changed marker, even if its run id
+                # is unchanged. Registration and close share one owned lease.
+                if read_marker(owned.path, root=owned.root) != owned._value:
+                    raise ArtifactError('Artifact provenance changed before child registration')
+                owned.protect_children(children, complete=complete)
+                return dict(owned._value)
             break

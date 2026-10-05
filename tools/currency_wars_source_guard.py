@@ -144,7 +144,12 @@ class Activity:
                 if (value.get('kind') == kind and value.get('pid') == pid
                         and value.get('process_identity') == identity
                         and identity_state(pid, identity) == 'active'):
-                    self.value.update(children=[], children_incomplete=False)
+                    # A Windows venv redirector can outlive this start CLI.
+                    # Transfer the registered worker only; retain any original
+                    # launch wrapper until its creation identity is dead.
+                    retained = [record for record in self.value['children']
+                                if (record['pid'], record['process_identity']) != (pid, identity)]
+                    self.value.update(children=retained, children_incomplete=False)
                     self.write()
                     return
             raise RuntimeError('Child lifecycle registration is not verified; original activity retained')

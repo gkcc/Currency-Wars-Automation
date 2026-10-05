@@ -7,6 +7,7 @@ import stat
 import subprocess
 import sys
 import threading
+import time
 import unittest
 from unittest.mock import patch
 
@@ -44,6 +45,8 @@ class UpdateTests(unittest.TestCase):
         local_git(self.clone, 'config', 'user.email', 'fixture@example.invalid')
         self.real_git = updater.git
         self.fetches = 0
+        self.remote_queries = 0
+        self.commands = []
 
     def tearDown(self):
         # Git writes read-only object files on Windows. Prepare only this
@@ -61,11 +64,17 @@ class UpdateTests(unittest.TestCase):
         self.owned.__exit__(None, None, None)
         self.assertFalse(self.run.exists())
 
-    def transport(self, project, *args, timeout=8):
+    def transport(self, project, *args, timeout=8, read_only=False):
+        self.commands.append((args, timeout, read_only))
         if args[0] == 'fetch':
             self.fetches += 1
             return self.real_git(project, 'fetch', '--no-tags', '--no-recurse-submodules', str(self.upstream), 'main', timeout=timeout)
-        return self.real_git(project, *args, timeout=timeout)
+        if args[0] == 'ls-remote' and '--heads' in args:
+            self.remote_queries += 1
+            self.assertIn(args[2], updater.CANONICAL)
+            self.assertEqual(args[3:], ('main',))
+            return self.real_git(project, 'ls-remote', '--heads', str(self.upstream), 'main', timeout=timeout, read_only=read_only)
+        return self.real_git(project, *args, timeout=timeout, read_only=read_only)
 
     def update(self, apply=True):
         with patch.object(updater, 'git', side_effect=self.transport):
@@ -77,6 +86,10 @@ class UpdateTests(unittest.TestCase):
         destination.write_text(value, encoding='utf8')
         local_git(self.upstream, 'add', '-f', '--', path)
         local_git(self.upstream, 'commit', '-m', 'fixture advance')
+
+    def git_snapshot(self):
+        return {str(path.relative_to(self.clone)): path.read_bytes()
+                for path in (self.clone / '.git').rglob('*') if path.is_file()}
 
     def test_clean_fast_forward_preserves_ignored_data(self):
         private = ['docs/local.json', '.venv/local.txt', 'gui/bin/local.exe', 'tools/shop_reader_resources/local.png']
@@ -164,8 +177,15 @@ class UpdateTests(unittest.TestCase):
 
     def test_check_only_and_network_timeout_leave_source_unchanged(self):
         self.advance()
+        before = self.git_snapshot()
         result = self.update(apply=False)
-        self.assertEqual(result['status'], 'update_available')
+        self.assertEqual(result['status'], 'remote_differs', result)
+        self.assertIn('需安全同步核验', result['message'])
+        self.assertFalse(result['sync_verified'])
+        self.assertEqual(self.fetches, 0)
+        self.assertEqual(self.remote_queries, 1)
+        self.assertTrue(all(read_only for args, timeout, read_only in self.commands))
+        self.assertEqual(self.git_snapshot(), before)
         self.assertEqual((self.clone / 'source.txt').read_text(), 'v1')
         def timeout_transport(project, *args, timeout=8):
             if args[0] == 'fetch':
@@ -175,6 +195,142 @@ class UpdateTests(unittest.TestCase):
             result = updater.update(self.clone)
         self.assertEqual(result['status'], 'unavailable')
         self.assertEqual((self.clone / 'source.txt').read_text(), 'v1')
+
+    def test_read_only_check_reports_active_gui_and_dirty_source(self):
+        self.advance()
+        (self.clone / 'source.txt').write_text('user changes')
+        (self.clone / 'untracked.txt').write_text('untracked user data')
+        before = self.git_snapshot()
+        with guard.activity(self.clone, 'gui'):
+            result = self.update(apply=False)
+        self.assertEqual(result['status'], 'remote_differs', result)
+        self.assertEqual(result['current_commit'], local_git(self.clone, 'rev-parse', 'HEAD'))
+        self.assertEqual(result['available_commit'], local_git(self.upstream, 'rev-parse', 'HEAD'))
+        self.assertIn('当前不能自动同步', result['message'])
+        self.assertTrue(any('GUI' in reason for reason in result['sync_blockers']))
+        self.assertTrue(any('本地源码' in reason for reason in result['sync_blockers']))
+        self.assertEqual(self.git_snapshot(), before)
+        self.assertEqual((self.clone / 'source.txt').read_text(), 'user changes')
+        self.assertEqual((self.clone / 'untracked.txt').read_text(), 'untracked user data')
+        self.assertEqual(self.fetches, 0)
+
+    def test_read_only_check_reports_unknown_activity_without_suppressing_query(self):
+        directory = self.clone / 'docs/source-activity'
+        directory.mkdir(parents=True)
+        (directory / 'unknown.json').write_text('{}')
+        result = self.update(apply=False)
+        self.assertEqual(result['status'], 'up_to_date', result)
+        self.assertTrue(result['sync_blockers'])
+        self.assertIn('未知', result['message'])
+        self.assertEqual(self.remote_queries, 1)
+        self.assertEqual(self.fetches, 0)
+
+    def test_read_only_check_refuses_origin_hijack_multiple_urls_and_wrong_branch(self):
+        local_git(self.clone, 'config', 'url.https://example.invalid/other/.insteadOf', 'https://github.com/gkcc/')
+        result = self.update(apply=False)
+        self.assertEqual(result['status'], 'unavailable')
+        self.assertIn('origin', result['message'])
+        self.assertEqual(self.remote_queries, 0)
+        local_git(self.clone, 'config', '--unset', 'url.https://example.invalid/other/.insteadOf')
+        local_git(self.clone, 'config', '--add', 'remote.origin.url', 'https://example.invalid/repository.git')
+        self.assertEqual(self.update(apply=False)['status'], 'unavailable')
+        self.assertEqual(self.remote_queries, 0)
+        local_git(self.clone, 'config', '--unset-all', 'remote.origin.url')
+        local_git(self.clone, 'config', 'remote.origin.url', 'https://github.com/gkcc/Currency-Wars-Automation.git')
+        local_git(self.clone, 'switch', '-c', 'user-branch')
+        self.assertEqual(self.update(apply=False)['status'], 'skipped')
+        self.assertEqual(self.remote_queries, 0)
+        self.assertEqual(local_git(self.clone, 'symbolic-ref', '--short', 'HEAD'), 'user-branch')
+
+    def test_read_only_check_refuses_nested_repository_root(self):
+        nested = self.clone / 'nested'
+        nested.mkdir()
+        (nested / '.git').write_text('gitdir: ../.git\n')
+        with patch.object(updater, 'git', side_effect=lambda project, *args, **kwargs: str(self.clone)):
+            result = updater.check_only(nested)
+        self.assertEqual(result['status'], 'skipped', result)
+        self.assertEqual(self.fetches, 0)
+
+    def test_read_only_network_timeout_has_total_budget_and_preserves_git(self):
+        before = self.git_snapshot()
+        def transport(project, *args, timeout=8, read_only=False):
+            if args[0] == 'ls-remote' and '--heads' in args:
+                self.assertLessEqual(timeout, updater.CHECK_WORK_SECONDS)
+                self.assertTrue(read_only)
+                raise subprocess.TimeoutExpired(['inert-network-query'], timeout)
+            return self.transport(project, *args, timeout=timeout, read_only=read_only)
+        with patch.object(updater, 'git', side_effect=transport):
+            result = updater.check_only(self.clone)
+        self.assertEqual(result['status'], 'timeout', result)
+        self.assertFalse(result['applied'])
+        self.assertEqual(self.git_snapshot(), before)
+        self.assertEqual(self.fetches, 0)
+        with patch.object(updater, 'git') as calls:
+            result = updater.check_only(self.clone, timeout=0)
+        calls.assert_not_called()
+        self.assertEqual(result['status'], 'timeout')
+
+    def test_read_only_remote_response_requires_unique_valid_main(self):
+        for invalid in ('', 'x' * 40 + '\trefs/heads/main',
+                        'a' * 40 + '\trefs/heads/other',
+                        '\n'.join(['a' * 40 + '\trefs/heads/main'] * 2)):
+            def transport(project, *args, timeout=8, read_only=False):
+                if args[0] == 'ls-remote' and '--heads' in args:
+                    return invalid
+                return self.transport(project, *args, timeout=timeout, read_only=read_only)
+            with patch.object(updater, 'git', side_effect=transport):
+                result = updater.check_only(self.clone)
+            self.assertEqual(result['status'], 'unavailable', result)
+            self.assertNotIn('available_commit', result)
+        self.assertEqual(self.fetches, 0)
+
+    def test_read_only_check_never_claims_upgrade_when_local_history_is_ahead(self):
+        (self.clone / 'source.txt').write_text('local commit')
+        local_git(self.clone, 'add', '--', 'source.txt')
+        local_git(self.clone, 'commit', '-m', 'local newer history')
+        before = self.git_snapshot()
+        result = self.update(apply=False)
+        self.assertEqual(result['status'], 'remote_differs', result)
+        self.assertFalse(result['sync_verified'])
+        self.assertIn('需安全同步核验', result['message'])
+        self.assertNotIn('快进更新可用', result['message'])
+        self.assertEqual(self.git_snapshot(), before)
+        self.assertEqual(self.fetches, 0)
+
+    def test_read_only_check_revalidates_origin_after_remote_query(self):
+        def transport(project, *args, timeout=8, read_only=False):
+            value = self.transport(project, *args, timeout=timeout, read_only=read_only)
+            if args[0] == 'ls-remote' and '--heads' in args:
+                local_git(self.clone, 'remote', 'set-url', 'origin', 'https://example.invalid/changed.git')
+            return value
+        with patch.object(updater, 'git', side_effect=transport):
+            result = updater.check_only(self.clone)
+        self.assertEqual(result['status'], 'unavailable', result)
+        self.assertFalse(result['sync_verified'])
+        self.assertEqual(self.fetches, 0)
+
+    def test_status_atomic_replace_preserves_previous_record_on_failure(self):
+        previous = {'status': 'previous', 'message': '已保存的真实结果'}
+        updater.write_status(self.clone, previous)
+        with patch.object(updater.os, 'replace', side_effect=OSError('inert replace failure')):
+            with self.assertRaises(OSError):
+                updater.write_status(self.clone, {'status': 'new'})
+        path = self.clone / 'docs/UPDATE_STATUS.json'
+        self.assertEqual(json.loads(path.read_text(encoding='utf8')), previous)
+        self.assertEqual(list(path.parent.glob('.UPDATE_STATUS-*.tmp')), [])
+        updater.write_status(self.clone, {'status': 'next', 'message': '新结果'})
+        self.assertEqual(json.loads(path.read_text(encoding='utf8'))['status'], 'next')
+
+    def test_owned_read_only_git_timeout_stops_only_its_new_process_tree(self):
+        # An inert local git alias launches a waiting child, not the network,
+        # game, GUI, broker or any pre-existing process.
+        local_git(self.clone, 'config', 'alias.inert-wait', '!sleep 20')
+        identity = artifacts.process_identity(os.getpid())
+        started = time.monotonic()
+        with self.assertRaises(subprocess.TimeoutExpired):
+            self.real_git(self.clone, 'inert-wait', timeout=.15, read_only=True)
+        self.assertLess(time.monotonic() - started, 4)
+        self.assertEqual(artifacts.process_identity(os.getpid()), identity)
 
     def test_stale_dependency_and_native_source_fingerprints_are_visible(self):
         (self.clone / 'requirements.txt').write_bytes((updater.PROJECT / 'requirements.txt').read_bytes())

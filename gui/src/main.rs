@@ -1,11 +1,14 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 mod protocol;
 mod input;
+mod attention;
+mod floating_native;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use protocol::{Binding, InitializationPause, ResumeGuard, ResumeProof, read_json, text, request_png};
 use serde_json::{json, Value};
 use sha2::{Digest,Sha256};
+use tauri::Manager;
 use std::{collections::HashMap, fs, io::Read, path::{Path, PathBuf}, process::{Child, Command, Stdio},
           sync::{Arc, Mutex, atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering}},
           thread, time::{Duration, Instant, SystemTime, UNIX_EPOCH}};
@@ -50,7 +53,7 @@ struct Session {
 }
 
 #[derive(Clone)]
-struct PendingResume {epoch:u64,guard:ResumeGuard}
+struct PendingResume {epoch:u64,guard:ResumeGuard,automatic:bool}
 
 enum StartupHandshake {
     Pending {epoch:u64},
@@ -76,7 +79,7 @@ impl Session {
             // Its reply cannot later clear a new manual intent.
             self.manual=false;self.startup=Some(StartupHandshake::Pending{epoch});
         }else if ["resume","pause","takeover","stop"].contains(&action){self.startup=None;}
-        if action=="resume"{self.resume=self.manual_guard.take().map(|guard|PendingResume{epoch,guard});}
+        if action=="resume"{self.resume=self.manual_guard.take().map(|guard|PendingResume{epoch,guard,automatic:false});}
         else{self.manual_guard=None;}
         if ["pause","takeover","stop"].contains(&action){self.manual=true;self.release_confirmed=false;}
         self.pending.insert(action.into(),epoch);
@@ -98,22 +101,159 @@ struct Shared {
     closing: AtomicBool, hwnd: AtomicUsize, children: Mutex<HashMap<u32, Arc<Mutex<Child>>>>,
     app: Mutex<Option<tauri::AppHandle>>,
     message_lock: Mutex<()>, message_sequence: AtomicU64,
+    update_checking: AtomicBool, update_result: Mutex<Option<Value>>,
+    attention: Mutex<attention::Policy>,
 }
 
 type SharedState = Arc<Shared>;
 enum Acceptance { Applied, ReassertManual, Stale }
 
+#[derive(Clone,Copy)]
+struct FullWindowGeometry {
+    size:tauri::PhysicalSize<u32>,position:tauri::PhysicalPosition<i32>,
+    minimum:Option<tauri::LogicalSize<f64>>,maximized:bool,resizable:bool,decorated:bool,
+}
+struct FloatingWindow {
+    full:Option<FullWindowGeometry>,opacity:u8,click_through:bool,generation:u64,
+    appearance:Option<floating_native::Appearance>,hotkey:Option<floating_native::Hotkey>,error:String,
+}
+impl Default for FloatingWindow {
+    fn default()->Self{Self{full:None,opacity:80,click_through:false,generation:0,appearance:None,hotkey:None,error:String::new()}}
+}
+#[derive(Default)]
+struct FloatingState(Arc<Mutex<FloatingWindow>>);
+
+
+fn floating_info(model:&FloatingWindow)->Value {
+    let hotkey=model.hotkey.as_ref().map(|value|value.info()).unwrap_or_else(||json!({}));
+    let f9=hotkey["f9_registered"]==true;let backup=hotkey["fallback_registered"]==true;
+    json!({"floating":model.full.is_some(),"opacity":model.opacity,"click_through":model.click_through,"effects_ready":model.appearance.is_some(),"hotkey_ready":model.hotkey.as_ref().map(|value|value.ready()).unwrap_or(false),"error":model.error,
+        "f9_registered":f9,"backup_registered":backup,"recovery_shortcut":if f9&&backup{"F9 / Ctrl+Alt+O"}else if f9{"F9"}else if backup{"Ctrl+Alt+O"}else{""},"hotkey":hotkey,
+        "capture":model.appearance.as_ref().map(|value|value.capture_info()).unwrap_or_else(||json!({"excluded":false}))})
+}
+
+fn apply_floating_options(model:&mut FloatingWindow,opacity:u8,through:bool)->Result<Value,String>{
+    if model.full.is_none(){return Err("请先切换到悬浮控制".into());}
+    if !(40..=100).contains(&opacity){return Err("透明度需要为 40%～100%".into());}
+    if through&&!model.hotkey.as_ref().map(|value|value.ready()).unwrap_or(false){return Err("恢复快捷键尚未注册，不能启用鼠标穿透".into());}
+    let appearance=model.appearance.as_ref().ok_or("浮窗效果尚未就绪，不能启用鼠标穿透")?;
+    if let Err(error)=appearance.apply(opacity,through){
+        let _=appearance.apply(model.opacity,false);model.click_through=appearance.click_through().unwrap_or(model.click_through);model.error=error.clone();return Err(error);
+    }
+    model.opacity=opacity;model.click_through=through;model.error.clear();Ok(floating_info(model))
+}
+
+fn prepare_floating_for_auto(shared:&SharedState)->Result<(),String>{
+    let Some(app)=shared.app.lock().unwrap().clone() else{return Ok(());};
+    let Some(window)=app.get_webview_window("main") else{return Err("控制窗口尚未就绪".into());};
+    let (sent,received)=std::sync::mpsc::sync_channel(1);
+    let pending=Arc::new(AtomicBool::new(true));let apply=pending.clone();
+    window.run_on_main_thread(move||{
+        if !apply.swap(false,Ordering::SeqCst){return;}
+        let state=app.state::<FloatingState>();
+        let result=(||{let mut model=state.0.lock().map_err(|_|"窗口状态正在恢复".to_string())?;
+            if model.full.is_some(){let opacity=model.opacity;apply_floating_options(&mut model,opacity,true)?;}Ok(())})();
+        let _=sent.send(result);
+    }).map_err(|e|e.to_string())?;
+    let result=received.recv_timeout(Duration::from_secs(3));
+    if result.is_err(){pending.store(false,Ordering::SeqCst);}
+    result.map_err(|_|"浮窗穿透未及时确认，尚未派发游戏输入".to_string())?
+}
+
+fn stop_floating_effects(model:&mut FloatingWindow)->Result<(),String>{
+    if let Some(appearance)=model.appearance.as_ref(){appearance.restore()?;model.click_through=false;}
+    if let Some(hotkey)=model.hotkey.as_mut(){hotkey.shutdown()?;}
+    model.hotkey=None;model.appearance=None;model.click_through=false;model.generation+=1;Ok(())
+}
+
+fn close_floating_effects(app:&tauri::AppHandle){
+    let state=app.state::<FloatingState>();
+    if let Ok(mut model)=state.0.lock(){
+        // This runs while Tauri still owns its window, before runtime cleanup.
+        // Exit always releases the global shortcut even if a window is gone.
+        if let Some(appearance)=model.appearance.as_ref(){let _=appearance.restore();}
+        if let Some(hotkey)=model.hotkey.as_mut(){let _=hotkey.shutdown();}
+        model.hotkey=None;model.appearance=None;model.click_through=false;model.generation+=1;
+    };
+}
+
+fn restore_full_window(window:&tauri::WebviewWindow,saved:&FullWindowGeometry)->tauri::Result<()> {
+    window.set_always_on_top(false)?;
+    window.set_decorations(saved.decorated)?;
+    window.set_position(saved.position)?;
+    window.set_min_size(saved.minimum)?;
+    window.set_resizable(saved.resizable)?;
+    window.set_size(saved.size)?;
+    if saved.maximized {window.maximize()?;}
+    Ok(())
+}
+
+fn toggle_floating(window:&tauri::WebviewWindow,state:&FloatingState,enabled:bool)->Result<Value,String> {
+    if window.label()!="main" {return Err("仅主界面支持悬浮控制".into());}
+    let mut model=state.0.lock().map_err(|_|"窗口状态正在恢复".to_string())?;
+    if enabled && model.full.is_none() {
+        let maximized=window.is_maximized().map_err(|e|e.to_string())?;
+        if maximized {window.unmaximize().map_err(|e|e.to_string())?;}
+        let captured=(||->tauri::Result<FullWindowGeometry>{
+            let config=window.app_handle().config().app.windows.iter().find(|value|value.label==window.label());
+            let minimum=config.and_then(|value|if value.min_width.is_some() || value.min_height.is_some(){Some(tauri::LogicalSize::new(value.min_width.unwrap_or(0.),value.min_height.unwrap_or(0.)))}else{None});
+            Ok(FullWindowGeometry{size:window.inner_size()?,position:window.outer_position()?,minimum,maximized,resizable:window.is_resizable()?,decorated:window.is_decorated()?})
+        })();
+        let geometry=match captured{Ok(value)=>value,Err(error)=>{if maximized{let _=window.maximize();}return Err(format!("无法保存完整界面位置：{error}"));}};
+        model.full=Some(geometry);model.error.clear();model.generation+=1;
+        let changed=(||->tauri::Result<()>{
+            // The full UI's 940x660 minimum must not clamp the compact size.
+            window.set_min_size(Some(tauri::LogicalSize::new(216.,40.)))?;
+            window.set_resizable(false)?;
+            window.set_decorations(false)?;
+            window.set_size(tauri::LogicalSize::new(216.,40.))?;
+            if let Some(monitor)=window.current_monitor()? {
+                let outer=window.outer_size()?;let margin=(16.*monitor.scale_factor()).round() as i32;
+                let x=monitor.position().x+(monitor.size().width as i32-outer.width as i32-margin).max(0);
+                window.set_position(tauri::PhysicalPosition::new(x,monitor.position().y+margin))?;
+            }
+            window.set_always_on_top(true)?;
+            Ok(())
+        })();
+        if let Err(error)=changed {
+            if restore_full_window(window,&geometry).is_ok(){model.full=None;return Err(format!("悬浮切换未完成，已恢复完整界面：{error}"));}
+            return Err(format!("悬浮切换未完成，请点击返回完整界面重试恢复：{error}"));
+        }
+        match floating_native::Appearance::capture(window){
+            Ok(appearance)=>{if let Err(error)=appearance.apply(model.opacity,false){let _=appearance.restore();model.error=error;}else{model.appearance=Some(appearance);}},
+            Err(error)=>model.error=error,
+        }
+        if model.appearance.is_some(){
+            if window.app_handle().state::<SharedState>().config.test_mode{model.error="界面测试模式不注册 F9，鼠标穿透不可用".into();}
+            else{match floating_native::Hotkey::start(window,state.0.clone(),model.generation){Ok(value)=>model.hotkey=Some(value),Err(error)=>model.error=error}}
+        }
+    } else if !enabled {
+        stop_floating_effects(&mut model)?;
+        if let Some(geometry)=model.full.as_ref(){restore_full_window(window,geometry).map_err(|e|format!("完整界面尚未恢复，请重试：{e}"))?;model.full=None;}
+        else{window.set_always_on_top(false).map_err(|e|e.to_string())?;}
+        model.error.clear();
+    }
+    Ok(floating_info(&model))
+}
+
 impl Shared {
     fn dashboard(&self) -> Value {
+        let app=self.app.lock().unwrap().clone();
+        let floating=if let Some(app)=app{let state=app.state::<FloatingState>();let model=state.0.lock().unwrap();floating_info(&model)}else{floating_info(&FloatingWindow::default())};
+        let attention=self.attention.lock().unwrap().info();
+        let assistant=attention::assistant_status(&self.config);
         let session = self.session.lock().unwrap();
         json!({"framework":"Rust / Tauri", "test_mode":self.config.test_mode,
+               "floating":floating["floating"],"floating_options":floating,
+               "attention":attention,"assistant_status":assistant,"coaching":coaching_info(&self.config),
                "mode":if session.fresh() || session.binding.is_none() { &session.mode } else { "unconfirmed" },
                "runner":session.state,"game":session.game,"manual_latch":session.manual,
                "input_release_confirmed":session.release_confirmed,"fresh":session.fresh(),
                "epoch":self.epoch.load(Ordering::SeqCst),"generation":session.generation,
                "pending":session.pending.keys().collect::<Vec<_>>(),"receipt":session.receipt,
                "error":session.error,"logs":session.logs,"hardware":session.hardware,"gamepad":session.gamepad,"messages":session.messages,"readiness":session.readiness,
-               "update":read_json(&self.config.project.join("docs/UPDATE_STATUS.json")).unwrap_or_else(|_|json!({"message":"更新状态尚未读取；可运行Update.ps1检查"}))})
+               "update_checking":self.update_checking.load(Ordering::SeqCst),
+               "update":self.update_result.lock().unwrap().clone().unwrap_or_else(||read_json(&self.config.project.join("docs/UPDATE_STATUS.json")).unwrap_or_else(|_|json!({"message":"点击检查更新，读取官方 main 的版本。"})))})
     }
     fn feedback(&self, action: &str, phase: &str, message: &str) {
         let mut session = self.session.lock().unwrap();
@@ -300,7 +440,17 @@ fn cli(shared: &Shared, action: &str, binding: Option<&Binding>, reason: &str, r
     if !reason.is_empty() && ["pause","takeover","stop"].contains(&action) { command.arg("--reason").arg(reason.chars().take(200).collect::<String>()); }
     #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
     command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
-    let child = Arc::new(Mutex::new(command.spawn().map_err(|e|e.to_string())?));
+    let spawned=if action=="resume"{
+        // This is the dispatch boundary shared with synchronous F8/input
+        // revocation. Never wait for the child while holding these locks.
+        let session=shared.session.lock().unwrap();
+        let pending=session.resume.as_ref().ok_or("恢复已被新接管撤销")?;
+        if pending.epoch!=command_epoch||shared.epoch.load(Ordering::SeqCst)!=command_epoch||Some(&pending.guard)!=resume_guard||shared.closing.load(Ordering::SeqCst)||shared.closed.load(Ordering::SeqCst){return Err("恢复派发边界已收到新接管，旧请求失效".into());}
+        let policy=shared.attention.lock().unwrap();
+        if pending.automatic&&!attention::dispatch_allowed(&policy,shared.hwnd.load(Ordering::SeqCst),&session.state["broker"]["game"]){return Err("自动返回的窗口、空闲或策略资格已失效".into());}
+        command.spawn().map_err(|e|e.to_string())?
+    }else{command.spawn().map_err(|e|e.to_string())?};
+    let child = Arc::new(Mutex::new(spawned));
     let pid = child.lock().unwrap().id();
     shared.children.lock().unwrap().insert(pid,child.clone());
     let timeout = match action { "status"=>3, "pause"|"takeover"=>6, "resume"=>12, "stop"=>28, _=>20 };
@@ -345,6 +495,9 @@ fn control(shared: &SharedState, action: &str, reason: &str) -> Result<Value, St
 }
 fn control_guarded(shared:&SharedState,action:&str,reason:&str,reassert_epoch:Option<u64>)->Result<Value,String>{
     if !["start","resume","pause","takeover","stop"].contains(&action) { return Err("界面拒绝未知流程控制命令".into()); }
+    let automatic=action=="resume"&&reassert_epoch.is_some();
+    let auto_guard=if automatic {shared.session.lock().unwrap().manual_guard.clone()}else{None};
+    if automatic&&!auto_guard.as_ref().map(|guard|attention::eligible(shared,guard)).unwrap_or(false){return Err("返回助手的资格已撤销，保持最新暂停".into());}
     let entered_epoch=shared.epoch.load(Ordering::SeqCst);
     if ["start","resume"].contains(&action){
         let checked=readiness(shared);let ready=checked["ready"]==true;
@@ -353,7 +506,17 @@ fn control_guarded(shared:&SharedState,action:&str,reason:&str,reassert_epoch:Op
     }
     let epoch = {
         let mut session = shared.session.lock().unwrap();
-        if let Some(expected)=reassert_epoch{if action!="takeover" || !session.may_reassert(shared.epoch.load(Ordering::SeqCst),expected){return Err("排队的旧自动接管已失效，保留本次明确交接".into());}}
+        if let Some(expected)=reassert_epoch{
+            let allowed=if action=="start" {
+                expected==shared.epoch.load(Ordering::SeqCst) && session.binding.is_none()
+                && !session.manual && !shared.closing.load(Ordering::SeqCst)
+                && !shared.closed.load(Ordering::SeqCst)
+            }else if action=="resume" {
+                expected==shared.epoch.load(Ordering::SeqCst)&&session.manual_guard==auto_guard
+                    &&!shared.closing.load(Ordering::SeqCst)&&!shared.closed.load(Ordering::SeqCst)
+            }else{action=="takeover" && session.may_reassert(shared.epoch.load(Ordering::SeqCst),expected)};
+            if !allowed{return Err("排队的旧控制请求已失效，保留最新接管或关闭请求".into());}
+        }
         if ["start","resume"].contains(&action) {
             if entered_epoch!=shared.epoch.load(Ordering::SeqCst){return Err("源码核验期间收到更新的控制请求，保留用户接管".into());}
             if session.pending.values().any(|_|true) { return Err("请等待当前控制请求确认".into()); }
@@ -365,6 +528,8 @@ fn control_guarded(shared:&SharedState,action:&str,reason:&str,reassert_epoch:Op
         }
         let epoch = shared.epoch.fetch_add(1,Ordering::SeqCst)+1;
         session.begin_control(action,epoch,input::current_tick());
+        if let Some(pending)=session.resume.as_mut(){pending.automatic=automatic;}
+        attention::on_control(shared,action,reason,automatic);
         epoch
     };
     shared.feedback(action,"pending",match action {"start"=>"正在启动本地一条龙…","resume"=>"正在核验唯一控制器交接…","stop"=>"正在停止并等待所属进程退出…",_=>"正在暂停并等待释放鼠标/手柄确认…"});
@@ -377,7 +542,9 @@ fn control_guarded(shared:&SharedState,action:&str,reason:&str,reassert_epoch:Op
             }
         }
         let binding = if action=="start" { None } else { Some(shared.binding()?) };
+        if ["start","resume"].contains(&action){prepare_floating_for_auto(shared)?;}
         let resume_guard=if action=="resume"{shared.session.lock().unwrap().resume.as_ref().filter(|pending|pending.epoch==epoch).map(|pending|pending.guard.clone())}else{None};
+        if automatic&&!resume_guard.as_ref().map(|guard|attention::eligible(shared,guard)).unwrap_or(false){return Err("恢复派发前出现新输入或窗口切换，已有暂停保持".into());}
         let value = cli(shared,action,binding.as_ref(),reason,resume_guard.as_ref())?;
         let state = value["state"].clone();
         let binding = if let Some(binding)=binding { binding } else {
@@ -469,12 +636,222 @@ fn poll(shared: &SharedState) {
 }
 
 #[tauri::command]
-fn dashboard(state: tauri::State<'_,SharedState>) -> Value { state.dashboard() }
+fn dashboard(state: tauri::State<'_,SharedState>) -> Value {state.dashboard()}
+
+#[tauri::command]
+async fn set_floating(enabled:bool,window:tauri::WebviewWindow)->Result<Value,String>{
+    window_operation(window,move|window|toggle_floating(&window,&window.app_handle().state::<FloatingState>(),enabled)).await
+}
+
+#[tauri::command]
+async fn window_action(action:String,window:tauri::WebviewWindow)->Result<Value,String>{
+    if !["maximize","close"].contains(&action.as_str()){return Err("未知窗口操作".into());}
+    window_operation(window,move|window|{
+        if window.label()!="main"{return Err("仅主界面支持窗口控制".into());}
+        if action=="close" {
+            // All exit buttons use the same input-release guard as the title bar.
+            window.close().map_err(|error|error.to_string())?;
+            return Ok(json!({"closing":true}));
+        }
+        toggle_floating(&window,&window.app_handle().state::<FloatingState>(),false)?;
+        if window.is_maximized().map_err(|error|error.to_string())?{
+            window.unmaximize().map_err(|error|error.to_string())?;
+        }else{window.maximize().map_err(|error|error.to_string())?;}
+        Ok(json!({"maximized":window.is_maximized().map_err(|error|error.to_string())?}))
+    }).await
+}
+
+async fn window_operation(window:tauri::WebviewWindow,operation:impl FnOnce(tauri::WebviewWindow)->Result<Value,String>+Send+'static)->Result<Value,String>{
+    tauri::async_runtime::spawn_blocking(move||{
+        let (sent,received)=std::sync::mpsc::sync_channel(1);
+        let pending=Arc::new(AtomicBool::new(true));let apply=pending.clone();let target=window.clone();
+        window.run_on_main_thread(move||{if !apply.swap(false,Ordering::SeqCst){return;}let _=sent.send(operation(target));}).map_err(|e|e.to_string())?;
+        let result=received.recv_timeout(Duration::from_secs(3));
+        if result.is_err(){pending.store(false,Ordering::SeqCst);}
+        result.map_err(|_|"窗口主线程未及时确认，请重试".to_string())?
+    }).await.map_err(|e|e.to_string())?
+}
+
+#[tauri::command]
+fn drag_floating(window:tauri::WebviewWindow,state:tauri::State<'_,FloatingState>)->Result<(),String>{
+    if window.label()!="main" || state.0.lock().map_err(|_|"窗口状态正在恢复".to_string())?.full.is_none(){return Err("当前不是悬浮窗口".into());}
+    window.start_dragging().map_err(|e|e.to_string())
+}
+
+#[tauri::command]
+async fn set_floating_opacity(opacity:u8,window:tauri::WebviewWindow)->Result<Value,String>{
+    window_operation(window,move|window|{
+        if window.label()!="main"{return Err("仅主界面支持悬浮控制".into());}
+        let state=window.app_handle().state::<FloatingState>();
+        let mut model=state.0.lock().map_err(|_|"窗口状态正在恢复".to_string())?;
+        if !(40..=100).contains(&opacity){return Err("透明度需要为 40%～100%".into());}
+        if model.full.is_none(){model.opacity=opacity;return Ok(floating_info(&model));}
+        let through=model.click_through;apply_floating_options(&mut model,opacity,through)
+    }).await
+}
+
+#[tauri::command]
+async fn set_click_through(enabled:bool,window:tauri::WebviewWindow)->Result<Value,String>{
+    window_operation(window,move|window|{
+        if window.label()!="main"{return Err("仅主界面支持悬浮控制".into());}
+        let state=window.app_handle().state::<FloatingState>();
+        let mut model=state.0.lock().map_err(|_|"窗口状态正在恢复".to_string())?;
+        let opacity=model.opacity;apply_floating_options(&mut model,opacity,enabled)
+    }).await
+}
+
+#[tauri::command]
+async fn set_chat_focus_auto(enabled:bool,state:tauri::State<'_,SharedState>)->Result<Value,String>{
+    let shared=state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move||attention::set_enabled(&shared,enabled)).await.map_err(|e|e.to_string())?
+}
+
+fn coaching_info(config:&Config)->Value{
+    match read_json(&config.project.join("docs/COACHING_POLICY.json")){
+        Ok(value) if value["protocol_version"]==1&&value["enabled"].is_boolean()=>json!({"enabled":value["enabled"],"updated_at_ms":value["updated_at_ms"],"error":""}),
+        _=>json!({"enabled":true,"error":"模式设置尚未确认，当前按带教模式等待战斗确认。"}),
+    }
+}
+
+#[tauri::command]
+async fn set_coaching_mode(enabled:bool,state:tauri::State<'_,SharedState>)->Result<Value,String>{
+    let shared=state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move||{
+        let _guard=shared.message_lock.lock().map_err(|_|"模式设置正在保存".to_string())?;
+        let path=shared.config.project.join("docs/COACHING_POLICY.json");
+        let mut value=read_json(&path).unwrap_or_else(|_|json!({}));
+        if !value.is_object(){value=json!({});}
+        let revision=now_ms().max(u128::from(value["updated_at_ms"].as_u64().unwrap_or(0).saturating_add(1)));
+        value["protocol_version"]=json!(1);value["enabled"]=json!(enabled);
+        value["require_battle_confirmation"]=json!(true);value["automatic_start"]=json!(false);
+        value["updated_at_ms"]=json!(revision);
+        let temporary=shared.config.project.join("docs/.COACHING_POLICY.gui.tmp.json");
+        fs::write(&temporary,serde_json::to_vec_pretty(&value).map_err(|error|error.to_string())?).map_err(|error|error.to_string())?;
+        fs::rename(&temporary,&path).map_err(|error|error.to_string())?;
+        // Changing teaching mode never starts a worker or releases a manual pause.
+        Ok(coaching_info(&shared.config))
+    }).await.map_err(|error|error.to_string())?
+}
 
 #[tauri::command]
 async fn runner_control(action: String, state: tauri::State<'_,SharedState>) -> Result<Value,String> {
     let shared=state.inner().clone();
+    if ["pause","stop","takeover"].contains(&action.as_str()){
+        attention::block(&shared,"已请求手动暂停；等待实际释放输入确认。");
+    }
     tauri::async_runtime::spawn_blocking(move||control(&shared,&action,match action.as_str(){"takeover"=>"用户手动接管","pause"=>"用户暂停","stop"=>"用户停止本次流程",_=>""})).await.map_err(|e|e.to_string())?
+}
+
+#[cfg(windows)]
+mod update_check_job {
+    use super::*;
+    use std::{ffi::c_void, os::windows::{io::AsRawHandle, process::CommandExt}};
+    type Handle = *mut c_void;
+    #[repr(C)]
+    #[derive(Default)]
+    struct BasicLimits { process_time:i64,job_time:i64,flags:u32,minimum:usize,maximum:usize,
+                         active_limit:u32,affinity:usize,priority:u32,scheduling:u32 }
+    #[repr(C)]
+    #[derive(Default)]
+    struct ExtendedLimits { basic:BasicLimits,io:[u64;6],process_memory:usize,job_memory:usize,
+                            peak_process:usize,peak_job:usize }
+    #[repr(C)]
+    struct ThreadEntry { size:u32,usage:u32,id:u32,owner:u32,base_priority:i32,delta_priority:i32,flags:u32 }
+    #[link(name="kernel32")]
+    extern "system" {
+        fn CreateJobObjectW(attributes:*mut c_void,name:*const u16)->Handle;
+        fn SetInformationJobObject(job:Handle,class:i32,value:*const c_void,size:u32)->i32;
+        fn AssignProcessToJobObject(job:Handle,process:Handle)->i32;
+        fn CloseHandle(handle:Handle)->i32;
+        fn CreateToolhelp32Snapshot(flags:u32,pid:u32)->Handle;
+        fn Thread32First(snapshot:Handle,entry:*mut ThreadEntry)->i32;
+        fn Thread32Next(snapshot:Handle,entry:*mut ThreadEntry)->i32;
+        fn OpenThread(access:u32,inherit:i32,id:u32)->Handle;
+        fn ResumeThread(thread:Handle)->u32;
+    }
+    pub struct Job(Handle);
+    impl Drop for Job { fn drop(&mut self) { unsafe { CloseHandle(self.0); } } }
+    impl Job {
+        pub fn spawn(command:&mut Command)->Result<(Self,Child),String>{
+            let handle=unsafe{CreateJobObjectW(std::ptr::null_mut(),std::ptr::null())};
+            if handle.is_null(){return Err("无法建立检查进程的退出保护".into());}
+            let job=Self(handle);let mut limits=ExtendedLimits::default();limits.basic.flags=0x2000;
+            if unsafe{SetInformationJobObject(job.0,9,&limits as *const _ as _,std::mem::size_of_val(&limits) as u32)}==0{return Err("无法设置检查进程的退出保护".into());}
+            // Suspend before assignment: neither the venv redirector nor Git
+            // can create a descendant outside this owned job.
+            command.creation_flags(0x08000004);
+            let mut child=command.spawn().map_err(|e|format!("无法启动只读检查：{e}"))?;
+            let resumed=(||->Result<(),String>{
+                if unsafe{AssignProcessToJobObject(job.0,child.as_raw_handle() as _)}==0{return Err("无法登记自有检查进程".into());}
+                let snapshot=unsafe{CreateToolhelp32Snapshot(4,0)};
+                if snapshot as isize == -1{return Err("无法核验检查进程的初始线程".into());}
+                let snapshot=Self(snapshot);
+                let mut entry=ThreadEntry{size:std::mem::size_of::<ThreadEntry>() as u32,usage:0,id:0,owner:0,base_priority:0,delta_priority:0,flags:0};
+                let mut found=unsafe{Thread32First(snapshot.0,&mut entry)};
+                while found!=0 {
+                    if entry.owner==child.id(){
+                        let handle=unsafe{OpenThread(2,0,entry.id)};
+                        if handle.is_null(){return Err("无法恢复已登记的检查线程".into());}
+                        let thread=Self(handle);
+                        if unsafe{ResumeThread(thread.0)}==u32::MAX{return Err("无法恢复已登记的检查线程".into());}
+                        return Ok(());
+                    }
+                    entry.size=std::mem::size_of::<ThreadEntry>() as u32;
+                    found=unsafe{Thread32Next(snapshot.0,&mut entry)};
+                }
+                Err("检查进程的初始线程未通过核验".into())
+            })();
+            if let Err(error)=resumed{let _=child.kill();let _=child.wait();return Err(error);}
+            Ok((job,child))
+        }
+    }
+}
+
+fn check_update(shared:&Shared)->Result<Value,String>{
+    if shared.update_checking.compare_exchange(false,true,Ordering::SeqCst,Ordering::SeqCst).is_err(){return Err("检查更新正在进行，请等待当前结果。".into());}
+    struct Checking<'a>(&'a AtomicBool);
+    impl Drop for Checking<'_>{fn drop(&mut self){self.0.store(false,Ordering::SeqCst);}}
+    let _checking=Checking(&shared.update_checking);
+    let result=(||->Result<Value,String>{
+        let script=shared.config.project.join("tools/currency_wars_update.py");
+        if !script.is_file(){return Err("本地只读更新检查器缺失。".into());}
+        let mut command=Command::new(&shared.config.python);
+        command.args(["-B","-X","utf8"]).arg(script).args(["--check-only","--json"]);
+        command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+        #[cfg(windows)] let (_job,spawned)=update_check_job::Job::spawn(&mut command)?;
+        #[cfg(not(windows))] let spawned=command.spawn().map_err(|e|e.to_string())?;
+        let child=Arc::new(Mutex::new(spawned));let pid=child.lock().unwrap().id();
+        shared.children.lock().unwrap().insert(pid,child.clone());
+        let started=Instant::now();let mut output=vec![];let mut error=vec![];
+        let checked=(||->Result<Value,String>{loop{
+            let mut locked=child.lock().unwrap();
+            drain_pipe(&mut locked.stdout,&mut output)?;drain_pipe(&mut locked.stderr,&mut error)?;
+            if let Some(code)=locked.try_wait().map_err(|e|e.to_string())?{
+                drain_pipe(&mut locked.stdout,&mut output)?;drain_pipe(&mut locked.stderr,&mut error)?;
+                if !code.success(){return Err(format!("只读检查器退出异常：{}",String::from_utf8_lossy(&error).chars().take(300).collect::<String>()));}
+                let value:Value=serde_json::from_slice(&output).map_err(|_|"只读检查器未返回有效 JSON".to_string())?;
+                if value["check_only"]!=true || value["applied"]!=false || value["sync_verified"]!=false || !value["message"].is_string() || !value["status"].is_string(){return Err("只读检查回执格式未通过核验".into());}
+                return Ok(value);
+            }
+            if shared.closed.load(Ordering::SeqCst) || started.elapsed()>=Duration::from_secs(28){
+                let _=locked.kill();let _=locked.wait();
+                return Err("检查更新超时或界面正在关闭（28 秒总时限），本地源码未更改。".into());
+            }
+            drop(locked);thread::sleep(Duration::from_millis(20));
+        }})();
+        if checked.is_err(){let mut owned=child.lock().unwrap();if owned.try_wait().ok().flatten().is_none(){let _=owned.kill();let _=owned.wait();}}
+        shared.children.lock().unwrap().remove(&pid);
+        checked
+    })();
+    let value=result.unwrap_or_else(|error|json!({"status":"unavailable","check_only":true,"applied":false,"sync_verified":false,"checked_at_ms":now_ms(),"message":error}));
+    *shared.update_result.lock().unwrap()=Some(value.clone());
+    Ok(value)
+}
+
+#[tauri::command]
+async fn check_updates(state:tauri::State<'_,SharedState>)->Result<Value,String>{
+    let shared=state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move||check_update(&shared)).await.map_err(|e|e.to_string())?
 }
 
 #[tauri::command]
@@ -524,7 +901,7 @@ fn message_records(shared:&Shared)->Result<Vec<Value>,String>{
     Ok(records)
 }
 
-const CORE_FILES:[&str;4]=["tools/currency_wars_runner.py","tools/currency_wars_broker_entry.py","tools/currency_wars_perception.py","tools/currency_wars_control.py"];
+const CORE_FILES:[&str;8]=["tools/currency_wars_runner.py","tools/currency_wars_broker_entry.py","tools/currency_wars_perception.py","tools/currency_wars_control.py","tools/currency_wars_artifacts.py","tools/currency_wars_source_guard.py","tools/currency_wars_input_bridge.py","tools/currency_wars_bridge_task.py"];
 fn readiness(shared:&Shared)->Value{
     let checked=(||->Result<Value,String>{
         let manifest=read_json(&shared.config.project.join("docs/RUNNER_READY.json")).map_err(|_|"独立审查尚未完成".to_string())?;
@@ -556,6 +933,7 @@ fn main() {
             if !python.is_file(){return Err("请先运行项目根目录的Setup.ps1".into());}
             let mut command=Command::new(python);
             command.args(["-B","-X","utf8"]).arg(helper).arg("--binary").arg(executable);
+            if std::env::args().any(|arg|arg=="--floating"){command.arg("--floating");}
             #[cfg(windows)] {use std::os::windows::process::CommandExt;command.creation_flags(0x08000000);}
             command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().map_err(|e|e.to_string())?;
             Ok(())
@@ -564,31 +942,79 @@ fn main() {
         return;
     }
     let config=match Config::load(){Ok(config)=>config,Err(error)=>{input::show_error(&error);return;}};
-    let shared=Arc::new(Shared{session:Mutex::new(Session::new(config.test_mode)),config,epoch:AtomicU64::new(0),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0)});
+    let start_requested=std::env::args().any(|arg|arg=="--start");
+    let floating_requested=std::env::args().any(|arg|arg=="--floating");
+    let shared=Arc::new(Shared{session:Mutex::new(Session::new(config.test_mode)),config,epoch:AtomicU64::new(0),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())});
+    *shared.attention.lock().unwrap()=attention::Policy::load(&shared.config);
     let setup_shared=shared.clone();
     let window_shared=shared.clone();
-    let result=tauri::Builder::default().manage(shared.clone())
-        .invoke_handler(tauri::generate_handler![dashboard,runner_control,preview,leave_message])
+    let result=tauri::Builder::default().manage(shared.clone()).manage(FloatingState::default())
+        .invoke_handler(tauri::generate_handler![dashboard,set_floating,window_action,drag_floating,set_floating_opacity,set_click_through,set_chat_focus_auto,set_coaching_mode,runner_control,check_updates,preview,leave_message])
         .setup(move|app| {
+            let startup_request_epoch=setup_shared.epoch.load(Ordering::SeqCst);
             *setup_shared.app.lock().unwrap()=Some(app.handle().clone());
             let mut builder=tauri::WebviewWindowBuilder::from_config(app,&app.config().app.windows[0])?
-                .focused(false).data_directory(setup_shared.config.runtime.join("webview-profile"));
+                .focused(false).transparent(true).background_color(tauri::utils::config::Color(0,0,0,0))
+                .data_directory(setup_shared.config.runtime.join("webview-profile"));
             if let Some(port)=setup_shared.config.debug_port {builder=builder.additional_browser_args(&format!("--remote-debugging-port={port} --remote-allow-origins=http://127.0.0.1"));}
             let window=builder.build()?;
+            if floating_requested{if let Err(error)=toggle_floating(&window,&app.state::<FloatingState>(),true){setup_shared.feedback("window","error",&error);}}
             #[cfg(windows)] setup_shared.hwnd.store(window.hwnd()?.0 as usize,Ordering::SeqCst);
             fs::write(setup_shared.config.runtime.join("gui-process.json"),serde_json::to_vec_pretty(&json!({"framework":"Rust/Tauri","pid":std::process::id(),"creation_id":input::current_creation(),"hwnd":setup_shared.hwnd.load(Ordering::SeqCst),"chat_id":setup_shared.config.chat,"started_at_ms":now_ms()}))?)?;
             let poll_shared=setup_shared.clone();
             thread::spawn(move||while !poll_shared.closed.load(Ordering::SeqCst){poll(&poll_shared);for _ in 0..10{if poll_shared.closed.load(Ordering::SeqCst){break;}thread::sleep(Duration::from_millis(100));}});
-            if !setup_shared.config.test_mode {input::watch(setup_shared.clone());}
+            if !setup_shared.config.test_mode {input::watch(setup_shared.clone());attention::watch(setup_shared.clone());}
+            if start_requested && !setup_shared.config.test_mode {
+                let start_shared=setup_shared.clone();
+                thread::spawn(move||{
+                    let deadline=Instant::now()+Duration::from_secs(30);
+                    while !start_shared.closed.load(Ordering::SeqCst) && Instant::now()<deadline {
+                        let ready={let session=start_shared.session.lock().unwrap();
+                            session.hardware["f8"]==true && session.hardware["raw_input"]==true
+                            && session.gamepad["available"]==true && session.readiness["ready"]==true};
+                        if ready {
+                            // One explicit startup request uses the exact same
+                            // guards and handshake as the visible Start button.
+                            if let Err(error)=control_guarded(&start_shared,"start","用户明确请求启动本次一条龙",Some(startup_request_epoch)) {
+                                start_shared.feedback("start","error",&format!("启动未确认：{error}"));
+                            }
+                            return;
+                        }
+                        thread::sleep(Duration::from_millis(100));
+                    }
+                    start_shared.feedback("start","error","启动前核验未就绪；本次没有派发控制器，不自动重试。");
+                });
+            }
             Ok(())
         })
-        .on_window_event(move|_,event|if let tauri::WindowEvent::CloseRequested{api,..}=event {
+        .on_window_event(move|window,event|match event {
+          tauri::WindowEvent::Focused(true)=>{
+            // Selecting the assistant in the taskbar/Alt+Tab is a mouse-accessible
+            // escape from click-through, even when a laptop does not send F9.
+            let state=window.app_handle().state::<FloatingState>();
+            let locked={let model=state.0.lock().unwrap();model.full.is_some()&&model.click_through};
+            if locked&&!window_shared.closing.load(Ordering::SeqCst){
+                if let Some(webview)=window.app_handle().get_webview_window(window.label()){
+                    if let Err(error)=toggle_floating(&webview,&state,false){window_shared.feedback("window","error",&error);}
+                }
+            }
+          },
+          tauri::WindowEvent::CloseRequested{api,..}=>{
             api.prevent_close();
             window_shared.closing.store(true,Ordering::SeqCst);
+            if let Some(webview)=window.app_handle().get_webview_window(window.label()){
+                if let Err(error)=toggle_floating(&webview,&window.app_handle().state::<FloatingState>(),false){window_shared.feedback("window","error",&error);}
+            }
             if window_shared.can_close(){window_shared.finish_close();}else{let cloned=window_shared.clone();thread::spawn(move||{let _=control(&cloned,"takeover","关闭界面前保持手动");});}
+          },
+          _=>{}
         })
-        .run(tauri::generate_context!());
+        .build(tauri::generate_context!())
+        .map(|app|app.run_return(|app,event|{
+            if matches!(event,tauri::RunEvent::ExitRequested{..}|tauri::RunEvent::Exit){close_floating_effects(app);}
+        }));
     shared.closed.store(true,Ordering::SeqCst);
+    if let Some(app)=shared.app.lock().unwrap().as_ref(){close_floating_effects(app);}
     shared.close_children();
     if let Err(error)=result {let _=fs::write(shared.config.runtime.join("gui-error.txt"),error.to_string());}
 }
@@ -627,7 +1053,7 @@ mod tests{
             write("runner-state.json",&manual);
         };
         let setup=||{
-            reset();let s=Arc::new(Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"resume-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0)});
+            reset();let s=Arc::new(Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"resume-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())});
             let b=Binding::load(&root,"resume-fixture").unwrap();s.bind(b.clone()).unwrap();s.accept(&b,manual.clone(),1,false).unwrap();(s,b)
         };
         let begin=|s:&Shared|{s.epoch.store(2,Ordering::SeqCst);s.session.lock().unwrap().begin_control("resume",2,0);};
@@ -697,7 +1123,7 @@ mod tests{
         let mut pause=json!({"pause_id":"original-pause","reason":"新本地worker初始安全暂停","chat_id":"close-fixture","run_token":"fixture-only"});write("manual-pause.json",&pause);
         let mut ack=json!({"pause_id":"original-pause","broker_pid":39,"broker_creation_time":49,"chat_id":"close-fixture","run_token":"fixture-only","owned_inputs_released":true});write("pause-ack.json",&ack);
         let mut state=json!({"protocol_version":1,"owner":"currency-wars-runner","chat_id":"close-fixture","run_id":run,"run_dir":root,"runner_pid":marker["pid"],"runner_creation_id":creation,"launch_id":launch,"state_sequence":1,"control_mode":"starting","broker":{"protocol_version":2,"broker_pid":39,"broker_creation_time":49,"chat_id":"close-fixture","run_dir":root,"paused":true,"acknowledged":true,"pause_id":"original-pause","broker_state":{"state":"running"}},"last_command":{"kind":"start","id":launch}});write("runner-state.json",&state);
-        let s=Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"close-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0)};
+        let s=Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"close-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
         let b=Binding::load(&root,"close-fixture").unwrap();s.bind(b.clone()).unwrap();s.session.lock().unwrap().begin_control("start",1,0);s.authorize_start(&b,&state,1).unwrap();
         state["control_mode"]=json!("manual");state["reason"]=initial["reason"].clone();assert!(b.pause_confirmed(&state).is_ok());
         assert!(matches!(s.accept(&b,state.clone(),1,false),Ok(Acceptance::Applied)));s.session.lock().unwrap().pending.remove("start");
@@ -740,7 +1166,7 @@ mod tests{
             for entry in fs::read_dir(root.join("manual-intents")).unwrap(){fs::remove_file(entry.unwrap().path()).unwrap();}
             write(&format!("manual-intents/{init}.json"),&initial);write("runner-manual.json",&initial);write("manual-pause.json",&pause);write("runner-state.json",raw);
         };
-        let shared=||Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"startup-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0)};
+        let shared=||Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"startup-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
         let setup=|raw:&Value|{reset(raw);let s=shared();let b=Binding::load(&root,"startup-fixture").unwrap();s.bind(b.clone()).unwrap();s.session.lock().unwrap().begin_control("start",1,0);s.authorize_start(&b,raw,1).unwrap();(s,b)};
         let manual=|raw:&Value|{let mut s=raw.clone();s["control_mode"]=json!("manual");s["reason"]=json!("初始化；等待唯一broker与一次受控交接");s};
         let check=|name:&str,condition:bool|{assert!(condition,"{name}");println!("STARTUP_CHECK {name}");};
@@ -799,7 +1225,7 @@ mod tests{
     }
     #[test]
     fn late_prebroker_binding_cannot_erase_known_identity_or_accept_sentinel(){
-        let shared=Shared{config:Config{project:PathBuf::from(r"C:\Temp\project"),python:PathBuf::new(),runner:PathBuf::new(),chat:"chat".into(),runtime:PathBuf::new(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(0),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0)};
+        let shared=Shared{config:Config{project:PathBuf::from(r"C:\Temp\project"),python:PathBuf::new(),runner:PathBuf::new(),chat:"chat".into(),runtime:PathBuf::new(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(0),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
         let early=Binding{root:PathBuf::from(r"C:\Temp\run"),chat:"chat".into(),run_id:"run".into(),token:"token".into(),pid:31,creation:"41".into(),marker_id:"run".into(),broker:None,launch_id:"launch".into()};
         let mut known=early.clone();known.broker=Some(protocol::ProcessIdentity{pid:32,creation:"42".into()});
         shared.bind(known.clone()).unwrap();shared.bind(early.clone()).unwrap();

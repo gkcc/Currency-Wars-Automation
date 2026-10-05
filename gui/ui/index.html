@@ -14,9 +14,15 @@
   <div class="sidebar-bottom"><span class="dot" id="connection-dot"></span><span id="connection-text">等待执行器</span><small>晋升目标 170<br>奖励进度以实机核验为准</small></div>
 </aside>
 <main>
-  <header><div><p class="eyebrow">CURRENCY WARS</p><h1>一条龙</h1><p class="subtitle">固定流程在本地运行，需要战略判断时等待助手。</p></div><div id="mode" class="badge">未连接执行器</div></header>
+  <header><div><p class="eyebrow">CURRENCY WARS</p><h1>一条龙</h1><p class="subtitle">固定流程在本地运行，需要战略判断时等待助手。</p></div><div class="header-actions"><div id="mode" class="badge">未连接执行器</div><button id="floating-control" class="small-button" aria-pressed="false">缩成浮窗</button><button id="window-maximize" class="small-button" title="最大化或还原完整界面">最大化 / 还原</button><button id="window-exit" class="small-button exit-button" title="释放自动输入并退出助手">退出</button></div></header>
   <div id="test-banner" hidden>界面测试模式 · 不注册全局输入监听 · 不操作游戏</div>
-  <p id="update-status" class="source">更新状态待读取。</p>
+  <p id="window-status" class="source window-status" role="status" aria-live="polite" hidden></p>
+  <div class="update-row"><p id="update-status" class="source" role="status" aria-live="polite">点击检查更新，读取官方 main 的版本。</p><button id="check-updates" class="small-button" title="只读检查官方 main，最长 28 秒">检查更新</button></div>
+  <section class="assistant-context" aria-label="助手进度与查看聊天">
+    <div id="assistant-progress" class="assistant-progress"><p id="assistant-message" class="assistant-message" role="status" aria-live="polite">尚未收到助手进度。</p><p id="assistant-age" class="assistant-age">更新时间待核验</p></div>
+    <div class="attention-setting"><button id="coaching-mode" class="small-button" type="button" aria-pressed="true">带教模式 · 点击切换全托管</button><p id="coaching-status" class="source" role="status" aria-live="polite">正在读取带教模式；关闭后采用全托管。</p><label class="attention-toggle"><input id="chat-focus-auto" type="checkbox" disabled>查看助手后自动继续</label><p id="attention-status" class="source" role="status" aria-live="polite">查看聊天后的返回策略正在核验。</p></div>
+    <p id="attention-help" class="source attention-help">纯鼠标移动不接管。普通键盘、点击、滚轮或切到其他应用会临时让位；键鼠全部释放且连续空闲 3 秒后，只受控返回本局游戏。F8、明确暂停、手动接管、停止与手柄保护仍保持暂停。</p>
+  </section>
   <section class="page active" id="overview">
     <div class="metrics">
       <article class="metric"><span>当前关卡</span><strong id="metric-stage">未知</strong><small id="mode-label">本局模式待读取</small></article>
@@ -33,6 +39,14 @@
   <section class="page" id="preview"><div class="section-head"><h2>观察画面</h2><button id="refresh-preview" class="small-button">重新读取</button></div><p class="source" id="preview-source">只显示当前执行器归属的观察画面，不能视为直播。</p><div class="preview-frame"><img id="preview-image" hidden alt="执行器最近核验的游戏画面"><p id="preview-empty">尚无当前执行器的已核验画面</p></div></section>
   <section class="page" id="logs"><div class="section-head"><h2>日志与错误</h2><span class="mini-tag">保留最近 100 条</span></div><div id="log-content" class="log-content">暂无日志。</div><details class="diagnostics"><summary>运行诊断</summary><pre id="diagnostics">执行器身份尚未确认。</pre></details></section>
   <section class="page" id="message"><div class="card"><h2>给助手留言</h2><p class="body-text">收到助手的实际确认后，才显示已读或回复。</p><textarea id="message-input" maxlength="2000" placeholder="告诉助手需要调整的目标或当前问题…"></textarea><div class="message-row"><span id="message-result" class="source"></span><button id="message-send" class="primary">发送留言</button></div></div><div id="message-records" class="card">暂无留言。</div></section>
-  <footer class="control-bar"><div class="controls"><button id="start" class="primary" disabled>开始一条龙</button><button id="pause">暂停</button><button id="takeover" class="takeover">手动接管 <kbd>F8</kbd></button><button id="stop" class="stop">停止本次流程</button></div><p id="receipt" class="receipt" aria-live="polite">执行器正在核验，开始暂不可用。</p><div class="control-info"><span id="input-state">输入监听正在初始化</span><span>默认一局 · 最长 120 分钟</span></div></footer>
-</main><script src="app.js"></script>
+  <footer class="control-bar"><div class="controls"><button id="start" class="primary" disabled>开始一条龙</button><button id="pause">暂停</button><button id="takeover" class="takeover">手动接管 <kbd>F8</kbd></button><button id="stop" class="stop">停止本次流程</button></div><p id="receipt" class="receipt" aria-live="polite">执行器正在核验，开始暂不可用。</p><div class="control-info"><span id="input-state">输入监听正在初始化</span><span>默认一局 · 最长 120 分钟</span></div><details class="hud-settings"><summary>悬浮状态与快捷键</summary><p id="shortcut-help" class="source">F8 只暂停，不恢复；Ctrl+Alt+P 是暂停备用键，注册状态待核验。</p><div class="floating-options"><label for="floating-opacity">HUD 不透明度</label><input id="floating-opacity" type="range" min="40" max="100" step="5" value="80" aria-label="浮窗不透明度，40% 到 100%，越低越透明"><output id="floating-opacity-value" for="floating-opacity">80%</output><button id="floating-click-through" class="small-button" aria-pressed="false" disabled>开启鼠标穿透</button></div><p id="floating-pass-status" class="source" role="status">穿透恢复键只在悬浮模式注册。</p><p class="source">普通键鼠临时让位后会空闲恢复。状态按钮：运行时点击是明确暂停；暂停或停止后点击明确继续或开始。右键选择“打开完整界面”；拖动状态点移动。鼠标穿透时先用已注册的 F9 / Ctrl+Alt+O 恢复点击。</p></details></footer>
+</main>
+<section id="floating-panel" class="floating-panel" aria-label="货币战争状态" hidden>
+  <span id="floating-drag" class="hud-drag" title="拖动状态点移动窗口"><i id="floating-dot" class="hud-dot" aria-hidden="true"></i></span>
+  <button id="floating-status-action" class="hud-status" aria-label="状态待核验" title="点击暂停或继续"><span id="floating-status">状态待核验</span></button>
+  <button id="floating-expand" class="hud-window-button" aria-label="展开完整界面" title="展开完整界面">↗</button>
+  <button id="floating-exit" class="hud-window-button exit-button" aria-label="退出助手" title="释放自动输入并退出助手">×</button>
+  <div id="floating-menu" class="hud-menu" role="menu" hidden><button id="floating-open-full" role="menuitem">打开完整界面</button></div>
+</section>
+<script src="app.js"></script>
 </body></html>

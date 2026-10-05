@@ -1,4 +1,4 @@
-param([string]$ChatId)
+param([string]$ChatId, [switch]$Run)
 $ErrorActionPreference = 'Stop'
 $currencyGuiDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $currencyGuiProject = Split-Path -Parent $currencyGuiDirectory
@@ -11,4 +11,5 @@ if ($LASTEXITCODE -ne 0) { throw 'Run Setup.ps1 -BuildGui; dependencies or the c
 $currencyGuiLifecycle = Join-Path $currencyGuiDirectory 'launch.py'
 $currencyGuiArguments = @('-B','-X','utf8',('"' + $currencyGuiLifecycle + '"'),'--skip-update')
 if ($ChatId) { $currencyGuiArguments += @('--chat-id', ('"' + $ChatId + '"')) }
+if ($Run) { $currencyGuiArguments += '--start' }
 Start-Process -FilePath $currencyGuiPython -ArgumentList $currencyGuiArguments -WindowStyle Hidden

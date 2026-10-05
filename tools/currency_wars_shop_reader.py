@@ -12,6 +12,7 @@ import io
 import json
 from pathlib import Path
 import re
+import stat
 import sys
 import time
 
@@ -24,6 +25,68 @@ RESOURCE_DIR = Path(__file__).resolve().with_name("shop_reader_resources")
 EXPECTED_SIZE = (1920, 1080)
 CENTERS = (490, 760, 1029, 1298, 1567)
 SCHEMA = "currency-wars-shop-observation/v1"
+
+
+def purchase_slot(observation: dict, slot_id: int, snapshot_id: str) -> dict | None:
+    """One positive, priced card; incomplete other cards/badges stay unknown."""
+    if (type(slot_id) is not int or not 1 <= slot_id <= 5
+            or observation.get("schema") != SCHEMA
+            or observation.get("input", {}).get("sha256") != snapshot_id
+            or observation.get("input", {}).get("size") != list(EXPECTED_SIZE)
+            or observation.get("input", {}).get("format") != "PNG"
+            or observation.get("page", {}).get("reliable_open_shop") is not True):
+        return None
+    geometry = observation.get("page", {}).get("geometry", {})
+    scores = geometry.get("frame_scores", [])
+    if (len(scores) != 5 or any(type(v) not in (int, float) or not .60 <= v <= 1. for v in scores)
+            or geometry.get("overlays") != []):
+        return None
+    matches = [slot for slot in observation.get("slots", []) if slot.get("slot") == slot_id]
+    if len(matches) != 1:
+        return None
+    slot = matches[0]
+    bounds, point = slot.get("bounds"), slot.get("position")
+    if (not isinstance(bounds, list) or len(bounds) != 4 or any(type(v) is not int for v in bounds)
+            or not isinstance(point, list) or len(point) != 2 or any(type(v) is not int for v in point)):
+        return None
+    x, y, width, height = bounds
+    if (not 0 <= x < x + width <= 1920 or not 0 <= y < y + height <= 1080
+            or point != [round(x + width / 2), round(y + height / 2)]
+            or slot.get("status") == "empty" or type(slot.get("cost")) is not int
+            or not 1 <= slot["cost"] <= 5 or not isinstance(slot.get("name"), str)):
+        return None
+    try:
+        names = json.loads((RESOURCE_DIR / "names.json").read_text(encoding="utf-8-sig"))["names"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if slot["name"] not in names:
+        return None
+    evidence = slot.get("evidence", {})
+    name, cost = evidence.get("name", {}), evidence.get("cost", {})
+    if (name.get("validation") == "not_in_fixed_source_name_list"
+            or name.get("method") not in ("ocr", "ocr_case_normalization", "explicit_observed_ocr_alias")
+            or type(name.get("confidence")) not in (int, float) or not .90 <= name["confidence"] <= 1.):
+        return None
+    digit = cost.get("method") == "digit_ocr"
+    template = (cost.get("method") == "observed_digit_template"
+                and cost.get("template_classification_used") is True
+                and set(cost.get("template_scores", {})) == {"1", "2", "3", "4", "5"}
+                and type(cost.get("confidence")) in (int, float) and .68 <= cost["confidence"] <= 1.
+                and type(cost.get("margin")) in (int, float) and cost["margin"] >= .12)
+    if not template and not (digit and type(cost.get("confidence")) in (int, float) and .90 <= cost["confidence"] <= 1.):
+        return None
+    for box in (name.get("bounds"), cost.get("ocr_bounds") if digit else cost.get("bounds")):
+        if (not isinstance(box, list) or len(box) != 4 or any(type(v) is not int for v in box)
+                or not x <= box[0] < box[2] <= x + width
+                or not y <= box[1] < box[3] <= y + height):
+            return None
+    # A complete high-confidence name plus its actually read fee is positive
+    # occupied-card evidence, even when the empty/badge templates are missing.
+    if digit and not any(row.get("raw") == str(slot["cost"])
+               and type(row.get("confidence")) in (int, float) and .90 <= row["confidence"] <= 1.
+               for row in cost.get("raw_ocr", [])):
+        return None
+    return slot
 
 
 def _unknown_slots(reason: str) -> list[dict]:
@@ -41,31 +104,65 @@ class ShopReader:
         self.templates = {}
         self.manifest = None
         self.names = set()
+        self._resource_version = None
 
     def _load(self):
-        if self.engine is None:
+        def snapshot():
+            manifest_data = (self.resources / "SOURCES.json").read_bytes()
+            names_data = (self.resources / "names.json").read_bytes()
+            manifest = json.loads(manifest_data.decode("utf-8"))
+            names = json.loads(names_data.decode("utf-8"))
+            versions, images = [], {}
+            for item in manifest["resources"]:
+                template_path = self.resources / item["file"]
+                try:
+                    info = template_path.stat()
+                except FileNotFoundError:
+                    versions.append((item["file"], None))
+                    continue
+                regular = stat.S_ISREG(info.st_mode)
+                data = template_path.read_bytes() if regular else None
+                versions.append((item["file"], regular, info.st_mtime_ns, info.st_size,
+                                 hashlib.sha256(data).digest() if data is not None else None))
+                if data is not None:
+                    images[item["file"]] = data
+            version = (hashlib.sha256(manifest_data).digest(), hashlib.sha256(names_data).digest(), tuple(versions))
+            return version, manifest, names, images
+
+        version, manifest, names, images = snapshot()
+        if version == self._resource_version:
+            return
+        loaded_names, templates = set(names["names"]), {}
+        for filename, data in images.items():
+            with Image.open(io.BytesIO(data)) as im:
+                templates[filename] = cv2.cvtColor(np.array(im.convert("RGB")), cv2.COLOR_RGB2GRAY)
+        engine = self.engine
+        if engine is None:
             from rapidocr_onnxruntime import RapidOCR
             # Bound CPU use; use the already installed package's local models.
-            manifest = json.loads((self.resources / "SOURCES.json").read_text("utf-8"))
-            names = json.loads((self.resources / "names.json").read_text("utf-8"))
-            templates = {}
-            for item in manifest["resources"]:
-                with Image.open(self.resources / item["file"]) as im:
-                    templates[item["file"]] = cv2.cvtColor(np.array(im.convert("RGB")), cv2.COLOR_RGB2GRAY)
             engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
-            self.manifest, self.templates, self.names, self.engine = manifest, templates, set(names["names"]), engine
+        # A calibration write during loading must not publish a mixed version.
+        if snapshot()[0] != version:
+            raise ValueError("shop_resources_changed_during_load")
+        self.manifest, self.templates, self.names, self.engine = manifest, templates, loaded_names, engine
+        self._resource_version = version
 
     @staticmethod
     def _rectangles(rgb):
         gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
         edges = cv2.Canny(gray, 50, 150)
         contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        # Actual native card outlines are lower contrast than text/modal edges.
+        card_edges = cv2.Canny(gray, 20, 60)
+        card_contours, _ = cv2.findContours(card_edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         candidates = []
-        overlays = []
-        for contour in contours:
+        for contour in card_contours:
             x, y, w, h = map(int, cv2.boundingRect(contour))
             if 345 < x < 1500 and 40 < y < 105 and 205 < w < 275 and 235 < h < 300:
                 candidates.append((x, y, w, h))
+        overlays = []
+        for contour in contours:
+            x, y, w, h = map(int, cv2.boundingRect(contour))
             if 300 < w < 1350 and 145 < h < 780 and w * h > 60000 and 90 < y < 620:
                 polygon = cv2.approxPolyDP(contour, 0.015 * cv2.arcLength(contour, True), True)
                 if len(polygon) == 4:
@@ -97,8 +194,11 @@ class ShopReader:
         for x, y, w, h in rects:
             sides = []
             for column in (x, x + w - 1):
-                band = edges[y + 12:y + h - 20, max(0, column - 6):column + 7]
+                band = card_edges[y + 12:y + h - 20, max(0, column - 6):column + 7]
                 sides.append(float(np.mean(np.max(band, axis=1) > 0)) if band.size else 0.)
+            for row in (y, y + h - 1):
+                band = card_edges[max(0, row - 6):row + 7, x + 12:x + w - 12]
+                sides.append(float(np.mean(np.max(band, axis=0) > 0)) if band.size else 0.)
             frame_scores.append(round(min(sides), 3))
         return rects, dict(detected_rectangles=len(found), frame_scores=frame_scores, overlays=overlays)
 
@@ -140,9 +240,15 @@ class ShopReader:
         card = cv2.cvtColor(rgb[y + 5:y + h - 5, x + 5:x + w - 5], cv2.COLOR_RGB2GRAY)
         choices = []
         for suffix in ("", "_flash"):
-            top, top_point = self._match(card[30:125], self.templates[f"empty_top{suffix}.png"])
-            bottom, bottom_point = self._match(card[150:245], self.templates[f"empty_bottom{suffix}.png"])
+            top_template = self.templates.get(f"empty_top{suffix}.png")
+            bottom_template = self.templates.get(f"empty_bottom{suffix}.png")
+            if top_template is None or bottom_template is None:
+                continue
+            top, top_point = self._match(card[30:125], top_template)
+            bottom, bottom_point = self._match(card[150:245], bottom_template)
             choices.append((min(top, bottom), top, bottom, top_point, bottom_point, suffix))
+        if not choices:
+            return None, dict(status="unknown", verified=False, reason="no_complete_empty_template_pair")
         _, top, bottom, top_point, bottom_point, variant = max(choices)
         dark = float(np.mean(card < 80))
         aligned = top_point is not None and bottom_point is not None and abs(top_point[0] - bottom_point[0]) <= 5
@@ -154,29 +260,38 @@ class ShopReader:
         x, y, w, h = rect
         region = (x + w - 40, y + h - 50, x + w - 2, y + h - 2)
         crop = cv2.cvtColor(np.array(image.crop(region)), cv2.COLOR_RGB2GRAY)
-        candidates = {}
+        templates = {}
         for filename, template in self.templates.items():
             if filename.startswith("cost_"):
                 label = int(filename.split("_")[1].split(".")[0])
-                resized = cv2.resize(template, (30, 40))
-                # Both appearance and edge shape must agree, avoiding color-only matches.
-                appearance = cv2.matchTemplate(crop, resized, cv2.TM_CCOEFF_NORMED)
-                edge = cv2.matchTemplate(cv2.Canny(crop, 50, 150), cv2.Canny(resized, 50, 150),
-                                        cv2.TM_CCOEFF_NORMED)
-                score = float(np.max(.5 * appearance + .5 * edge))
-                candidates[label] = max(candidates.get(label, -1), score)
-        ranked = sorted(candidates.items(), key=lambda item: item[1], reverse=True)
-        label, score = ranked[0]
-        margin = score - ranked[1][1]
-        evidence = dict(bounds=list(region), method="observed_digit_template", template_scores={
-                        str(k): round(v, 4) for k, v in candidates.items()}, margin=round(margin, 4),
-                        confidence=round(score, 4), raw_ocr=[])
-        if score >= .68 and margin >= .12:
-            return label, evidence
+                if 1 <= label <= 5:
+                    templates.setdefault(label, []).append(template)
+        evidence = dict(bounds=list(region), method="digit_ocr", template_labels=sorted(templates),
+                        template_classification_used=False, template_scores={}, margin=None,
+                        confidence=None, raw_ocr=[])
+        if set(templates) == {1, 2, 3, 4, 5}:
+            candidates = {}
+            for label, variants in templates.items():
+                for template in variants:
+                    resized = cv2.resize(template, (30, 40))
+                    # Both appearance and edge shape must agree, avoiding color-only matches.
+                    appearance = cv2.matchTemplate(crop, resized, cv2.TM_CCOEFF_NORMED)
+                    edge = cv2.matchTemplate(cv2.Canny(crop, 50, 150), cv2.Canny(resized, 50, 150),
+                                            cv2.TM_CCOEFF_NORMED)
+                    score = float(np.max(.5 * appearance + .5 * edge))
+                    candidates[label] = max(candidates.get(label, -1), score)
+            ranked = sorted(candidates.items(), key=lambda item: item[1], reverse=True)
+            label, score = ranked[0]
+            margin = score - ranked[1][1]
+            evidence.update(method="observed_digit_template", template_classification_used=True,
+                            template_scores={str(k): round(v, 4) for k, v in candidates.items()},
+                            margin=round(margin, 4), confidence=round(score, 4))
+            if score >= .68 and margin >= .12:
+                return label, evidence
         # No roster/default fee. Unsupported/uncertain digits remain unknown.
-        padded = Image.new("RGB", (100, 65), "white")
-        padded.paste(image.crop((x + w - 36, y + h - 46, x + w - 6, y + h - 6)).resize((45, 60)), (27, 2))
-        result, _ = self.engine(np.array(padded), use_det=False, use_cls=False)
+        ocr_region = (x + w - 36, y + h - 46, x + w - 6, y + h - 6)
+        evidence.update(ocr_bounds=list(ocr_region), input_transform="original_rgb_crop_no_resize_or_padding")
+        result, _ = self.engine(np.array(image.crop(ocr_region)), use_det=False, use_cls=False)
         for row in result or []:
             text, confidence = row[-2:]
             evidence["raw_ocr"].append(dict(raw=str(text), confidence=round(float(confidence), 4)))
@@ -187,9 +302,13 @@ class ShopReader:
 
     def _recommended(self, rgb, rect):
         x, y, w, h = rect
+        template = self.templates.get("recommend_badge.png")
+        if template is None:
+            return None, dict(method="yellow_gift_badge_template", bounds=[x + 3, y + 3, 79, 77],
+                              verified=False, reason="recommend_badge_template_missing")
         patch = rgb[y + 3:y + 80, x + 3:x + 82]
         gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
-        score, point = self._match(gray, self.templates["recommend_badge.png"])
+        score, point = self._match(gray, template)
         whiteout = float(np.mean(np.all(patch > 240, axis=2)))
         blackout = float(np.mean(np.max(patch, axis=2) < 60))
         hsv = cv2.cvtColor(patch, cv2.COLOR_RGB2HSV)
@@ -258,7 +377,7 @@ class ShopReader:
                     fragments = [item for item in rows[i] if item["confidence"] >= .70]
                     raw = "".join(item["raw"] for item in fragments).strip()
                     confidence = min((item["confidence"] for item in fragments), default=0.)
-                    name = raw if re.fullmatch(r"[\u3400-\u9fffA-Za-z·.0-9]{2,16}", raw) else None
+                    name = raw if re.fullmatch(r"[\u3400-\u9fffA-Za-z·.0-9&]{1,16}", raw) else None
                     name_evidence = dict(raw=raw, confidence=confidence, fragments=rows[i],
                                          bounds=list(name_boxes[i]), method="ocr")
                     alias = self.manifest.get("ocr_name_aliases", {}).get(raw)
@@ -284,6 +403,8 @@ class ShopReader:
                     slot["status"] = "recognized" if not slot["reasons"] else "unknown"
                 slots.append(slot)
             output["slots"] = slots
+            for slot in slots:
+                slot["purchase_eligible"] = purchase_slot(output, slot["slot"], output["input"]["sha256"]) is not None
             complete = all(slot["status"] in ("recognized", "empty") for slot in slots)
             output.update(ok=complete, status="ok" if complete else "partial")
             return output

@@ -4,6 +4,7 @@ Only directory provenance and bounded request transport live here. All game
 input, pause, foreground and process guards remain in the pinned broker.
 """
 import argparse
+import errno
 import hashlib
 import importlib.util
 import json
@@ -16,7 +17,7 @@ from pathlib import Path
 import currency_wars_artifacts as artifacts
 
 SOURCE = Path(__file__).with_name('currency_wars_control.py')
-PINNED = '930198830AA224B9E6AA38058E2783F430CC1B8D081DF8F6120C1B5AF816EB9C'
+PINNED = '2B93583C57EE7593CA17CC951F078FA9CD4238285CA84AA83325646F45D86B54'
 
 
 def read_json(path, limit=2_000_000):
@@ -48,7 +49,9 @@ def backend():
 def authenticate(run, chat, token, control):
     """Emergency authentication never parses binding or display state."""
     run = Path(run).absolute()
-    marker = artifacts.read_marker(run)
+    # RunAs can inherit Explorer's old TEMP value. Validate the declared run
+    # root instead of substituting the elevated process's temp directory.
+    marker = artifacts.read_marker(run, root=run.parent)
     owner = read_json(run / 'owner.json')
     if (owner.get('owner') != 'currency-wars-control' or owner.get('chat_id') != chat
             or not secrets.compare_digest(str(owner.get('run_token', '')), token)
@@ -159,7 +162,11 @@ def install_expected_resume(control):
     control.execute_request = execute
 
 
-def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET):
+class SubmissionDeadlineExpired(TimeoutError):
+    """A new request was refused before publication, not a missing reply."""
+
+
+def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, submit_deadline=None):
     if not isinstance(rid, str) or not 1 <= len(rid) <= 100:
         raise ValueError('bounded request ID required')
     state = control.status()
@@ -176,8 +183,11 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET):
             {'type': p[0], 'args': p[1:]} for p in (t.split(':') for t in tokens)])
     with control.submission_lock():
         ledger = Path(control.ROOT, 'request-ledger')
-        ledger.mkdir(exist_ok=True)
         receipt = ledger / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+        if (submit_deadline is not None and time.monotonic() >= submit_deadline
+                and not receipt.exists()):
+            raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
+        ledger.mkdir(exist_ok=True)
         if receipt.exists():
             previous = read_json(receipt)
             if previous.get('id') != rid or previous.get('request') != value:
@@ -187,7 +197,14 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET):
             # A previous publication might already have executed. Waiting for
             # that exact ID is allowed; publication is never repeated.
         else:
+            if submit_deadline is not None and time.monotonic() >= submit_deadline:
+                raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
             control.write_json(receipt, {'id': rid, 'request': value, 'result': None})
+            if submit_deadline is not None and time.monotonic() >= submit_deadline:
+                # Only this new, still-unpublished receipt exists. Do not leave
+                # an incomplete ledger entry that a later call could wait on.
+                receipt.unlink()
+                raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
             control.publish_request(value)
         # The caller knows the ID before publishing. An unreadable reply never
         # triggers a resend, and no different result can be accepted.
@@ -205,7 +222,10 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET):
             except (FileNotFoundError, json.JSONDecodeError):
                 pass
             except OSError as exc:
-                if getattr(exc, 'winerror', None) not in (5, 32):
+                if not (getattr(exc, 'winerror', None) in (5, 32)
+                        or (getattr(exc, 'winerror', None) is None
+                            and isinstance(exc, PermissionError)
+                            and exc.errno in (errno.EACCES, errno.EPERM))):
                     raise
                 if time.monotonic() >= deadline:
                     break
@@ -248,7 +268,13 @@ def main():
         run, unused_owner, unused_binding = load(args.run_dir, args.chat_id, args.run_token, c)
     if args.command == 'serve':
         install_expected_resume(c)
-        c.serve()
+        try:
+            c.serve()
+        except Exception as exc:
+            if c.BROKER_IDENTITY is None:
+                c.write_json(run / 'broker-start-error.json',
+                             {'error': str(exc), 'time': c.utc_now(), 'game_inputs': 0})
+            raise
         return
     if args.command == 'status':
         result = c.status()

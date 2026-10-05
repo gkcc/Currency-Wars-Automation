@@ -255,7 +255,7 @@ def observe():
     im = ImageGrab.grab(bbox=rect, all_screens=True)
     im.save(Path(ROOT, 'game-current.png'))
     im.resize((1920, 1080)).save(Path(ROOT, 'game-preview.png'))
-    return {'hwnd': int(hwnd), 'pid': pid, 'rect': rect, 'foreground': int(u.GetForegroundWindow()), 'snapshot': str(Path(ROOT, 'game-preview.png'))}
+    return {'hwnd': int(hwnd), 'pid': pid, 'rect': rect, 'foreground': int(u.GetForegroundWindow() or 0), 'snapshot': str(Path(ROOT, 'game-preview.png'))}
 
 def point(x, y, rect):
     if not all(math.isfinite(v) for v in (x, y)) or not (0 <= x < 1920 and 0 <= y < 1080):
@@ -671,7 +671,7 @@ def status():
         assert_owner(ack.get('chat_id'), ack.get('run_token'))
     alive = probe['state'] == 'running'
     acknowledged = bool(pause and ack and alive and ack.get('pause_id') == pause['pause_id'] and ack.get('broker_pid') == identity['pid'] and ack.get('broker_creation_time') == identity['creation_id'])
-    foreground = int(u.GetForegroundWindow())
+    foreground = int(u.GetForegroundWindow() or 0)
     try:
         hwnd, pid, rect = win()
         verified_game = {'pid': pid, 'hwnd': int(hwnd), 'creation_id': BINDING['creation_id'], 'rect': rect}
