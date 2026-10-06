@@ -206,12 +206,14 @@ def inventory_mutation(action):
             or kind == 'click_text' and any(word in text for word in ('出售', '合成', '装备', '拆卸', '赋予', '复制')))
 
 
-def action_effect(action):
+def action_effect(action, page=None):
     """Effect classes for invalidation, never an exemption from target guards."""
     text = action.get('text', '')
     if inventory_mutation(action):
         return 'inventory'
-    if (action.get('type') == 'buy_xp' or action.get('type') == 'key' and action.get('args') in ([68], [69])
+    location = page or action.get('expected_page')
+    if (action.get('type') == 'buy_xp' or action.get('type') == 'key' and
+            (action.get('args') == [68] or action.get('args') == [70] and location in ('preparation', 'shop'))
             or action.get('type') == 'click_text' and any(word in text for word in ('刷新', '购买经验'))):
         return 'economy'
     return 'navigation'

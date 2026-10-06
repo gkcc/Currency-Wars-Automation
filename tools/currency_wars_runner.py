@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import copy
 import ctypes
 import hashlib
 import json
@@ -25,6 +26,7 @@ from currency_wars_perception import Perception, clean, find_text, hash_distance
 from currency_wars_shop_reader import purchase_slot
 from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
+import currency_wars_economy as economy
 from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
 from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target,
@@ -177,7 +179,7 @@ def battle_input(observed, action=None, tokens=()):
 
     for kind, values in inputs:
         if kind == 'key':
-            if values in ([27], [68], [69], [70]):
+            if values in ([27], [68], [70]):
                 continue  # Ordinary exit/shop/experience navigation keeps its guards.
             if boxes:
                 return True
@@ -298,33 +300,15 @@ def preparation_decision(observed, facts):
     phase_evidence = coaching.guide_phase(guide, observed, facts.get('guide_proof'))
     phase = phase_evidence['phase']
     economic_actions = []
-    xp = semantic.get('xp', {})
-    full_population = bool(count and 1 <= int(count[1]) == int(count[2]) <= 12)
-    stage = canonical_stage(observed.get('fields', {}).get('stage'))
-    due_level = any(canonical_stage(value.get('stage')) and stage and stage >= value['stage']
-                    and type(value.get('level')) is int and type(observed.get('fields', {}).get('level')) is int
-                    and observed['fields']['level'] < value['level'] for value in rules.get('level_deadlines', []))
-    if (not candidates and not missing and full_population and (due_level or team.get('power_weak') is True)
-            and xp.get('snapshot_id') == observed.get('snapshot_id') and type(xp.get('buy_cost')) is int
-            and 0 < xp['buy_cost'] <= (coins if type(coins) is int else -1)
-            and type(xp.get('buy_gain')) is int and xp['buy_gain'] > 0):
-        economic_actions.append({'type': 'buy_xp', 'count': 1, 'expected_page': observed['page'],
-                                 'reason': '人口已满且有实读战力缺口/攻略等级期限，按实际经验费用单次升人口后回读'})
-    reroll = semantic.get('reroll', {})
-    refresh = find_text(observed.get('rows', []), '刷新', exact=True)
-    if (not candidates and not economic_actions and not missing and phase is not None and phase not in rules.get('no_reroll_phases', [])
-            and refresh and refresh['confidence'] >= .90 and reroll.get('power_improvement_needed') is True
-            and reroll.get('snapshot_id') == observed.get('snapshot_id') and type(reroll.get('cost')) is int
-            and 0 < reroll['cost'] <= (coins if type(coins) is int else -1)):
-        economic_actions.append({'type': 'click_text', 'text': '刷新', 'exact': True, 'bounds': refresh['box'],
-                                 'expected_page': observed['page'], 'reason': '没有现成可买提升且实读战力不足，按实价有限刷新一次'})
+    # Ranking describes useful gaps; only Worker.economic_policy may turn them
+    # into spendable actions after the current budget and dependencies exist.
     return {'phase': 'equipment_and_lineup_check' if missing else 'improve_current_power',
             'needs_user_guidance': missing, 'inspection_actions': actions,
             'purchase_candidates': candidates, 'economic_actions': economic_actions,
             'recommended_actions': actions[:1] or [value['action'] for value in candidates[:1]] or economic_actions[:1],
             'operating_rules': rules, 'strategy_phase': phase_evidence,
             'reroll_allowed': phase_evidence['reroll_allowed'] and phase not in rules.get('no_reroll_phases', []),
-            'economy_policy': '对子/上场/小羁绊/早期经济成长优先于长线囤钱；未知经验费用或刷新收益时不盲花',
+            'economy_policy': '现成缺口购买→免费刷新并处理缺口→有停止条件的付费搜牌→人口经验；共享本节点实花预算，标准常规保50、关键缺口可明确例外',
             'unknown_fields': ['未实读的星级、装备兼容性、羁绊贡献、经验费用与刷新收益不推造']}
 
 
@@ -1111,6 +1095,11 @@ def validate_plan(reply, request, epoch):
             raise ValueError('仅真实整局结算请求可确认match结果')
         if action['type'] == 'buy_xp' and (type(action.get('count')) is not int or not 1 <= action['count'] <= 5):
             raise ValueError('单计划经验次数须1–5')
+        page = request.get('observation', {}).get('page')
+        if page in economy.PREPARATION_PAGES and action.get('type') == 'key' and action.get('args') == [69]:
+            raise ValueError('备战/商店经验键已实机核为F70，E69不再作为经验或导航输入')
+        if economy.economic_action(action, page) and len(actions) != 1:
+            raise ValueError('经济动作须一笔一回验；有限连续执行由同一预算逐新帧规划')
     if any(coaching.inventory_mutation(action) for action in actions) and len(actions) != 1:
         raise ValueError('库存改变须独立单动作；重新定位后再操作下一件，禁止沿用旧坐标')
     if (len(actions) != 1 and any(action['type'] == 'click_point'
@@ -2276,6 +2265,7 @@ class Worker:
                         'environment': None, 'team': None, 'bonds': None, 'gear': None,
                         'tasks': None, 'hp': None, 'coins': None, 'xp': None, 'preparation_review': None, 'guide_reference': None,
                         'reward_capacity': None,
+                        'economy_plan': None,
                         'unknown_fields': ['guide', 'guide_tracking', 'investments', 'environment',
                                            'team', 'bonds', 'gear', 'tasks', 'hp', 'coins', 'xp']}
         self.last_observation = None
@@ -2544,6 +2534,13 @@ class Worker:
             self.publish(control_mode='manual', phase='控制器已连接，等待明确继续', reason='新手动接管优先')
 
     def command(self, tokens, reason, expected_page=None, postcondition=None, action=None):
+        page = (self.last_observation or {}).get('page')
+        if page in economy.PREPARATION_PAGES:
+            keys = {float(token.split(':')[1]) for token in tokens if token.startswith('key:')}
+            if 69 in keys:
+                raise ValueError('备战/商店不发布旧经验E69')
+            if keys & {68, 70} and not getattr(self, 'economy_inflight', None):
+                raise ValueError('D刷新/F经验须由已核统一预算逐笔发布')
         if time.monotonic() >= self.deadline:
             raise RuntimeError('本次worker总期限已到，未发布动作')
         if manual_state(self.run) or (self.run / 'runner-stop').exists():
@@ -2618,6 +2615,10 @@ class Worker:
                         raise BattleConfirmationRequired('needs_user_confirmation：发布前无本请求有效战斗批准，未提交')
                 if time.monotonic() >= submit_deadline:
                     raise entry.SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
+                if transaction is not None:
+                    transaction['publication_attempted'] = True
+                    transaction['broker_actions'] = value['actions']
+                    self.save_economy_ledger(transaction['before']['stage'])
 
         rid = uuid.uuid4().hex
         if action and action.get('purpose') == 'reward_capacity':
@@ -2627,6 +2628,10 @@ class Worker:
             pending.update(input_request_id=rid, tokens=tokens)
             self.c.write_json(self.run / 'reward-capacity.json', pending)
             self.c.write_json(self.records / (rid + '-reward-capacity.json'), pending)
+        transaction = getattr(self, 'economy_inflight', None)
+        if transaction is not None:
+            transaction['request_id'] = rid
+            self.save_economy_ledger(transaction['before']['stage'])
         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
         self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
@@ -2646,6 +2651,10 @@ class Worker:
                     pending.update(status='refused', request_published=False, error=str(exc))
                     self.c.write_json(self.run / 'reward-capacity.json', pending)
                     self.c.write_json(self.records / (rid + '-reward-capacity.json'), pending)
+            if transaction is not None:
+                transaction['publication_attempted'] = guarded.publication_attempted
+                transaction['error'] = str(exc)
+                self.save_economy_ledger(transaction['before']['stage'])
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
@@ -2655,6 +2664,10 @@ class Worker:
             raise
         # Persist the input receipt even if its subsequent observation failed.
         # A new read-only observation must never resubmit these input tokens.
+        if transaction is not None:
+            transaction['publication_attempted'] = guarded.publication_attempted
+            transaction['receipt'] = redact(result)
+            self.save_economy_ledger(transaction['before']['stage'])
         self.c.write_json(self.records / (rid + '-result.json'), redact(result))
         after = None
         try:
@@ -2735,6 +2748,12 @@ class Worker:
         for key in keys:
             reviews.pop(key, None)
         if keys:
+            self.economy_read_cache = None
+            if effect == 'inventory':
+                self.economy_binding = None
+                self.context['economy_plan'] = None
+                for ledger in getattr(self, 'economy_ledgers', {}).values():
+                    ledger['shop_complete'] = False
             for key in ('team', 'gear', 'bonds', 'xp'):
                 self.strategy_reads.pop(key, None)
                 self.context[key] = None
@@ -2814,6 +2833,16 @@ class Worker:
                     or any(current_fields.get(key) != panel_source.get('fields', {}).get(key)
                            for key in ('coins', 'level', 'xp'))):
                 raise ManualReviewDeferred('当前金币/等级/经验缺失或已变化；须按新资源复核经济')
+        if phase == 'economy':
+            economic = self.economic_policy(self.last_observation)
+            if (not economic['available'] or economic.get('pending') or economic.get('actions')
+                    or not economic.get('experience_resolved')
+                    or set(economic['observation']['unknown']) & economy.required_fields('review', economic['observation']['values'])
+                    or not economic['dependencies']['experience_allowed']):
+                raise unverified('经济完成须当前新epoch/新帧缺口、免费次数、付费停止与经验剩余计划均解决，原交易效果待验时不能复制完成标记')
+            value = {**value, 'economic_snapshot_id': economic['observation']['snapshot_id'],
+                     'economic_values': economic['observation']['values'], 'actual_spent': economic['spent'],
+                     'budget_revision': self.economy_binding['plan']['revision']}
         if phase == 'lineup_equipment':
             team = value.get('team')
             investments = value.get('investments')
@@ -3336,6 +3365,398 @@ class Worker:
                   'sale_outcome': pending['sale_outcome'], 'resolution': pending['status'],
                   'snapshot_id': request['snapshot_id'], 'next_phase': 'rewards', 'input_resent': False})
 
+    def economy_ledger(self, stage):
+        if not canonical_stage(stage):
+            raise ValueError('经济预算缺少当前真实节点')
+        if not hasattr(self, 'economy_ledgers'):
+            self.economy_ledgers = {}
+        key = (self.active_match_id, stage)
+        if key not in self.economy_ledgers:
+            stored = optional(self.economy_ledger_path(stage))
+            if stored is not None and (stored.get('run_id') != self.owner['run_id']
+                    or stored.get('match_id') != self.active_match_id or stored.get('stage') != stage
+                    or stored.get('schema') != economy.SCHEMA or not isinstance(stored.get('ledger'), dict)):
+                raise ValueError('已有经济台账身份不符，不能清零覆盖')
+            self.economy_ledgers[key] = stored['ledger'] if stored else economy.new_ledger()
+            # Shop/ROI readings never survive a process restart as fresh facts.
+            self.economy_ledgers[key]['shop_complete'] = False
+        return self.economy_ledgers[key]
+
+    def economy_ledger_path(self, stage):
+        identity = hashlib.sha256((self.active_match_id + ':' + stage).encode()).hexdigest()[:24]
+        return self.records / ('economy-' + identity + '.json')
+
+    def save_economy_ledger(self, stage, ledger=None):
+        self.c.write_json(self.economy_ledger_path(stage), {'schema': economy.SCHEMA,
+            'run_id': self.owner['run_id'], 'match_id': self.active_match_id, 'stage': stage,
+            'ledger': ledger if ledger is not None else self.economy_ledger(stage)})
+
+    def economy_receipt_watermark(self):
+        paths = list((self.run / 'request-ledger').glob('*.json'))
+        if len(paths) > 4096:
+            raise ValueError('经济回执fence超过有界容量')
+        return [entry.read_json(path)['id'] for path in paths]
+
+    def verify_economy_fence(self, pending):
+        receipt = await_existing_receipt(self.run, self.c, pending['request_id'], 0)
+        if (receipt['request'].get('kind') != 'actions' or receipt['request'].get('handoff') is not False
+                or receipt['request'].get('actions') != pending['broker_actions']):
+            raise ValueError('待验经济收据与原始动作不符，不重发')
+        allowed_resume = None
+        if pending['resume_epoch'] != self.epoch():
+            verifier = globals().get('verified_resume_event')
+            if not callable(verifier):
+                raise ValueError('跨epoch经济补证须先合入B003精确恢复事件核验；旧待验请求不重发')
+            event, resume = verifier(self.run, self.owner, self.c, optional(self.run / 'runner-resume-epoch.json') or {})
+            if (event.get('old_epoch') != pending['resume_epoch'] or event.get('new_epoch') != self.epoch()
+                    or event.get('run_id') != self.owner['run_id'] or event.get('match_id') != self.active_match_id
+                    or canonical_stage(event.get('stage')) != pending['before']['stage']
+                    or canonical_stage((self.last_observation or {}).get('fields', {}).get('stage')) != pending['before']['stage']):
+                raise ValueError('经济待验交易不属于精确单跳恢复事件')
+            allowed_resume = resume['id']
+        for rid in set(self.economy_receipt_watermark()) - set(pending['prior_receipt_ids']) - {pending['request_id']}:
+            other = await_existing_receipt(self.run, self.c, rid, 0)
+            request, result = other['request'], other['result']
+            if request.get('kind') == 'resume' and rid == allowed_resume:
+                continue
+            actions = request.get('actions', [])
+            # Use B003's actual delivery classification, including unknown
+            # input; an observe label never overrides contradictory evidence.
+            delivery = manual_receipt_state(other)
+            unchanged = (not delivery['unknown_input']
+                         and delivery['state'] in ('zero_input', 'completed'))
+            attempted = result.get('input_attempted')
+            if (request.get('kind') != 'actions' or request.get('handoff') is not False or not actions
+                    or any(action.get('type') not in ('wait', 'observe') for action in actions)
+                    or attempted is not None and attempted is not False
+                    or result.get('attempted_actions') not in (None, []) or not unchanged):
+                raise ValueError('经济后帧之前出现未覆盖的其他输入，差额不能归属于原交易')
+        pending['receipt'] = redact(receipt['result'])
+
+    def archive_economy_after(self, pending, actual, *, persist=True):
+        data = self.frame_path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != actual['snapshot_id']:
+            raise ValueError('经济交易后帧身份变化；保留原请求待验，不重发')
+        target = self.records / (pending['request_id'] + '-economy-after-' + actual['snapshot_id'][:16] + '.png')
+        if target.exists():
+            if target.read_bytes() != data:
+                raise ValueError('原经济交易后帧已存在，不覆盖')
+        else:
+            with target.open('xb') as stream:
+                stream.write(data)
+        pending.update(after_png=str(target), after_snapshot_id=actual['snapshot_id'])
+        if persist:
+            self.save_economy_ledger(pending['before']['stage'])
+
+    def economy_observation(self, actual, binding=None):
+        from PIL import Image
+        binding = binding or getattr(self, 'economy_binding', None)
+        stage = canonical_stage(actual.get('fields', {}).get('stage'))
+        if (not binding or binding['scope'] != (self.active_match_id, stage, self.epoch())
+                or actual.get('page') not in economy.PREPARATION_PAGES):
+            raise ValueError('本节点/当前epoch尚无已核经济读数和统一预算')
+        cache_key = (actual['snapshot_id'], binding['snapshot_id'])
+        cached = getattr(self, 'economy_read_cache', None)
+        if cached and cached[0] == cache_key:
+            return cached[1]
+        path = self.frame_path
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != actual['snapshot_id']:
+            raise ValueError('经济回读不属于本请求不可变原帧')
+        from io import BytesIO
+        with Image.open(BytesIO(data)) as image:
+            image.load()
+            reading = economy.observe_fields(binding['fields'], image, getattr(self.perception, 'engine', None))
+        native = actual.get('semantic', {}).get('coins') or {}
+        if (native.get('bounds') == GOLD_HUD and type(native.get('value')) is int and native['value'] >= 0
+                and .15 <= native.get('currency_icon_gold_fraction', 0) <= 1.
+                and .90 <= native.get('confidence', 1.) <= 1.):
+            if 'coins' in reading['values'] and native['value'] != reading['values']['coins']:
+                reading['values'].pop('coins')
+                reading['unknown'].append('coins')
+            else:
+                reading['values']['coins'] = native['value']
+                reading['unknown'] = [key for key in reading['unknown'] if key != 'coins']
+                reading['evidence']['coins'] = {'source': 'current_native_gold_hud', 'bounds': GOLD_HUD}
+        shop, complete = [], actual.get('page') == 'shop'
+        native_shop = actual.get('shop') or {}
+        if actual.get('page') == 'shop':
+            geometry = native_shop.get('page', {}).get('geometry', {})
+            scores = geometry.get('frame_scores', [])
+            complete = (native_shop.get('schema') == 'currency-wars-shop-observation/v1'
+                        and native_shop.get('input', {}).get('sha256') == actual['snapshot_id']
+                        and native_shop.get('input', {}).get('size') == [1920, 1080]
+                        and native_shop.get('input', {}).get('format') == 'PNG'
+                        and native_shop.get('page', {}).get('reliable_open_shop') is True
+                        and len(scores) == 5 and all(type(value) in (int, float) and .60 <= value <= 1. for value in scores)
+                        and geometry.get('overlays') == [])
+            for slot_id in range(1, 6):
+                slot = purchase_slot(native_shop, slot_id, actual['snapshot_id'])
+                if slot:
+                    shop.append({key: slot[key] for key in ('slot', 'name', 'cost')} | {'status': 'recognized'})
+                    continue
+                found = [slot for slot in native_shop.get('slots', []) if slot.get('slot') == slot_id]
+                if len(found) == 1 and found[0].get('status') == 'empty':
+                    shop.append({'slot': slot_id, 'status': 'empty', 'name': None, 'cost': None})
+                else:
+                    complete = False
+            ledger = self.economy_ledger(stage)
+            if complete:
+                ledger['last_shop'], ledger['shop_epoch'] = shop, self.epoch()
+                ledger['shop_complete'] = True
+            else:
+                ledger['shop_complete'] = False
+        else:
+            ledger = self.economy_ledger(stage)
+            complete = ledger.get('shop_complete') is True and ledger.get('shop_epoch') == self.epoch()
+            shop = ledger.get('last_shop', []) if complete else []
+        result = {**reading, 'snapshot_id': actual['snapshot_id'], 'stage': stage,
+                  'shop': shop, 'shop_complete': complete, 'source': 'explicit_economic_observation'}
+        self.economy_read_cache = cache_key, result
+        return result
+
+    def accept_economy_plan(self, record):
+        from io import BytesIO
+        from PIL import Image
+        if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
+            raise ValueError('经济计划须绑定当前请求实际原帧proof')
+        source = self.verified_source(record['proof'], 180)
+        request, plan = self.state.get('decision_request') or {}, record.get('value')
+        actual = self.last_observation
+        stage = canonical_stage(actual.get('fields', {}).get('stage'))
+        if (not isinstance(plan, dict) or record['proof'].get('snapshot_id') != request.get('snapshot_id')
+                or source.get('page') not in economy.PREPARATION_PAGES or plan.get('stage') != stage
+                or canonical_stage(source.get('fields', {}).get('stage')) != stage
+                or source.get('match_id') != self.active_match_id):
+            raise ValueError('经济计划须来自本局、本节点、当前epoch和当前请求的完整备战/商店原帧')
+        mode = getattr(self, 'live_mode', None)
+        if mode and mode['match_id'] == self.active_match_id and plan.get('mode') != mode['value']:
+            raise ValueError('经济模式与本局已确认模式冲突')
+        data = Path(request['original_png']).read_bytes()
+        if hashlib.sha256(data).hexdigest() != request['snapshot_id']:
+            raise ValueError('经济原始PNG身份变化')
+        with Image.open(BytesIO(data)) as image:
+            image.load()
+            fields = economy.bind_fields(plan.get('fields'), image, gold_bounds=GOLD_HUD)
+        binding = {'scope': (self.active_match_id, stage, self.epoch()), 'snapshot_id': request['snapshot_id'],
+                   'fields': fields, 'plan': plan, 'proof': record['proof']}
+        self.economy_read_cache = None
+        observed = self.economy_observation(actual, binding)
+        ledger = self.economy_ledger(stage)
+        # A proven target slot may be bought even if unrelated slots are
+        # unknown. Refresh, experience and completion still require full shop.
+        rounds = plan.get('reserve', {}).get('remaining_interest_rounds')
+        if rounds is not None:
+            proof = plan.get('reserve', {}).get('rounds_evidence', {})
+            basis = self.verified_source(proof.get('proof', {}), 180)
+            reading = proof.get('reading')
+            row = find_text(basis.get('rows', []), reading, proof.get('bounds'), exact=True) if isinstance(reading, str) else None
+            if (proof.get('remaining_interest_rounds') != rounds or not isinstance(reading, str)
+                    or not re.search(r'(?:剩余|还有)\s*' + str(rounds) + r'\s*(?:次|个)?(?:结息|利息结算|回合)', reading)
+                    or not row or row.get('confidence', 0) < .90
+                    or proof.get('proof', {}).get('snapshot_id') != request['snapshot_id']
+                    or basis.get('preparation_stage') != stage):
+                raise ValueError('剩余结息回合须关联本局已读画面与实际读数，不从节点字符串推导')
+        proposed = copy.deepcopy(ledger)
+        pending = proposed.get('pending')
+        if pending:
+            if plan.get('resolve_request_id') != pending.get('request_id'):
+                raise ValueError('先按上次真实请求回执和后帧补读经济结果，不能重置待验交易')
+            if not pending.get('after_png'):
+                self.verify_economy_fence(pending)
+                # No economic or other mutating input has followed the original
+                # request; this new read-only frame may repair missing evidence.
+                self.archive_economy_after(pending, actual, persist=False)
+                pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
+            if not pending.get('receipt'):
+                self.verify_economy_fence(pending)
+            old_data = Path(pending['after_png']).read_bytes()
+            if hashlib.sha256(old_data).hexdigest() != pending['after_snapshot_id']:
+                raise ValueError('待验交易后帧身份变化')
+            with Image.open(BytesIO(old_data)) as image:
+                image.load()
+                after = economy.observe_fields(fields, image, getattr(self.perception, 'engine', None))
+            after.update(shop=pending.get('after_shop', []), shop_complete=pending.get('after_shop_complete', False))
+            outcome = economy.classify_effect(pending['kind'], pending['before'], after,
+                expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'))
+            if outcome['outcome'] != 'success' and actual['snapshot_id'] != pending['after_snapshot_id']:
+                self.verify_economy_fence(pending)
+                outcome = economy.classify_effect(pending['kind'], pending['before'], observed,
+                    expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'))
+                if outcome['outcome'] != 'unknown':
+                    self.archive_economy_after(pending, actual, persist=False)
+                    pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
+            if outcome['outcome'] == 'unknown':
+                raise ValueError('该笔原始后帧仍不能证明实际经济效果；不重发已发布输入')
+            self.apply_economy_result(proposed, pending, outcome, acknowledged=True, persist=False)
+        details = economy.validate_budget(plan, observed, proposed)
+        if plan['budget']['refresh']:
+            # Existing role costs help reserve enough for a found card; the
+            # actual purchase still requires its new-frame native slot price.
+            costs = [self.knowledge.get('roles', {}).get(name, {}).get('base_cost') for name in plan['paid_search']['targets']]
+            required_reserve = max(cost if type(cost) is int and 1 <= cost <= 5 else 5 for cost in costs)
+            if plan['paid_search']['purchase_reserve'] < required_reserve:
+                raise ValueError('付费搜牌留资不足以购买目标；未知费用按现有1–5费槽位上限预留5')
+        proposed['revision'], proposed['budget'] = plan['revision'], dict(plan['budget'])
+        proposed['policy'] = {key: copy.deepcopy(plan[key]) for key in economy.POLICY_FIELDS}
+        self.save_economy_ledger(stage, proposed)
+        ledger.clear()
+        ledger.update(proposed)
+        self.economy_binding = binding
+        self.context['economy_plan'] = {'value': plan, 'proof': record['proof'],
+                                      'origin': 'supervising_agent', 'scope': binding['scope']}
+        self.log({'event': 'economic_budget_verified', 'stage': stage, 'snapshot_id': observed['snapshot_id'],
+                  'revision': plan['revision'], 'budget': plan['budget'], 'actual_spent': ledger['spent'], **details})
+
+    def economic_policy(self, actual):
+        try:
+            observation = self.economy_observation(actual)
+            binding = self.economy_binding
+            plan, ledger = binding['plan'], self.economy_ledger(observation['stage'])
+            targets = {item['name']: item for item in plan['targets']}
+            gaps = [slot for slot in observation['shop'] if slot.get('name') in targets
+                    and ledger['purchased'].get(slot['name'], 0) < targets[slot['name']]['copies']]
+            strategy_observation, facts = self.preparation_inputs(actual)
+            strategy_observation['fields']['level'] = observation['values'].get('level')
+            strategy = preparation_decision(strategy_observation, facts)
+            permission = {'allowed': strategy['reroll_allowed'], 'phase': strategy['strategy_phase']['phase']}
+            status = economy.dependencies(plan, observation, ledger, gaps, shop_complete=observation['shop_complete'],
+                                          guide_permission=permission)
+            actions = []
+            if not ledger['pending'] and status['phase'] == 'purchase' and actual['page'] == 'shop':
+                for slot in gaps:
+                    target = targets[slot['name']]
+                    economy.require_spending('purchase', slot['cost'], plan, observation, ledger, critical=target['critical'])
+                    actions.append({'type': 'buy_shop', 'slot': slot['slot'], 'name': slot['name'], 'cost': slot['cost'],
+                        'expected_page': 'shop', 'reason': target['reason']})
+                    break
+            elif not ledger['pending'] and status['phase'] in ('free_refresh', 'paid_search') and actual['page'] == 'shop':
+                cost = 0 if observation['values'].get('free_refreshes', 0) > 0 else observation['values'].get('refresh_cost')
+                if status['phase'] == 'free_refresh' and observation['values'].get('free_refreshes', 0) > 0 or status['paid_search']['allowed']:
+                    economy.require_spending('refresh', cost, plan, observation, ledger)
+                    actions.append({'type': 'key', 'args': [economy.REFRESH_KEY], 'guard_texts': ['刷新'],
+                                    'expected_page': 'shop', 'reason': status['reason']})
+            elif not ledger['pending'] and status['experience_allowed']:
+                values = observation['values']
+                if values.get('level', 10) < plan['experience']['target_level'] and plan['budget']['experience'] > ledger['spent']['experience']:
+                    cost = values.get('xp_cost')
+                    if cost is not None and ledger['spent']['experience'] + cost <= plan['budget']['experience']:
+                        economy.require_spending('experience', cost, plan, observation, ledger,
+                                                 critical=plan['experience'].get('critical') is True)
+                        actions.append({'type': 'buy_xp', 'count': 1, 'expected_page': actual['page'],
+                                        'reason': plan['experience']['reason']})
+            values = observation['values']
+            xp_remaining = plan['budget']['experience'] - ledger['spent']['experience']
+            experience_resolved = (values.get('level', 0) >= plan['experience']['target_level'] or xp_remaining == 0
+                or values.get('xp_cost') is not None and xp_remaining < values['xp_cost'])
+            return {'available': True, 'dependencies': status, 'observation': observation,
+                    'actions': actions, 'pending': ledger['pending'], 'budget': plan['budget'], 'spent': dict(ledger['spent']),
+                    'experience_resolved': experience_resolved, 'guide_permission': permission}
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            return {'available': False, 'actions': [], 'reason': str(exc)}
+
+    def require_economic_action(self, action, actual):
+        kind = economy.economic_action(action, actual.get('page'))
+        if not kind:
+            return None
+        policy = self.economic_policy(actual)
+        if not policy['available']:
+            raise ValueError('经济动作缺少当前可核预算：' + policy['reason'])
+        observation, plan = policy['observation'], self.economy_binding['plan']
+        ledger = self.economy_ledger(observation['stage'])
+        missing = set(observation['unknown']) & economy.required_fields(kind, observation['values'])
+        if missing:
+            raise ValueError('本动作必要经济数字区当前未可靠回读：' + '、'.join(sorted(missing)))
+        candidates = policy['actions']
+        candidate = next((item for item in candidates if economy.economic_action(item, actual['page']) == kind
+            and (kind != 'purchase' or all(item.get(key) == action.get(key) for key in ('slot', 'name', 'cost')))), None)
+        if candidate is None:
+            raise ValueError('经济依赖或预算拒绝本动作：' + policy['dependencies']['reason'])
+        cost = (action['cost'] if kind == 'purchase' else observation['values']['xp_cost'] if kind == 'experience'
+                else 0 if observation['values']['free_refreshes'] > 0 else observation['values']['refresh_cost'])
+        return {'kind': kind, 'cost': cost, 'observation': observation, 'plan': plan, 'ledger': ledger}
+
+    def apply_economy_result(self, ledger, pending, result, *, acknowledged=False, persist=True):
+        outcome, spent = result['outcome'], result.get('observed_spent')
+        if outcome == 'success' or acknowledged and outcome in ('zero', 'partial'):
+            if type(spent) is not int or not 0 <= spent <= pending['before']['values']['coins']:
+                raise ValueError('经济效果的实花无法归属原交易，保持待验')
+            ledger['spent'][pending['kind']] += spent
+            floor = pending['reserve_coins']
+            ledger['critical_spent'] += max(0, min(spent, floor - (pending['before']['values']['coins'] - spent)))
+            if pending['kind'] == 'refresh' and spent:
+                ledger['paid_refreshes'] += 1
+            if outcome == 'success' and pending['kind'] == 'purchase':
+                ledger['purchased'][pending['name']] = ledger['purchased'].get(pending['name'], 0) + 1
+            ledger['pending'] = None
+        if persist:
+            self.save_economy_ledger(pending['before']['stage'], ledger)
+        self.log({'event': 'economic_effect_verified', 'request_id': pending.get('request_id'),
+                  'stage': pending['before']['stage'], 'kind': pending['kind'], **result,
+                  'actual_spent': dict(ledger['spent']), 'input_resent': False})
+
+    def execute_economic_action(self, action, actual, request):
+        info = self.require_economic_action(action, actual)
+        kind, ledger = info['kind'], info['ledger']
+        if kind == 'purchase':
+            slot = purchase_slot(actual.get('shop') or {}, action.get('slot'), actual['snapshot_id'])
+            old = purchase_slot(request['observation'].get('shop') or {}, action.get('slot'), request['snapshot_id'])
+            if (not slot or not old or request.get('match_id') != self.active_match_id
+                    or any(slot[key] != old[key] for key in ('slot', 'name', 'cost', 'bounds', 'position'))):
+                raise ValueError('购牌仍须同请求原/新帧单槽实名实价一致')
+            self.verify_purchase_frame(request, actual)
+            tokens = ['click:' + ':'.join(map(str, slot['position'])), 'wait:0.5']
+        else:
+            tokens = ['key:' + str(economy.XP_KEY if kind == 'experience' else economy.REFRESH_KEY), 'wait:0.7']
+        pending = {'kind': kind, 'cost': info['cost'], 'before': info['observation'], 'name': action.get('name'),
+                   'slot': action.get('slot'), 'request_id': None, 'publication_attempted': False,
+                   'reserve_coins': info['plan']['reserve']['coins'], 'resume_epoch': self.epoch(),
+                   'prior_receipt_ids': self.economy_receipt_watermark(),
+                   'broker_actions': self.c.validate_actions([
+                       {'type': parts[0], 'args': parts[1:]} for parts in (token.split(':') for token in tokens)])}
+        ledger['pending'], self.economy_inflight = pending, pending
+        try:
+            after = self.command(tokens, action['reason'], actual['page'], '按同请求后帧核实际资源差额', action=action)
+        except Exception:
+            if pending['publication_attempted'] is False:
+                ledger['pending'] = None
+            self.save_economy_ledger(info['observation']['stage'], ledger)
+            raise
+        finally:
+            self.economy_inflight = None
+        self.economy_read_cache = None
+        self.archive_economy_after(pending, after)
+        observed = self.economy_observation(after)
+        pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
+        outcome = economy.classify_effect(kind, info['observation'], observed, expected_cost=info['cost'],
+            target_level=info['plan']['experience']['target_level'], slot=action.get('slot'))
+        self.apply_economy_result(ledger, pending, outcome)
+        # Only explicitly planned useful purchases occur here; the completed
+        # initial unwanted-card cleanup remains valid. Dynamic team proof does not.
+        self.invalidate_preparation('economy')
+        self.record_node_progress(actual, after)
+        if outcome['outcome'] != 'success':
+            self.ask(after, 'economy_result', '本笔经济效果为' + outcome['outcome'] + '，原请求' + str(pending['request_id'])
+                     + '；补读原后帧或给明确剩余计划，不重发已发布输入。', choices={'pending': pending, 'outcome': outcome})
+            return False
+        return True
+
+    def advance_economy(self, observed):
+        if not self.preparation_checklist(observed)['economy_allowed']:
+            return False
+        for unused in range(8):
+            policy = self.economic_policy(observed)
+            if not policy['available'] or not policy['actions']:
+                return False
+            action = policy['actions'][0]
+            self.guard_preparation_action(action, observed)
+            request = {'match_id': self.active_match_id, 'snapshot_id': observed['snapshot_id'],
+                       'observation': observed, 'original_png': str(self.frame_path)}
+            if not self.execute_economic_action(action, observed, request):
+                return True
+            observed = self.last_observation
+        return True  # A later bounded tick may continue only from its new frame.
+
     def guard_preparation_action(self, action, actual, *, loot_pickup=False, verified_navigation=False):
         if self.pending_reward_capacity():
             raise ValueError('腾位已尝试；先按原收据回读空位/钱/溢出，不再发送输入')
@@ -3347,6 +3768,8 @@ class Worker:
             return
         status = self.preparation_checklist(actual)
         reviews = self.preparation_reviews
+        if action.get('type') == 'key' and action.get('args') == [69]:
+            raise ValueError('当前备战经验键为F70，拒绝旧E69绕过经济守卫')
         if verified_navigation:
             if status['phase'] != 'startup_guide' or reviews.get('rewards', {}).get('completed') is not True:
                 raise ValueError('须先领奖领空，再进入第二创业指南；固定图标不跳过准备顺序')
@@ -3358,10 +3781,11 @@ class Worker:
             if not population or not 1 <= int(population[1]) == int(population[2]) <= 10:
                 raise ValueError('当前出战鲜帧人口未满/未知；旧验收不能批准变化后的阵容')
             return
-        effect = coaching.action_effect(action)
+        effect = coaching.action_effect(action, actual['page'])
         if effect == 'economy' or action.get('type') == 'buy_shop':
             if not status['economy_allowed']:
                 raise ValueError('奖励/创业指南/清库存未核，不执行购买、刷新或升级')
+            self.require_economic_action(action, actual)
         elif effect == 'inventory':
             if not all(reviews.get(key, {}).get('completed') is True for key in ('rewards', 'startup_guide')):
                 raise ValueError('奖励未领空或第二入口创业指南未核，禁止出售/装备等库存改变')
@@ -3375,7 +3799,7 @@ class Worker:
                     target = find_text(actual.get('rows', []), label, exact=label != '购买经验')
                     if target and target['box'][0] <= point[0] <= target['box'][2] and target['box'][1] <= point[1] <= target['box'][3]:
                         raise ValueError('经济按钮必须用语义动作和实价守卫，不能以坐标绕过：' + label)
-        if action.get('type') == 'key' and action.get('args') not in ([27], [68], [69], [46]):
+        if action.get('type') == 'key' and action.get('args') not in ([27], [68], [70], [46]):
             if not status['economy_allowed']:
                 raise ValueError('准备清单未完成，不允许未知快捷键改变资源')
 
@@ -3429,7 +3853,7 @@ class Worker:
             self.log({'event': 'node_observable_progress', 'page_before': before.get('page'),
                       'page_after': after.get('page'), 'snapshot_id': after.get('snapshot_id'), 'verified_changes': changed})
 
-    def preparation_policy(self, observed):
+    def preparation_inputs(self, observed):
         facts = {}
         for key, record in self.strategy_reads.items():
             age = (datetime.now(timezone.utc) - datetime.fromisoformat(record['observed_at'])).total_seconds()
@@ -3454,6 +3878,10 @@ class Worker:
         phase_observation = {**observed, 'fields': phase_fields}
         if self.live_mode and self.live_mode['match_id'] == self.active_match_id:
             phase_observation['fields']['mode'] = self.live_mode['value']
+        return phase_observation, facts
+
+    def preparation_policy(self, observed):
+        phase_observation, facts = self.preparation_inputs(observed)
         decision = preparation_decision(phase_observation, facts)
         task_context, observation_scope = self.reviewed_task_context(observed)
         decision['progression_plan'] = progression_plan(self.knowledge, observed,
@@ -3461,6 +3889,11 @@ class Worker:
             reviewed_task_context=task_context, observation_scope=observation_scope)
         checklist = self.preparation_checklist(observed)
         decision['preparation_checklist'] = checklist
+        economic = self.economic_policy(observed)
+        decision['economic_execution'] = economic
+        decision['economic_actions'] = economic['actions'] if checklist['economy_allowed'] else []
+        if checklist['phase'] == 'economy' and not economic['available']:
+            decision['needs_user_guidance'].insert(0, economic['reason'] + '；提交当前请求context_update.economy_plan')
         native_team = observed.get('semantic', {}).get('team') or {}
         retained_team = facts.get('team') or {}
         team = native_team if native_team.get('checked') is True else retained_team if retained_team.get('checked') is True else native_team
@@ -3475,9 +3908,8 @@ class Worker:
         inspection_unit = (semantic.get('unit_preview') or {}).get('name') or (semantic.get('gear') or {}).get('unit_name')
         decision['inspection_actions'] = [action for action in decision['inspection_actions']
             if (self.active_match_id, stage, action.get('text'), inspection_unit) not in self.inspection_attempted]
-        decision['recommended_actions'] = decision['inspection_actions'][:1] or [item['action'] for item in decision['purchase_candidates'][:1]]
-        if not decision['recommended_actions']:
-            decision['recommended_actions'] = decision['economic_actions'][:1]
+        decision['recommended_actions'] = (decision['economic_actions'][:1] if checklist['phase'] == 'economy'
+                                           else decision['inspection_actions'][:1])
         if checklist['phase'] in ('rewards', 'startup_guide', 'inventory_cleanup'):
             decision['recommended_actions'] = []
         if checklist['phase'] == 'startup_guide' and observed.get('page') == 'preparation':
@@ -3647,7 +4079,7 @@ class Worker:
             actual = self.last_observation
             kind = action['type']
             if kind == 'finish_preparation_review':
-                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference', 'reward_capacity'))
+                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference', 'reward_capacity', 'economy_plan'))
                         or len(reply['actions']) != 1):
                     raise ValueError('准备复核须独立无输入动作及当前帧context_update.preparation_review')
                 continue
@@ -3723,12 +4155,13 @@ class Worker:
                                  and slot['bounds'][1] <= point[1] < slot['bounds'][1] + slot['bounds'][3]
                                  for slot in (actual.get('shop') or {}).get('slots', [])):
                     raise ValueError('商店卡片购买必须使用buy_shop实名/实价/单槽守卫，不以普通点击绕过')
-                if kind == 'key' and action.get('args') not in ([27], [68], [69]):
+                if kind == 'key' and action.get('args') not in ([27], [68], [70]):
                     raise ValueError('商店键盘不作为未经单槽核验的购买入口')
-            if (kind in ('buy_shop', 'buy_xp')
-                    or (kind == 'key' and action.get('args') in ([68], [69]))
-                    or (kind == 'click_text' and '购买经验' in action.get('text', ''))):
+            if economy.economic_action(action, actual['page']):
                 self.require_strategy_context(actual)
+                if not self.execute_economic_action(action, actual, request):
+                    return
+                continue
             if kind == 'click_text':
                 plan = self.preparation_policy(actual)
                 if any(candidate.get('text') == action['text'] for candidate in plan['inspection_actions']):
@@ -3738,29 +4171,8 @@ class Worker:
                         canonical_stage(actual.get('fields', {}).get('stage')) or self.last_preparation_stage, action['text'], inspection_unit))
                 self.check_reroll(action, actual)
                 self.click_text(actual, action['text'], action['reason'], action.get('exact', True), action.get('bounds'))
-            elif kind == 'buy_shop':
-                if len(reply['actions']) != 1 or request.get('match_id') != self.active_match_id:
-                    raise ValueError('单槽购买须为本局一个动作，回读后再决定下一次')
-                old_slot = purchase_slot(original.get('shop') or {}, action.get('slot'), request['snapshot_id'])
-                slot = purchase_slot(actual.get('shop') or {}, action.get('slot'), actual['snapshot_id'])
-                if (not old_slot or not slot or type(action.get('cost')) is not int
-                        or slot['name'] != action.get('name') or slot['cost'] != action.get('cost')
-                        or any(old_slot[key] != slot[key] for key in ('slot', 'name', 'cost', 'bounds', 'position'))
-                        or not canonical_stage(actual.get('fields', {}).get('stage'))
-                        or actual['fields']['stage'] != original.get('fields', {}).get('stage')):
-                    raise ValueError('目标单槽实名/实价/完整槽框/节点与原鲜帧计划不符')
-                self.verify_purchase_frame(request, actual)
-                if actual['semantic']['coins']['value'] < slot['cost']:
-                    raise ValueError('新鲜实读金币不足，未提交购买')
-                x, y = slot['position']
-                self.command([f'click:{x}:{y}', 'wait:0.5'], action['reason'], 'shop', {'bought': slot['name']})
-            elif kind == 'buy_xp':
-                for unused in range(action['count']):
-                    actual = self.last_observation
-                    self.require_xp_cost(actual)
-                    self.click_text(actual, '购买经验', action['reason'], False)
-                    if actual['fields']['level'] != self.last_observation['fields']['level']:
-                        break
+            elif kind in ('buy_shop', 'buy_xp'):
+                raise ValueError('购买/经验只允许在已核备战或商店经济路径执行')
             else:
                 values = action.get('args', [])
                 command = {'click_point': 'click', 'key': 'key', 'drag': 'drag', 'scroll': 'scroll'}[kind]
@@ -3802,7 +4214,7 @@ class Worker:
                     self.log({'event': 'verified_loot_pickup', 'match_id': self.active_match_id,
                               'stage': loot_key[1], 'control_id': loot_key[2],
                               'snapshot_id': self.last_observation['snapshot_id'], 'retry_allowed': False})
-            effect = coaching.action_effect(action)
+            effect = coaching.action_effect(action, actual['page'])
             if guide_navigation:
                 effect = 'navigation'
             elif kind == 'click_point' and not loot_pickup and actual['page'] in ('preparation', 'shop'):
@@ -3951,6 +4363,9 @@ class Worker:
             if key == 'reward_capacity':
                 self.review_reward_capacity(record)
                 continue
+            if key == 'economy_plan':
+                self.accept_economy_plan(record)
+                continue
             if key == 'guide_reference':
                 if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
                     raise ValueError('缓存攻略引用须当前应用状态鲜帧proof')
@@ -4036,15 +4451,13 @@ class Worker:
                 'verified_proofs': verified_proofs, 'match_id': self.active_match_id, 'lifetime_seconds': lifetime}
 
     def require_strategy_context(self, actual):
-        coin_fact = actual.get('semantic', {}).get('coins')
-        if (not isinstance(coin_fact, dict) or coin_fact.get('bounds') != GOLD_HUD
-                or type(coin_fact.get('value')) is not int or not 0 <= coin_fact['value'] <= 1_000_000):
+        observed = self.economy_observation(actual)
+        if 'coins' not in observed['values']:
             raise ValueError('新鲜金币HUD无法可信读取，停止购买')
         if not self.preparation_checklist(actual)['economy_allowed']:
             raise ValueError('经济动作前须按顺序核领奖领空→第二入口创业指南→清库存；当前未完成')
-        if isinstance(self.context.get('coins'), dict):
-            self.context['coins']['value'] = coin_fact['value']
-        self.log({'event': 'live_coins_roi', **coin_fact, 'snapshot_id': actual['snapshot_id']})
+        self.log({'event': 'live_coins_roi', 'value': observed['values']['coins'],
+                  **observed['evidence']['coins'], 'snapshot_id': actual['snapshot_id']})
 
     def verify_purchase_frame(self, request, actual):
         from io import BytesIO
@@ -4060,32 +4473,14 @@ class Worker:
 
     def require_xp_cost(self, actual):
         self.require_strategy_context(actual)
-        xp = actual.get('semantic', {}).get('xp', {})
-        cost = xp.get('buy_cost')
-        if (type(cost) is not int or cost <= 0 or actual['semantic']['coins']['value'] < cost
-                or xp.get('snapshot_id') != actual['snapshot_id']):
-            raise ValueError('经验购买费用/当前经验未实读或金币不足，先检查，未提交')
+        return self.require_economic_action({'type': 'buy_xp', 'count': 1}, actual)
 
     def check_reroll(self, action, actual):
-        if action.get('type') == 'key' and action.get('args') == [69] or action.get('type') == 'click_text' and '购买经验' in action.get('text', ''):
-            self.require_xp_cost(actual)
-        if not (action.get('type') == 'key' and action.get('args') == [68]
-                or action.get('type') == 'click_text' and clean(action.get('text', '')) == '刷新'):
-            return
-        decision = self.preparation_policy(actual)
-        if not decision['reroll_allowed']:
-            raise ValueError('实读攻略禁止当前阶段搜牌/刷新，未提交')
-        stage = canonical_stage(actual.get('fields', {}).get('stage'))
-        reroll = actual.get('semantic', {}).get('reroll', {})
-        cost = reroll.get('cost')
-        self.require_strategy_context(actual)
-        if (not stage or type(cost) is not int or cost <= 0 or reroll.get('snapshot_id') != actual['snapshot_id']
-                or actual['semantic']['coins']['value'] < cost or reroll.get('power_improvement_needed') is not True):
-            raise ValueError('刷新费用/战力缺口未实读，不盲刷')
-        key = (self.active_match_id, stage)
-        if key in self.reroll_attempted:
-            raise ValueError('本节点刷新已尝试；不因新请求或未知结果重复花钱')
-        self.reroll_attempted.add(key)
+        if actual.get('page') in economy.PREPARATION_PAGES and action.get('type') == 'key' and action.get('args') == [69]:
+            raise ValueError('经验仅F70；旧E69不发布')
+        if economy.economic_action(action, actual.get('page')):
+            self.require_strategy_context(actual)
+            return self.require_economic_action(action, actual)
 
     def node_guard(self, observed):
         page = observed['page']
@@ -4292,20 +4687,26 @@ class Worker:
                 return
             if shop_key is not None:
                 self.shop_stages.add(shop_key)
+            if checklist['phase'] == 'economy' and self.advance_economy(observed):
+                return
+            observed = self.last_observation or observed
             self.ask(observed, 'shop_strategy',
                      '当前先完成：' + checklist['next_step'] + '；第二入口创业指南优先，动态复核须当前帧proof。'
                      if not checklist['economy_allowed'] else
-                     '优先装备利用、对子升星、过渡上场、小羁绊与早期经济成长，再考虑攻略长线；实读金币与目标槽后有限购买，不机械囤50。'
+                     '先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。'
                      if (observed.get('shop') or {}).get('ok') is True
                      else '商店仍有未知槽位/推荐标记；独立确认实名、实价和完整槽框的目标可单次购买，未知目标继续等待检查。')
         elif page == 'preparation':
             policy = self.preparation_policy(observed)
             checklist = policy['preparation_checklist']
+            if checklist['phase'] == 'economy' and self.advance_economy(observed):
+                return
+            observed = self.last_observation or observed
             if not checklist['economy_allowed']:
                 self.ask(observed, 'preparation_strategy',
                          '按顺序处理当前待办：' + checklist['next_step'] + '。领奖后重新扫全场；第二入口创业指南读当前目标并领奖；清库存后再统一经济。'
                          '可用当前帧proof提交supervising_agent复核，未知项回传，缓存不代替进度。')
-            elif policy['inspection_actions']:
+            elif checklist['phase'] != 'economy' and policy['inspection_actions']:
                 self.ask(observed, 'preparation_strategy', '先按已选攻略检查追踪、可用装备与场上阵容；攻略推荐不是库存，也不默认装备已生效。')
             elif shop_key is None:
                 self.ask(observed, 'preparation_strategy', '当前备战节点stage缺失或异常，停止自动开店；先核真实节点与角色/装备。')
