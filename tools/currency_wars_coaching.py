@@ -158,6 +158,46 @@ def preparation_status(reviews):
             'battle_ready': pending is None}
 
 
+def reward_status(observed, review=None):
+    """No absent-template inference: only a current reviewed full sweep is clear.
+
+    The worker still authenticates the review's run, epoch and request through
+    verified_source. This pure predicate never upgrades native confidence.
+    """
+    if observed.get('page') in ('investment', 'environment', 'supply', 'reward_overlay'):
+        return 'pending'
+    review = review if isinstance(review, dict) else {}
+    proof, value = review.get('proof'), review.get('value')
+    if (observed.get('page') != 'preparation' or not observed.get('snapshot_id')
+            or not isinstance(proof, dict) or not isinstance(value, dict)
+            or proof.get('source') != 'observed_screen'
+            or proof.get('snapshot_id') != observed['snapshot_id']
+            or value.get('reviewer') != 'supervising_agent'):
+        return 'unknown'
+    if value.get('all_claimed') is False:
+        return 'pending'
+    return ('clear' if value.get('all_claimed') is True
+            and value.get('rescanned_after_claim') is True else 'unknown')
+
+
+def reviewed_capacity(value):
+    """A separate, explicit supervisor reading; never writes native team facts."""
+    if not isinstance(value, dict) or type(value.get('bench_capacity')) is not int or value['bench_capacity'] != 9:
+        raise ValueError('容量须独立实读9个备战席，不能由人口推定')
+    slots = value.get('slots')
+    if (not isinstance(slots, list) or len(slots) != 9 or any(not isinstance(slot, dict) for slot in slots)
+            or any(type(slot.get('slot')) is not int for slot in slots)
+            or {slot['slot'] for slot in slots} != set(range(1, 10))
+            or any(slot.get('status') not in ('empty', 'occupied') for slot in slots)
+            or value.get('overflow_checked') is not True
+            or type(value.get('overflow_count')) is not int or not 0 <= value['overflow_count'] <= 64):
+        raise ValueError('备战席或临时溢出未逐项回读；满人口不能代替库存检查')
+    occupied = sum(slot['status'] == 'occupied' for slot in slots)
+    return {'bench_capacity': 9, 'occupied': occupied, 'free_slots': 9 - occupied,
+            'overflow_count': value['overflow_count'], 'slots': slots,
+            'origin': 'supervising_agent'}
+
+
 def inventory_mutation(action):
     kind, text = action.get('type'), action.get('text', '')
     if kind == 'click_text' and text in ('装备推荐', '装备追踪', '装备追踪中', '角色详情', '攻略', '阵容'):

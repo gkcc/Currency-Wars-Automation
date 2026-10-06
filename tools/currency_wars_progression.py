@@ -113,10 +113,32 @@ def progression_plan(knowledge, observed, guide_candidates=None, live_tasks=None
     opportunities = []
     for task in unmet:
         usable = [item['name'] for item in current_items if item['name'] in task['required_resources']]
+        resource_choices = []
+        if snapshot and observed.get('page') in ('investment', 'environment', 'supply'):
+            for option in observed.get('semantic', {}).get('options', []):
+                if (not isinstance(option, dict) or type(option.get('card_index')) is not int
+                        or not isinstance(option.get('title'), str) or not option['title']
+                        or not isinstance(option.get('effect_lines'), list) or not option['effect_lines']
+                        or any(not isinstance(line, str) or not line for line in option['effect_lines'])
+                        or not isinstance(option.get('bounds'), list) or len(option['bounds']) != 4):
+                    continue
+                content = '\n'.join([option['title'], *option['effect_lines']])
+                matched = [name for name in task['required_resources'] if name in content]
+                if matched:
+                    resource_choices.append({'snapshot_id': snapshot, 'card_index': option['card_index'],
+                        'title': option['title'], 'effect_lines': option['effect_lines'], 'bounds': option['bounds'],
+                        'matched_resources': matched, 'priority': 'pending_task_resource',
+                        'interpretation': '文本提及所需资源；须核完整效果确实提供它及当前奖励取舍',
+                        'execute_ready': False})
+        preconditions = ['核目标物品／角色是否符合任务条件', '核当前输入前置和实际变化']
+        if task['operator'] == 'upgrade_equipment':
+            preconditions = ['当前特权赋予卡资源实名/数量', '符合任务的进阶装备实名和当前升级资格',
+                             '实际使用/升级控件及原帧、新帧守卫', '按原收据核资源消耗与任务进度变化']
         opportunities.append({'task_id': task['id'], 'operator': task['operator'],
             'seek_resources': task['required_resources'], 'verified_resources_available': usable,
+            'resource_reward_candidates': resource_choices,
             'next_step': task['next_step'], 'execute_ready': False,
-            'preconditions_remaining': ['核目标物品／角色是否符合任务条件', '核当前输入前置和实际变化']})
+            'preconditions_remaining': preconditions})
     return {'origin': 'goal_intent_only', 'snapshot_id': snapshot,
             'completed_goal_preferences': completed, 'tasks': audit,
             'observation_needed': [task['id'] for task in audit if task['state'] == 'unknown'],

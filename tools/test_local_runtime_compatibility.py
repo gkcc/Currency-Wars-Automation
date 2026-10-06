@@ -1,6 +1,7 @@
 """Regression checks for local startup compatibility; no game or GUI input."""
 import ast
 import contextlib
+import copy
 import hashlib
 import io
 import json
@@ -762,6 +763,265 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             with self.subTest(action=action), self.assertRaises(ValueError):
                 worker.guard_preparation_action(action, actual)
 
+    @contextlib.contextmanager
+    def reward_capacity_fixture(self):
+        # Reuse the existing real Entry/Worker receipt fixture. Images and
+        # semantic values below are contract fixtures, not live vision evidence.
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            (runtime / 'runner-manual.json').unlink()
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            worker.preparation_scope, worker.preparation_reviews = None, {}
+            worker.context, worker.history = {'reward_capacity': None}, {}
+            worker.state['statistics']['decisions'] = 0
+            worker.publish = lambda **updates: worker.state.update(updates)
+            status = control.status
+            control.status = lambda: {**status(), 'broker_pid': 123, 'broker_creation_time': '456', 'pause_id': None}
+            control.pause = lambda reason: {'ok': True, 'paused': True, 'reason': reason}
+            events = []
+            worker.log = events.append
+            control.sold = False
+            publish = control.publish_request
+            def publish_sale(value):
+                if value.get('actions') and value['actions'][0]['type'] == 'drag':
+                    from PIL import Image
+                    image = io.BytesIO()
+                    Image.new('RGB', (1920, 1080), 'white').save(image, format='PNG')
+                    control.frame, control.sold = image.getvalue(), True
+                publish(value)
+            control.publish_request = publish_sale
+            def read(path):
+                digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                slots = [{**slot, 'snapshot_id': digest,
+                    'status': 'empty' if control.sold and slot['slot'] == 1 else 'occupied',
+                    'name': '可售角色', 'star': 1} for slot in runner.native_slots() if slot['location'] == 'bench']
+                return {'snapshot_id': digest, 'page': 'preparation', 'fingerprint': '00',
+                    'fields': {'stage': '2-3', 'deployed': '8/8'}, 'elapsed_ms': 0.,
+                    'rows': [{'text': '备战阶段', 'confidence': .99, 'box': [420, 25, 530, 60]},
+                             {'text': '出战', 'confidence': .99, 'box': [1760, 720, 1860, 770]}],
+                    'semantic': {'team': {'slots': slots, 'checked': False, 'fully_read': False},
+                        'coins': {'value': 51 if control.sold else 50, 'bounds': runner.GOLD_HUD,
+                                  'currency_icon_gold_fraction': .5, 'confidence': .99}}}
+            reader.read = read
+            def ask(observed, kind, reason, choices=None):
+                rid = uuid.uuid4().hex
+                path = records / (rid + '-original.png')
+                path.write_bytes(worker.frame_path.read_bytes())
+                request = {'request_id': rid, 'snapshot_id': observed['snapshot_id'], 'kind': kind,
+                    'observation': copy.deepcopy(observed), 'match_id': 'match', 'resume_epoch': worker.epoch(),
+                    'original_png': str(path), 'evidence_file': str(path), 'created_at': runner.now(),
+                    'deadline_at': (runner.datetime.now(runner.timezone.utc) + runner.timedelta(minutes=5)).isoformat()}
+                worker.history[observed['snapshot_id']] = {**copy.deepcopy(observed),
+                    'evidence_file': str(path), 'observed_at': runner.now(), 'match_id': 'match',
+                    'resume_epoch': worker.epoch(), 'preparation_stage': '2-3'}
+                worker.state['decision_request'] = request
+                return request
+            worker.ask = ask
+            observed = worker.observe()
+            request = ask(observed, 'preparation_strategy', 'fixture')
+            inventory = {'bench_capacity': 9, 'slots': [
+                {'slot': i, 'status': 'occupied', 'name': '可售角色', 'star': 1} for i in range(1, 10)],
+                'overflow_checked': True, 'overflow_count': 0, 'overflow_bounds': [200, 800, 375, 1030]}
+            value = {'reviewer': 'supervising_agent', 'stage': '2-3', 'findings': '逐席及溢出检查',
+                'inventory': inventory, 'coins': 50,
+                'blocked_reward': {'pending': True, 'blocked_by_capacity': True, 'kind': 'unit_reward',
+                                   'findings': '角色奖励显示容量阻塞', 'bounds': [1550, 300, 1700, 450]},
+                'sale': {'slot': 1, 'name': '可售角色', 'star': 1, 'sale_value': 1,
+                         'not_required': True, 'reason': '已核攻略、升星与强制同场需求均不用该张',
+                         'control_verified': True, 'control_text': '出售', 'control_bounds': [20, 800, 190, 950]}}
+            proof = {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
+                     'resume_epoch': worker.epoch(), 'evidence_file': request['evidence_file']}
+            action = {'type': 'drag', 'purpose': 'reward_capacity', 'args': [439, 912, 100, 875],
+                'expected_page': 'preparation', 'reason': '只为当前被阻塞的角色奖励腾一席', 'guard_texts': ['备战阶段'],
+                'target_evidence': {'snapshot_id': request['snapshot_id'], 'control_id': 'reward_capacity_sale',
+                                    'bounds': [20, 800, 497, 981]},
+                'capacity_review': {'proof': proof, 'value': value}}
+            reply = {'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'],
+                     'resume_epoch': worker.epoch(), 'actions': [action]}
+            yield worker, control, reply, events
+
+    def capacity_post_review(self, worker, reply):
+        value = copy.deepcopy(reply['actions'][0]['capacity_review']['value'])
+        value['inventory']['slots'][0]['status'] = 'empty'
+        value['coins'] = 51
+        value['input_request_id'] = worker.pending_reward_capacity()['input_request_id']
+        request = worker.state['decision_request']
+        return {'proof': {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
+                         'resume_epoch': worker.epoch(), 'evidence_file': request['evidence_file']}, 'value': value}
+
+    def test_reward_capacity_single_sale_requires_receipt_and_new_capacity_then_returns_to_rewards(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            pending = worker.pending_reward_capacity()
+            self.assertIsNotNone(pending['input_request_id'])
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            for action in ({'type': 'buy_shop'}, {'type': 'key', 'args': [68]}, reply['actions'][0]):
+                with self.assertRaises(ValueError):
+                    worker.guard_preparation_action(action, worker.last_observation)
+            record = self.capacity_post_review(worker, reply)
+            request = worker.state['decision_request']
+            worker.execute_plan({'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'],
+                'resume_epoch': worker.epoch(), 'context_update': {'reward_capacity': record},
+                'actions': [{'type': 'finish_preparation_review', 'reason': '新帧核钱、腾出的单席和独立溢出'}]})
+            self.assertIsNone(worker.pending_reward_capacity())
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertFalse(worker.last_observation['semantic']['team']['fully_read'])
+            self.assertFalse(worker.preparation_checklist(worker.last_observation)['economy_allowed'])
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    def test_reward_capacity_rejects_unknown_overflow_nonfull_bench_or_unverified_sale(self):
+        mutations = [lambda v: v['inventory'].update(overflow_checked=False),
+                     lambda v: v['inventory'].update(overflow_count=1),
+                     lambda v: v['inventory']['slots'][0].update(status='empty'),
+                     lambda v: v['blocked_reward'].update(blocked_by_capacity=False),
+                     lambda v: v['sale'].update(control_verified=False),
+                     lambda v: v['sale'].update(name='另一个角色')]
+        for mutate in mutations:
+            with self.subTest(mutate=mutate), self.reward_capacity_fixture() as (worker, control, reply, events):
+                mutate(reply['actions'][0]['capacity_review']['value'])
+                with self.assertRaises(ValueError):
+                    worker.execute_plan(reply)
+                self.assertFalse(any(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published))
+
+    def test_reward_capacity_rejects_stale_identity_roi_change_and_economy_disguise(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            action = reply['actions'][0]
+            for changed in ({'type': 'buy_shop'}, {'type': 'key', 'args': [68]},
+                            {'purpose': 'ordinary_cleanup'}):
+                with self.assertRaises(ValueError):
+                    worker.guard_preparation_action({**action, **changed}, worker.last_observation)
+            action['capacity_review']['proof']['resume_epoch'] = 'old'
+            with self.assertRaises(ValueError):
+                worker.execute_plan(reply)
+            action['capacity_review']['proof']['resume_epoch'] = worker.epoch()
+            from PIL import Image
+            image = Image.open(io.BytesIO(control.frame)).convert('RGB')
+            image.putpixel((440, 913), (255, 0, 0))
+            changed = io.BytesIO()
+            image.save(changed, format='PNG')
+            control.frame = changed.getvalue()
+            with self.assertRaisesRegex(ValueError, '相关库存'):
+                worker.execute_plan(reply)
+            self.assertFalse(any(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published))
+
+    def test_reward_capacity_after_input_bad_frame_only_reobserves_never_repeats_sale(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            actual_request = entry.request
+            def request(controller, kind, tokens, rid, handoff, **kwargs):
+                result = actual_request(controller, kind, tokens, rid, handoff, **kwargs)
+                if tokens[0].startswith('drag:'):
+                    Path(result['observation']['snapshot']).write_bytes(b'truncated')
+                return result
+            with patch.object(entry, 'request', side_effect=request):
+                worker.execute_plan(reply)
+            worker.review_reward_capacity(self.capacity_post_review(worker, reply))
+            self.assertIsNone(worker.pending_reward_capacity())
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    def test_reward_capacity_missing_receipt_or_wrong_difference_stays_pending_without_input(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            record = self.capacity_post_review(worker, reply)
+            count = len(control.published)
+            record['value']['coins'] = 50
+            with self.assertRaises(ValueError):
+                worker.review_reward_capacity(record)
+            record['value']['coins'] = 51
+            pending = worker.pending_reward_capacity()
+            path = worker.run / 'request-ledger' / (hashlib.sha256(pending['input_request_id'].encode()).hexdigest() + '.json')
+            receipt = entry.read_json(path)
+            receipt['result']['input_attempted'] = False
+            control.write_json(path, receipt)
+            with self.assertRaisesRegex(ValueError, '未知'):
+                worker.review_reward_capacity(record)
+            receipt['result']['completed'] = []
+            receipt['result']['input_attempted'] = True
+            control.write_json(path, receipt)
+            with self.assertRaisesRegex(ValueError, '未知'):
+                worker.review_reward_capacity(record)
+            self.assertIsNotNone(worker.pending_reward_capacity())
+            self.assertEqual(len(control.published), count)
+
+    def test_reward_capacity_new_epoch_or_later_mutation_does_not_copy_completion(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            record = self.capacity_post_review(worker, reply)
+            entry.request(control, 'actions', ['key:27'], 'later-unrecorded-input', False)
+            with self.assertRaisesRegex(ValueError, '另有输入'):
+                worker.review_reward_capacity(record)
+            worker.epoch = lambda: 'new-epoch'
+            with self.assertRaises(ValueError):
+                worker.review_reward_capacity(record)
+            self.assertIsNotNone(worker.pending_reward_capacity())
+
+    @unittest.skipUnless(hasattr(runner, 'verified_resume_event'), 'B003 exact resume-event dependency not installed')
+    def test_reward_capacity_exact_b003_resume_reconciles_original_sale_in_new_epoch(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            control.write_json(worker.run / 'runner-manual.json', {'manual_id': 'manual-one', 'reason': 'handoff'})
+            resumed = runner.explicit_resume(worker.run, worker.owner, control, 'new-epoch',
+                expected_guard=runner.resume_guard_snapshot(worker.run, worker.owner, control))
+            self.assertTrue(resumed['ok'])
+            worker.ask(worker.observe(), 'preparation_strategy', '当前epoch补验容量')
+            record = self.capacity_post_review(worker, reply)
+            record['value']['resume_event_id'] = 'new-epoch'
+            worker.review_reward_capacity(record)
+            self.assertIsNone(worker.pending_reward_capacity())
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    @unittest.skipUnless(hasattr(runner, 'verified_resume_event'), 'B003 exact manual-result dependency not installed')
+    def test_reward_capacity_b003_manual_result_supersedes_unknown_sale_without_claiming_success(self):
+        self.check_capacity_manual_resolution(extra_handoff=False)
+
+    @unittest.skipUnless(hasattr(runner, 'verified_resume_event'), 'B003 exact manual-result dependency not installed')
+    def test_reward_capacity_b003_manual_result_after_multiple_handoffs_closes_unknown_pending(self):
+        self.check_capacity_manual_resolution(extra_handoff=True)
+
+    def check_capacity_manual_resolution(self, *, extra_handoff):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            pending = worker.pending_reward_capacity()
+            path = worker.run / 'request-ledger' / (hashlib.sha256(pending['input_request_id'].encode()).hexdigest() + '.json')
+            receipt = entry.read_json(path)
+            receipt['result'].update(ok=False, completed=[], input_attempted=True)
+            control.write_json(path, receipt)
+            if extra_handoff:
+                control.write_json(worker.run / 'runner-manual.json', {'manual_id': 'intermediate-manual', 'reason': 'first handoff'})
+                first = runner.explicit_resume(worker.run, worker.owner, control, 'intermediate-epoch',
+                    expected_guard=runner.resume_guard_snapshot(worker.run, worker.owner, control))
+                self.assertTrue(first['ok'])
+            control.write_json(worker.run / 'runner-manual.json', {'manual_id': 'manual-one', 'reason': 'manual repair'})
+            checkpoint = runner.begin_manual_phase(worker.run, worker.owner, control, 'manual-one', 'rewards', reader=worker.perception)
+            entry.request(control, 'actions', ['click:1:2'], 'manual-repair', False)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': '实际整理库存并复核当前奖励', 'all_claimed': True, 'rescanned_after_claim': True}
+            runner.finish_manual_phase(worker.run, worker.owner, control, checkpoint['checkpoint_id'],
+                                       ['manual-repair'], review, reader=worker.perception)
+            resumed = runner.explicit_resume(worker.run, worker.owner, control, 'new-epoch',
+                expected_guard=runner.resume_guard_snapshot(worker.run, worker.owner, control))
+            self.assertTrue(resumed['ok'])
+            worker.ask(worker.observe(), 'preparation_strategy', '以当前实读替代旧未知腾位')
+            record = self.capacity_post_review(worker, reply)
+            record['value'].update(resume_event_id='new-epoch', resolution='manual_reconciled',
+                                   manual_checkpoint_id=checkpoint['checkpoint_id'])
+            worker.review_reward_capacity(record)
+            self.assertIsNone(worker.pending_reward_capacity())
+            final = entry.read_json(worker.run / 'reward-capacity.json')
+            self.assertEqual(final['status'], 'superseded')
+            self.assertEqual(final['sale_outcome'], 'unknown')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    def test_reward_clear_requires_current_full_sweep_not_absent_templates_or_old_review(self):
+        observed = {'page': 'preparation', 'snapshot_id': 'fresh', 'semantic': {}}
+        record = {'proof': {'source': 'observed_screen', 'snapshot_id': 'fresh'},
+                  'value': {'reviewer': 'supervising_agent', 'all_claimed': True, 'rescanned_after_claim': True}}
+        self.assertEqual(runner.coaching.reward_status(observed), 'unknown')
+        self.assertEqual(runner.coaching.reward_status(observed, record), 'clear')
+        self.assertEqual(runner.coaching.reward_status({**observed, 'snapshot_id': 'new'}, record), 'unknown')
+        self.assertEqual(runner.coaching.reward_status({**observed, 'page': 'supply'}, record), 'pending')
+
     def test_selected_investment_requires_both_units_and_board_limits(self):
         investment = [{'name': '飞光·传剑', 'effect': '两人同时在场，每进入新节点比例+4%'}]
         team = {'checked': True, 'units': [{'name': '景元', 'location': 'board', 'row': 'front', 'slot': 1},
@@ -814,7 +1074,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
         worker.node_progress, worker.live_mode = 0, None
         worker.log = lambda event: None
         worker.state = {'decision_request': {'snapshot_id': 'reward-frame'}}
-        worker.history = {'reward-frame': {'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
+        worker.history = {'reward-frame': {'snapshot_id': 'reward-frame', 'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
             'evidence_file': 'reward-evidence', 'page': 'preparation', 'preparation_stage': '2-3', 'rows': []}}
         def record(snapshot, evidence, **value):
             return {'value': {'reviewer': 'supervising_agent', 'completed': True, 'stage': '2-3',
@@ -823,7 +1083,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                               'evidence_file': evidence, 'resume_epoch': 'epoch'}}
         reward = record('reward-frame', 'reward-evidence', phase='rewards', all_claimed=True, rescanned_after_claim=True)
         worker.review_preparation(reward)
-        worker.history['guide-frame'] = {'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
+        worker.history['guide-frame'] = {'snapshot_id': 'guide-frame', 'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
             'evidence_file': 'guide-evidence', 'page': 'unknown', 'preparation_stage': '2-3',
             'rows': [{'text': '创业指南', 'confidence': .99, 'box': [0, 0, 100, 40]}]}
         worker.state['decision_request']['snapshot_id'] = 'guide-frame'
@@ -843,8 +1103,8 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             worker.review_preparation(guide)
         worker.history['guide-frame']['rows'].pop()
         worker.review_preparation(guide)
-        self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'inventory_cleanup')
-        self.assertEqual(worker.preparation_reviews['rewards']['proof']['snapshot_id'], 'reward-frame')
+        self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+        self.assertNotIn('rewards', worker.preparation_reviews)
         context, scope = worker.reviewed_task_context({'snapshot_id': 'shop-frame', 'fields': {'stage': '2-3'}})
         self.assertEqual(context['source_snapshot_id'], 'guide-frame')
         proposal = runner.progression_plan({}, {'snapshot_id': 'shop-frame'},

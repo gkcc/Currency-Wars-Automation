@@ -58,6 +58,21 @@ def native_slots():
     return result
 
 
+def native_capacity(slots, snapshot_id):
+    """Known bench occupancy is independent of board population and overflow."""
+    bench = [slot for slot in slots if slot.get('location') == 'bench']
+    complete = (bool(snapshot_id) and len(bench) == 9
+        and {slot.get('slot') for slot in bench} == set(range(1, 10))
+        and all(slot.get('snapshot_id') == snapshot_id and slot.get('row') == 'bench'
+            and slot.get('status') in ('empty', 'occupied') for slot in bench))
+    occupied = sum(slot['status'] == 'occupied' for slot in bench) if complete else None
+    return {'snapshot_id': snapshot_id, 'bench_capacity': 9, 'bench_checked': complete,
+            'occupied': occupied, 'free_slots': 9 - occupied if complete else None,
+            'overflow_checked': False, 'overflow_count': None,
+            'reason': 'temporary_overflow_layout_not_yet_observed',
+            'origin': 'native_visual_state_reader'}
+
+
 class StateReader:
     def __init__(self, resources=RESOURCE_DIR):
         self.resources = Path(resources)
@@ -289,6 +304,7 @@ class StateReader:
             'origin': 'native_visual_state_reader', 'resource_version': self._version,
             'anchors': {k: round(v, 4) for k, v in anchors.items()}, 'overlays': overlays,
             'team': {'checked': False, 'fully_read': bool(fully_read), 'slots': slots,
-                     'units': units, 'unknown_slots': unknown, 'snapshot_id': digest},
+                     'units': units, 'unknown_slots': unknown, 'snapshot_id': digest,
+                     'capacity': native_capacity(slots, digest)},
             'inventory': {**inventory, 'snapshot_id': digest},
             'tooltips': self._tooltips(rows, digest) if native else [], 'requests': requests}

@@ -23,6 +23,7 @@ import currency_wars_input_bridge as input_bridge
 from currency_wars_source_guard import activity
 from currency_wars_perception import Perception, clean, find_text, hash_distance, GOLD_HUD
 from currency_wars_shop_reader import purchase_slot
+from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
 from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
@@ -1073,6 +1074,9 @@ def validate_plan(reply, request, epoch):
     actions = reply.get('actions')
     if not isinstance(actions, list) or not 1 <= len(actions) <= 8:
         raise ValueError('计划须含1–8个有限语义动作')
+    if 'reward_capacity' in reply.get('context_update', {}) and (
+            len(actions) != 1 or actions[0].get('type') != 'finish_preparation_review'):
+        raise ValueError('腾位后回读必须独立无输入复核，之后重新规划领奖')
     allowed = {'click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'finish_preparation_review',
                'finish_inspection', 'confirm_match_result'}
     for action in actions:
@@ -2271,6 +2275,7 @@ class Worker:
         self.context = {'guide': None, 'guide_tracking': None, 'investments': None,
                         'environment': None, 'team': None, 'bonds': None, 'gear': None,
                         'tasks': None, 'hp': None, 'coins': None, 'xp': None, 'preparation_review': None, 'guide_reference': None,
+                        'reward_capacity': None,
                         'unknown_fields': ['guide', 'guide_tracking', 'investments', 'environment',
                                            'team', 'bonds', 'gear', 'tasks', 'hp', 'coins', 'xp']}
         self.last_observation = None
@@ -2615,6 +2620,13 @@ class Worker:
                     raise entry.SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
 
         rid = uuid.uuid4().hex
+        if action and action.get('purpose') == 'reward_capacity':
+            pending = self.pending_reward_capacity()
+            if not pending or pending.get('input_request_id'):
+                raise ValueError('领奖腾位没有独立未发布记录；不重发出售')
+            pending.update(input_request_id=rid, tokens=tokens)
+            self.c.write_json(self.run / 'reward-capacity.json', pending)
+            self.c.write_json(self.records / (rid + '-reward-capacity.json'), pending)
         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
         self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
@@ -2628,6 +2640,12 @@ class Worker:
                 result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline)
                 self.profile_broker_result(result, timing)
         except Exception as exc:
+            if action and action.get('purpose') == 'reward_capacity' and not guarded.publication_attempted:
+                pending = self.pending_reward_capacity()
+                if pending and pending.get('input_request_id') == rid:
+                    pending.update(status='refused', request_published=False, error=str(exc))
+                    self.c.write_json(self.run / 'reward-capacity.json', pending)
+                    self.c.write_json(self.records / (rid + '-reward-capacity.json'), pending)
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
@@ -2756,8 +2774,7 @@ class Worker:
                 or record['proof'].get('snapshot_id') != request.get('snapshot_id')
                 or phase != status['phase'] or not isinstance(value.get('findings'), str) or not value['findings'].strip()):
             raise ValueError('复核须按当前节点准备顺序、当前请求鲜帧，由监督助手写明实际检查结果')
-        if phase == 'rewards' and (source['page'] != 'preparation' or value.get('all_claimed') is not True
-                or value.get('rescanned_after_claim') is not True):
+        if phase == 'rewards' and coaching.reward_status(source, record) != 'clear':
             raise ValueError('领奖须关闭商店后重新扫全场，奖励球及待选奖励确认领空')
         startup_title = find_text(source['rows'], '创业指南', exact=True) if phase == 'startup_guide' else None
         if phase == 'startup_guide' and (value.get('entry_index') != 2 or value.get('rewards_claimed') is not True
@@ -3096,7 +3113,236 @@ class Worker:
             return record.get('value', [])
         return getattr(self, 'preparation_reviews', {}).get('lineup_equipment', {}).get('investments', [])
 
+    def pending_reward_capacity(self):
+        record = optional(self.run / 'reward-capacity.json') if getattr(self, 'run', None) else None
+        if record and record.get('run_id') != self.owner['run_id']:
+            raise ValueError('领奖腾位记录不属于当前run')
+        return record if record and record.get('status') not in ('verified', 'refused', 'superseded') else None
+
+    def capacity_source(self, record, actual):
+        """Authenticate a separate supervisor read; do not overwrite native facts."""
+        if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
+            raise ValueError('库存容量须当前请求主管实读proof')
+        source = self.verified_source(record['proof'], 180)
+        value, request = record.get('value'), self.state.get('decision_request') or {}
+        if (not isinstance(value, dict) or value.get('reviewer') != 'supervising_agent'
+                or not value.get('findings') or value.get('stage') != canonical_stage(actual.get('fields', {}).get('stage'))
+                or source.get('page') != 'preparation' or actual.get('page') != 'preparation'
+                or source.get('fields', {}).get('stage') != value['stage']
+                or record['proof'].get('snapshot_id') != request.get('snapshot_id')
+                or request.get('match_id') != self.active_match_id
+                or request.get('resume_epoch') != self.epoch()
+                or type(value.get('coins')) is not int or value['coins'] < 0):
+            raise ValueError('库存/金币proof须本局本节点当前请求；人口不作库存证据')
+        capacity = coaching.reviewed_capacity(value.get('inventory'))
+        slots = {slot['slot']: slot for slot in capacity['slots']}
+        for observed in (request['observation'], actual):
+            team = observed.get('semantic', {}).get('team', {})
+            for slot in team.get('slots', []):
+                if (slot.get('location') != 'bench' or slot.get('snapshot_id') != observed.get('snapshot_id')
+                        or slot.get('status') not in ('empty', 'occupied')):
+                    continue
+                declared = slots.get(slot.get('slot'), {})
+                if declared.get('status') != slot['status']:
+                    raise ValueError('主管库存读数与当前原生备战席冲突')
+                for key in ('name', 'star'):
+                    if slot.get(key) is not None and declared.get(key) is not None and slot[key] != declared[key]:
+                        raise ValueError('可售对象实名/星级与原生读数冲突')
+            coins = observed.get('semantic', {}).get('coins', {})
+            if (coins.get('bounds') == GOLD_HUD and type(coins.get('value')) is int
+                    and coins.get('currency_icon_gold_fraction', 0) >= .15
+                    and coins.get('confidence', 1.) >= .90 and coins['value'] != value['coins']):
+                raise ValueError('主管金币读数与当前原生HUD冲突')
+        return value, capacity
+
+    def capacity_rois(self, request, actual, bounds):
+        """Keep same-request human readings fresh using exact relevant PNG regions."""
+        from io import BytesIO
+        from PIL import Image
+        old_bytes, fresh_bytes = Path(request['original_png']).read_bytes(), self.frame_path.read_bytes()
+        if (hashlib.sha256(old_bytes).hexdigest() != request['snapshot_id']
+                or hashlib.sha256(fresh_bytes).hexdigest() != actual.get('snapshot_id')):
+            raise ValueError('领奖腾位原图/新图身份不符')
+        with Image.open(BytesIO(old_bytes)) as old, Image.open(BytesIO(fresh_bytes)) as fresh:
+            old.load()
+            fresh.load()
+            if old.format != 'PNG' or fresh.format != 'PNG' or old.size != (1920, 1080) or fresh.size != old.size:
+                raise ValueError('领奖腾位只支持当前原生1920×1080完整帧')
+            for box in bounds:
+                if (not isinstance(box, list) or len(box) != 4 or any(type(v) is not int for v in box)
+                        or not 0 <= box[0] < box[2] <= 1920 or not 0 <= box[1] < box[3] <= 1080):
+                    raise ValueError('领奖腾位实读ROI缺失或无效')
+                if old.crop(box).convert('RGB').tobytes() != fresh.crop(box).convert('RGB').tobytes():
+                    raise ValueError('领奖腾位相关库存/钱/目标已变化；只重新观察')
+
+    def reward_capacity_action(self, action, actual, *, pixels=False):
+        request = self.state.get('decision_request') or {}
+        proof = action.get('target_evidence') or {}
+        value, capacity = self.capacity_source(action.get('capacity_review'), actual)
+        sale, blocked = value.get('sale', {}), value.get('blocked_reward', {})
+        if not isinstance(sale, dict) or not isinstance(blocked, dict):
+            raise ValueError('腾位须明确当前被阻塞奖励和已核可售对象')
+        native = next((slot for slot in native_slots() if slot['location'] == 'bench'
+                       and slot['slot'] == sale.get('slot')), None)
+        selected = next((slot for slot in capacity['slots'] if slot['slot'] == sale.get('slot')), {})
+        if (action.get('type') != 'drag' or action.get('purpose') != 'reward_capacity'
+                or action.get('expected_page') != 'preparation' or proof.get('control_id') != 'reward_capacity_sale'
+                or proof.get('snapshot_id') != request.get('snapshot_id') or not native
+                or capacity['free_slots'] != 0 or capacity['overflow_count'] != 0
+                or blocked.get('pending') is not True or blocked.get('blocked_by_capacity') is not True
+                or blocked.get('kind') != 'unit_reward' or not blocked.get('findings')
+                or sale.get('not_required') is not True or not sale.get('reason')
+                or sale.get('control_verified') is not True or sale.get('control_text') != '出售'
+                or type(sale.get('sale_value')) is not int or sale['sale_value'] <= 0
+                or not isinstance(sale.get('name'), str) or not sale['name']
+                or type(sale.get('star')) is not int or sale['star'] not in (1, 2, 3)
+                or selected.get('name') != sale['name'] or selected.get('star') != sale['star']):
+            raise ValueError('仅支持真实满9席且无临时溢出阻塞角色奖励时，单个明确可售对象腾位')
+        args, target = action.get('args', []), sale.get('control_bounds')
+        box = native['bounds']
+        if (len(args) != 4 or any(type(v) not in (int, float) for v in args)
+                or not isinstance(target, list) or len(target) != 4
+                or any(type(v) is not int for v in target)
+                or not box[0] <= args[0] < box[2] or not box[1] <= args[1] < box[3]
+                or not target[0] <= args[2] < target[2] or not target[1] <= args[3] < target[3]
+                or target[0] <= args[0] < target[2] and target[1] <= args[1] < target[3]):
+            raise ValueError('腾位必须从已核单个备战席拖到已核出售控件，任意拖动不是出售')
+        if pixels:
+            self.capacity_rois(request, actual, [slot['bounds'] for slot in native_slots() if slot['location'] == 'bench']
+                + [GOLD_HUD, value['inventory'].get('overflow_bounds'), blocked.get('bounds'), target])
+        return value
+
+    def begin_reward_capacity(self, value, action, actual):
+        if self.pending_reward_capacity():
+            raise ValueError('上一腾位动作未对账；不重发')
+        request = self.state['decision_request']
+        watermark = [entry.read_json(path)['id'] for path in (self.run / 'request-ledger').glob('*.json')]
+        if len(watermark) > 4096:
+            raise ValueError('腾位回执水位超出有界容量')
+        record = {'run_id': self.owner['run_id'], 'match_id': self.active_match_id,
+            'resume_epoch': self.epoch(), 'stage': value['stage'], 'created_at': now(), 'status': 'unverified',
+            'plan_request_id': request['request_id'], 'before_snapshot_id': actual['snapshot_id'],
+            'before': value, 'proof': action['capacity_review']['proof'], 'watermark': watermark}
+        self.c.write_json(self.run / 'reward-capacity.json', record)
+        self.context['reward_capacity'] = record
+
+    def review_reward_capacity(self, record):
+        pending = self.pending_reward_capacity()
+        request = self.state.get('decision_request') or {}
+        value, capacity = self.capacity_source(record, self.last_observation)
+        if (not pending or pending.get('match_id') != self.active_match_id
+                or pending.get('stage') != value['stage'] or not pending.get('input_request_id')
+                or value.get('input_request_id') != pending['input_request_id']
+                or request.get('request_id') == pending['plan_request_id']
+                or request.get('observation', {}).get('capture_request_id') in pending['watermark']
+                or not request.get('observation', {}).get('captured_at')
+                or datetime.fromisoformat(request['observation']['captured_at']) <= datetime.fromisoformat(pending['created_at'])
+                or datetime.fromisoformat(request['created_at']) <= datetime.fromisoformat(pending['created_at'])):
+            raise ValueError('腾位复核须绑定原输入收据与本节点新请求/新epoch证据；不重发旧动作')
+        resume_id, resume_event = None, None
+        if pending.get('resume_epoch') != self.epoch():
+            # B003 owns the existing CAS/event verifier. Until that capability
+            # is installed this older branch stays conservative across epochs.
+            verifier = globals().get('verified_resume_event')
+            if not callable(verifier):
+                raise ValueError('新epoch须B003真实恢复事件校验；保留腾位记录，不重发')
+            epoch = optional(self.run / 'runner-resume-epoch.json') or {}
+            resume_event, resumed = verifier(self.run, self.owner, self.c, epoch)
+            if (value.get('resolution') != 'manual_reconciled' and resume_event.get('old_epoch') != pending['resume_epoch']
+                    or resume_event.get('new_epoch') != self.epoch()
+                    or resume_event.get('match_id') != self.active_match_id or resume_event.get('stage') != value['stage']
+                    or value.get('resume_event_id') != resumed['id']
+                    or not datetime.fromisoformat(pending['created_at']) <= datetime.fromisoformat(epoch['time'])
+                    <= datetime.fromisoformat(request['observation']['captured_at'])):
+                raise ValueError('腾位新epoch复核须确切旧新代次/CAS事件/当前帧时序，不继承旧完成项')
+            resume_id = resumed['id']
+        receipt = await_existing_receipt(self.run, self.c, pending['input_request_id'], 0)
+        current_frame = request['observation']
+        capture_id = current_frame.get('capture_request_id')
+        if not isinstance(capture_id, str):
+            raise ValueError('腾位后新帧没有实际捕获请求身份')
+        capture = await_existing_receipt(self.run, self.c, capture_id, 0)
+        observed = capture['result'].get('observation') or {}
+        if (capture_id != pending['input_request_id'] and capture['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                or capture['request'].get('handoff') is not False
+                or observed.get('request_id') != capture_id or observed.get('frame_protocol') != 1
+                or observed.get('snapshot_sha256') != current_frame.get('snapshot_id')
+                or observed.get('frame_id') != current_frame.get('frame_id')
+                or observed.get('captured_at') != current_frame.get('captured_at')):
+            raise ValueError('腾位后当前帧与原捕获收据不匹配')
+        expected = self.c.validate_actions([{'type': parts[0], 'args': parts[1:]}
+            for parts in (token.split(':') for token in pending['tokens'])])
+        if (receipt['request'].get('kind') != 'actions' or receipt['request'].get('handoff') is not False
+                or receipt['request'].get('actions') != expected):
+            raise ValueError('腾位收据不是原始出售请求；保持未知，不重发')
+        classifier = globals().get('manual_receipt_state')
+        if callable(classifier):
+            delivery = classifier(receipt)
+        else:
+            result = receipt['result']
+            # B001 legacy complete receipts are accepted only without
+            # contradictory input-attempt evidence. B003 owns richer outcomes.
+            complete = (result.get('ok') is True and result.get('completed') == expected
+                and result.get('input_attempted') is not False
+                and result.get('attempted_actions') in (None, [expected[0]]))
+            delivery = {'state': 'completed' if complete else 'unknown', 'unknown_input': not complete}
+        manual = None
+        if value.get('resolution') == 'manual_reconciled':
+            checkpoint = value.get('manual_checkpoint_id')
+            if not callable(classifier) or not resume_event or not isinstance(checkpoint, str) or not re.fullmatch(r'[0-9a-f]{32}', checkpoint):
+                raise ValueError('人工整理替代旧腾位须B003完整checkpoint与已校验恢复事件')
+            manual = entry.read_json(self.run / 'manual-results' / (checkpoint + '.json'))
+            if (manual.get('checkpoint_id') != checkpoint or manual.get('phase') not in ('rewards', 'inventory_cleanup')
+                    or pending['input_request_id'] not in manual.get('prior_receipt_ids', [])
+                    or datetime.fromisoformat(manual['before']['observed_at']) < datetime.fromisoformat(pending['created_at'])):
+                raise ValueError('人工整理须在原腾位之后，明确覆盖当前库存；不能普通context覆盖pending')
+            self.preparation_checklist(self.last_observation)
+            source = self.verified_source(record['proof'], 180)
+            fresh = {**source, **{key: request['observation'].get(key)
+                     for key in ('capture_request_id', 'frame_id', 'captured_at')}}
+            self.verified_manual_source(manual, fresh)
+        elif delivery['unknown_input'] or delivery['state'] != 'completed':
+            raise ValueError('腾位原输入未完整确认；业务效果未知，不重复出售')
+        for index, path in enumerate((self.run / 'request-ledger').glob('*.json')):
+            if index >= 4096:
+                raise ValueError('腾位回执数量超出有界容量')
+            item = entry.read_json(path)
+            if item['id'] in pending['watermark'] or item['id'] in (pending['input_request_id'], resume_id):
+                continue
+            if manual and item['id'] in manual['after']['receipt_watermark']:
+                continue  # B003 verified the whole intervening manual trace.
+            item = await_existing_receipt(self.run, self.c, item['id'], 0)
+            if (item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                    or any(a.get('type') != 'observe' for a in item['request'].get('actions', []))):
+                raise ValueError('腾位后另有输入或交接，不能把当前差额归给原出售')
+        before = pending['before']
+        sold = next(slot for slot in capacity['slots'] if slot['slot'] == before['sale']['slot'])
+        if (capacity['overflow_count'] != 0 or not manual and (capacity['occupied'] != 8 or sold['status'] != 'empty'
+                or value['coins'] != before['coins'] + before['sale']['sale_value'])):
+            raise ValueError('腾位后空槽/独立溢出/金币差額未同时核实，保留未知；不重发')
+        self.capacity_rois(request, self.last_observation,
+            [slot['bounds'] for slot in native_slots() if slot['location'] == 'bench']
+            + [GOLD_HUD, value['inventory'].get('overflow_bounds')])
+        pending.update(status='superseded' if manual else 'verified', after=record, receipt=redact(receipt),
+                       delivery=delivery, sale_outcome='unknown' if manual else 'success',
+                       manual_checkpoint_id=manual['checkpoint_id'] if manual else None,
+                       resume_event=resume_event, verified_at=now())
+        self.c.write_json(self.run / 'reward-capacity.json', pending)
+        self.c.write_json(self.records / (pending['input_request_id'] + '-reward-capacity.json'), pending)
+        self.context['reward_capacity'] = pending
+        self.preparation_reviews.pop('rewards', None)
+        self.invalidate_preparation('inventory')
+        self.log({'event': 'reward_capacity_reconciled', 'input_request_id': pending['input_request_id'],
+                  'sale_outcome': pending['sale_outcome'], 'resolution': pending['status'],
+                  'snapshot_id': request['snapshot_id'], 'next_phase': 'rewards', 'input_resent': False})
+
     def guard_preparation_action(self, action, actual, *, loot_pickup=False, verified_navigation=False):
+        if self.pending_reward_capacity():
+            raise ValueError('腾位已尝试；先按原收据回读空位/钱/溢出，不再发送输入')
+        if action.get('purpose') == 'reward_capacity' or action.get('target_evidence', {}).get('control_id') == 'reward_capacity_sale':
+            if self.preparation_checklist(actual)['phase'] != 'rewards':
+                raise ValueError('领奖容量例外仅属于当前领奖阶段')
+            return self.reward_capacity_action(action, actual)
         if actual.get('page') not in ('preparation', 'shop', 'unit_gear'):
             return
         status = self.preparation_checklist(actual)
@@ -3309,6 +3555,7 @@ class Worker:
                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
+        request['reward_capacity_pending'] = self.pending_reward_capacity()
         task_context, observation_scope = self.reviewed_task_context(observed)
         request['progression_plan'] = progression_plan(self.knowledge, observed,
             guide_candidates=choices if kind == 'guide_strategy' and isinstance(choices, list)
@@ -3400,7 +3647,7 @@ class Worker:
             actual = self.last_observation
             kind = action['type']
             if kind == 'finish_preparation_review':
-                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference'))
+                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference', 'reward_capacity'))
                         or len(reply['actions']) != 1):
                     raise ValueError('准备复核须独立无输入动作及当前帧context_update.preparation_review')
                 continue
@@ -3450,8 +3697,8 @@ class Worker:
             if guide_navigation and not stable_preparation_icon_target(
                     action, request, actual, self.frame_path):
                 raise ValueError('第二创业指南图标的双帧定位/页面/遮挡守卫拒绝，未提交')
-            self.guard_preparation_action(action, actual, loot_pickup=loot_pickup,
-                                          verified_navigation=guide_navigation)
+            capacity_review = self.guard_preparation_action(action, actual, loot_pickup=loot_pickup,
+                                                            verified_navigation=guide_navigation)
             for label in action.get('guard_texts', []):
                 if not any(clean(label) in clean(row['text']) and row['confidence'] >= .78 for row in actual['rows']):
                     raise ValueError('新画面缺少计划守卫：' + label)
@@ -3531,7 +3778,19 @@ class Worker:
                     self.log({'event': 'loot_pickup_attempted', 'match_id': self.active_match_id,
                               'stage': loot_key[1], 'control_id': loot_key[2], 'request_id': request['request_id'],
                               'input_sent': False, 'retry_allowed': False})
+                if action.get('purpose') == 'reward_capacity':
+                    self.begin_reward_capacity(capacity_review, action, actual)
                 self.command([command + ':' + ':'.join(map(str, values)), 'wait:0.7'], action['reason'], actual['page'], action.get('expected_change'), action=action)
+                if action.get('purpose') == 'reward_capacity':
+                    self.preparation_reviews.pop('rewards', None)
+                    self.invalidate_preparation('inventory')
+                    # Native overflow has no reliable reader yet. Ask one
+                    # current proof of capacity/money through the same worker;
+                    # never repeat the drag or continue an economic batch.
+                    self.state['decision_request'] = None
+                    self.ask(self.last_observation, 'preparation_strategy',
+                             '单次腾位已提交；按reward_capacity_pending原收据复核空槽/钱/独立溢出，随后立即领奖')
+                    return
                 if loot_pickup and (self.last_observation.get('page') != 'preparation'
                                     or self.last_observation.get('fields', {}).get('stage') != loot_key[1]):
                     raise ValueError('战利品点击后出现模态或页面/节点变化；停止，不重发')
@@ -3577,6 +3836,9 @@ class Worker:
         reference = Path(request['original_png'])
         if hashlib.sha256(reference.read_bytes()).hexdigest() != request['snapshot_id']:
             raise ValueError('本次请求原始帧已更换，拒绝坐标计划')
+        if proof.get('control_id') == 'reward_capacity_sale':
+            self.reward_capacity_action(action, actual, pixels=True)
+            return
         if proof.get('control_id') == PREPARATION_GUIDE_CONTROL:
             if (request.get('match_id') != self.active_match_id
                     or not stable_preparation_icon_target(action, request, actual, self.frame_path)):
@@ -3685,6 +3947,9 @@ class Worker:
                 continue
             if key == 'preparation_review':
                 self.review_preparation(record)
+                continue
+            if key == 'reward_capacity':
+                self.review_reward_capacity(record)
                 continue
             if key == 'guide_reference':
                 if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):

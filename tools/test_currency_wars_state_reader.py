@@ -14,7 +14,7 @@ try:
     from artifacts import scratch_directory
 except ImportError:
     scratch_directory = None
-from currency_wars_state_reader import StateReader, RESOURCE_DIR, native_slots
+from currency_wars_state_reader import StateReader, RESOURCE_DIR, native_slots, native_capacity
 from currency_wars_perception import native_deployed_count
 
 
@@ -32,6 +32,29 @@ class NativePopulationTests(unittest.TestCase):
         self.assertIsNone(native_deployed_count([{**row, 'box': [120, 520, 230, 565]}]))
         self.assertIsNone(native_deployed_count([row, row]))
         self.assertIsNone(native_deployed_count([{**row, 'raw_text': '5/4'}]))
+
+
+class NativeCapacityTests(unittest.TestCase):
+    def test_bench_capacity_does_not_certify_unknown_overflow_or_population(self):
+        slots = [{**slot, 'snapshot_id': 'fresh', 'status': 'occupied'} for slot in native_slots()]
+        capacity = native_capacity(slots, 'fresh')
+        self.assertTrue(capacity['bench_checked'])
+        self.assertEqual(capacity['occupied'], 9)
+        self.assertEqual(capacity['free_slots'], 0)
+        self.assertFalse(capacity['overflow_checked'])
+        self.assertIsNone(capacity['overflow_count'])
+        slots[0]['status'] = 'unknown'  # Board ambiguity is independent of bench count.
+        self.assertTrue(native_capacity(slots, 'fresh')['bench_checked'])
+
+    def test_partial_stale_or_duplicate_bench_stays_unknown(self):
+        slots = [{**slot, 'snapshot_id': 'fresh', 'status': 'empty'} for slot in native_slots() if slot['location'] == 'bench']
+        for bad in (slots[:-1], slots + [slots[0]],
+                    [{**slots[0], 'status': 'unknown'}, *slots[1:]],
+                    [{**slots[0], 'snapshot_id': 'old'}, *slots[1:]]):
+            with self.subTest(slots=bad):
+                value = native_capacity(bad, 'fresh')
+                self.assertFalse(value['bench_checked'])
+                self.assertIsNone(value['free_slots'])
 
 
 @unittest.skipUnless(scratch_directory is not None and EARLY.is_file() and LATER.is_file() and POPUP.is_file()

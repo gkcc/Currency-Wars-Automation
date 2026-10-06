@@ -1,0 +1,76 @@
+{
+  "task": "B-004",
+  "parent_sha": "ddcb460c412811991ee5a96abbf867bd6a6c396d",
+  "development_base_sha": "beaea343ee7edf29bcba70ba8351a7dc462a83da",
+  "recorded_at": "2026-10-06T18:03:49.176071+00:00",
+  "environment": "Linux; exact B003 plus B004 working tree; real Entry/Worker methods with synthetic PNG/control substitutes",
+  "root_verification": {
+    "tests_run": 25,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 4.823,
+    "runtime_test_names": [
+      "test_manual_current_guide_review_requires_reward_rescan_and_preserves_guide",
+      "test_preparation_reviews_survive_navigation_but_inventory_invalidates_downstream",
+      "test_reward_capacity_after_input_bad_frame_only_reobserves_never_repeats_sale",
+      "test_reward_capacity_b003_manual_result_after_multiple_handoffs_closes_unknown_pending",
+      "test_reward_capacity_b003_manual_result_supersedes_unknown_sale_without_claiming_success",
+      "test_reward_capacity_exact_b003_resume_reconciles_original_sale_in_new_epoch",
+      "test_reward_capacity_missing_receipt_or_wrong_difference_stays_pending_without_input",
+      "test_reward_capacity_new_epoch_or_later_mutation_does_not_copy_completion",
+      "test_reward_capacity_rejects_stale_identity_roi_change_and_economy_disguise",
+      "test_reward_capacity_rejects_unknown_overflow_nonfull_bench_or_unverified_sale",
+      "test_reward_capacity_single_sale_requires_receipt_and_new_capacity_then_returns_to_rewards",
+      "test_reward_clear_requires_current_full_sweep_not_absent_templates_or_old_review",
+      "test_supervised_reviews_require_current_request_and_guide_second_entry",
+      "test_unclaimed_rewards_block_spending_and_selling"
+    ],
+    "additional_suites": [
+      "test_currency_wars_state_reader.NativeCapacityTests",
+      "test_currency_wars_progression"
+    ],
+    "ast_files": [
+      "tools/currency_wars_coaching.py",
+      "tools/currency_wars_progression.py",
+      "tools/currency_wars_runner.py",
+      "tools/currency_wars_state_reader.py",
+      "tools/test_currency_wars_progression.py",
+      "tools/test_currency_wars_state_reader.py",
+      "tools/test_local_runtime_compatibility.py"
+    ],
+    "staged_diff_check": "passed"
+  },
+  "source_sha256": {
+    "tools/currency_wars_coaching.py": "3c85265601efcf5407be2462489a594d0ece145adc05319d32260fea2b24e394",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_runner.py": "85438af0287e5c602a8cd14f99e0c94d8b021512b70df028ac98de5d65e2d77e",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/test_currency_wars_progression.py": "6fb962b86fa711be7a0e24ddba94d36514e9b677ce70cea2382bf8f22cdc0a50",
+    "tools/test_currency_wars_state_reader.py": "099f9cbe8ae94140e38db47485b1c2b1444660061723c9f60db13d385577f205",
+    "tools/test_local_runtime_compatibility.py": "669ab10850dc0c31eb14252fc05b0c4b545cd2bb937ede37ecea2cc2ff9ddd91"
+  },
+  "integration_changes": [
+    "Current reward-clear predicate calls coaching.reward_status after existing identity guards",
+    "Three B003 recovery cases run on the actual combined checkout without skips",
+    "Updated existing current-review fixture to retain actual history snapshot identity and expect the required post-guide reward rescan; production guard was not relaxed"
+  ],
+  "review_findings_resolved": [
+    "Complete original sale can reconcile after exact CAS resume",
+    "Current complete manual checkpoint can supersede unknown sale after multiple handoffs without declaring old sale successful"
+  ],
+  "limitations": [
+    "No Win32/game input or live installation",
+    "No native overflow scanner or general sale-control template",
+    "Nonzero/unknown overflow remains unsupported by automatic sale exception",
+    "Privilege-card resource candidates do not execute equipment upgrades",
+    "No autonomous whole-match or speed claim"
+  ],
+  "game_inputs": 0,
+  "first_integration_run": {
+    "tests_run": 25,
+    "passed": 24,
+    "errors": 1,
+    "reason": "Legacy current-review fixture omitted its history snapshot_id; its downstream assertion also expected rewards to survive guide claims. Corrected fixture and expected new dependency; no native facts fabricated."
+  }
+}
