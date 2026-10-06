@@ -1,0 +1,66 @@
+{
+  "task": "B-003",
+  "parent_sha": "beaea343ee7edf29bcba70ba8351a7dc462a83da",
+  "recorded_at": "2026-10-06T17:54:11.258675+00:00",
+  "environment": "Linux; repository dependencies in task-local test-deps; synthetic PNG/control substitutes",
+  "root_verification": {
+    "tests_run": 23,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 4.794,
+    "test_names": [
+      "test_finish_manual_phase_does_not_overwrite_changed_checkpoint_status",
+      "test_manual_after_frame_failure_saves_receipts_and_retry_only_observes",
+      "test_manual_battle_acceptance_uses_current_population_instead_of_historical_full_team",
+      "test_manual_bridge_incomplete_or_omitted_receipt_stays_pending",
+      "test_manual_bridge_partial_completion_survives_resume_without_blanket_completion_or_resend",
+      "test_manual_bridge_rejects_changed_match_stage_new_takeover_and_stale_fresh_frame",
+      "test_manual_completed_input_without_frame_and_control_resume_keep_original_receipts",
+      "test_manual_current_guide_review_requires_reward_rescan_and_preserves_guide",
+      "test_manual_inventory_reconciliation_requires_all_nineteen_unique_native_slots",
+      "test_manual_known_partial_preserves_prefix_and_only_current_review_continues",
+      "test_manual_missing_hud_defers_once_per_request_and_new_frame_can_revalidate",
+      "test_manual_no_effect_coin_check_does_not_exempt_a_later_drag_from_fence",
+      "test_manual_receipt_evidence_distinguishes_no_input_completed_partial_and_unknown",
+      "test_manual_resume_event_rejects_changed_receipt_guard_and_new_pause_wins",
+      "test_manual_trace_does_not_survive_a_later_unrecorded_sale",
+      "test_manual_unknown_input_does_not_poison_a_new_current_review",
+      "test_manual_wait_does_not_spend_node_budget_or_extend_hard_deadline",
+      "test_takeover_receipt_reconciliation_waits_exact_id_and_never_republishes",
+      "test_two_manual_checkpoint_writers_publish_only_one_pending_phase",
+      "test_unknown_manual_phase_keeps_prior_verified_phase_without_new_takeover",
+      "test_worker_bad_observations_are_bounded_and_do_not_adopt_old_frame",
+      "test_worker_capture_failure_reobserves_without_resending_completed_input",
+      "test_worker_reads_its_receipt_and_releases_only_consumed_previous_frame"
+    ],
+    "ast_files": [
+      "tools/currency_wars_runner.py",
+      "tools/test_local_runtime_compatibility.py"
+    ],
+    "staged_diff_check": "passed"
+  },
+  "source_sha256": {
+    "tools/currency_wars_runner.py": "546c2116f6b84ae064a4aca1f0d1d09119905e65d235780d46b6958312e877b7",
+    "tools/test_local_runtime_compatibility.py": "2c0e348380f17495209714b5e050166128bf4faa5394de2916063faf572b5b44"
+  },
+  "broker_sha256": "187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5",
+  "matching_pins": {
+    "tools/currency_wars_broker_entry.py": "187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5",
+    "tools/currency_wars_bridge_task.py": "187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5"
+  },
+  "independent_review": {
+    "agent": "frame_fix",
+    "tests_run": 23,
+    "passed": 23,
+    "skipped": 0,
+    "resolved_finding": "Complete fixed slots do not prove temporary overflow; missing independent overflow evidence defers to current review."
+  },
+  "limitations": [
+    "No Win32 or game inputs issued",
+    "No live installation or complete autonomous match validated",
+    "Missing native economy/overflow facts remain deferred; synthetic fixture fields are not OCR capability",
+    "No real timing baseline or measured speedup claimed"
+  ],
+  "game_inputs": 0
+}

@@ -42,8 +42,13 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                 OWNER = {'chat_id': 'owned-chat', 'run_token': 'owned-token'}
                 frame = before_png.getvalue()
                 published = []
+                pauses = []
                 def status(self):
-                    return {'ready': True, 'paused': False, 'input_halted': False, 'game_foreground': True}
+                    return {'ready': True, 'paused': False, 'input_halted': False, 'game_foreground': True,
+                            'broker_pid': 123, 'broker_creation_time': '456', 'pause_id': None}
+                def pause(self, reason):
+                    self.pauses.append(reason)
+                    return {'ok': True, 'paused': True, 'reason': reason}
                 def submission_lock(self):
                     return contextlib.nullcontext()
                 def validate_actions(self, value):
@@ -61,15 +66,23 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                         (directory / filename).write_bytes(self.frame)
                     digest = hashlib.sha256(self.frame).hexdigest()
                     self.write_json(runtime / 'result.json', {'id': value['id'], 'ok': True,
-                        'completed': value.get('actions', []), 'observation': {
+                        'completed': value.get('actions', []),
+                        'input_attempted': bool(value.get('handoff') or any(action['type'] not in ('observe', 'wait')
+                                                for action in value.get('actions', []))),
+                        'attempted_actions': [action for action in value.get('actions', []) if action['type'] not in ('observe', 'wait')],
+                        'observation': {
                             'frame_protocol': 1, 'request_id': value['id'], 'frame_id': frame_id,
                             'captured_at': runner.now(), 'snapshot': str(directory / 'preview.png'),
                             'original': str(directory / 'original.png'), 'snapshot_sha256': digest,
                             'original_sha256': digest, 'snapshot_size': [1920, 1080], 'original_size': [1920, 1080]}})
             control = Control()
-            reader = SimpleNamespace(read=lambda path: {'snapshot_id': hashlib.sha256(Path(path).read_bytes()).hexdigest(),
-                'page': 'preparation', 'fields': {'stage': '2-3', 'deployed': '1/1'}, 'rows': [], 'semantic': {},
-                'elapsed_ms': 0.})
+            reader = SimpleNamespace(frames={})
+            def read_frame(path):
+                digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                return json.loads(json.dumps({'snapshot_id': digest, 'page': 'preparation',
+                    'fields': {'stage': '2-3', 'deployed': '1/1', 'coins': 52, 'level': 7, 'xp': '38/52'},
+                    'rows': [], 'semantic': {}, 'elapsed_ms': 0., **reader.frames.get(digest, {})}))
+            reader.read = read_frame
             control.write_json(records / 'owner.json', owner)
             control.write_json(runtime / 'runner-state.json', {**owner, 'match_id': 'match', 'preparation_stage': '2-3',
                 'journal_file': str(records / 'journal.jsonl')})
@@ -166,24 +179,49 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             self.assertIs(worker.last_observation, old)
 
     def resumed_manual_worker(self, runtime, records, owner, control, reader, item):
-        entry.request(control, 'resume', [], 'new-epoch', True)
-        control.write_json(runtime / 'runner-resume-epoch.json', {'id': 'new-epoch', 'previous_epoch': 'old-epoch',
-            'consumed_manual_id': 'manual-one', 'consumed_manual_ids': ['manual-one'], 'time': runner.now()})
-        (runtime / 'runner-manual.json').unlink()
+        result = runner.explicit_resume(runtime, owner, control, 'new-epoch',
+                                        expected_guard=runner.resume_guard_snapshot(runtime, owner, control))
+        self.assertTrue(result['ok'])
         worker = object.__new__(runner.Worker)
         worker.run, worker.records, worker.owner, worker.c, worker.perception = runtime, records, owner, control, reader
         worker.active_match_id, worker.last_preparation_stage = 'match', '2-3'
         worker.preparation_scope, worker.preparation_reviews, worker.context = None, {}, {}
         worker.node_progress, worker.live_mode = 0, None
-        worker.log = lambda event: None
+        worker.events = []
+        worker.log = worker.events.append
         worker.publish = lambda **updates: worker.state.update(updates)
-        fresh = {**reader.read(Path(item['after']['evidence_file'])), 'evidence_file': item['after']['evidence_file'],
-            'observed_at': runner.now(), 'preparation_stage': '2-3', 'match_id': 'match', 'resume_epoch': 'new-epoch'}
-        worker.last_observation = fresh
-        worker.history = {fresh['snapshot_id']: fresh}
-        worker.state = {'decision_request': {'snapshot_id': fresh['snapshot_id'], 'evidence_file': fresh['evidence_file'],
-            'resume_epoch': 'new-epoch'}}
+        worker.history, worker.state = {}, {}
+        self.current_manual_frame(worker, control, reader)
         return worker
+
+    def current_manual_frame(self, worker, control, reader):
+        rid = uuid.uuid4().hex
+        receipt = entry.request(control, 'actions', ['observe'], rid, False)
+        frame = entry.observation_frame(worker.run, receipt)
+        path = worker.records / ('current-' + rid + '.png')
+        path.write_bytes(frame.read_bytes())
+        fresh = {**reader.read(path), 'evidence_file': str(path), 'observed_at': runner.now(),
+            'capture_request_id': rid, 'frame_id': receipt['observation']['frame_id'],
+            'captured_at': receipt['observation']['captured_at'], 'preparation_stage': '2-3',
+            'match_id': 'match', 'resume_epoch': worker.epoch()}
+        worker.last_observation = fresh
+        worker.history[fresh['snapshot_id']] = fresh
+        worker.state['decision_request'] = {'request_id': uuid.uuid4().hex, 'snapshot_id': fresh['snapshot_id'],
+            'evidence_file': fresh['evidence_file'], 'original_png': str(path), 'observation': fresh,
+            'resume_epoch': worker.epoch()}
+        return fresh
+
+    def current_manual_review(self, worker, value):
+        fresh = worker.last_observation
+        worker.review_preparation({'value': value, 'proof': {'source': 'observed_screen',
+            'snapshot_id': fresh['snapshot_id'], 'evidence_file': fresh['evidence_file'], 'resume_epoch': worker.epoch()}})
+
+    def manual_image(self, control, reader, color, **observation):
+        from PIL import Image
+        payload = io.BytesIO()
+        Image.new('RGB', (1920, 1080), color).save(payload, format='PNG')
+        control.frame = payload.getvalue()
+        reader.frames[hashlib.sha256(control.frame).hexdigest()] = observation
 
     def test_manual_bridge_partial_completion_survives_resume_without_blanket_completion_or_resend(self):
         with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
@@ -193,16 +231,19 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             self.assertTrue(Path(item['after']['evidence_file']).exists())
             worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
             published = len(control.published)
-            self.assertTrue(worker.consume_manual_results())
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_review(worker, item['review'])
             self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
             self.assertEqual(set(worker.preparation_reviews), {'rewards'})
             self.assertEqual(worker.preparation_reviews['rewards']['proof']['resume_epoch'], 'new-epoch')
             self.assertEqual(item['binding']['old_epoch'], 'old-epoch')
             self.assertEqual(len(control.published), published)
-            durable = entry.read_json(records / ('manual-' + item['checkpoint_id'] + '.json'))
-            self.assertEqual(durable['reconciliation']['new_epoch'], 'new-epoch')
-            self.assertEqual(durable['reconciliation']['resume_receipt']['result']['id'], 'new-epoch')
-            self.assertTrue(Path(durable['reconciliation']['fresh_original_png']).exists())
+            event, receipt = runner.verified_resume_event(runtime, owner, control,
+                entry.read_json(runtime / 'runner-resume-epoch.json'))
+            self.assertEqual(event['old_epoch'], 'old-epoch')
+            self.assertEqual(receipt['result']['id'], 'new-epoch')
+            self.assertFalse((runtime / 'runner-battle-approval.json').exists())
             self.assertFalse(worker.consume_manual_results())
 
     def test_progression_knowledge_loads_conditions_but_never_cached_progress(self):
@@ -262,8 +303,9 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             incomplete['review'].update(phase='startup_guide', entry_index=2, rewards_claimed=True, goals=[])
             control.write_json(runtime / 'manual-results' / 'unknown-guide.json', incomplete)
             worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            self.current_manual_review(worker, item['review'])
             count = len(control.published)
-            self.assertTrue(worker.consume_manual_results())
+            self.assertFalse(worker.consume_manual_results())
             status = worker.preparation_checklist(worker.last_observation)
             self.assertEqual(status['phase'], 'startup_guide')
             self.assertEqual(set(worker.preparation_reviews), {'rewards'})
@@ -368,13 +410,16 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             control.write_json(path, receipt)
             review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent', 'findings': 'review'}
             count = len(control.published)
-            for ids in (['partial-click'], []):
-                with self.subTest(ids=ids), self.assertRaises(ValueError):
-                    runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ids, review, reader=reader)
+            with self.assertRaises(ValueError):
+                runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], [], review, reader=reader)
+            runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ['partial-click'], review, reader=reader)
             saved = entry.read_json(runtime / 'manual-results' / (checkpoint['checkpoint_id'] + '.json'))
             self.assertEqual(saved['status'], 'pending')
-            self.assertNotIn('after', saved)
-            self.assertEqual(len(control.published), count)
+            self.assertEqual(saved['outcome'], 'unknown')
+            self.assertTrue(saved['receipt_states'][0]['unknown_input'])
+            self.assertEqual(saved['input_receipts'][0], runner.redact(receipt))
+            self.assertIn('after', saved)
+            self.assertEqual(len(control.published), count + 1)  # Only the new observe.
 
     def test_takeover_receipt_reconciliation_waits_exact_id_and_never_republishes(self):
         with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
@@ -394,6 +439,265 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                 reconciled = runner.await_existing_receipt(runtime, control, 'ongoing', .2)
             self.assertEqual(reconciled['result']['id'], 'ongoing')
             self.assertEqual(len(control.published), count)
+
+    def replace_manual_receipt(self, runtime, control, rid, *, remove=(), **updates):
+        path = runtime / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+        receipt = entry.read_json(path)
+        receipt['result'].update(updates)
+        for key in remove:
+            receipt['result'].pop(key, None)
+        control.write_json(path, receipt)
+        control.write_json(runtime / 'result.json', receipt['result'])
+        return receipt
+
+    def test_manual_receipt_evidence_distinguishes_no_input_completed_partial_and_unknown(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            entry.request(control, 'actions', ['click:1:2', 'click:3:4'], 'delivery', False)
+            raw = runner.await_existing_receipt(runtime, control, 'delivery', 0)
+            actions = raw['request']['actions']
+            cases = [
+                ({'ok': False, 'completed': [], 'input_attempted': False, 'attempted_actions': []}, 'zero_input', False),
+                ({'ok': True, 'completed': actions, 'input_attempted': True, 'attempted_actions': actions}, 'completed', False),
+                ({'ok': False, 'completed': actions[:1], 'input_attempted': True, 'attempted_actions': actions[:1]}, 'partial', False),
+                ({'ok': False, 'completed': [], 'input_attempted': True, 'attempted_actions': actions[:1]}, 'unknown', True),
+                ({'ok': False, 'completed': actions[:1], 'input_attempted': True, 'attempted_actions': actions}, 'unknown', True),
+                ({'ok': False, 'completed': [], 'input_attempted': None, 'attempted_actions': None}, 'unknown', True),
+            ]
+            for result, expected, unknown in cases:
+                with self.subTest(expected=expected, result=result):
+                    state = runner.manual_receipt_state({**raw, 'result': {'id': 'delivery', **result}})
+                    self.assertEqual((state['state'], state['unknown_input']), (expected, unknown))
+            wait = {**raw, 'request': {**raw['request'], 'actions': [{'type': 'wait', 'args': [1]}], 'handoff': True},
+                    'result': {'id': 'delivery', 'ok': False, 'completed': [], 'input_attempted': True, 'attempted_actions': []}}
+            self.assertTrue(runner.manual_receipt_state(wait)['unknown_input'])
+
+    def test_manual_completed_input_without_frame_and_control_resume_keep_original_receipts(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'resume', [], 'phase-handoff', True, expected_pause_id=None)
+            entry.request(control, 'actions', ['click:1:2'], 'complete-no-frame', False)
+            completed = self.replace_manual_receipt(runtime, control, 'complete-no-frame', remove=('observation',),
+                                                    observation_error='capture failed')
+            entry.request(control, 'actions', ['click:3:4'], 'zero-input-refusal', False)
+            zero = self.replace_manual_receipt(runtime, control, 'zero-input-refusal', remove=('observation',),
+                ok=False, completed=[], input_attempted=False, attempted_actions=[], error='guard refused before dispatch')
+            # Failed passive observations are reconciled without requiring the
+            # supervisor to list them as business input or publish them again.
+            entry.request(control, 'actions', ['observe'], 'passive-failure', False)
+            self.replace_manual_receipt(runtime, control, 'passive-failure', remove=('observation',), ok=False)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': 'Current reward area reviewed', 'all_claimed': True, 'rescanned_after_claim': True}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                ['phase-handoff', 'complete-no-frame', 'zero-input-refusal'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('completed', 'success'))
+            saved = {receipt['id']: receipt for receipt in item['input_receipts']}
+            self.assertEqual(saved['complete-no-frame'], runner.redact(completed))
+            self.assertEqual(saved['zero-input-refusal'], runner.redact(zero))
+            self.assertTrue(item['image_changed'])
+            self.assertNotIn('verified_change', json.dumps(item))
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            count = len(control.published)
+            self.assertFalse(worker.consume_manual_results())
+            self.current_manual_review(worker, review)
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(len(control.published), count)
+
+    def test_manual_unknown_input_does_not_poison_a_new_current_review(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'actions', ['click:1:2'], 'sent-before-focus-loss', False)
+            actual = self.replace_manual_receipt(runtime, control, 'sent-before-focus-loss', ok=False,
+                completed=[], input_attempted=True, error='focus failed after dispatch')
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': 'Claimed success must not erase unknown input', 'all_claimed': True,
+                      'rescanned_after_claim': True}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                             ['sent-before-focus-loss'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('pending', 'unknown'))
+            self.assertEqual(item['input_receipts'], [runner.redact(actual)])
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            count = len(control.published)
+            self.assertFalse(worker.consume_manual_results())
+            self.current_manual_review(worker, {**review, 'findings': 'Independent current request: reward area now clear'})
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertFalse(worker.consume_manual_results())
+            self.assertEqual(len(control.published), count)
+            self.assertEqual(entry.read_json(runtime / 'manual-results' / (item['checkpoint_id'] + '.json'))['outcome'], 'unknown')
+            self.assertEqual(sum(request['id'] == 'sent-before-focus-loss' for request in control.published), 1)
+
+    def test_manual_after_frame_failure_saves_receipts_and_retry_only_observes(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'actions', ['click:1:2'], 'one-completed-input', False)
+            raw = runner.await_existing_receipt(runtime, control, 'one-completed-input', 0)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': 'After observation is still required', 'all_claimed': True, 'rescanned_after_claim': True}
+            original_request = entry.request
+            def bad_after(*args, **kwargs):
+                result = original_request(*args, **kwargs)
+                Path(result['observation']['snapshot']).write_bytes(b'truncated')
+                return result
+            with patch.object(entry, 'request', side_effect=bad_after):
+                pending = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                                    ['one-completed-input'], review, reader=reader)
+            self.assertEqual((pending['status'], pending['outcome']), ('pending', 'unknown'))
+            self.assertEqual(pending['input_receipts'], [runner.redact(raw)])
+            self.assertNotIn('after', pending)
+            self.assertTrue(pending['observation_error'])
+            count = len(control.published)
+            finished = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                                 ['one-completed-input'], review, reader=reader)
+            self.assertEqual((finished['status'], finished['outcome']), ('completed', 'success'))
+            self.assertEqual(len(control.published), count + 1)
+            self.assertEqual(control.published[-1]['actions'], [{'type': 'observe', 'args': []}])
+            self.assertEqual(sum(request['id'] == 'one-completed-input' for request in control.published), 1)
+
+    def test_manual_known_partial_preserves_prefix_and_only_current_review_continues(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'actions', ['click:1:2', 'click:3:4'], 'known-prefix', False)
+            original = runner.await_existing_receipt(runtime, control, 'known-prefix', 0)
+            prefix = original['request']['actions'][:1]
+            self.replace_manual_receipt(runtime, control, 'known-prefix', ok=False, completed=prefix,
+                                        attempted_actions=prefix, failing_action_index=1)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': False, 'outcome': 'partial',
+                      'reviewer': 'supervising_agent', 'findings': 'Only the first reward input completed'}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ['known-prefix'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('pending', 'partial'))
+            self.assertFalse(item['receipt_states'][0]['unknown_input'])
+            self.assertEqual(item['input_receipts'][0]['result']['completed'], prefix)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            count = len(control.published)
+            self.current_manual_review(worker, {**review, 'completed': True, 'outcome': 'success',
+                'all_claimed': True, 'rescanned_after_claim': True, 'findings': 'Current remaining rewards independently reviewed'})
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(len(control.published), count)
+
+    def test_manual_no_effect_coin_check_does_not_exempt_a_later_drag_from_fence(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            reward = self.complete_manual_reward(runtime, owner, control, reader)
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'startup_guide', reader=reader)
+            entry.request(control, 'actions', ['drag:1:2:3:4'], 'drag-with-same-coins', False)
+            review = {'phase': 'startup_guide', 'stage': '2-3', 'completed': False, 'outcome': 'no_effect',
+                'reviewer': 'supervising_agent', 'findings': 'Only the coin field was compared', 'effect_fields': ['coins']}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                             ['drag-with-same-coins'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('pending', 'no_effect'))
+            self.assertEqual(item['effect_scope'], 'listed_dynamic_fields_only')
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            worker.preparation_checklist(worker.last_observation)
+            with self.assertRaisesRegex(ValueError, '未覆盖的输入变化'):
+                worker.verify_manual_mutation_fence(reward)
+
+    def test_manual_missing_hud_defers_once_per_request_and_new_frame_can_revalidate(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            item = self.complete_manual_reward(runtime, owner, control, reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            worker.last_observation['fields']['stage'] = None
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            events = len(worker.events)
+            self.assertFalse(worker.consume_manual_results())
+            self.assertEqual(len(worker.events), events)
+            fresh = self.current_manual_frame(worker, control, reader)
+            worker.preparation_checklist(fresh)
+            source = worker.verified_manual_source(item, fresh)
+            self.assertEqual(source['preparation_stage'], '2-3')
+            self.current_manual_review(worker, item['review'])
+            self.assertEqual(worker.preparation_checklist(fresh)['phase'], 'startup_guide')
+
+    def test_manual_inventory_reconciliation_requires_all_nineteen_unique_native_slots(self):
+        from currency_wars_state_reader import native_slots
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            slots = [{**slot, 'status': 'empty', 'name': None, 'star': None} for slot in native_slots()]
+            self.manual_image(control, reader, 'gray', semantic={'team': {'slots': slots}})
+            digest = hashlib.sha256(control.frame).hexdigest()
+            reader.frames[digest]['semantic']['team']['snapshot_id'] = digest
+            reader.frames[digest]['semantic']['team']['capacity'] = {
+                'snapshot_id': digest, 'overflow_checked': True, 'overflow_count': 0}
+            for phase in runner.coaching.PHASES[:3]:
+                checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', phase, reader=reader)
+                review = {'phase': phase, 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                          'findings': 'Fixture phase; current proof still required'}
+                item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], [], review, reader=reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            worker.preparation_checklist(worker.last_observation)
+            # Prior two phases model already accepted current supervising
+            # reviews; this check isolates the real inventory reconciliation.
+            proof = {'source': 'observed_screen', 'resume_epoch': worker.epoch(),
+                     'snapshot_id': worker.last_observation['snapshot_id'], 'evidence_file': worker.last_observation['evidence_file']}
+            worker.preparation_reviews = {phase: {'completed': True, 'proof': proof} for phase in runner.coaching.PHASES[:2]}
+            worker.last_observation['semantic']['team']['slots'] = slots[:1]
+            count = len(control.published)
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_frame(worker, control, reader)
+            worker.last_observation['semantic']['team']['capacity']['overflow_checked'] = False
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_frame(worker, control, reader)
+            worker.last_observation['semantic']['team']['capacity']['overflow_count'] = 1
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_frame(worker, control, reader)
+            self.assertTrue(worker.consume_manual_results())
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'economy')
+            self.assertEqual(len(control.published), count + 3)
+            durable = entry.read_json(records / ('manual-' + item['checkpoint_id'] + '.json'))
+            self.assertEqual(durable['reconciliation']['fresh_receipt']['id'], worker.last_observation['capture_request_id'])
+            self.assertTrue(Path(durable['reconciliation']['fresh_original_png']).exists())
+            self.assertEqual(durable['reconciliation']['resume_event']['new_epoch'], 'new-epoch')
+
+    def test_manual_resume_event_rejects_changed_receipt_guard_and_new_pause_wins(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            item = self.complete_manual_reward(runtime, owner, control, reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            epoch = entry.read_json(runtime / 'runner-resume-epoch.json')
+            target = runtime / 'resume-events' / (hashlib.sha256(b'new-epoch').hexdigest() + '.json')
+            original = entry.read_json(target)
+            for field, value in [('broker_pause_id', 'wrong-pause'), ('broker_creation_id', '999')]:
+                changed = json.loads(json.dumps(original))
+                changed['guard'][field] = value
+                control.write_json(target, changed)
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    runner.verified_resume_event(runtime, owner, control, epoch)
+            control.write_json(target, original)
+            self.replace_manual_receipt(runtime, control, 'new-epoch', observation_error='receipt changed later')
+            with self.assertRaises(ValueError):
+                runner.verified_resume_event(runtime, owner, control, epoch)
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            expected = runner.resume_guard_snapshot(runtime, owner, control)
+            request = entry.request
+            def new_pause(*args, **kwargs):
+                result = request(*args, **kwargs)
+                control.write_json(runtime / 'runner-manual.json', {'manual_id': 'new-takeover', 'reason': 'new pause'})
+                return result
+            with patch.object(entry, 'request', side_effect=new_pause), self.assertRaisesRegex(RuntimeError, '新的手动接管优先'):
+                runner.explicit_resume(runtime, owner, control, 'late-resume', expected_guard=expected)
+            self.assertEqual(entry.read_json(runtime / 'runner-resume-epoch.json')['id'], 'old-epoch')
+            self.assertEqual(runner.manual_state(runtime)['manual_id'], 'new-takeover')
+            self.assertEqual(len(control.published), 1)
+            self.assertEqual(len(control.pauses), 1)
+
+    def test_manual_current_guide_review_requires_reward_rescan_and_preserves_guide(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            item = self.complete_manual_reward(runtime, owner, control, reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            self.current_manual_review(worker, item['review'])
+            self.manual_image(control, reader, 'blue', page='unknown',
+                rows=[{'text': '创业指南', 'confidence': .99, 'box': [1, 1, 100, 40]}])
+            self.current_manual_frame(worker, control, reader)
+            self.current_manual_review(worker, {'phase': 'startup_guide', 'stage': '2-3', 'completed': True,
+                'reviewer': 'supervising_agent', 'findings': 'Current chapter and claimed rewards read',
+                'entry_index': 2, 'rewards_claimed': True, 'goals': []})
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertIn('startup_guide', worker.preparation_reviews)
+            self.manual_image(control, reader, 'green', page='preparation')
+            self.current_manual_frame(worker, control, reader)
+            with self.assertRaises(ValueError):
+                self.current_manual_review(worker, {**item['review'], 'all_claimed': False})
+            self.current_manual_review(worker, item['review'])
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'inventory_cleanup')
 
     def test_boss_result_only_advances_once_and_does_not_confirm_a_match(self):
         worker = object.__new__(runner.Worker)
