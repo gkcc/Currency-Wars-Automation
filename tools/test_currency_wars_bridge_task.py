@@ -609,8 +609,8 @@ class ResumeTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(data).hexdigest().upper(), bridge.PINNED_BROKER_SHA256)
         tree = ast.parse(data)
         functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
-                     and node.name in ('execute_resume', 'execute_request')]
-        self.assertEqual({node.name for node in functions}, {'execute_resume', 'execute_request'})
+                     and node.name in ('execute_resume', 'execute_request', 'attach_observation')]
+        self.assertEqual({node.name for node in functions}, {'execute_resume', 'execute_request', 'attach_observation'})
         control = types.ModuleType('offline_pinned_resume')
         control.__dict__.update(ROOT=str(owned), OWNER={'chat_id': 'test-chat', 'run_token': 'a' * 48},
             BINDING={'hwnd': 333}, Path=Path, time=time, SEEN_RESUME_IDS=set(),
