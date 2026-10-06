@@ -74,3 +74,7 @@
 Pro已指出公开材料缺连续输入后的截图和收据，因此ROOT从既有留存补出了[刷新子链清单](refresh-sequence/manifest.json)：起始商店帧加六笔实际D68/等待0.4的后帧，旧读数金币70→68→66→64→62→60→58。原收据只脱敏本机句柄/PID/路径，原哈希和完成动作保留；截图仅遮UID，第一刷新图复用此前fixture。
 
 这只覆盖付费刷新子链，其余奖励、购买、免费刷新、F、布阵装备与出战均未覆盖。原图中的错误player level=99仍保留，不以期望值替代真实识别、不补confidence/fully_read。没有当前owner/token/epoch，这些档案不能授权实操或关闭业务。用于同序列离线对比，OCR、进程内处理和模拟执行各自计时；不得据此宣称完整备战已自主完成。
+
+## PR9测试依赖小修：本机已通过
+
+`23944b1c85522b0d4e64778c3c9d511d89fb08bc` 生产文件与PR8相同；ROOT 在Windows actual installed环境重跑PR8原50项选择，50/50通过、0失败/错误/跳过，7.677秒。两个原RuntimeRoot方法的实际installed与仓库standalone子案例都执行。见[本机记录](ROOT_PR9_WINDOWS_ACCEPTANCE.json)。不将各版本测试数量相加，也不称107项已重跑。无新游戏截图/输入、GUI构建或安装。
