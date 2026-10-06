@@ -2968,6 +2968,9 @@ class Worker:
         if getattr(self, 'business_needs_review', False):
             raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
         page = (self.last_observation or {}).get('page')
+        if (expected_page is not None and page != expected_page
+                or action and action.get('expected_page') not in (None, page)):
+            raise ValueError('输入前置页面与当前帧不符；只回读重定位，未提交')
         if page in economy.PREPARATION_PAGES:
             keys = {float(token.split(':')[1]) for token in tokens if token.startswith('key:')}
             if 69 in keys:
@@ -3027,6 +3030,8 @@ class Worker:
                         or any(current_request.get(key) != item for key, item in binding.items())
                         or battle_stage(current_request) != captured_stage
                         or current.get('snapshot_id') != observed.get('snapshot_id')
+                        or current.get('page') != observed.get('page')
+                        or expected_page is not None and current.get('page') != expected_page
                         or canonical_stage(current.get('fields', {}).get('stage')) != canonical_stage(observed.get('fields', {}).get('stage'))):
                     raise BattleConfirmationRequired('needs_user_confirmation：发布前请求/画面/节点/交接身份已改变，未提交')
                 if request and datetime.now(timezone.utc) >= datetime.fromisoformat(request['deadline_at']):
@@ -3280,10 +3285,7 @@ class Worker:
                 raise ManualReviewDeferred('当前金币/等级/经验缺失或已变化；须按新资源复核经济')
         if phase == 'economy':
             economic = self.economic_policy(self.last_observation)
-            if (not economic['available'] or economic.get('pending') or economic.get('actions')
-                    or not economic.get('experience_resolved')
-                    or set(economic['observation']['unknown']) & economy.required_fields('review', economic['observation']['values'])
-                    or not economic['dependencies']['experience_allowed']):
+            if not self.economy_complete(economic):
                 raise unverified('经济完成须当前新epoch/新帧缺口、免费次数、付费停止与经验剩余计划均解决，原交易效果待验时不能复制完成标记')
             value = {**value, 'economic_snapshot_id': economic['observation']['snapshot_id'],
                      'economic_values': economic['observation']['values'], 'actual_spent': economic['spent'],
@@ -4021,14 +4023,33 @@ class Worker:
         if rounds is not None:
             proof = plan.get('reserve', {}).get('rounds_evidence', {})
             basis = self.verified_source(proof.get('proof', {}), 180)
-            reading = proof.get('reading')
-            row = find_text(basis.get('rows', []), reading, proof.get('bounds'), exact=True) if isinstance(reading, str) else None
-            if (proof.get('remaining_interest_rounds') != rounds or not isinstance(reading, str)
-                    or not re.search(r'(?:剩余|还有)\s*' + str(rounds) + r'\s*(?:次|个)?(?:结息|利息结算|回合)', reading)
-                    or not row or row.get('confidence', 0) < .90
+            if (proof.get('remaining_interest_rounds') != rounds
                     or proof.get('proof', {}).get('snapshot_id') != request['snapshot_id']
-                    or basis.get('preparation_stage') != stage):
-                raise ValueError('剩余结息回合须关联本局已读画面与实际读数，不从节点字符串推导')
+                    or basis.get('preparation_stage') != stage
+                    or basis.get('page') not in economy.PREPARATION_PAGES):
+                raise ValueError('结息来源须绑定本局、本节点、当前epoch与请求原帧')
+            origin = proof.get('source', 'observed_screen')
+            if origin == 'supervisor_confirmation':
+                # A current supervisor confirmation is an explicit policy
+                # source, not invented OCR. Keep its original reference and
+                # statement in the unchanged budget/receipt journal.
+                if (rounds != 0 or proof.get('reviewer') != 'supervising_agent'
+                        or proof.get('request_id') != request.get('request_id')
+                        or proof.get('match_id') != self.active_match_id
+                        or proof.get('stage') != stage or proof.get('mode') != plan.get('mode')
+                        or proof.get('confirmation_source') not in ('user_confirmation', 'reviewed_rule')
+                        or any(not isinstance(proof.get(key), str) or not proof[key].strip()
+                               for key in ('reference', 'statement'))):
+                    raise ValueError('末关确认须为当前请求明确的最后备战、模式、来源引用和确认原文；不能只填节点')
+            elif origin == 'observed_screen':
+                reading = proof.get('reading')
+                row = find_text(basis.get('rows', []), reading, proof.get('bounds'), exact=True) if isinstance(reading, str) else None
+                if (not isinstance(reading, str)
+                        or not re.search(r'(?:剩余|还有)\s*' + str(rounds) + r'\s*(?:次|个)?(?:结息|利息结算|回合)', reading)
+                        or not row or row.get('confidence', 0) < .90):
+                    raise ValueError('屏幕结息来源须有对应完整ROI与实际读数；不可编造不存在的控件')
+            else:
+                raise ValueError('未知结息来源；保留未知，不从节点字符串推导')
         proposed = copy.deepcopy(ledger)
         pending = proposed.get('pending')
         if pending:
@@ -4216,13 +4237,83 @@ class Worker:
             return False
         return True
 
+    @staticmethod
+    def economy_complete(policy):
+        """The same completion conditions for local execution and ROOT review."""
+        return bool(policy['available'] and not policy.get('pending') and not policy.get('actions')
+            and policy.get('experience_resolved')
+            and not set(policy['observation']['unknown']) & economy.required_fields('review', policy['observation']['values'])
+            and policy['dependencies']['experience_allowed'])
+
+    def finish_local_economy(self, observed, policy):
+        """Close only an already authorized budget; do not invent a human review."""
+        # Share Entry's single publication lock, as _manual_capture does.
+        # A later request cannot hide behind the still-valid old frame bytes.
+        with self.c.submission_lock():
+            if (optional(self.run / 'result.json') or {}).get('id') != observed.get('capture_request_id'):
+                return False
+            for rid in self.economy_receipt_watermark():
+                path = self.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+                if optional(path).get('result') is None:
+                    return False
+            if self.preparation_checklist(observed)['phase'] != 'economy' or not self.economy_complete(policy):
+                return False
+            scope = (self.active_match_id, canonical_stage(observed.get('fields', {}).get('stage')), self.epoch())
+            binding = getattr(self, 'economy_binding', None)
+            if (not binding or binding['scope'] != scope or observed is not self.last_observation
+                    or policy['observation']['snapshot_id'] != observed['snapshot_id']
+                    or getattr(self, 'business_needs_review', False)
+                    or manual_state(self.run) or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
+                return False
+            status = self.c.status()
+            if not status['ready'] or status['paused'] or status['input_halted'] or not status['game_foreground']:
+                return False
+            # A current image alone is not an input outcome. Retain its actual
+            # terminal receipt, and require the original economic pending to be
+            # resolved by the existing per-transaction reconciliation first.
+            receipt = await_existing_receipt(self.run, self.c, observed['capture_request_id'], 0)
+            result = receipt['result']
+            delivery = manual_receipt_state(receipt)
+            frame = result.get('observation') or {}
+            if (delivery['unknown_input'] or receipt['request'].get('handoff') is not False
+                    or result.get('ok') is not True or frame.get('request_id') != observed['capture_request_id']
+                    or frame.get('frame_id') != observed.get('frame_id')
+                    or frame.get('snapshot_sha256') != observed['snapshot_id']
+                    or frame.get('captured_at') != observed.get('captured_at')):
+                return False
+            payload = self.frame_path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() != observed['snapshot_id']:
+                raise entry.ObservationUnavailable('经济完成的当前原帧改变，保持待验')
+            path = self.records / ('economy-complete-' + observed['snapshot_id'] + '.png')
+            if path.exists():
+                if path.read_bytes() != payload:
+                    raise ValueError('经济完成证据已存在但字节不同；不覆盖')
+            else:
+                with path.open('xb') as stream:
+                    stream.write(payload)
+            proof = {'source': 'local_economy_execution', 'snapshot_id': observed['snapshot_id'],
+                     'evidence_file': str(path), 'capture_request_id': observed['capture_request_id'],
+                     'frame_id': observed['frame_id'], 'resume_epoch': scope[2], 'match_id': scope[0]}
+            self.preparation_reviews['economy'] = {'phase': 'economy', 'completed': True,
+                'stage': scope[1], 'origin': 'local_economy_execution', 'proof': proof, 'observed_at': now(),
+                'budget_revision': binding['plan']['revision'], 'budget_proof': copy.deepcopy(binding['proof']),
+                'economic_snapshot_id': observed['snapshot_id'], 'economic_values': copy.deepcopy(policy['observation']['values']),
+                'actual_spent': dict(policy['spent']), 'completion_receipt': redact(receipt),
+                'findings': '已核当前预算的缺口、免费次数、付费停止条件与经验剩余计划均已解决；布阵和出战仍待独立验收'}
+            self.node_progress = getattr(self, 'node_progress', 0) + 1
+            self.log({'event': 'preparation_phase_verified', 'phase': 'economy', 'stage': scope[1],
+                      'origin': 'local_economy_execution', 'proof': proof})
+            return True
+
     def advance_economy(self, observed):
-        if not self.preparation_checklist(observed)['economy_allowed']:
+        if self.preparation_checklist(observed)['phase'] != 'economy':
             return False
         for unused in range(8):
             policy = self.economic_policy(observed)
-            if not policy['available'] or not policy['actions']:
+            if not policy['available']:
                 return False
+            if not policy['actions']:
+                return self.finish_local_economy(observed, policy)
             action = policy['actions'][0]
             self.guard_preparation_action(action, observed)
             request = {'match_id': self.active_match_id, 'snapshot_id': observed['snapshot_id'],
@@ -4417,6 +4508,12 @@ class Worker:
                     raise
 
     def click_text(self, observed, label, reason, exact=True, bounds=None):
+        current = self.last_observation or {}
+        if (any(observed.get(key) != current.get(key)
+                for key in ('snapshot_id', 'page', 'capture_request_id', 'frame_id'))
+                or canonical_stage(observed.get('fields', {}).get('stage'))
+                    != canonical_stage(current.get('fields', {}).get('stage'))):
+            raise ValueError('文字入口仍引用旧帧/页面/节点；只回读重定位，未提交')
         found = find_text(observed['rows'], label, bounds, exact)
         if found is None:
             raise ValueError('文字按钮缺失/不唯一/置信不足：' + label)

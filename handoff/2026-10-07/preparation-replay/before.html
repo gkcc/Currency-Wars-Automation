@@ -1,0 +1,402 @@
+<!doctype html><meta charset="utf-8"><title>备战离线回放</title><style>body{font:16px system-ui;max-width:1250px;margin:40px auto;padding:0 20px;line-height:1.6}table{border-collapse:collapse;width:100%;font-size:13px}td,th{border:1px solid #bbb;padding:8px;text-align:left}pre{white-space:pre-wrap}summary{cursor:pointer;font-weight:600}strong{color:#9b3b00}</style><h1>备战离线回放</h1><p><strong>真实输入 0，新游戏截图 0。四个保留截图起点不构成连续备战。</strong></p><p>真实覆盖：备战/商店图到达领奖阶段，完整准备阶段完成 0/6，历史动作转移证据 0。单独标记的合成事务仅测试经济阶段（1/6）；前三阶段是 fixture 前提，收据是惰性替身产物。ROOT 策略、布阵与出战验收保持独立。单次耗时不作速度提升结论；未知动画与主管延迟不填零。</p><table><tr><th>section</th><th>case</th><th>normal_root_requests</th><th>exception_root_requests</th><th>total_seconds</th></tr><tr><td>real_starts</td><td>shop_character_level_999</td><td>0</td><td>0</td><td>2.5613884909980698</td></tr><tr><td>real_starts</td><td>shop_actual_player_level_8</td><td>0</td><td>0</td><td>2.1416555600007996</td></tr><tr><td>real_starts</td><td>boss_level_90_intro</td><td>0</td><td>1</td><td>0.8013322119950317</td></tr><tr><td>real_starts</td><td>final_preparation_player_level_9</td><td>1</td><td>0</td><td>2.159875191995525</td></tr><tr><td>synthetic_contracts</td><td>three_f_success</td><td>2</td><td>0</td><td>0.2829676359979203</td></tr><tr><td>synthetic_contracts</td><td>zero_effect</td><td>1</td><td>1</td><td>0.19429200600279728</td></tr></table><details><summary>shop_character_level_999</summary><pre>{
+  &quot;id&quot;: &quot;shop_character_level_999&quot;,
+  &quot;kind&quot;: &quot;retained_png_start_only&quot;,
+  &quot;snapshot_sha256&quot;: &quot;b4bb0d6cb242aef43c88fbf9c088251ae2a20ef13462ac5f47d2494ace4971ac&quot;,
+  &quot;engine_cold&quot;: true,
+  &quot;page&quot;: &quot;shop&quot;,
+  &quot;fields&quot;: {
+    &quot;stage&quot;: &quot;3-7&quot;,
+    &quot;level&quot;: &quot;99&quot;,
+    &quot;deployed&quot;: null
+  },
+  &quot;normal_root_requests&quot;: 0,
+  &quot;exception_root_requests&quot;: 0,
+  &quot;request_kind&quot;: null,
+  &quot;reason&quot;: &quot;offline_fixture_missing_successor: candidate recorded, zero physical input&quot;,
+  &quot;candidate_actions&quot;: [
+    {
+      &quot;type&quot;: &quot;click&quot;,
+      &quot;args&quot;: [
+        &quot;1623.0&quot;,
+        &quot;982.0&quot;
+      ]
+    }
+  ],
+  &quot;missing_successor&quot;: true,
+  &quot;phase&quot;: &quot;rewards&quot;,
+  &quot;phase_coverage&quot;: {
+    &quot;denominator&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;,
+      &quot;economy&quot;,
+      &quot;lineup_equipment&quot;,
+      &quot;battle_acceptance&quot;
+    ],
+    &quot;reached&quot;: [
+      &quot;rewards&quot;
+    ],
+    &quot;completed&quot;: [],
+    &quot;ordered_transitions&quot;: 0
+  },
+  &quot;timing_seconds&quot;: {
+    &quot;entry_and_perception&quot;: 2.470714766997844,
+    &quot;rule_and_inert_entry&quot;: 0.09067372400022577,
+    &quot;total&quot;: 2.5613884909980698,
+    &quot;ocr_and_field_read_reported&quot;: 2.40502,
+    &quot;exclusive&quot;: {
+      &quot;perception&quot;: 2.40502,
+      &quot;entry_io_unattributed&quot;: 0.06569476699784405,
+      &quot;decision_plus_inert_publication&quot;: 0.09067372400022577
+    },
+    &quot;real_input_animation&quot;: null,
+    &quot;supervisor_wait&quot;: null
+  },
+  &quot;knowledge_available&quot;: false,
+  &quot;physical_inputs&quot;: 0,
+  &quot;fresh_game_captures&quot;: 0,
+  &quot;historical_receipts_available&quot;: false
+}</pre></details><details><summary>shop_actual_player_level_8</summary><pre>{
+  &quot;id&quot;: &quot;shop_actual_player_level_8&quot;,
+  &quot;kind&quot;: &quot;retained_png_start_only&quot;,
+  &quot;snapshot_sha256&quot;: &quot;7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c&quot;,
+  &quot;engine_cold&quot;: false,
+  &quot;page&quot;: &quot;shop&quot;,
+  &quot;fields&quot;: {
+    &quot;stage&quot;: &quot;3-4&quot;,
+    &quot;level&quot;: &quot;99&quot;,
+    &quot;deployed&quot;: null
+  },
+  &quot;normal_root_requests&quot;: 0,
+  &quot;exception_root_requests&quot;: 0,
+  &quot;request_kind&quot;: null,
+  &quot;reason&quot;: &quot;offline_fixture_missing_successor: candidate recorded, zero physical input&quot;,
+  &quot;candidate_actions&quot;: [
+    {
+      &quot;type&quot;: &quot;click&quot;,
+      &quot;args&quot;: [
+        &quot;1623.0&quot;,
+        &quot;982.0&quot;
+      ]
+    }
+  ],
+  &quot;missing_successor&quot;: true,
+  &quot;phase&quot;: &quot;rewards&quot;,
+  &quot;phase_coverage&quot;: {
+    &quot;denominator&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;,
+      &quot;economy&quot;,
+      &quot;lineup_equipment&quot;,
+      &quot;battle_acceptance&quot;
+    ],
+    &quot;reached&quot;: [
+      &quot;rewards&quot;
+    ],
+    &quot;completed&quot;: [],
+    &quot;ordered_transitions&quot;: 0
+  },
+  &quot;timing_seconds&quot;: {
+    &quot;entry_and_perception&quot;: 2.067672188997676,
+    &quot;rule_and_inert_entry&quot;: 0.07398337100312347,
+    &quot;total&quot;: 2.1416555600007996,
+    &quot;ocr_and_field_read_reported&quot;: 1.9951199999999998,
+    &quot;exclusive&quot;: {
+      &quot;perception&quot;: 1.9951199999999998,
+      &quot;entry_io_unattributed&quot;: 0.07255218899767635,
+      &quot;decision_plus_inert_publication&quot;: 0.07398337100312347
+    },
+    &quot;real_input_animation&quot;: null,
+    &quot;supervisor_wait&quot;: null
+  },
+  &quot;knowledge_available&quot;: false,
+  &quot;physical_inputs&quot;: 0,
+  &quot;fresh_game_captures&quot;: 0,
+  &quot;historical_receipts_available&quot;: false
+}</pre></details><details><summary>boss_level_90_intro</summary><pre>{
+  &quot;id&quot;: &quot;boss_level_90_intro&quot;,
+  &quot;kind&quot;: &quot;retained_png_start_only&quot;,
+  &quot;snapshot_sha256&quot;: &quot;26bd80bd377990d76c96899759cb582fbca19dd1c1f300170d8d7ca0337668b7&quot;,
+  &quot;engine_cold&quot;: false,
+  &quot;page&quot;: &quot;unknown&quot;,
+  &quot;fields&quot;: {
+    &quot;stage&quot;: null,
+    &quot;level&quot;: &quot;90&quot;,
+    &quot;deployed&quot;: null
+  },
+  &quot;normal_root_requests&quot;: 0,
+  &quot;exception_root_requests&quot;: 1,
+  &quot;request_kind&quot;: &quot;unknown_page&quot;,
+  &quot;reason&quot;: &quot;当前页本地未可靠识别，停止点击；请由现有代理读原帧给有限守卫计划，不能盲点或重复试局。&quot;,
+  &quot;candidate_actions&quot;: [],
+  &quot;missing_successor&quot;: false,
+  &quot;phase&quot;: &quot;unclassified&quot;,
+  &quot;phase_coverage&quot;: {
+    &quot;denominator&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;,
+      &quot;economy&quot;,
+      &quot;lineup_equipment&quot;,
+      &quot;battle_acceptance&quot;
+    ],
+    &quot;reached&quot;: [],
+    &quot;completed&quot;: [],
+    &quot;ordered_transitions&quot;: 0
+  },
+  &quot;timing_seconds&quot;: {
+    &quot;entry_and_perception&quot;: 0.7330429779976839,
+    &quot;rule_and_inert_entry&quot;: 0.06828923399734776,
+    &quot;total&quot;: 0.8013322119950317,
+    &quot;ocr_and_field_read_reported&quot;: 0.66712,
+    &quot;exclusive&quot;: {
+      &quot;perception&quot;: 0.66712,
+      &quot;entry_io_unattributed&quot;: 0.06592297799768387,
+      &quot;decision_plus_inert_publication&quot;: 0.06828923399734776
+    },
+    &quot;real_input_animation&quot;: null,
+    &quot;supervisor_wait&quot;: null
+  },
+  &quot;knowledge_available&quot;: false,
+  &quot;physical_inputs&quot;: 0,
+  &quot;fresh_game_captures&quot;: 0,
+  &quot;historical_receipts_available&quot;: false
+}</pre></details><details><summary>final_preparation_player_level_9</summary><pre>{
+  &quot;id&quot;: &quot;final_preparation_player_level_9&quot;,
+  &quot;kind&quot;: &quot;retained_png_start_only&quot;,
+  &quot;snapshot_sha256&quot;: &quot;f1b2e675f99d8c5fb0606aad48c1b8fa21da5c424d556dc303c822ded054adce&quot;,
+  &quot;engine_cold&quot;: false,
+  &quot;page&quot;: &quot;preparation&quot;,
+  &quot;fields&quot;: {
+    &quot;stage&quot;: &quot;3-7&quot;,
+    &quot;level&quot;: &quot;9&quot;,
+    &quot;deployed&quot;: &quot;8/9&quot;
+  },
+  &quot;normal_root_requests&quot;: 1,
+  &quot;exception_root_requests&quot;: 0,
+  &quot;request_kind&quot;: &quot;preparation_strategy&quot;,
+  &quot;reason&quot;: &quot;按顺序处理当前待办：领奖领空。领奖后重新扫全场；第二入口创业指南读当前目标并领奖；清库存后再统一经济。可用当前帧proof提交supervising_agent复核，未知项回传，缓存不代替进度。&quot;,
+  &quot;candidate_actions&quot;: [],
+  &quot;missing_successor&quot;: false,
+  &quot;phase&quot;: &quot;rewards&quot;,
+  &quot;phase_coverage&quot;: {
+    &quot;denominator&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;,
+      &quot;economy&quot;,
+      &quot;lineup_equipment&quot;,
+      &quot;battle_acceptance&quot;
+    ],
+    &quot;reached&quot;: [
+      &quot;rewards&quot;
+    ],
+    &quot;completed&quot;: [],
+    &quot;ordered_transitions&quot;: 0
+  },
+  &quot;timing_seconds&quot;: {
+    &quot;entry_and_perception&quot;: 2.0873667579944595,
+    &quot;rule_and_inert_entry&quot;: 0.07250843400106532,
+    &quot;total&quot;: 2.159875191995525,
+    &quot;ocr_and_field_read_reported&quot;: 2.02477,
+    &quot;exclusive&quot;: {
+      &quot;perception&quot;: 2.02477,
+      &quot;entry_io_unattributed&quot;: 0.0625967579944593,
+      &quot;decision_plus_inert_publication&quot;: 0.07250843400106532
+    },
+    &quot;real_input_animation&quot;: null,
+    &quot;supervisor_wait&quot;: null
+  },
+  &quot;knowledge_available&quot;: false,
+  &quot;physical_inputs&quot;: 0,
+  &quot;fresh_game_captures&quot;: 0,
+  &quot;historical_receipts_available&quot;: false
+}</pre></details><details><summary>three_f_success</summary><pre>{
+  &quot;id&quot;: &quot;three_f_success&quot;,
+  &quot;kind&quot;: &quot;synthetic_numeric_transaction_contract&quot;,
+  &quot;frame_sequence&quot;: [
+    &quot;c43070e32745e015e86bf15117f33a9881f449cf6b43af35f374f6578c9c4312&quot;,
+    &quot;78c14722077de38727db107b3b08bfd85da9f7c01eea380589355f1a302df788&quot;,
+    &quot;4c4ffc723f5285ebea74b6ac8d6d87b98cb226741e4472477d58abfdd9945e61&quot;,
+    &quot;cf8eb99840db810ef414ced3a625658b70ae3aa1ad81c029013d6f905a1b5004&quot;
+  ],
+  &quot;normal_root_requests&quot;: 2,
+  &quot;exception_root_requests&quot;: 0,
+  &quot;request_kinds&quot;: [
+    &quot;shop_strategy&quot;,
+    &quot;shop_strategy&quot;
+  ],
+  &quot;simulated_keys&quot;: [
+    [
+      70.0
+    ],
+    [
+      70.0
+    ],
+    [
+      70.0
+    ]
+  ],
+  &quot;spent&quot;: {
+    &quot;purchase&quot;: 0,
+    &quot;refresh&quot;: 0,
+    &quot;experience&quot;: 12
+  },
+  &quot;pending&quot;: false,
+  &quot;next_phase&quot;: &quot;lineup_equipment&quot;,
+  &quot;economy_completed&quot;: true,
+  &quot;phase_coverage&quot;: {
+    &quot;denominator&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;,
+      &quot;economy&quot;,
+      &quot;lineup_equipment&quot;,
+      &quot;battle_acceptance&quot;
+    ],
+    &quot;tested&quot;: [
+      &quot;economy&quot;
+    ],
+    &quot;fixture_preconditions_only&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;
+    ]
+  },
+  &quot;physical_inputs&quot;: 0,
+  &quot;timing_seconds&quot;: {
+    &quot;total&quot;: 0.2829676359979203
+  },
+  &quot;receipt_origin&quot;: &quot;inert_entry_fixture_not_historical_game_receipt&quot;,
+  &quot;timing_limit&quot;: &quot;Generated numeric frames and mocked crop OCR; excludes human decision latency, real OCR, game animation.&quot;
+}</pre></details><details><summary>zero_effect</summary><pre>{
+  &quot;id&quot;: &quot;zero_effect&quot;,
+  &quot;kind&quot;: &quot;synthetic_numeric_transaction_contract&quot;,
+  &quot;frame_sequence&quot;: [
+    &quot;c43070e32745e015e86bf15117f33a9881f449cf6b43af35f374f6578c9c4312&quot;,
+    &quot;c43070e32745e015e86bf15117f33a9881f449cf6b43af35f374f6578c9c4312&quot;
+  ],
+  &quot;normal_root_requests&quot;: 1,
+  &quot;exception_root_requests&quot;: 1,
+  &quot;request_kinds&quot;: [
+    &quot;shop_strategy&quot;,
+    &quot;economy_result&quot;
+  ],
+  &quot;simulated_keys&quot;: [
+    [
+      70.0
+    ]
+  ],
+  &quot;spent&quot;: {
+    &quot;purchase&quot;: 0,
+    &quot;refresh&quot;: 0,
+    &quot;experience&quot;: 0
+  },
+  &quot;pending&quot;: true,
+  &quot;next_phase&quot;: &quot;economy&quot;,
+  &quot;economy_completed&quot;: false,
+  &quot;phase_coverage&quot;: {
+    &quot;denominator&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;,
+      &quot;economy&quot;,
+      &quot;lineup_equipment&quot;,
+      &quot;battle_acceptance&quot;
+    ],
+    &quot;tested&quot;: [
+      &quot;economy&quot;
+    ],
+    &quot;fixture_preconditions_only&quot;: [
+      &quot;rewards&quot;,
+      &quot;startup_guide&quot;,
+      &quot;inventory_cleanup&quot;
+    ]
+  },
+  &quot;physical_inputs&quot;: 0,
+  &quot;timing_seconds&quot;: {
+    &quot;total&quot;: 0.19429200600279728
+  },
+  &quot;receipt_origin&quot;: &quot;inert_entry_fixture_not_historical_game_receipt&quot;,
+  &quot;timing_limit&quot;: &quot;Generated numeric frames and mocked crop OCR; excludes human decision latency, real OCR, game animation.&quot;
+}</pre></details><h2>历史宿主计时证据</h2><pre>{
+  &quot;source_code_sha&quot;: &quot;3878f9ce9cdf427efd2fe58539a93c3794fbf3f8&quot;,
+  &quot;helper_events&quot;: 99,
+  &quot;matched_host_span_count&quot;: 146,
+  &quot;unique_host_call_ids&quot;: 146,
+  &quot;helper_kind_counts&quot;: {
+    &quot;observe&quot;: 17,
+    &quot;actions&quot;: 67,
+    &quot;battle&quot;: 8,
+    &quot;state&quot;: 4,
+    &quot;resume&quot;: 3
+  },
+  &quot;helper_result_counts&quot;: {
+    &quot;outcome_not_exported&quot;: 15,
+    &quot;reported_success&quot;: 80,
+    &quot;reported_refusal_or_error&quot;: 4
+  },
+  &quot;window_seconds&quot;: 6028.101221084595,
+  &quot;helper_internal_sum_seconds&quot;: 543.739,
+  &quot;helper_interval_union_seconds&quot;: 543.739000082016,
+  &quot;host_tool_union_seconds&quot;: 773.0252211093903,
+  &quot;host_outside_tools_unattributed_seconds&quot;: 5255.0759999752045,
+  &quot;host_tag_counts_nonexclusive&quot;: {
+    &quot;gameplay_helper&quot;: 97,
+    &quot;saved_image_review&quot;: 32,
+    &quot;repo_diagnostic&quot;: 41,
+    &quot;host_wait&quot;: 6,
+    &quot;pro_browser&quot;: 12,
+    &quot;git_sync&quot;: 9,
+    &quot;workflow_telemetry&quot;: 4
+  },
+  &quot;host_time_partition_seconds&quot;: {
+    &quot;gameplay_helper&quot;: 476.9632213115692,
+    &quot;outside_matched_tools_unattributed&quot;: 5255.0759999752045,
+    &quot;gameplay_helper + saved_image_review&quot;: 22.311000108718872,
+    &quot;gameplay_helper + repo_diagnostic&quot;: 121.93399977684021,
+    &quot;host_wait + repo_diagnostic&quot;: 7.571000099182129,
+    &quot;host_wait&quot;: 6.543999910354614,
+    &quot;pro_browser + repo_diagnostic&quot;: 6.148000001907349,
+    &quot;repo_diagnostic&quot;: 12.502000331878662,
+    &quot;gameplay_helper + host_wait + pro_browser&quot;: 10.099999904632568,
+    &quot;saved_image_review&quot;: 17.548999786376953,
+    &quot;gameplay_helper + git_sync + pro_browser&quot;: 5.7850000858306885,
+    &quot;gameplay_helper + workflow_telemetry&quot;: 23.11900043487549,
+    &quot;git_sync + pro_browser + repo_diagnostic&quot;: 2.8239998817443848,
+    &quot;gameplay_helper + pro_browser&quot;: 11.76200008392334,
+    &quot;gameplay_helper + git_sync&quot;: 15.07200002670288,
+    &quot;pro_browser + repo_diagnostic + saved_image_review&quot;: 3.3269999027252197,
+    &quot;repo_diagnostic + saved_image_review&quot;: 10.376999616622925,
+    &quot;gameplay_helper + git_sync + repo_diagnostic&quot;: 6.34499979019165,
+    &quot;git_sync + repo_diagnostic&quot;: 2.7250001430511475,
+    &quot;git_sync&quot;: 9.138999938964844,
+    &quot;pro_browser&quot;: 0.9279999732971191
+  },
+  &quot;step_source_available&quot;: false,
+  &quot;historical_request_and_receipt_payloads_available&quot;: false,
+  &quot;attribution_limit&quot;: &quot;Labels and tags describe operator activity, not Worker requests or semantic guards. Tool-outside time is not all reasoning; helper duration is not all OCR. No model roundtrip count inferred from 99 helper events.&quot;,
+  &quot;diagnostic_refresh_groups&quot;: [
+    {
+      &quot;labels&quot;: &quot;3-4-paid-roll-&quot;,
+      &quot;count&quot;: 6,
+      &quot;window_seconds&quot;: 105.032,
+      &quot;helper_seconds&quot;: 34.203,
+      &quot;outside_helper_seconds&quot;: 70.829,
+      &quot;same_code&quot;: true,
+      &quot;matched_scenario&quot;: false,
+      &quot;causal_speed_claim&quot;: false
+    },
+    {
+      &quot;labels&quot;: &quot;final-search-topaz-b&quot;,
+      &quot;count&quot;: 5,
+      &quot;window_seconds&quot;: 35.2,
+      &quot;helper_seconds&quot;: 29.093,
+      &quot;outside_helper_seconds&quot;: 6.107,
+      &quot;same_code&quot;: true,
+      &quot;matched_scenario&quot;: false,
+      &quot;causal_speed_claim&quot;: false
+    }
+  ]
+}</pre>
