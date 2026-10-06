@@ -22,7 +22,7 @@ import psutil
 import currency_wars_broker_entry as entry
 import currency_wars_input_bridge as input_bridge
 from currency_wars_source_guard import activity
-from currency_wars_perception import Perception, clean, find_text, hash_distance, GOLD_HUD
+from currency_wars_perception import Perception, clean, find_text, hash_distance, GOLD_HUD, valid_population_counts
 from currency_wars_shop_reader import purchase_slot
 from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
@@ -479,7 +479,8 @@ def preparation_decision(observed, facts):
     owned = [unit.get('name') for unit in units if isinstance(unit.get('name'), str)]
     deployed = observed.get('fields', {}).get('deployed')
     count = re.fullmatch(r'([0-9]+)/([0-9]+)', deployed or '')
-    open_population = bool(count and 0 <= int(count[1]) < int(count[2]) <= 12)
+    open_population = bool(count and valid_population_counts(int(count[1]), int(count[2]))
+                           and int(count[1]) < int(count[2]))
     traits = semantic.get('purchase_units', [])
     bonds = semantic.get('bonds') or facts.get('bonds') or {}
     for slot_id in range(1, 6):
@@ -3322,8 +3323,9 @@ class Worker:
         if phase == 'battle_acceptance':
             deployed = source.get('fields', {}).get('deployed')
             match = re.fullmatch(r'([0-9]+)/([0-9]+)', deployed or '')
-            if not match or not 1 <= int(match[1]) == int(match[2]) <= 10:
-                raise unverified('出战验收须实际人口已满且不超过10，不能用文字批准补造')
+            if (not match or not valid_population_counts(int(match[1]), int(match[2]))
+                    or int(match[1]) != int(match[2])):
+                raise unverified('出战验收须当前完整人口读数合法且已满；玩家等级上限不能代替人口域')
         goals, task_source = None, None
         if phase == 'startup_guide':
             actual = panel_source or source
@@ -4251,7 +4253,8 @@ class Worker:
             if not status['battle_ready']:
                 raise ValueError('出战前准备清单未完成：' + status['next_step'])
             population = re.fullmatch(r'([0-9]+)/([0-9]+)', actual.get('fields', {}).get('deployed') or '')
-            if not population or not 1 <= int(population[1]) == int(population[2]) <= 10:
+            if (not population or not valid_population_counts(int(population[1]), int(population[2]))
+                    or int(population[1]) != int(population[2])):
                 raise ValueError('当前出战鲜帧人口未满/未知；旧验收不能批准变化后的阵容')
             return
         effect = coaching.action_effect(action, actual['page'])
