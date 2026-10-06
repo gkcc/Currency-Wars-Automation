@@ -1,0 +1,14 @@
+﻿group,event_count,helper_raw_sum_seconds,mean_seconds,median_seconds,p95_nearest_rank_seconds,min_seconds,max_seconds,phase_zh,full_phase_elapsed_seconds,evidence,note
+rewards,7,28.328,4.046857,4.891,6.344,1.64,6.344,奖励/选择,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+startup_guide,0,0.0,,,,,,创业指南（未独立标注）,,operator_annotation_only,无可独立归属调用；不代表实际耗时为零
+inventory_cleanup,5,27.546,5.5092,5.047,7.36,2.765,7.36,整理/清库,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+economy,10,66.686,6.6686,5.7815,9.515,5.562,9.515,购买/刷新/升级,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+lineup_equipment,7,41.483,5.926143,6.359,12.937,0.265,12.937,布阵/装备/合成,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+battle_acceptance,11,79.763,7.251182,7.781,12.047,2.453,12.047,验收/出战 helper,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+battle,0,0.0,,,,,,完整战斗（未测量）,,operator_annotation_only,无可独立归属调用；不代表实际耗时为零
+settlement,4,19.765,4.94125,4.9065,5.718,4.234,5.718,结算/下一页,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+recovery,3,3.062,1.020667,1.391,1.656,0.015,1.656,恢复/恢复状态查询,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+mixed_guide_equipment,1,7.187,7.187,7.187,7.187,7.187,7.187,指南与装备混合,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+battle_progress_query,2,0.016,0.008,0.008,0.016,0.0,0.016,战斗进度查询,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+mixed_battle_settlement,2,9.422,4.711,4.711,4.719,4.703,4.719,战斗或结算观察,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
+unknown,1,4.203,4.203,4.203,4.203,4.203,4.203,未标注阶段,,operator_annotation_only,仅 helper 耗时之和；不含空档，不代表完整阶段
