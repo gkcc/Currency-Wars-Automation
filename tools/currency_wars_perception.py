@@ -32,6 +32,7 @@ SUPPLY_FIVE_CARD_LAYOUT = ((84, 292, 419, 783), (439, 292, 774, 783),
                            (793, 292, 1129, 783), (1147, 292, 1482, 783),
                            (1501, 292, 1836, 783))
 GOLD_HUD = [1613, 892, 1687, 950]
+DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 
 
 def clean(text):
@@ -640,18 +641,35 @@ def hash_distance(a, b):
     return sum((x ^ y).bit_count() for x, y in zip(left, right)) / (len(left) * 8)
 
 
+def _valid_population_match(text):
+    match = re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(text))
+    if match is None:
+        return None
+    occupied, capacity = map(int, match[1].split('/'))
+    return match if 0 <= occupied <= capacity <= 10 and capacity >= 1 else None
+
+
 def native_deployed_count(rows):
     """Unique, confident count from the native central roster HUD only."""
-    counts = [re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(row.get('raw_text', row.get('text', ''))))
+    candidates = [(row, re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(row.get('raw_text', row.get('text', '')))))
         for row in rows if .90 <= row.get('confidence', 0) <= 1.
         and isinstance(row.get('box'), list) and len(row['box']) == 4
         and 820 <= row['box'][0] < row['box'][2] <= 1050
         and 190 <= row['box'][1] < row['box'][3] <= 300]
-    counts = [match.group(1) for match in counts if match]
-    if len(counts) != 1:
+    candidates = [(row, match[1]) for row, match in candidates if match]
+    valid = [(row, value) for row, value in candidates if _valid_population_match(value)]
+    if len(valid) != 1:
         return None
-    occupied, capacity = map(int, counts[0].split('/'))
-    return counts[0] if 0 <= occupied <= capacity <= 10 and capacity >= 1 else None
+    row, value = valid[0]
+    if len(candidates) == 1:
+        return value
+    # Only an actual recognition of the established digits-only crop may
+    # resolve impossible full-row readings such as an icon joined to "18/8".
+    # Original OCR rows remain unchanged. Two plausible readings still fail.
+    if (row.get('normalization_basis') == 'fixed_native_deployed_count_roi'
+            and row['box'] == DEPLOYED_COUNT_ROI):
+        return value
+    return None
 
 
 class Perception:
@@ -766,13 +784,7 @@ class Perception:
             matched = re.search(pattern, joined, re.I)
             fields[name] = matched.group(1) if matched else None
         if page == "preparation":
-            deployed_pattern = r"i?([0-9]{1,2}/[0-9]{1,2})"
-            deployed_rows = [row for row in rows
-                             if row["confidence"] >= .90
-                             and re.fullmatch(deployed_pattern, clean(row["raw_text"]))
-                             and 820 <= row["box"][0] < row["box"][2] <= 1050
-                             and 190 <= row["box"][1] < row["box"][3] <= 300]
-            if not deployed_rows:
+            if native_deployed_count(rows) is None:
                 native_layout = all(len([row for row in rows
                     if .90 <= row["confidence"] <= 1. and clean(row["text"]) == label
                     and bounds[0] <= row["box"][0] < row["box"][2] <= bounds[2]
@@ -783,29 +795,26 @@ class Perception:
                 if native_layout:
                     # One complete native count crop, excluding the blue icon.
                     # Keep original rows and reject conflicting central counts.
-                    count_bounds = [890, 210, 1029, 280]
+                    count_bounds = list(DEPLOYED_COUNT_ROI)
                     try:
                         result, unused = self.engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
                         if result is not None and len(result) == 1:
                             text, confidence = result[0][-2:]
                             raw, confidence = str(text).strip(), float(confidence)
-                            count = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})", raw)
-                            previous = [re.fullmatch(deployed_pattern, clean(row["raw_text"]))
+                            count = _valid_population_match(raw)
+                            previous = [_valid_population_match(row["raw_text"])
                                         for row in rows
                                         if 820 <= row["box"][0] < row["box"][2] <= 1050
                                         and 190 <= row["box"][1] < row["box"][3] <= 300]
-                            if (count and .90 <= confidence <= 1.
-                                    and 0 <= int(count[1]) <= int(count[2]) <= 12 and int(count[2]) >= 1
-                                    and all(match is None or match.group(1) == raw for match in previous)):
+                            if (count and raw == count[1] and .90 <= confidence <= 1.
+                                    and all(match is None or match[1] == raw for match in previous)):
                                 derived = {"text": raw, "raw_text": str(text),
                                            "normalization_basis": "fixed_native_deployed_count_roi",
                                            "confidence": confidence, "box": count_bounds}
                                 rows.append(derived)
-                                deployed_rows = [derived]
                     except Exception:
                         pass  # Read failure leaves the count unknown; no inferred value.
-            fields["deployed"] = (re.fullmatch(deployed_pattern, clean(deployed_rows[0]["raw_text"])).group(1)
-                                  if len(deployed_rows) == 1 else None)
+            fields["deployed"] = native_deployed_count(rows)
             # One unscaled, complete native HP crop, only when trusted HP is absent.
             hp_pattern = r"(?:100|[1-9]?[0-9])"
             hp_bounds = [1420, 60, 1490, 100]
