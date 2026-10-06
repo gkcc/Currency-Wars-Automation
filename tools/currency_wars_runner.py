@@ -55,6 +55,226 @@ def optional(path):
         return None
 
 
+BUSINESS_SCHEMA = 'currency-wars-business/v1'
+BUSINESS_REVIEW_PAGES = ('preparation', 'shop', 'settlement', 'settlement_grade', 'lobby', 'opponents',
+    'environment', 'investment', 'supply', 'reward_overlay', 'node_result', 'boss_result', 'plane_intro',
+    'guide', 'unit_gear', 'investment_summary', 'update_notice') + tuple(name for name, unused in PANELS)
+
+
+def durable_records(state):
+    """Only this project's original, owner-bound replay directory is durable."""
+    records = Path(state.get('journal_file', '')).parent.resolve()
+    if records.parent != (PROJECT / 'debug').resolve() or not records.is_dir():
+        raise ValueError('业务记录不在本项目原始回放目录')
+    owner = entry.read_json(records / 'owner.json')
+    for key in ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id'):
+        if owner.get(key) != state.get(key):
+            raise ValueError('业务记录与原运行身份不一致：' + key)
+    return records
+
+
+def load_business(path, chat_id):
+    path = Path(path).resolve()
+    if path.parent.parent != (PROJECT / 'debug').resolve() or not path.name.startswith('business-'):
+        raise ValueError('业务检查点路径不属于本项目')
+    value = entry.read_json(path)
+    if (value.get('schema') != BUSINESS_SCHEMA
+            or not isinstance(value.get('match_id'), str) or not value['match_id']
+            or type(value.get('revision')) is not int or not isinstance(value.get('leases'), list)
+            or not value['leases'] or len(value['leases']) > 128):
+        raise ValueError('业务检查点身份/版本/有界租期历史无效')
+    if value['leases'][-1].get('chat_id') != chat_id:
+        raise ValueError('业务当前归属会话不匹配')
+    return path, value
+
+
+def old_lease_exit(state, control):
+    """Probe exact original identities; never terminate a PID discovered here."""
+    def probe(pid, creation, label):
+        if type(pid) is not int or pid <= 0 or not str(creation).isdecimal() or int(creation) <= 0:
+            raise ValueError('旧' + label + '缺少PID及创建身份')
+        found = control.process_probe(pid, str(creation))
+        if found.get('state') not in ('absent', 'exited', 'reused'):
+            raise RuntimeError('旧' + label + '仍在运行或退出未知，禁止新租期')
+        return {**found, 'expected_creation_id': str(creation)}
+    worker = probe(state.get('runner_pid'), state.get('runner_creation_id'), 'worker')
+    run = Path(state.get('run_dir', ''))
+    identity = optional(run / 'broker-process.json') if run.is_dir() else None
+    retained = state.get('broker_identity') or {}
+    if identity:
+        if retained and (retained.get('pid') != identity.get('pid')
+                or str(retained.get('creation_id')) != str(identity.get('creation_id'))):
+            raise ValueError('原broker持久创建身份冲突，不能选择较方便的退出证据')
+        # These are the same owner fields used by entry.owned_broker_identity.
+        runtime_owner = entry.read_json(run / 'runner-owner.json')
+        if any(runtime_owner.get(k) != state.get(k) for k in ('run_id', 'runner_pid', 'runner_creation_id')):
+            raise ValueError('旧broker运行目录归属不符')
+        if (identity.get('chat_id') != runtime_owner.get('chat_id')
+                or not secrets.compare_digest(str(identity.get('run_token', '')), str(runtime_owner.get('run_token', '')))):
+            raise ValueError('旧broker持久身份不属于原owner')
+        broker = probe(identity.get('pid'), identity.get('creation_id'), 'broker')
+    else:
+        evidence = state.get('exit_evidence', {}).get('broker', {})
+        if retained:
+            # Known original identity outranks a contradictory display/start
+            # sentinel. A missing runtime never erases its exit obligation.
+            broker = probe(retained.get('pid'), retained.get('creation_id'), 'broker')
+        elif evidence.get('state') in ('not_launched', 'launch_failed'):
+            if (evidence.get('run_id') != state.get('run_id')
+                    or evidence.get('worker_pid') != state.get('runner_pid')
+                    or str(evidence.get('worker_creation_id')) != str(state.get('runner_creation_id'))
+                    or evidence.get('launch_id') != state.get('launch_id')
+                    or evidence.get('identity_observed') is not False
+                    or evidence['state'] == 'not_launched' and evidence.get('launch_attempted') is not False
+                    or evidence['state'] == 'launch_failed' and (evidence.get('launch_attempted') is not True
+                        or type(evidence.get('launch_exit_code')) is not int or evidence['launch_exit_code'] == 0)):
+                raise ValueError('旧broker未启动/失败证据不完整')
+            broker = evidence
+        else:
+            broker = probe(evidence.get('pid'), evidence.get('expected_creation_id'), 'broker')
+    return {'worker': worker, 'broker': broker}
+
+
+def archive_business_receipt(records, owner, item, control):
+    """Retain the original request and receipt, without transporting its token."""
+    rid = item.get('id')
+    if (not isinstance(rid, str) or not 1 <= len(rid) <= 100
+            or not isinstance(item.get('request'), dict) or item['request'].get('id') != rid
+            or item['request'].get('chat_id') != owner['chat_id']):
+        raise ValueError('待归档原请求身份不符')
+    directory = records / 'business-receipts'
+    directory.mkdir(exist_ok=True)
+    path = directory / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    archived = {**redact(item), 'origin': {key: owner[key]
+                for key in ('run_id', 'chat_id', 'runner_pid', 'runner_creation_id')}}
+    previous = optional(path)
+    if previous:
+        if previous['origin'] != archived['origin'] or previous['request'] != archived['request']:
+            raise ValueError('原请求归档身份冲突，不能覆盖')
+        if previous.get('result') is not None and previous != archived:
+            raise ValueError('原终态收据不可改写')
+    if previous != archived:
+        control.write_json(path, archived)
+    return path
+
+
+def archive_business_run(state, control):
+    """Run before scratch creation/cleanup, including after a worker crash."""
+    records = durable_records(state)
+    run = Path(state['run_dir'])
+    if run.is_dir():
+        owner = entry.read_json(run / 'runner-owner.json')
+        if any(owner.get(k) != state.get(k) for k in ('run_id', 'chat_id', 'runner_pid', 'runner_creation_id')):
+            raise ValueError('原运行目录身份变化，不能归档其他run')
+        paths = list((run / 'request-ledger').glob('*.json'))
+        if len(paths) > 4096:
+            raise ValueError('业务原收据超出有界容量，保留运行目录')
+        for path in paths:
+            archive_business_receipt(records, owner, entry.read_json(path), control)
+        capacity = optional(run / 'reward-capacity.json')
+        if capacity:
+            control.write_json(records / 'business-reward-capacity.json', redact(capacity))
+        last_result = optional(run / 'result.json')
+        if last_result:
+            # A broker can finish before the caller folds this reply into its
+            # ledger. Preserve it separately; do not invent a completed ledger.
+            control.write_json(records / 'business-last-result.json',
+                {'origin_run_id': state['run_id'], 'result': redact(last_result)})
+    control.write_json(records / 'business-archive.json', {'run_id': state['run_id'],
+        'archived_at': now(), 'runtime_present': run.is_dir(), 'missing_evidence_is_unknown': True,
+        'evidence_scope': 'original_requests_and_receipts; no transport_frame_copy',
+        'manual_records_directory': str(records), 'runtime_only_sources_may_be_missing': True})
+    return records
+
+
+def pending_business_requests(business):
+    """Every historical unresolved identity stays visible; no new-run alias."""
+    pending = {}
+    for lease in business['leases']:
+        records = durable_records(lease)
+        for path in (records / 'business-receipts').glob('*.json'):
+            item = entry.read_json(path)
+            if item['id'] in lease.get('entry_receipt_watermark', []):
+                continue  # Earlier business in this same bounded process.
+            request = item['request']
+            if item.get('result') is None or manual_receipt_state(item)['unknown_input']:
+                key = lease['run_id'] + ':' + item['id']
+                pending[key] = {'origin_run_id': lease['run_id'], 'request_id': item['id'],
+                    'receipt_file': str(path), 'outcome': 'unknown', 'amount': None}
+        capacity = optional(records / 'business-reward-capacity.json')
+        if capacity and capacity.get('status') not in ('verified', 'refused', 'superseded') and capacity.get('input_request_id'):
+            rid = capacity['input_request_id']
+            pending[lease['run_id'] + ':' + rid] = {'origin_run_id': lease['run_id'], 'request_id': rid,
+                'outcome': 'unknown', 'kind': 'reward_capacity', 'amount': None,
+                'record_file': str(records / 'business-reward-capacity.json')}
+    for stage, stored in business.get('economy', {}).items():
+        item = stored['ledger'].get('pending')
+        if item and item.get('request_id'):
+            pending[stored['run_id'] + ':' + item['request_id']] = {
+                'origin_run_id': stored['run_id'], 'request_id': item['request_id'], 'outcome': 'unknown',
+                'kind': item.get('kind'), 'stage': stage, 'amount': None,
+                'planned_cost_not_actual': item.get('cost'), 'record_file': stored['record_file'],
+                'receipt_available': (Path(stored['record_file']).parent / 'business-receipts' /
+                    (hashlib.sha256(item['request_id'].encode()).hexdigest() + '.json')).is_file()}
+        for old in stored['ledger'].get('prior_run_unknown', []):
+            pending[old['origin_run_id'] + ':' + old['request_id']] = old
+    return [pending[key] for key in sorted(pending)]
+
+
+def prepare_business_start(state, control, target_chat_id=None):
+    pointer = state.get('business', {}).get('checkpoint')
+    if pointer:
+        path, business = load_business(pointer, state['chat_id'])
+        previous = business['leases'][-1]
+        if any(previous.get(k) != state.get(k) for k in ('run_id', 'runner_pid', 'runner_creation_id')):
+            raise ValueError('当前运行与业务归属已变化；不迟到续接')
+        discovered_identity, retained_identity = state.get('broker_identity'), previous.get('broker_identity')
+        if discovered_identity and retained_identity and (
+                discovered_identity.get('pid') != retained_identity.get('pid')
+                or str(discovered_identity.get('creation_id')) != str(retained_identity.get('creation_id'))):
+            raise ValueError('CURRENT与业务保留的原broker创建身份冲突')
+        state = {**state, 'broker_identity': retained_identity or discovered_identity}
+    exits = old_lease_exit(state, control)
+    records = archive_business_run(state, control)  # Before stale scratch sweeping.
+    if pointer:
+        if business['leases'][-1]['run_id'] != state['run_id'] or business['match_id'] != state['match_id']:
+            raise ValueError('当前运行与业务归属已变化；不迟到续接')
+    else:
+        # Upgrade a pre-B007 replay conservatively. Old UI completion is not a
+        # verified whole-match result and never closes this imported business.
+        if not isinstance(state.get('match_id'), str) or not state['match_id']:
+            raise ValueError('旧运行缺少真实match身份，不能默认为新局')
+        path = records / ('business-' + state['match_id'] + '.json')
+        business = {'schema': BUSINESS_SCHEMA, 'chat_id': state['chat_id'], 'match_id': state['match_id'],
+            'revision': 0, 'status': 'active', 'leases': [business_lease(state)], 'economy': {}}
+    # The per-node write precedes the business summary. Recover that atomic
+    # ledger after a crash between these writes instead of losing real spent.
+    for candidate in records.glob('economy-*.json'):
+        value = entry.read_json(candidate)
+        if value.get('run_id') == state['run_id'] and value.get('match_id') == state['match_id']:
+            if value.get('schema') != economy.SCHEMA or not canonical_stage(value.get('stage')) or not isinstance(value.get('ledger'), dict):
+                raise ValueError('原节点经济台账无效，不将已有花费清零')
+            business['economy'][value['stage']] = {**value, 'record_file': str(candidate)}
+    with file_lock(path.parent, 'business.lock'):
+        if pointer and entry.read_json(path)['revision'] != business['revision']:
+            raise ValueError('业务检查点CAS已变化')
+        business['leases'][-1]['exit_evidence'] = exits
+        if state.get('broker_identity'):
+            # The child's pre-scratch check reads this lease independently of
+            # CURRENT; do not lose an identity known only by discovery.
+            business['leases'][-1]['broker_identity'] = copy.deepcopy(state['broker_identity'])
+        business['revision'] += 1
+        control.write_json(path, business)
+    return {'checkpoint': str(path), 'revision': business['revision'], 'previous_run_id': state['run_id'],
+            'previous_chat_id': state['chat_id'], 'target_chat_id': target_chat_id or state['chat_id']}
+
+
+def business_lease(state):
+    return {key: redact(state[key]) for key in ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id',
+        'launch_id', 'run_dir', 'journal_file', 'control_mode', 'exit_evidence', 'broker_identity',
+        'entry_receipt_watermark') if key in state}
+
+
 class BattleConfirmationRequired(ValueError):
     pass
 
@@ -1003,14 +1223,18 @@ def _start_cli(args, lease):
     child = None
     try:
         discovered = optional(CURRENT)
-        if discovered and discovered.get('chat_id') == args.chat_id:
+        continuation = None
+        if discovered:
             probe = control.process_probe(discovered['runner_pid'], discovered['runner_creation_id'])
             if probe['state'] == 'unknown':
                 raise RuntimeError('旧worker退出未知，禁止启动第二个')
             if probe['state'] == 'running':
+                if discovered.get('chat_id') != args.chat_id:
+                    raise RuntimeError('另一会话所属worker仍在运行，不启动第二控制器')
                 owner = entry.read_json(Path(discovered['run_dir'], 'runner-owner.json'))
                 run, owner, binding, c = load(discovered['run_dir'], args.chat_id, owner['run_token'])
                 return envelope(current_state(run, owner, c))
+            continuation = prepare_business_start(discovered, control, args.chat_id)
         inherited = getattr(args, 'runtime_location_json', None)
         runtime_location = input_bridge.runtime_location(entry.PINNED,
             inherited=json.loads(inherited) if inherited is not None else None)
@@ -1019,6 +1243,8 @@ def _start_cli(args, lease):
                    '--chat-id', args.chat_id, '--launch-id', launch,
                    '--runtime-location-json', json.dumps(runtime_location),
                    '--max-seconds', str(args.max_seconds), '--max-matches', str(args.max_matches)]
+        if continuation:
+            command.extend(['--business-resume-json', json.dumps(continuation, ensure_ascii=False)])
         if args.continue_matches:
             command.append('--continue-matches')
         if getattr(args, 'profile', False):
@@ -1062,6 +1288,10 @@ def validate_plan(reply, request, epoch):
     actions = reply.get('actions')
     if not isinstance(actions, list) or not 1 <= len(actions) <= 8:
         raise ValueError('计划须含1–8个有限语义动作')
+    if request.get('kind') == 'business_resume' and (len(actions) != 1
+            or actions[0].get('type') != 'finish_preparation_review'
+            or set(reply.get('context_update', {})) != {'business_resume'}):
+        raise ValueError('跨租期承接只允许独立当前业务复核，禁止附带旧阶段或游戏输入')
     if 'reward_capacity' in reply.get('context_update', {}) and (
             len(actions) != 1 or actions[0].get('type') != 'finish_preparation_review'):
         raise ValueError('腾位后回读必须独立无输入复核，之后重新规划领奖')
@@ -2273,6 +2503,7 @@ class Worker:
                         'tasks': None, 'hp': None, 'coins': None, 'xp': None, 'preparation_review': None, 'guide_reference': None,
                         'reward_capacity': None,
                         'economy_plan': None,
+                        'business_resume': None,
                         'unknown_fields': ['guide', 'guide_tracking', 'investments', 'environment',
                                            'team', 'bonds', 'gear', 'tasks', 'hp', 'coins', 'xp']}
         self.last_observation = None
@@ -2336,10 +2567,202 @@ class Worker:
         self.initial_broker_pause_id = self.c.latch_pause('新本地worker初始安全暂停')['pause_id']
         self.initial_manual_id = uuid.uuid4().hex
         latch_manual(run, '初始化；等待唯一broker与一次受控交接', self.initial_manual_id)
+        self.initialize_business(getattr(args, 'business_resume_json', None))
         self.publish()
+
+    def initialize_business(self, continuation=None):
+        self.business_needs_review = bool(continuation)
+        self.business_unknown = []
+        if continuation:
+            contract = json.loads(continuation) if isinstance(continuation, str) else continuation
+            if contract.get('target_chat_id') != self.owner['chat_id']:
+                raise ValueError('业务启动合同不属于当前授权会话')
+            self.business_path, self.business = load_business(contract['checkpoint'], contract.get('previous_chat_id'))
+            previous = self.business['leases'][-1]
+            if (contract.get('revision') != self.business['revision']
+                    or contract.get('previous_run_id') != previous['run_id'] or len(self.business['leases']) >= 128):
+                raise ValueError('跨租期业务CAS/有界历史已改变，不启动迟到worker')
+            old_lease_exit(previous, self.c)
+            self.business_unknown = pending_business_requests(self.business)
+            self.active_match_id = self.business['match_id']
+            self.business_previous_run = previous['run_id']
+            self.business_previous_chat = previous['chat_id']
+            self.business_previous_observation = copy.deepcopy(self.business.get('last_observed'))
+            self.match_result_confirmed = self.business['status'] == 'completed'
+            if self.match_result_confirmed:
+                self.consumed_match_results.add(self.active_match_id)
+        else:
+            self.business_path = self.records / ('business-' + self.active_match_id + '.json')
+            self.business = {'schema': BUSINESS_SCHEMA, 'chat_id': self.owner['chat_id'],
+                'match_id': self.active_match_id, 'revision': 0, 'status': 'active', 'leases': [], 'economy': {}}
+            self.business_previous_run = None
+            self.business_previous_chat = None
+            self.business_previous_observation = None
+        self.business_revision = self.business['revision']
+        self.business_lease_watermark = self.economy_receipt_watermark()
+        # Claim is a bounded CAS, not permission to act in the old game state.
+        with file_lock(self.business_path.parent, 'business.lock'):
+            current = optional(self.business_path)
+            if current is not None and (current['revision'] != self.business_revision
+                    or current['leases'][-1]['run_id'] != self.business_previous_run):
+                raise ValueError('业务归属CAS不匹配')
+            self.business['leases'].append(business_lease({**self.state,
+                'journal_file': str(self.records / 'journal.jsonl'),
+                'entry_receipt_watermark': self.business_lease_watermark}))
+            self.business['revision'] += 1
+            self.c.write_json(self.business_path, self.business)
+            self.business_revision = self.business['revision']
+
+    def save_business(self):
+        if not hasattr(self, 'business'):
+            return  # Existing focused fixtures are deliberately input-only.
+        state = {**self.state, 'journal_file': str(self.records / 'journal.jsonl'),
+                 'entry_receipt_watermark': self.business_lease_watermark}
+        identity = optional(self.run / 'broker-process.json')
+        if identity:
+            state['broker_identity'] = {key: identity[key] for key in ('pid', 'creation_id')}
+        proposed = copy.deepcopy(self.business)
+        proposed['leases'][-1] = business_lease(state)
+        observed = self.last_observation or {}
+        if observed:
+            proposed['last_observed'] = {'origin_run_id': self.owner['run_id'],
+                **{key: observed.get(key) for key in ('snapshot_id', 'capture_request_id', 'captured_at', 'page', 'fields')}}
+        with file_lock(self.business_path.parent, 'business.lock'):
+            current = entry.read_json(self.business_path)
+            latest = current['leases'][-1]
+            if (current['revision'] != self.business_revision
+                    or any(latest.get(k) != self.owner.get(k) for k in ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id'))):
+                raise RuntimeError('旧租期业务CAS已失效，禁止覆盖新owner')
+            if proposed != current:
+                proposed['revision'] += 1
+                self.c.write_json(self.business_path, proposed)
+            self.business, self.business_revision = proposed, proposed['revision']
+        self.state['business'] = {'checkpoint': str(self.business_path), 'match_id': self.active_match_id,
+            'status': self.business['status'], 'resume_review_required': self.business_needs_review,
+            'previous_run_id': self.business_previous_run, 'previous_chat_id': self.business_previous_chat,
+            'unresolved_requests': self.business_unknown,
+            'continuation_required': self.business['status'] != 'completed',
+            'awaiting_next_lease': self.business['status'] != 'completed' and self.state.get('control_mode') in TERMINAL,
+            'all_rewards_completed': False}
+
+    def review_business_resume(self, record):
+        request, actual = self.state.get('decision_request') or {}, self.last_observation or {}
+        if not self.business_needs_review or request.get('kind') != 'business_resume':
+            raise ValueError('没有当前跨租期业务承接请求')
+        source = self.verified_source(record.get('proof', {}), 180)
+        capture = await_existing_receipt(self.run, self.c, actual.get('capture_request_id'), 0)
+        if (capture['request'].get('kind') != 'actions' or capture['request'].get('handoff') is not False
+                or capture['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                or capture.get('result', {}).get('observation', {}).get('snapshot_sha256') != actual.get('snapshot_id')):
+            raise ValueError('承接当前帧须来自本run实际只读观察收据')
+        since_request = set(self.economy_receipt_watermark()) - set(request.get('business_receipt_watermark', []))
+        if 'business_receipt_watermark' not in request or actual['capture_request_id'] not in since_request:
+            raise ValueError('业务承接缺少本请求后新增观察水位')
+        for rid in since_request:
+            item = await_existing_receipt(self.run, self.c, rid, 0)
+            delivery = manual_receipt_state(item)
+            if (item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                    or any(a.get('type') not in ('observe', 'wait') for a in item['request'].get('actions', []))
+                    or delivery['unknown_input'] or delivery['state'] not in ('zero_input', 'completed')
+                    or item['result'].get('input_attempted') not in (None, False)
+                    or item['result'].get('attempted_actions') not in (None, [])):
+                raise ValueError('业务承接原请求后存在输入/未知结果；需新的当前复核，不重发')
+        value = record.get('value', {})
+        expected_unknown = sorted(item['origin_run_id'] + ':' + item['request_id'] for item in self.business_unknown)
+        if (record['proof'].get('snapshot_id') != request.get('snapshot_id')
+                or actual.get('page') != source.get('page')
+                or hashlib.sha256(Path(request['original_png']).read_bytes()).hexdigest() != request.get('snapshot_id')
+                or not source.get('capture_request_id')
+                or record['proof'].get('capture_request_id') != source['capture_request_id']
+                or source['capture_request_id'] != request['observation'].get('capture_request_id')
+                or value.get('reviewer') != 'supervising_agent'
+                or value.get('previous_run_id') != self.business_previous_run
+                or value.get('previous_chat_id') != self.business_previous_chat
+                or value.get('current_chat_id') != self.owner['chat_id']
+                or value.get('match_id') != self.active_match_id
+                or value.get('unresolved_requests') != expected_unknown
+                or value.get('prior_outcomes_remain_unknown') is not True
+                or value.get('remaining_policy') != 'fresh_reviews_and_current_balance'
+                or not isinstance(value.get('continuity_basis'), str) or len(value['continuity_basis'].strip()) < 12):
+            raise ValueError('承接须为当前proof、原业务身份、完整未定请求及明确同局依据')
+        reading = value.get('current_state', {})
+        if reading.get('page') != actual.get('page'):
+            raise ValueError('业务承接页面已变化，需重读')
+        if actual.get('page') in economy.PREPARATION_PAGES:
+            if (not isinstance(reading.get('roster'), list) or not reading['roster']
+                    or not all(isinstance(name, str) and name.strip() for name in reading['roster'])
+                    or not isinstance(reading.get('selected_strategy'), str) or not reading['selected_strategy'].strip()):
+                raise ValueError('备战承接须独立实读当前阵容与所选策略，PID/节点相同不能证明同局')
+            deployed = re.fullmatch(r'([0-9]+)/([0-9]+)', str(reading.get('deployed', '')))
+            native_deployed = re.fullmatch(r'([0-9]+)/([0-9]+)', str(actual.get('fields', {}).get('deployed') or ''))
+            native_level = actual.get('fields', {}).get('level')
+            native_coins = actual.get('semantic', {}).get('coins', {})
+            if (not canonical_stage(reading.get('stage'))
+                    or any(canonical_stage(observation.get('fields', {}).get('stage')) not in (None, reading['stage'])
+                           for observation in (source, actual))
+                    or type(reading.get('coins')) is not int or reading['coins'] < 0
+                    or type(reading.get('level')) is not int or not 1 <= reading['level'] <= 10
+                    or not isinstance(reading.get('xp'), list) or len(reading['xp']) != 2
+                    or any(type(n) is not int or n < 0 for n in reading['xp'])
+                    or not 0 <= reading['xp'][0] < reading['xp'][1]
+                    or not deployed or not 0 <= int(deployed[1]) <= int(deployed[2]) or int(deployed[2]) <= 0
+                    or native_deployed and 0 <= int(native_deployed[1]) <= int(native_deployed[2]) and int(native_deployed[2]) > 0
+                        and deployed.groups() != native_deployed.groups()
+                    or str(native_level).isdigit() and 1 <= int(native_level) <= 10 and int(native_level) != reading['level']
+                    or native_coins.get('bounds') == GOLD_HUD and type(native_coins.get('value')) is int
+                        and .15 <= native_coins.get('currency_icon_gold_fraction', 0) <= 1.
+                        and .90 <= native_coins.get('confidence', 1.) <= 1.
+                        and native_coins['value'] != reading['coins']):
+                raise ValueError('承接缺少当前节点/金币/等级/经验/人口独立读数')
+        elif actual.get('page') in BUSINESS_REVIEW_PAGES:
+            labels = reading.get('visible_labels')
+            if (not isinstance(labels, list) or not labels or len(labels) > 32
+                    or any(not isinstance(label, str) or not find_text(source.get('rows', []), label, exact=True)
+                           for label in labels)):
+                raise ValueError('非备战页须列出本请求当前画面实际可见文字，不要求看不到的旧阵容')
+        else:
+            raise ValueError('当前页不足以核实整局归属；只补观察，不能输入或猜同局')
+        if value.get('disposition') not in ('same_match', 'new_match'):
+            raise ValueError('须明确同一局或已另开新局')
+        if value['disposition'] == 'new_match' and actual['page'] not in (
+                'lobby', 'preparation', 'shop', 'opponents', 'environment', 'investment'):
+            raise ValueError('另开新局须在实际setup/备战确认，或大厅登记意图；不能将新局结果归到旧ID')
+        if (value['disposition'] == 'same_match' and actual['page'] == 'lobby'
+                and self.business['status'] != 'completed'):
+            raise ValueError('大厅不能证明原局已结算；可明确另开业务并保留旧局未决')
+        status = self.c.status()
+        if (manual_state(self.run) or self.epoch() != request['resume_epoch']
+                or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()
+                or status['paused'] or status['input_halted'] or not status['ready']):
+            raise ValueError('新的暂停/停止/epoch优先，业务承接未提交')
+        review_path = self.records / (request['request_id'] + '-business-resume.json')
+        self.c.write_json(review_path, {'origin_run_id': self.owner['run_id'], 'record': record,
+            'previous_business': str(self.business_path), 'unknown_requests': self.business_unknown,
+            'current_capture_request_id': actual['capture_request_id'], 'current_snapshot_id': actual['snapshot_id'],
+            'observation_only_receipt_ids': sorted(since_request),
+            'input_resent': False, 'recorded_at': now()})
+        self.business['last_resume_review'] = str(review_path)
+        self.business_needs_review = False
+        self.preparation_reviews, self.preparation_scope, self.economy_binding = {}, None, None
+        self.economy_read_cache = None
+        self.strategy_reads, self.live_mode, self.cached_guide_binding = {}, None, None
+        if value['disposition'] == 'new_match':
+            if self.business['status'] != 'completed':
+                self.business['status'] = 'unresolved'
+            self.save_business()
+            if actual['page'] in ('preparation', 'shop', 'opponents', 'environment', 'investment'):
+                self.active_match_id = uuid.uuid4().hex
+                self.match_result_confirmed = False
+                self.initialize_business()
+            # At the lobby this is only an explicit intent. The existing
+            # new_match -> actual setup transition will allocate its new ID.
+        self.context = {key: None for key in self.context}
+        self.history = {}
+        self.save_business()
 
     def publish(self, **updates):
         self.state.update(updates)
+        self.save_business()
         self.profile_context()
         self.state['match_id'] = self.active_match_id
         self.state['preparation_stage'] = self.last_preparation_stage
@@ -2541,6 +2964,8 @@ class Worker:
             self.publish(control_mode='manual', phase='控制器已连接，等待明确继续', reason='新手动接管优先')
 
     def command(self, tokens, reason, expected_page=None, postcondition=None, action=None):
+        if getattr(self, 'business_needs_review', False):
+            raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
         page = (self.last_observation or {}).get('page')
         if page in economy.PREPARATION_PAGES:
             keys = {float(token.split(':')[1]) for token in tokens if token.startswith('key:')}
@@ -2626,6 +3051,12 @@ class Worker:
                     transaction['publication_attempted'] = True
                     transaction['broker_actions'] = value['actions']
                     self.save_economy_ledger(transaction['before']['stage'])
+                if hasattr(self, 'business'):
+                    self.save_business()  # Original lease CAS still owns this publication.
+                    # This is an intent before the actual publisher. A crash
+                    # here is unknown, never proof of input or zero effect.
+                    archive_business_receipt(self.records, self.owner,
+                        {'id': value['id'], 'request': value, 'result': None}, self.c)
 
         rid = uuid.uuid4().hex
         if action and action.get('purpose') == 'reward_capacity':
@@ -2669,6 +3100,12 @@ class Worker:
             if isinstance(exc, entry.SubmissionDeadlineExpired) and approval is not None and not guarded.publication_attempted:
                 raise BattleConfirmationRequired('needs_user_confirmation：战斗批准在发布前过期，已消费且不恢复') from exc
             raise
+        finally:
+            if hasattr(self, 'business'):
+                path = self.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+                original = optional(path)
+                if original:
+                    archive_business_receipt(self.records, self.owner, original, self.c)
         # Persist the input receipt even if its subsequent observation failed.
         # A new read-only observation must never resubmit these input tokens.
         if transaction is not None:
@@ -3384,7 +3821,20 @@ class Worker:
                     or stored.get('match_id') != self.active_match_id or stored.get('stage') != stage
                     or stored.get('schema') != economy.SCHEMA or not isinstance(stored.get('ledger'), dict)):
                 raise ValueError('已有经济台账身份不符，不能清零覆盖')
-            self.economy_ledgers[key] = stored['ledger'] if stored else economy.new_ledger()
+            if stored:
+                inherited = stored['ledger']
+            else:
+                inherited = economy.new_ledger()
+                prior = getattr(self, 'business', {}).get('economy', {}).get(stage)
+                if prior and prior['run_id'] != self.owner['run_id']:
+                    old = prior['ledger']
+                    for field in ('spent', 'paid_refreshes', 'critical_spent', 'purchased', 'revision'):
+                        inherited[field] = copy.deepcopy(old[field])
+                    inherited['carried_from'] = {'run_id': prior['run_id'], 'record_file': prior['record_file']}
+                if getattr(self, 'business_previous_run', None):
+                    inherited['prior_run_unknown'] = copy.deepcopy(getattr(self, 'business_unknown', []))
+                    inherited['requires_current_budget'] = True
+            self.economy_ledgers[key] = inherited
             # Shop/ROI readings never survive a process restart as fresh facts.
             self.economy_ledgers[key]['shop_complete'] = False
         return self.economy_ledgers[key]
@@ -3394,9 +3844,13 @@ class Worker:
         return self.records / ('economy-' + identity + '.json')
 
     def save_economy_ledger(self, stage, ledger=None):
-        self.c.write_json(self.economy_ledger_path(stage), {'schema': economy.SCHEMA,
+        value = {'schema': economy.SCHEMA,
             'run_id': self.owner['run_id'], 'match_id': self.active_match_id, 'stage': stage,
-            'ledger': ledger if ledger is not None else self.economy_ledger(stage)})
+            'ledger': ledger if ledger is not None else self.economy_ledger(stage)}
+        self.c.write_json(self.economy_ledger_path(stage), value)
+        if hasattr(self, 'business'):
+            self.business['economy'][stage] = {**copy.deepcopy(value), 'record_file': str(self.economy_ledger_path(stage))}
+            self.save_business()
 
     def economy_receipt_watermark(self):
         paths = list((self.run / 'request-ledger').glob('*.json'))
@@ -3525,6 +3979,8 @@ class Worker:
     def accept_economy_plan(self, record):
         from io import BytesIO
         from PIL import Image
+        if getattr(self, 'business_needs_review', False):
+            raise ValueError('先以当前帧复核跨租期业务归属，再提交独立当前经济预算')
         if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
             raise ValueError('经济计划须绑定当前请求实际原帧proof')
         source = self.verified_source(record['proof'], 180)
@@ -3550,6 +4006,13 @@ class Worker:
         self.economy_read_cache = None
         observed = self.economy_observation(actual, binding)
         ledger = self.economy_ledger(stage)
+        if ledger.get('requires_current_budget'):
+            unknown = sorted(item['origin_run_id'] + ':' + item['request_id']
+                             for item in ledger.get('prior_run_unknown', []))
+            if (plan.get('prior_run_unknown_requests') != unknown
+                    or plan.get('prior_run_budget_policy') != 'current_balance_after_unknown_inputs'
+                    or type(plan.get('revision')) is not int or plan['revision'] <= ledger['revision']):
+                raise ValueError('跨租期原未定支出仍未知；须列齐请求并用当前余额明确新剩余预算')
         # A proven target slot may be bought even if unrelated slots are
         # unknown. Refresh, experience and completion still require full shop.
         rounds = plan.get('reserve', {}).get('remaining_interest_rounds')
@@ -3605,6 +4068,9 @@ class Worker:
             if plan['paid_search']['purchase_reserve'] < required_reserve:
                 raise ValueError('付费搜牌留资不足以购买目标；未知费用按现有1–5费槽位上限预留5')
         proposed['revision'], proposed['budget'] = plan['revision'], dict(plan['budget'])
+        if proposed.get('requires_current_budget'):
+            proposed['requires_current_budget'] = False
+            proposed['current_balance_budget_proof'] = copy.deepcopy(record['proof'])
         proposed['policy'] = {key: copy.deepcopy(plan[key]) for key in economy.POLICY_FIELDS}
         self.save_economy_ledger(stage, proposed)
         ledger.clear()
@@ -3994,6 +4460,8 @@ class Worker:
                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
+        if kind == 'business_resume':
+            request['business_receipt_watermark'] = self.economy_receipt_watermark()
         request['reward_capacity_pending'] = self.pending_reward_capacity()
         task_context, observation_scope = self.reviewed_task_context(observed)
         request['progression_plan'] = progression_plan(self.knowledge, observed,
@@ -4059,7 +4527,7 @@ class Worker:
             loot_key = (self.active_match_id, actual['fields']['stage'], reply['actions'][0]['target_evidence']['control_id'])
             if loot_key in self.loot_pickup_attempted:
                 raise ValueError('本局本节点该固定战利品已尝试，不重发')
-        if hash_distance(actual['fingerprint'], original['fingerprint']) > .10:
+        if request.get('kind') != 'business_resume' and hash_distance(actual['fingerprint'], original['fingerprint']) > .10:
             if not (stable_world_menu_navigation(reply, request, actual)
                     or stable_phone_guide_navigation(reply, request, actual)
                     or stable_peace_guide_tab_navigation(reply, request, actual)
@@ -4086,7 +4554,7 @@ class Worker:
             actual = self.last_observation
             kind = action['type']
             if kind == 'finish_preparation_review':
-                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference', 'reward_capacity', 'economy_plan'))
+                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference', 'reward_capacity', 'economy_plan', 'business_resume'))
                         or len(reply['actions']) != 1):
                     raise ValueError('准备复核须独立无输入动作及当前帧context_update.preparation_review')
                 continue
@@ -4125,6 +4593,12 @@ class Worker:
                 self.match_result_confirmed = True
                 self.state['statistics']['matches_confirmed'] += 1
                 self.state['last_match_result'] = result
+                if hasattr(self, 'business'):
+                    self.business['status'] = 'completed'
+                    self.business['settlement'] = {'result': copy.deepcopy(result), 'origin_run_id': self.owner['run_id'],
+                        'request_id': request['request_id'], 'snapshot_id': actual['snapshot_id'],
+                        'evidence_file': request['evidence_file'], 'confirmed_at': now()}
+                    self.save_business()
                 self.panel_index, self.panel_state = 0, 'enter'
                 self.inspections = {}
                 self.log({'event': 'match_result_verified', 'result': result})
@@ -4233,7 +4707,13 @@ class Worker:
         if request['kind'] == 'new_match' and self.last_observation['page'] in ('opponents', 'environment', 'investment'):
             # A new game identity is admitted only at a real setup screen,
             # never merely because a caller supplied a different request ID.
+            if hasattr(self, 'business'):
+                if self.business['status'] != 'completed':
+                    self.business['status'] = 'unresolved'
+                self.save_business()
             self.active_match_id = uuid.uuid4().hex
+            if hasattr(self, 'business'):
+                self.initialize_business()
             self.shop_stages.clear()
             self.free_lineup_attempted.clear()
             self.node_result_attempted.clear()
@@ -4362,6 +4842,9 @@ class Worker:
         if not isinstance(updates, dict) or any(key not in self.context for key in updates):
             raise ValueError('未知战略context字段')
         for key, record in updates.items():
+            if key == 'business_resume':
+                self.review_business_resume(record)
+                continue
             if key == 'unknown_fields':
                 continue
             if key == 'preparation_review':
@@ -4563,6 +5046,23 @@ class Worker:
             return False
         if self.consume_manual_results():
             return False
+        if (request['kind'] == 'business_resume' and not (self.run / 'decision-reply.json').exists()
+                and time.monotonic() >= getattr(self, 'business_refresh_at', 0.)):
+            self.business_refresh_at = time.monotonic() + 3
+            observed = self.observe()
+            if (observed['page'] != request['observation']['page']
+                    or canonical_stage(observed.get('fields', {}).get('stage')) not in
+                        (None, canonical_stage(request['observation'].get('fields', {}).get('stage')))):
+                with file_lock(self.run, 'decision-submit.lock'):
+                    if (manual_state(self.run) or self.epoch() != request['resume_epoch']
+                            or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
+                        return False
+                    stale = optional(self.run / 'decision-reply.json')
+                    if stale:
+                        self.log({'event': 'business_reply_retired', 'reply': redact(stale), 'input_sent': False})
+                        (self.run / 'decision-reply.json').unlink()
+                    self.publish(decision_request=None, control_mode='auto', reason='业务复核页面已变，废弃旧请求后重读')
+                return False
         if request['kind'] == 'unknown_page' and request['observation'].get('page') == 'unknown':
             # Reuse actual known pages from the existing 90-second passive capture.
             # Unknown animation alone never renews a nonempty original request.
@@ -4629,6 +5129,20 @@ class Worker:
         self.log({'event': 'input_halt', 'reason': reason, 'broker': result})
 
     def tick(self, observed):
+        if getattr(self, 'business_needs_review', False):
+            if observed.get('page') not in BUSINESS_REVIEW_PAGES:
+                self.publish(phase='续接只读等待可核页面', decision_request=None,
+                             reason='当前战斗/未知过渡页不发输入，沿原硬期限等待新帧')
+                time.sleep(min(2, max(0, self.deadline - time.monotonic())))
+                return
+            self.ask(observed, 'business_resume',
+                '新有界租期尚未证明同一局。实读当前局面并说明原局连续性；原请求不重发，'
+                '原未知结果继续未知，需逐阶段当前复核与当前余额新预算。',
+                choices={'checkpoint': str(self.business_path), 'previous_run_id': self.business_previous_run,
+                         'previous_chat_id': self.business_previous_chat, 'current_chat_id': self.owner['chat_id'],
+                         'unresolved_requests': self.business_unknown, 'previous_status': self.business['status'],
+                         'previous_observation_reference': self.business_previous_observation})
+            return
         if not self.node_guard(observed):
             return
         page = observed['page']
@@ -4890,12 +5404,18 @@ class Worker:
             if time.monotonic() >= end:
                 raise RuntimeError('owned子进程退出未确认，保留标准运行目录')
             time.sleep(.05)
-        artifacts.protect_children(self.run, self.children, root=self.run.parent, complete=True)
+        # Failure retains the standard runtime: archive success is required
+        # before children are declared complete and scratch can be removed.
+        if hasattr(self, 'business'):
+            archive_business_run({**self.state, 'journal_file': str(self.records / 'journal.jsonl')}, self.c)
         final_mode = self.state['control_mode'] if self.state['control_mode'] in ('completed', 'failed') else 'stopped'
         self.broker_activity_at = -float('inf')  # Preserve all final receipts before the runtime is removed.
         self.publish(control_mode=final_mode, exit_evidence=evidence, reason=self.state.get('reason'),
                      cleanup={'directory': str(self.run), 'removed': False, 'pending_finally': True})
         self.log({'event': 'owned_shutdown', 'exit_evidence': evidence})
+        # A successful receipt copy alone is insufficient: the original broker
+        # creation identity/final business state must survive runtime disposal.
+        artifacts.protect_children(self.run, self.children, root=self.run.parent, complete=True)
 
 
 def worker_cli(args):
@@ -4909,6 +5429,27 @@ def _worker_cli(args):
         inherited=json.loads(inherited) if inherited is not None else None)
     runtime_root = Path(args.runtime_location['runtime_root'])
     control = entry.backend()
+    if not 60 <= args.max_seconds <= 7200 or not 1 <= args.max_matches <= 20:
+        raise ValueError('worker仍须遵守60–7200秒及1–20局硬上限')
+    if args.max_matches > 1 and not args.continue_matches:
+        raise ValueError('worker多局仍须明确continue-matches')
+    discovered = optional(CURRENT)
+    continuation = getattr(args, 'business_resume_json', None)
+    if discovered:
+        if not continuation:
+            raise RuntimeError('已有业务运行记录；新租期须由公开start核旧双进程退出后承接')
+        contract = json.loads(continuation)
+        if contract.get('target_chat_id') != args.chat_id:
+            raise ValueError('新worker业务合同不属于当前授权会话')
+        unused, business = load_business(contract['checkpoint'], contract.get('previous_chat_id'))
+        previous = business['leases'][-1]
+        if (contract.get('revision') != business['revision'] or contract.get('previous_run_id') != previous['run_id']
+                or previous['run_id'] != discovered.get('run_id')):
+            raise ValueError('新worker业务启动CAS不符')
+        old_lease_exit(previous, control)
+        archive_business_run(previous, control)  # Before scratch_directory may sweep the old root.
+    elif continuation:
+        raise ValueError('业务启动缺少当前发现记录，不采用孤立恢复合同')
     artifact_chat = os.environ.get('CODEX_THREAD_ID', 'unbound')
     purpose = 'currency-wars-runner-' + artifact_chat[:8].lower()
     worker, run = None, None
@@ -5138,6 +5679,7 @@ def main():
     parser.add_argument('--continue-matches', action='store_true')
     parser.add_argument('--profile', action='store_true', help='记录本节点真实阶段/操作耗时，退出时生成 JSON/CSV/HTML')
     parser.add_argument('--profile-comparison-key', help='本机明确指定的同口径场景标识；不从单次结果推定可比')
+    parser.add_argument('--business-resume-json', help=argparse.SUPPRESS)
     parser.add_argument('--handoff', action='store_true')
     parser.add_argument('--resume-guard-json')
     parser.add_argument('--reply-file')

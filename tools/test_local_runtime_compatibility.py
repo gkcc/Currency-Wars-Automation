@@ -1658,7 +1658,8 @@ class RuntimeRootTests(unittest.TestCase):
     def test_worker_marker_child_registration_and_cleanup_keep_selected_root(self):
         with self.roots() as (outer, c_root, d_root, default):
             selected = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
-            args = SimpleNamespace(chat_id='root-fixture', runtime_location_json=json.dumps(selected))
+            args = SimpleNamespace(chat_id='root-fixture', runtime_location_json=json.dumps(selected),
+                                   max_seconds=60, max_matches=1, continue_matches=False)
             seen, child_state, case = [], ['active'], self
             register, shutdown = runner.Worker.register, runner.Worker.shutdown
             def identity(pid):
