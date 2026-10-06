@@ -56,6 +56,10 @@ class BattleConfirmationRequired(ValueError):
     pass
 
 
+class ManualReviewDeferred(ValueError):
+    """The identity is intact; a new current observation/review is still needed."""
+
+
 class GuardedSubmission:
     """Delegate unchanged Entry semantics; guard only its locked publication."""
     def __init__(self, control, guard):
@@ -508,6 +512,71 @@ def await_existing_receipt(run, control, rid, timeout=5):
         time.sleep(.05)
 
 
+def manual_receipt_state(receipt):
+    """Classify delivery evidence, independently of any business postcondition.
+
+    Empty completed is not zero input. A dispatched action may fail after
+    SendInput, and handoff itself may send Alt. Never reconstruct those facts
+    from a screenshot or an exception's text.
+    """
+    request, result = receipt.get('request'), receipt.get('result')
+    state = {'request_id': receipt.get('id'), 'state': 'unknown', 'unknown_input': True,
+             'input_attempted': result.get('input_attempted') if isinstance(result, dict) else None}
+    if (not isinstance(request, dict) or not isinstance(result, dict) or type(result.get('ok')) is not bool
+            or request.get('id') != receipt.get('id') or result.get('id') != receipt.get('id')):
+        return state
+    completed = result.get('completed')
+    if request.get('kind') == 'resume':
+        if (request.get('handoff') is True and 'expected_pause_id' in request
+                and (request['expected_pause_id'] is None or isinstance(request['expected_pause_id'], str))
+                and 'actions' not in request and result.get('ok') is True
+                and result.get('resumed') is True and completed == []):
+            return {**state, 'state': 'control', 'unknown_input': False}
+        return state
+    actions = request.get('actions')
+    if (request.get('kind') != 'actions' or not isinstance(actions, list) or not actions
+            or any(not isinstance(action, dict) or action.get('type') not in ('observe', 'wait', 'click', 'key', 'drag', 'scroll')
+                   or not isinstance(action.get('args'), list) for action in actions)
+            or not isinstance(completed, list) or completed != actions[:len(completed)]):
+        return state
+    physical = lambda values: [action for action in values if action['type'] not in ('observe', 'wait')]
+    done, planned = physical(completed), physical(actions)
+    attempted = result.get('attempted_actions')
+    if result.get('input_attempted') is False and (done or request.get('handoff') is True or attempted not in (None, [])):
+        return state
+    if (request.get('handoff') is not True and not done
+            and (all(action['type'] == 'observe' for action in actions)
+                 or result.get('input_attempted') is False and attempted == [])):
+        if result.get('input_attempted') is not True and attempted in (None, []):
+            return {**state, 'state': 'zero_input', 'unknown_input': False}
+    if completed == actions and result.get('ok') is True:
+        if attempted is not None and attempted != planned:
+            return state
+        return {**state, 'state': 'completed', 'unknown_input': False}
+    # A failed guard after a completed prefix can leave the next action wholly
+    # unattempted. An extra attempted action makes its effect unknown instead.
+    if (result.get('ok') is False and done and attempted == done
+            and result.get('input_attempted') is True and request.get('handoff') is not True):
+        return {**state, 'state': 'partial' if completed != actions else 'completed', 'unknown_input': False}
+    return state
+
+
+def _manual_records(run, owner):
+    state = entry.read_json(run / 'runner-state.json')
+    records = Path(state['journal_file']).parent
+    if (state.get('run_id') != owner['run_id'] or state.get('chat_id') != owner['chat_id']
+            or records.resolve().parent != (PROJECT / 'debug').resolve()
+            or entry.read_json(records / 'owner.json').get('run_id') != owner['run_id']):
+        raise ValueError('人工结果持久证据目录不属于当前run')
+    return records, state
+
+
+def _manual_save(run, records, control, item):
+    target = run / 'manual-results' / (item['checkpoint_id'] + '.json')
+    control.write_json(target, item)
+    control.write_json(records / ('manual-' + item['checkpoint_id'] + '.json'), redact(item))
+
+
 def _drain_manual_receipts(run, control):
     pending = []
     for index, path in enumerate((run / 'request-ledger').glob('*.json')):
@@ -532,7 +601,7 @@ def _drain_manual_receipts(run, control):
 
 def _manual_binding(run, owner, control, manual_id):
     manual = manual_state(run)
-    state = entry.read_json(run / 'runner-state.json')
+    records, state = _manual_records(run, owner)
     if (not manual or manual.get('manual_id') != manual_id
             or state.get('run_id') != owner['run_id'] or state.get('chat_id') != owner['chat_id']
             or (run / 'runner-stop').exists() or (run / 'broker-stop').exists()):
@@ -540,10 +609,6 @@ def _manual_binding(run, owner, control, manual_id):
     stage = canonical_stage(state.get('preparation_stage'))
     if not stage or not state.get('match_id'):
         raise ValueError('没有当前局/节点绑定；人工结果保持未知')
-    records = Path(state['journal_file']).parent
-    if (records.resolve().parent != (PROJECT / 'debug').resolve()
-            or entry.read_json(records / 'owner.json').get('run_id') != owner['run_id']):
-        raise ValueError('人工结果持久证据目录不属于当前run')
     return {'run_id': owner['run_id'], 'match_id': state['match_id'], 'stage': stage,
             'manual_id': manual_id, 'old_epoch': (optional(run / 'runner-resume-epoch.json') or {}).get('id')}, records
 
@@ -554,7 +619,7 @@ def _manual_capture(run, owner, control, binding, records, label, reader):
     # never focuses, resumes or performs a desktop input.
     result = entry.request(control, 'actions', ['observe'], rid, False)
     if not result.get('ok') or not result.get('observation'):
-        raise ValueError('人工结果缺少同请求的新观察')
+        raise entry.ObservationUnavailable('人工结果缺少同请求的新观察；仅补观察，不重发输入')
     target = records / (label + '-' + rid + '.png')
     with control.submission_lock():
         # Keep the transaction watermark at this exact observation. The image
@@ -582,6 +647,7 @@ def _manual_capture(run, owner, control, binding, records, label, reader):
     except (OSError, ValueError):
         pass  # A release failure preserves evidence; it never repeats input.
     return {'receipt_id': rid, 'observed_at': now(), 'snapshot_id': digest,
+            'captured_at': result['observation']['captured_at'], 'frame_id': result['observation']['frame_id'],
             'evidence_file': str(target), 'observation': observed, 'receipt_watermark': watermark}
 
 
@@ -605,7 +671,8 @@ def _begin_manual_phase(run, owner, control, manual_id, phase, *, reader=None):
     reconciled = _drain_manual_receipts(run, control)
     checkpoint_id = uuid.uuid4().hex
     before = _manual_capture(run, owner, control, binding, records, 'manual-' + checkpoint_id + '-before', reader or Perception())
-    item = {'schema': 'manual-preparation-result/v1', 'checkpoint_id': checkpoint_id, 'binding': binding,
+    item = {'schema': 'manual-preparation-result/v1', 'receipt_protocol': 2,
+            'checkpoint_id': checkpoint_id, 'binding': binding,
             'phase': phase, 'status': 'pending', 'before': before, 'reconciled_receipts': redact(reconciled),
             'prior_receipt_ids': before['receipt_watermark']}
     current, _ = _manual_binding(run, owner, control, manual_id)
@@ -636,37 +703,92 @@ def _finish_manual_phase(run, owner, control, checkpoint_id, input_receipt_ids, 
             or any(rid in item['prior_receipt_ids'] for rid in input_receipt_ids)):
         raise ValueError('人工输入须为checkpoint之后的唯一真实回执')
     if (not isinstance(review, dict) or review.get('phase') != item['phase']
-            or review.get('stage') != binding['stage'] or review.get('completed') is not True
+            or review.get('stage') != binding['stage'] or type(review.get('completed')) is not bool
             or review.get('reviewer') != 'supervising_agent'
             or not isinstance(review.get('findings'), str) or not review['findings'].strip()):
         raise ValueError('人工结果须监督助手逐阶段实际复核')
+    reported = review.get('outcome', 'success' if review['completed'] else 'unknown')
+    if (reported not in ('success', 'no_effect', 'partial', 'unknown')
+            or review['completed'] != (reported == 'success')):
+        raise ValueError('人工结果须区分成功/零效果/部分/未知，只有成功可请求完成阶段')
     receipts = []
     end = time.monotonic() + 5
-    for rid in input_receipt_ids:
-        receipt = await_existing_receipt(run, control, rid, end - time.monotonic())
-        result, request = receipt['result'], receipt['request']
-        if (request.get('kind') != 'actions' or result.get('ok') is not True
-                or result.get('completed') != request.get('actions') or not result.get('observation')):
-            raise ValueError('人工输入回执缺失/部分完成/失败；保持PENDING，不重发')
-        receipts.append(receipt)
-    # An omitted concurrent request is also unknown. Capturing a later frame
-    # cannot silently certify that omitted request's outcome.
-    _drain_manual_receipts(run, control)
-    actual_ids = {entry.read_json(p)['id'] for p in (run / 'request-ledger').glob('*.json')}
-    if actual_ids - set(item['prior_receipt_ids']) != set(input_receipt_ids):
-        raise ValueError('checkpoint之后有未列出的回执；人工结果保持PENDING')
-    after = _manual_capture(run, owner, control, binding, records, 'manual-' + checkpoint_id + '-after', reader or Perception())
+    paths = list((run / 'request-ledger').glob('*.json'))
+    if len(paths) > 4096:
+        raise ValueError('回执数量超出有界容量')
+    ledger = {value['id']: value for value in (entry.read_json(path) for path in paths)}
+    actual_ids = set(ledger) - set(item['prior_receipt_ids'])
+    if len(actual_ids) > 128:
+        raise ValueError('单个人工checkpoint超过128张回执；保持未知，不截断证据')
+    if set(input_receipt_ids) - actual_ids:
+        raise ValueError('所列输入缺少checkpoint之后的原回执；不能把缺失当零输入')
+    unresolved = []
+    for rid in sorted(actual_ids):
+        try:
+            receipts.append(await_existing_receipt(run, control, rid, end - time.monotonic()))
+        except TimeoutError:
+            receipts.append(ledger[rid])
+            unresolved.append(rid)
+    states = [manual_receipt_state(receipt) for receipt in receipts]
+    # Observe-only receipts and positive zero-input refusals may be discovered
+    # during reconciliation. Every possible input/control request must still
+    # be declared, including failed and partially executed requests.
+    omitted = [value['request_id'] for value in states
+               if value['request_id'] not in input_receipt_ids and value['state'] != 'zero_input']
+    if omitted:
+        raise ValueError('checkpoint之后有未列出的可能输入回执；人工结果保持PENDING')
+    after, capture_error = None, None
+    if unresolved:
+        capture_error = '既有请求仍未返回终态：' + ','.join(unresolved)
+    else:
+        try:
+            _drain_manual_receipts(run, control)
+            after = _manual_capture(run, owner, control, binding, records, 'manual-' + checkpoint_id + '-after', reader or Perception())
+        except (entry.ObservationUnavailable, OSError, TimeoutError) as exc:
+            capture_error = str(exc)
     current = entry.read_json(path)
     latest_binding, _ = _manual_binding(run, owner, control, binding['manual_id'])
     if current != item or current.get('status') != 'pending' or latest_binding != binding:
         raise ValueError('人工结果提交前checkpoint状态/交接身份已变；未覆盖')
-    if set(after['receipt_watermark']) - set(item['prior_receipt_ids']) != set(input_receipt_ids) | {after['receipt_id']}:
+    if after and set(after['receipt_watermark']) - set(item['prior_receipt_ids']) != actual_ids | {after['receipt_id']}:
         raise ValueError('人工后帧之前有未列出的回执；保持PENDING')
-    item.update(status='completed', after=after, review=review, input_receipts=redact(receipts),
-                outcome='verified_change' if item['before']['snapshot_id'] != after['snapshot_id'] else 'verified_no_change')
-    control.write_json(path, item)
-    control.write_json(records / ('manual-' + checkpoint_id + '.json'), redact(item))
-    return item
+    unknown = any(value['unknown_input'] for value in states)
+    # A no-effect claim names the actual dynamic fields compared, not the PNG
+    # hash. This is evidence about those fields, never all game side effects.
+    fields = review.get('effect_fields', [])
+    comparisons = {}
+    if (after and isinstance(fields, list) and 1 <= len(fields) <= 5
+            and all(field in ('coins', 'xp', 'level', 'deployed', 'hp') for field in fields)):
+        for field in fields:
+            before_value = item['before']['observation'].get('fields', {}).get(field)
+            after_value = after['observation'].get('fields', {}).get(field)
+            comparisons[field] = {'before': before_value, 'after': after_value,
+                                  'unchanged': before_value is not None and before_value == after_value}
+    if capture_error or unknown:
+        outcome = 'unknown'
+    elif reported == 'success':
+        outcome = 'success'
+    elif reported == 'no_effect' and (states and all(value['state'] == 'zero_input' for value in states)
+                                     or comparisons and all(value['unchanged'] for value in comparisons.values())):
+        outcome = 'no_effect'
+    elif reported == 'partial' and any(value['state'] in ('completed', 'partial') for value in states):
+        outcome = 'partial'
+    else:
+        outcome = 'unknown'
+    updated = {**item, 'status': 'completed' if outcome == 'success' else 'pending',
+        'review': review, 'reported_outcome': reported, 'outcome': outcome,
+        'input_receipts': redact(receipts), 'receipt_states': states,
+        'effect_observations': comparisons, 'effect_scope': 'listed_dynamic_fields_only', 'input_resent': False,
+        'native_automation_gate_passed': False, 'needs_fresh_revalidation': True}
+    if after:
+        updated.update(after=after, image_changed=item['before']['snapshot_id'] != after['snapshot_id'])
+        updated.pop('observation_error', None)
+    else:
+        updated.pop('after', None)
+        updated.pop('image_changed', None)
+        updated['observation_error'] = capture_error
+    _manual_save(run, records, control, updated)
+    return updated
 
 
 def resume_guard_snapshot(run, owner, control, *, status=None, pending=None):
@@ -715,8 +837,40 @@ def resume_guard_rejection(expected, actual):
     return None
 
 
+def verified_resume_event(run, owner, control, epoch):
+    """Read the exact successful CAS/epoch commit, not any successful resume."""
+    rid = epoch.get('id')
+    if not isinstance(rid, str) or epoch.get('resume_event') != rid:
+        raise ValueError('恢复缺少绑定原CAS的持久事件；当前监督复核，不继承旧完成')
+    target = run / 'resume-events' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    event = entry.read_json(target)
+    guard = parse_resume_guard(event.get('guard'))
+    receipt = await_existing_receipt(run, control, rid, 0)
+    state = control.status()
+    if (event.get('schema') != 'manual-resume-event/v1' or event.get('run_id') != owner['run_id']
+            or event.get('new_epoch') != rid or event.get('old_epoch') != epoch.get('previous_epoch')
+            or event.get('recorded_at') != epoch.get('time')
+            or event.get('consumed_manual_ids') != guard['pending_manual_ids']
+            or epoch.get('consumed_manual_id') not in guard['pending_manual_ids']
+            or not set(guard['pending_manual_ids']).issubset(epoch.get('consumed_manual_ids', []))
+            or guard['run_id'] != owner['run_id'] or guard['resume_epoch'] != epoch.get('previous_epoch')
+            or guard['broker_pid'] != state.get('broker_pid')
+            or guard['broker_creation_id'] != str(state.get('broker_creation_time'))
+            or manual_receipt_state(receipt)['state'] != 'control'
+            or receipt['request'].get('expected_pause_id') != guard['broker_pause_id']
+            or redact(receipt) != event.get('receipt')):
+        raise ValueError('恢复事件的请求/CAS/进程/前后epoch身份不符')
+    return event, receipt
+
+
 def explicit_resume(run, owner, control, rid, expected_manual_id=None, expected_broker_pause_id=entry.UNSET,
                     expected_guard=entry.UNSET):
+    if not isinstance(rid, str) or not 1 <= len(rid) <= 100:
+        raise ValueError('恢复请求身份无效')
+    event_path = run / 'resume-events' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    if event_path.exists():
+        return {'ok': False, 'resumed': False, 'guard_matched': False,
+                'error': '恢复请求已有持久事件；只对账原结果，不重发交接'}
     if expected_guard is not entry.UNSET:
         expected_guard = parse_resume_guard(expected_guard)
     elif expected_manual_id is None or expected_broker_pause_id is entry.UNSET:
@@ -788,13 +942,30 @@ def explicit_resume(run, owner, control, rid, expected_manual_id=None, expected_
                 raise RuntimeError('新的手动接管优先，恢复未解锁')
             if not result.get('ok') or not result.get('resumed'):
                 raise RuntimeError(result.get('error', '同broker恢复未确认'))
-            (run / 'runner-manual.json').unlink(missing_ok=True)
             # All old strategy replies become invalid across explicit handoff.
             old = optional(run / 'runner-resume-epoch.json') or {}
             consumed_ids = sorted(set(old.get('consumed_manual_ids', [])) | captured_ids)
-            control.write_json(run / 'runner-resume-epoch.json', {'id': rid, 'time': now(), 'previous_epoch': old.get('id'),
-                'consumed_manual_id': epoch,
-                'consumed_manual_ids': consumed_ids})
+            records, observed_state = _manual_records(run, owner)
+            receipt = await_existing_receipt(run, control, rid, 0)
+            committed_at = now()
+            event = {'schema': 'manual-resume-event/v1', 'run_id': owner['run_id'],
+                'match_id': observed_state.get('match_id'), 'stage': observed_state.get('preparation_stage'),
+                'old_epoch': captured_resume_epoch, 'new_epoch': rid,
+                'guard': captured_guard, 'consumed_manual_ids': sorted(captured_ids),
+                'receipt': redact(receipt), 'recorded_at': committed_at, 'input_resent': False}
+            try:
+                event_path.parent.mkdir(exist_ok=True)
+                if event_path.exists():
+                    raise ValueError('恢复事件已存在；不覆盖原CAS')
+                control.write_json(event_path, event)
+                control.write_json(records / ('resume-' + hashlib.sha256(rid.encode()).hexdigest() + '.json'), event)
+                control.write_json(run / 'runner-resume-epoch.json', {'id': rid, 'time': committed_at,
+                    'previous_epoch': old.get('id'), 'consumed_manual_id': epoch,
+                    'consumed_manual_ids': consumed_ids, 'resume_event': rid})
+                (run / 'runner-manual.json').unlink(missing_ok=True)
+            except Exception:
+                control.pause('恢复结果持久记录未完成；只对账，不重发交接')
+                raise
         return {**result, 'guard_matched': True, 'resume_epoch': rid, 'consumed_manual_ids': consumed_ids}
     finally:
         (run / 'runner-resuming.json').unlink(missing_ok=True)
@@ -2565,7 +2736,16 @@ class Worker:
         if not isinstance(value, dict):
             raise ValueError('准备复核缺少结构化value')
         phase = value.get('phase')
-        if panel_source is not None and phase in ('rewards', 'startup_guide'):
+        if manual_record is not None and (phase != manual_record.get('phase') or value != manual_record.get('review')):
+            raise ValueError('人工阶段与原监督复核内容不符；新复核须绑定当前请求单独提交')
+        unverified = ManualReviewDeferred if manual_record is not None else ValueError
+        if manual_record is not None and phase == 'rewards':
+            # There is no full-field native reward-clear scanner. A historical
+            # boolean cannot acquire a new proof merely by changing its epoch.
+            raise ManualReviewDeferred('历史领奖标记须当前请求监督重新扫场；不复制all_claimed到新帧')
+        if panel_source is not None and phase == 'startup_guide':
+            if panel_source['manual_later_mutations']:
+                raise ManualReviewDeferred('指南之后有已记录输入，当前任务进度须重新读取')
             source = panel_source
         status = self.preparation_checklist(self.last_observation)
         stage = self.preparation_scope[1]
@@ -2583,9 +2763,40 @@ class Worker:
         if phase == 'startup_guide' and (value.get('entry_index') != 2 or value.get('rewards_claimed') is not True
                 or not isinstance(value.get('goals'), list)
                 or not startup_title or startup_title.get('confidence', 0) < .90):
-            raise ValueError('须实读第二入口创业指南、当前章节目标并领空已完成奖励')
+            raise unverified('须实读第二入口创业指南、当前章节目标并领空已完成奖励')
         if phase in ('inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') and source['page'] not in ('preparation', 'shop'):
-            raise ValueError('库存/经济/阵容验收须回到当前备战或商店鲜帧')
+            raise unverified('库存/经济/阵容验收须回到当前备战或商店鲜帧')
+        if manual_record is not None and phase == 'inventory_cleanup':
+            def inventory_identity(observation):
+                from currency_wars_state_reader import native_slots
+                team = observation.get('semantic', {}).get('team') or {}
+                slots = team.get('slots')
+                expected = {(slot['location'], slot['row'], slot['slot']) for slot in native_slots()}
+                identities = [(slot.get('location'), slot.get('row'), slot.get('slot')) for slot in slots
+                              if isinstance(slot, dict)] if isinstance(slots, list) else []
+                if (team.get('snapshot_id') != observation.get('snapshot_id') or not isinstance(slots, list)
+                        or len(slots) != len(expected) or len(identities) != len(expected) or set(identities) != expected
+                        or any(slot.get('status') not in ('empty', 'occupied')
+                               or slot.get('status') == 'occupied' and (not slot.get('name') or slot.get('star') is None)
+                               for slot in slots)):
+                    raise ManualReviewDeferred('当前完整库存姓名/星级/空位仍未知，须当前监督复核')
+                capacity = team.get('capacity') or {}
+                if (capacity.get('snapshot_id') != observation.get('snapshot_id')
+                        or capacity.get('overflow_checked') is not True
+                        or type(capacity.get('overflow_count')) is not int or capacity['overflow_count'] != 0):
+                    raise ManualReviewDeferred('临时溢出须独立确认为空；19个固定槽不代表全部库存')
+                return sorted((slot.get('row'), slot.get('slot'), slot.get('status'), slot.get('name'), slot.get('star'))
+                              for slot in slots)
+            if inventory_identity(fresh_source) != inventory_identity(panel_source):
+                raise ManualReviewDeferred('人工整理后的库存已变化；按当前库存重验，不继承旧清理标记')
+        if manual_record is not None and phase == 'economy':
+            current_fields = fresh_source.get('fields', {})
+            if (type(current_fields.get('coins')) is not int or current_fields['coins'] < 0
+                    or type(current_fields.get('level')) is not int
+                    or not re.fullmatch(r'[0-9]+/[0-9]+', current_fields.get('xp') or '')
+                    or any(current_fields.get(key) != panel_source.get('fields', {}).get(key)
+                           for key in ('coins', 'level', 'xp'))):
+                raise ManualReviewDeferred('当前金币/等级/经验缺失或已变化；须按新资源复核经济')
         if phase == 'lineup_equipment':
             team = value.get('team')
             investments = value.get('investments')
@@ -2602,13 +2813,18 @@ class Worker:
             board_count = sum(unit.get('location') == 'board' for unit in team.get('units', []))
             if manual_record is not None:
                 native_team = fresh_source.get('semantic', {}).get('team') or {}
-                board_identity = lambda value: sorted((unit.get('row'), unit.get('slot'), unit.get('name'))
+                board_identity = lambda value: sorted((unit.get('row'), unit.get('slot'), unit.get('name'),
+                    unit.get('star', unit.get('stars')))
                     for unit in value.get('units', []) if unit.get('location') == 'board')
                 fresh_requirements = coaching.lineup_requirements(investments, native_team, self.knowledge)
                 if (native_team.get('checked') is not True
                         or board_identity(native_team) != board_identity(team)
                         or fresh_requirements['verified'] is not True or fresh_requirements['needs_lineup_plan']):
-                    raise ValueError('新交接鲜帧的场上实名/槽位未完整匹配；阵容仍待当前监督复核')
+                    raise ManualReviewDeferred('新交接鲜帧的场上实名/星级/槽位未完整匹配；阵容仍待当前监督复核')
+                gear = fresh_source.get('semantic', {}).get('gear') or {}
+                if (gear.get('snapshot_id') != fresh_source.get('snapshot_id') or gear.get('checked') is not True
+                        or gear.get('scope') == 'guide_recommendation_only' or not isinstance(gear.get('equipped'), list)):
+                    raise ManualReviewDeferred('当前穿戴未实读；旧gear_checked不能替代新帧装备验收')
             if (not requirements['verified'] or requirements['needs_lineup_plan'] or not population
                     or board_count != int(population[1])):
                 raise ValueError('前4/后6、角色位置或已选投资同时上场条件未满足')
@@ -2617,7 +2833,19 @@ class Worker:
             deployed = source.get('fields', {}).get('deployed')
             match = re.fullmatch(r'([0-9]+)/([0-9]+)', deployed or '')
             if not match or not 1 <= int(match[1]) == int(match[2]) <= 10:
-                raise ValueError('出战验收须实际人口已满且不超过10，不能用文字批准补造')
+                raise unverified('出战验收须实际人口已满且不超过10，不能用文字批准补造')
+        goals, task_source = None, None
+        if phase == 'startup_guide':
+            actual = panel_source or source
+            actual_snapshot = actual.get('snapshot_id', record['proof']['snapshot_id'])
+            goals = coaching.reviewed_goals(value['goals'], actual_snapshot)
+            task_source = {'snapshot_id': actual_snapshot,
+                'evidence_file': manual_record['after']['evidence_file'] if manual_record else record['proof']['evidence_file'],
+                'observed_at': actual['observed_at'], 'match_id': self.active_match_id,
+                'stage': stage, 'resume_epoch': self.epoch(), 'source': 'validated_preparation_review'}
+            if manual_record is not None:
+                task_source.update(observation_epoch=manual_record['binding']['old_epoch'],
+                                   revalidated_at=fresh_source['observed_at'])
         mode = value.get('mode')
         if mode in ('标准博弈', '超频博弈'):
             self.live_mode = {'value': mode, 'match_id': self.active_match_id, 'origin': 'supervising_agent',
@@ -2625,14 +2853,12 @@ class Worker:
         self.preparation_reviews[phase] = {**value, 'proof': record['proof'], 'origin': 'supervising_agent',
                                            'observed_at': source['observed_at']}
         if phase == 'startup_guide':
-            actual = panel_source or source
-            actual_snapshot = actual.get('snapshot_id', record['proof']['snapshot_id'])
-            self.preparation_reviews[phase]['goals'] = coaching.reviewed_goals(value['goals'], actual_snapshot)
-            self.preparation_reviews[phase]['task_source'] = {
-                'snapshot_id': actual_snapshot,
-                'evidence_file': manual_record['after']['evidence_file'] if manual_record else record['proof']['evidence_file'],
-                'observed_at': actual['observed_at'], 'match_id': self.active_match_id,
-                'stage': stage, 'resume_epoch': self.epoch(), 'source': 'validated_preparation_review'}
+            self.preparation_reviews[phase].update(goals=goals, task_source=task_source)
+            rewards = self.preparation_reviews.get('rewards') or {}
+            if manual_record is None or rewards.get('proof', {}).get('snapshot_id') != record['proof']['snapshot_id']:
+                self.preparation_reviews.pop('rewards', None)
+                self.log({'event': 'guide_requires_current_reward_rescan', 'stage': stage,
+                          'input_resent': False, 'reason': '指南领取可能新增掉落，保留指南结果并重扫奖励'})
         self.context['preparation_review'] = {'value': self.preparation_reviews, 'origin': 'supervising_agent'}
         self.node_progress = getattr(self, 'node_progress', 0) + 1
         self.log({'event': 'preparation_phase_verified', 'phase': phase, 'stage': stage,
@@ -2641,50 +2867,82 @@ class Worker:
     def verified_manual_source(self, item, fresh):
         epoch = optional(self.run / 'runner-resume-epoch.json') or {}
         binding = item.get('binding', {})
-        if (item.get('schema') != 'manual-preparation-result/v1' or item.get('status') != 'completed'
+        status = self.c.status()
+        if (item.get('schema') != 'manual-preparation-result/v1' or item.get('receipt_protocol') != 2
+                or item.get('status') != 'completed' or item.get('outcome') != 'success'
                 or binding.get('run_id') != self.owner['run_id'] or binding.get('match_id') != self.active_match_id
                 or binding.get('stage') != self.preparation_scope[1]
                 or binding.get('manual_id') != epoch.get('consumed_manual_id')
                 or binding.get('old_epoch') != epoch.get('previous_epoch')
                 or binding.get('old_epoch') == self.epoch() or manual_state(self.run)
-                or fresh.get('preparation_stage') != binding.get('stage')
-                or canonical_stage(fresh.get('fields', {}).get('stage')) != binding.get('stage')
+                or not status.get('ready') or status.get('paused') or status.get('input_halted')
+                or status.get('game_foreground') is not True
                 or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
             raise ValueError('人工trace不属于当前局/节点/新交接代次')
-        resume = await_existing_receipt(self.run, self.c, self.epoch(), 0)
-        if (resume['request'].get('kind') != 'resume' or resume['result'].get('ok') is not True
-                or resume['result'].get('resumed') is not True):
-            raise ValueError('同broker恢复回执未确认；人工结果保持未知')
+        actual_stage = canonical_stage(fresh.get('fields', {}).get('stage'))
+        if actual_stage and actual_stage != binding['stage']:
+            raise ValueError('人工trace与实际当前节点冲突')
+        if not actual_stage or fresh.get('preparation_stage') != binding['stage']:
+            raise ManualReviewDeferred('当前帧尚无实际节点HUD；回到同节点新帧再复核，不伪造节点')
+        event, resume = verified_resume_event(self.run, self.owner, self.c, epoch)
+        if event.get('match_id') != binding['match_id'] or event.get('stage') != binding['stage']:
+            raise ValueError('恢复CAS事件的对局/节点与人工trace冲突')
+        capture_id = fresh.get('capture_request_id')
+        if not capture_id:
+            raise ManualReviewDeferred('当前请求缺少新epoch捕获收据；先补当前观察')
+        capture = await_existing_receipt(self.run, self.c, capture_id, 0)
+        observation = capture['result'].get('observation') or {}
+        if (capture['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                or capture['request'].get('handoff') is True or capture['result'].get('ok') is not True
+                or observation.get('frame_protocol') != 1 or observation.get('request_id') != capture_id
+                or observation.get('frame_id') != fresh.get('frame_id')
+                or observation.get('snapshot_sha256') != fresh.get('snapshot_id')
+                or observation.get('captured_at') != fresh.get('captured_at')):
+            raise ValueError('新交接观察的请求/帧/摘要身份不符')
         times = [datetime.fromisoformat(item[key]['observed_at']) for key in ('before', 'after')]
         resumed = datetime.fromisoformat(epoch['time'])
         fresh_time = datetime.fromisoformat(fresh['observed_at'])
-        if not times[0] <= times[1] <= resumed <= fresh_time or (fresh_time - times[1]).total_seconds() > 3600:
+        captured = datetime.fromisoformat(fresh['captured_at'])
+        if (any(value.tzinfo is None for value in [*times, resumed, captured, fresh_time])
+                or not times[0] <= times[1] <= resumed <= captured <= fresh_time
+                or (fresh_time - times[1]).total_seconds() > 3600):
             raise ValueError('人工trace时序/期限不符；重新观察')
-        self.verify_manual_mutation_fence(item)
+        fence = self.verify_manual_mutation_fence(item)
+        saved_ids = [saved.get('id') for saved in item.get('input_receipts', [])]
+        if (item.get('prior_receipt_ids') != item['before'].get('receipt_watermark')
+                or len(set(saved_ids)) != len(saved_ids)
+                or set(item['after'].get('receipt_watermark', [])) - set(item['prior_receipt_ids'])
+                   != set(saved_ids) | {item['after']['receipt_id']}):
+            raise ValueError('人工输入归档与前后回执watermark不符')
         for saved in item.get('input_receipts', []):
             receipt = await_existing_receipt(self.run, self.c, saved['id'], 0)
-            if (receipt['result'].get('ok') is not True
-                    or receipt['result'].get('completed') != receipt['request'].get('actions')
-                    or not receipt['result'].get('observation')):
-                raise ValueError('人工输入回执不再完整；不重发')
+            if redact(receipt) != saved or manual_receipt_state(receipt)['unknown_input']:
+                raise ValueError('人工原收据改变或仍含未知输入；不继承阶段，不重发')
         for key in ('before', 'after'):
             frame = item[key]
             path = Path(frame['evidence_file'])
             if path.resolve().parent != self.records.resolve() or hashlib.sha256(path.read_bytes()).hexdigest() != frame['snapshot_id']:
                 raise ValueError('人工前后原帧缺失/改变')
             receipt = await_existing_receipt(self.run, self.c, frame['receipt_id'], 0)
+            observation = receipt['result'].get('observation') or {}
             if (receipt['request'].get('actions') != [{'type': 'observe', 'args': []}]
-                    or receipt['result'].get('ok') is not True or not receipt['result'].get('observation')):
+                    or receipt['request'].get('handoff') is True or receipt['result'].get('ok') is not True
+                    or observation.get('frame_protocol') != 1 or observation.get('request_id') != frame['receipt_id']
+                    or observation.get('snapshot_sha256') != frame['snapshot_id']
+                    or observation.get('frame_id') != frame.get('frame_id')
+                    or observation.get('captured_at') != frame.get('captured_at')):
                 raise ValueError('人工观察回执未确认')
         source = self.perception.read(Path(item['after']['evidence_file']))
         stage = canonical_stage(source.get('fields', {}).get('stage'))
         if stage and stage != binding['stage']:
             raise ValueError('人工后帧节点已改变')
-        return {**source, 'preparation_stage': binding['stage'], 'observed_at': item['after']['observed_at']}
+        return {**source, 'preparation_stage': binding['stage'], 'observed_at': item['after']['observed_at'],
+                'manual_later_mutations': fence['later_mutations']}
 
     def verify_manual_mutation_fence(self, item):
         watermark = item.get('after', {}).get('receipt_watermark')
-        if not isinstance(watermark, list):
+        if (not isinstance(watermark, list) or len(watermark) > 4096
+                or any(not isinstance(rid, str) for rid in watermark) or len(set(watermark)) != len(watermark)):
             raise ValueError('人工阶段缺少确切回执watermark；保持未知')
         allowed = set()
         phase_index = coaching.PHASES.index(item['phase'])
@@ -2692,27 +2950,43 @@ class Worker:
             later = entry.read_json(path)
             if (later.get('binding') == item['binding'] and later.get('status') == 'completed'
                     and later.get('phase') in coaching.PHASES[phase_index + 1:]):
-                allowed.update(saved['id'] for saved in later.get('input_receipts', []))
+                for saved in later.get('input_receipts', []):
+                    current = await_existing_receipt(self.run, self.c, saved['id'], 0)
+                    if redact(current) == saved and not manual_receipt_state(current)['unknown_input']:
+                        allowed.add(saved['id'])
         known = set(watermark)
+        found, mutations = set(), []
         for index, path in enumerate((self.run / 'request-ledger').glob('*.json')):
             if index >= 4096:
                 raise ValueError('回执fence超出有界容量')
             raw = entry.read_json(path)
             rid = raw.get('id')
+            found.add(rid)
             if rid in known:
                 continue
             receipt = await_existing_receipt(self.run, self.c, rid, 0)
             request, result = receipt['request'], receipt['result']
             if request.get('kind') == 'resume' and rid == self.epoch():
+                verified_resume_event(self.run, self.owner, self.c, optional(self.run / 'runner-resume-epoch.json') or {})
+                continue
+            delivery = manual_receipt_state(receipt)
+            if delivery['unknown_input']:
+                raise ValueError('阶段之后的请求含未知输入；不继承旧完成，不重发')
+            if delivery['state'] == 'zero_input':
+                continue
+            if delivery['state'] == 'control' and rid in allowed:
                 continue
             if request.get('kind') != 'actions' or not isinstance(request.get('actions'), list):
                 raise ValueError('阶段之后出现不属于恢复的请求；人工结果未知')
-            mutation = any(action.get('type') not in ('observe', 'wait') for action in request['actions'])
+            mutation = (request.get('handoff') is True
+                        or any(action.get('type') not in ('observe', 'wait') for action in request['actions']))
             if mutation and (item['phase'] in ('lineup_equipment', 'battle_acceptance') or rid not in allowed):
                 raise ValueError('人工阶段之后存在未覆盖的输入变化；旧准备结果不继承')
-            if (result.get('ok') is not True or result.get('completed') != request['actions']
-                    or not result.get('observation')):
-                raise ValueError('阶段之后的请求仍未完整确认；不重发')
+            if mutation:
+                mutations.append(rid)
+        if known - found:
+            raise ValueError('人工阶段的原回执watermark有缺失；不继承旧完成')
+        return {'later_mutations': sorted(mutations)}
 
     def reviewed_task_context(self, observed):
         stage = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
@@ -2735,8 +3009,16 @@ class Worker:
         self.preparation_checklist(self.last_observation)
         used = getattr(self, 'manual_results_consumed', set())
         rejected = getattr(self, 'manual_results_rejected', set())
+        deferred = getattr(self, 'manual_results_deferred', {})
         changed = False
         for phase in coaching.PHASES:
+            current = self.preparation_reviews.get(phase) or {}
+            if (current.get('completed') is True
+                    and current.get('proof', {}).get('source') == 'observed_screen'
+                    and current.get('proof', {}).get('resume_epoch') == self.epoch()):
+                # A new ordinary supervising review can advance this phase
+                # even when its historical trace is pending or hard-rejected.
+                continue
             candidates = [item for item in items if item.get('phase') == phase
                 and item.get('status') == 'completed' and item.get('binding', {}).get('manual_id') == epoch.get('consumed_manual_id')]
             if not candidates:
@@ -2746,42 +3028,59 @@ class Worker:
             item = candidates[0]
             identity = (self.epoch(), item['checkpoint_id'])
             if identity in used:
-                continue
+                break  # A subsequently invalidated phase needs a current review.
             if identity in rejected:
                 break
+            request_key = request.get('request_id') or (request.get('snapshot_id'),
+                request.get('observation', {}).get('capture_request_id'))
+            if deferred.get(identity) == request_key:
+                break  # No repeated OCR of the same immutable decision frame.
             if self.preparation_checklist(self.last_observation)['phase'] != phase:
                 break
             proof = {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
                      'evidence_file': request['evidence_file'], 'resume_epoch': self.epoch()}
-            fresh_data = Path(request.get('original_png') or request['evidence_file']).read_bytes()
-            if hashlib.sha256(fresh_data).hexdigest() != request['snapshot_id']:
-                raise ValueError('新交接的原始PNG与当前请求不符；人工结果保持未知')
             try:
+                fresh_data = Path(request.get('original_png') or request['evidence_file']).read_bytes()
+                if hashlib.sha256(fresh_data).hexdigest() != request['snapshot_id']:
+                    raise ValueError('新交接的原始PNG与当前请求不符；人工结果保持未知')
                 self.review_preparation({'value': item['review'], 'proof': proof}, manual_record=item)
+            except (ManualReviewDeferred, entry.ObservationUnavailable, FileNotFoundError, TimeoutError) as exc:
+                deferred[identity] = request_key
+                self.manual_results_deferred = deferred
+                self.log({'event': 'manual_phase_deferred', 'phase': phase,
+                    'checkpoint_id': item['checkpoint_id'], 'new_epoch': self.epoch(),
+                    'request_id': request.get('request_id'), 'error': str(exc), 'input_resent': False,
+                    'next_step': '当前请求补必要观察或监督复核；保留已验阶段，不重新接管'})
+                break
             except ValueError as exc:
-                # An incomplete visual read needs a current supervising review,
-                # not a new takeover that erases already accepted phases.
-                # Keep this exact trace unaccepted and never retry its input.
                 rejected.add(identity)
                 self.manual_results_rejected = rejected
-                self.log({'event': 'manual_phase_unverified', 'phase': phase,
+                self.log({'event': 'manual_phase_conflict', 'phase': phase,
                     'checkpoint_id': item['checkpoint_id'], 'new_epoch': self.epoch(),
-                    'error': str(exc), 'input_resent': False, 'next_step': '当前请求鲜帧复核未完成阶段'})
+                    'error': str(exc), 'input_resent': False,
+                    'next_step': '旧trace不继承；允许当前请求独立复核未完成阶段'})
                 break
-            fresh_path = self.records / ('manual-' + item['checkpoint_id'] + '-reobserved-' + hashlib.sha256(self.epoch().encode()).hexdigest()[:12] + '.png')
-            with fresh_path.open('wb') as stream:
+            fresh_source = self.history[request['snapshot_id']]
+            fresh_id = fresh_source['capture_request_id']
+            fresh_path = self.records / ('manual-' + item['checkpoint_id'] + '-reobserved-'
+                + hashlib.sha256((self.epoch() + fresh_id).encode()).hexdigest()[:16] + '.png')
+            with fresh_path.open('xb') as stream:
                 stream.write(fresh_data)
+            resume_event, resume_receipt = verified_resume_event(self.run, self.owner, self.c, epoch)
             item['reconciliation'] = {'run_id': self.owner['run_id'], 'match_id': self.active_match_id,
                 'stage': self.preparation_scope[1], 'manual_id': item['binding']['manual_id'],
                 'new_epoch': self.epoch(), 'fresh_proof': proof, 'fresh_original_png': str(fresh_path),
-                'resume_receipt': redact(await_existing_receipt(self.run, self.c, self.epoch(), 0)),
+                'fresh_receipt': redact(await_existing_receipt(self.run, self.c, fresh_id, 0)),
+                'resume_receipt': redact(resume_receipt), 'resume_event': resume_event,
                 'reconciled_at': now(), 'input_resent': False}
             self.c.write_json(self.records / ('manual-' + item['checkpoint_id'] + '.json'), redact(item))
             self.preparation_reviews[phase]['manual_trace'] = {'checkpoint_id': item['checkpoint_id'],
                 'manual_id': item['binding']['manual_id'], 'before': item['before']['evidence_file'],
-                'after': item['after']['evidence_file'], 'outcome': item['outcome'], 'new_epoch': self.epoch()}
+                'after': item['after']['evidence_file'], 'outcome': item['outcome'],
+                'image_changed': item.get('image_changed'), 'new_epoch': self.epoch()}
             used.add(identity)
             self.manual_results_consumed = used
+            deferred.pop(identity, None)
             self.log({'event': 'manual_phase_reconciled', 'phase': phase, 'checkpoint_id': item['checkpoint_id'],
                       'manual_id': item['binding']['manual_id'], 'new_epoch': self.epoch(),
                       'proof': proof, 'outcome': item['outcome'], 'input_resent': False})
@@ -2993,6 +3292,8 @@ class Worker:
         self.history[observed['snapshot_id']] = {'snapshot_id': observed['snapshot_id'], 'evidence_file': evidence,
             'observed_at': now(), 'page': observed['page'], 'rows': observed['rows'], 'match_id': self.active_match_id,
             'resume_epoch': self.epoch(), 'semantic': observed.get('semantic', {}), 'fields': observed.get('fields', {}),
+            'capture_request_id': observed.get('capture_request_id'), 'frame_id': observed.get('frame_id'),
+            'captured_at': observed.get('captured_at'),
             'preparation_stage': canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage}
         if len(self.history) > 256:
             self.history.pop(next(iter(self.history)))
@@ -3980,7 +4281,10 @@ def command_cli(args):
                                    json.loads(args.input_receipt_ids_json), review)
         return {'ok': True, 'checkpoint_id': item['checkpoint_id'], 'phase': item['phase'],
                 'status': item['status'], 'outcome': item['outcome'], 'binding': item['binding'],
-                'before': item['before']['evidence_file'], 'after': item['after']['evidence_file']}
+                'receipt_states': item['receipt_states'], 'needs_fresh_revalidation': True,
+                'input_resent': False, 'before': item['before']['evidence_file'],
+                'after': (item.get('after') or {}).get('evidence_file'),
+                'observation_error': item.get('observation_error')}
     if args.command in ('pause', 'takeover'):
         intent_error = None
         try:
