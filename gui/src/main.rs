@@ -901,7 +901,7 @@ fn message_records(shared:&Shared)->Result<Vec<Value>,String>{
     Ok(records)
 }
 
-const CORE_FILES:[&str;13]=["tools/currency_wars_runner.py","tools/currency_wars_broker_entry.py","tools/currency_wars_perception.py","tools/currency_wars_control.py","tools/currency_wars_artifacts.py","tools/currency_wars_source_guard.py","tools/currency_wars_input_bridge.py","tools/currency_wars_bridge_task.py","tools/currency_wars_coaching.py","tools/currency_wars_visual_guards.py","tools/currency_wars_shop_reader.py","tools/currency_wars_state_reader.py","tools/currency_wars_progression.py"];
+const CORE_FILES:[&str;14]=["tools/currency_wars_runner.py","tools/currency_wars_broker_entry.py","tools/currency_wars_perception.py","tools/currency_wars_control.py","tools/currency_wars_artifacts.py","tools/currency_wars_source_guard.py","tools/currency_wars_input_bridge.py","tools/currency_wars_bridge_task.py","tools/currency_wars_coaching.py","tools/currency_wars_visual_guards.py","tools/currency_wars_shop_reader.py","tools/currency_wars_state_reader.py","tools/currency_wars_progression.py","tools/currency_wars_profile.py"];
 fn readiness(shared:&Shared)->Value{
     let checked=(||->Result<Value,String>{
         let manifest=read_json(&shared.config.project.join("docs/RUNNER_READY.json")).map_err(|_|"独立审查尚未完成".to_string())?;

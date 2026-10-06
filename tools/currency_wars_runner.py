@@ -25,6 +25,7 @@ from currency_wars_perception import Perception, clean, find_text, hash_distance
 from currency_wars_shop_reader import purchase_slot
 import currency_wars_coaching as coaching
 from currency_wars_progression import progression_plan
+from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
 from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target,
     stable_preparation_icon_target, PREPARATION_GUIDE_CONTROL,
     PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT)
@@ -556,9 +557,11 @@ def _manual_capture(run, owner, control, binding, records, label, reader):
         raise ValueError('人工结果缺少同请求的新观察')
     target = records / (label + '-' + rid + '.png')
     with control.submission_lock():
+        # Keep the transaction watermark at this exact observation. The image
+        # is immutable, but a newer input must not be hidden in its watermark.
         if (optional(run / 'result.json') or {}).get('id') != rid:
-            raise ValueError('人工观察已被另一请求替换；保持未知')
-        data = (run / 'game-preview.png').read_bytes()
+            raise ValueError('人工观察后已有新请求；重新观察，不继承旧水位')
+        data = entry.observation_frame(run, result).read_bytes()
         watermark = [entry.read_json(path)['id'] for path in (run / 'request-ledger').glob('*.json')]
         if len(watermark) > 4096:
             raise ValueError('人工观察回执数量超出有界容量')
@@ -574,6 +577,10 @@ def _manual_capture(run, owner, control, binding, records, label, reader):
     current, _ = _manual_binding(run, owner, control, binding['manual_id'])
     if current != binding:
         raise ValueError('观察期间发生新接管/新局；结果保持未知')
+    try:
+        entry.release_observation(run, result)
+    except (OSError, ValueError):
+        pass  # A release failure preserves evidence; it never repeats input.
     return {'receipt_id': rid, 'observed_at': now(), 'snapshot_id': digest,
             'evidence_file': str(target), 'observation': observed, 'receipt_watermark': watermark}
 
@@ -854,6 +861,10 @@ def _start_cli(args, lease):
                    '--max-seconds', str(args.max_seconds), '--max-matches', str(args.max_matches)]
         if args.continue_matches:
             command.append('--continue-matches')
+        if getattr(args, 'profile', False):
+            command.append('--profile')
+        if getattr(args, 'profile_comparison_key', None):
+            command.extend(['--profile-comparison-key', args.profile_comparison_key])
         lease.children([], complete=False)
         child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                  stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -2092,6 +2103,8 @@ class Worker:
                         'unknown_fields': ['guide', 'guide_tracking', 'investments', 'environment',
                                            'team', 'bonds', 'gear', 'tasks', 'hp', 'coins', 'xp']}
         self.last_observation = None
+        self.frame_path = None
+        self.frame_result = None
         self.last_epoch = None
         self.wait_started = None
         self.wait_page = None
@@ -2100,6 +2113,12 @@ class Worker:
         self.children = []
         self.records = PROJECT / 'debug' / ('runner-' + args.chat_id[:8] + '-' + marker['run_id'][:12])
         self.records.mkdir(exist_ok=False)
+        self.profile = ProfileRecorder(self.records, run_id=self.owner['run_id'],
+            enabled=getattr(args, 'profile', False) or os.environ.get('CW_PROFILE') == '1',
+            source_sha=hashlib.sha256(SELF.read_bytes()).hexdigest(),
+            comparison_key=getattr(args, 'profile_comparison_key', None))
+        self.profile_wait_id = None
+        self.profile_wait_kind = None
         self.c.write_json(self.records / 'owner.json', {**redact(self.owner), 'deliverable': 'requested replay log',
                          'controller_sha256': entry.PINNED, 'runner_sha256': hashlib.sha256(SELF.read_bytes()).hexdigest()})
         self.evidence_count = 0
@@ -2148,6 +2167,7 @@ class Worker:
 
     def publish(self, **updates):
         self.state.update(updates)
+        self.profile_context()
         self.state['match_id'] = self.active_match_id
         self.state['preparation_stage'] = self.last_preparation_stage
         if time.monotonic() - getattr(self, 'broker_activity_at', 0.) >= 15:
@@ -2161,20 +2181,97 @@ class Worker:
         self.c.write_json(self.run / 'runner-state.json', redact(self.state))
         self.c.write_json(CURRENT, redact(self.state))
 
+    def profile_context(self):
+        profile = getattr(self, 'profile', None)
+        if profile is None or not profile.enabled:
+            return
+        observed = self.last_observation or {}
+        stage = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
+        mode, page = self.state.get('control_mode'), observed.get('page')
+        if mode in ('manual', 'halted', 'stopping'):
+            phase = 'recovery'
+        elif page == 'battle':
+            phase = 'battle'
+        elif page in ('node_result', 'boss_result', 'settlement', 'settlement_grade', 'plane_intro'):
+            phase = 'settlement'
+        elif stage and page != 'unknown':
+            reviews = getattr(self, 'preparation_reviews', {})
+            if self.preparation_scope != (self.active_match_id, stage, self.epoch()):
+                reviews = {}
+            phase = coaching.preparation_status(reviews)['phase']
+            if phase == 'ready_for_battle':
+                phase = 'battle_acceptance'
+        else:
+            phase = 'unknown'
+        profile.set_context(match_id=self.active_match_id, stage=stage,
+                            resume_epoch=self.epoch(), phase=phase)
+        # Polling/approval wait has an actual open interval. A child capture or
+        # OCR span is subtracted rather than added to the same wall time.
+        waiting = 'takeover' if mode in ('manual', 'halted') else (
+            'decision' if mode == 'waiting_decision' else None)
+        identity = (waiting, self.active_match_id, stage, self.epoch(),
+                    (self.state.get('decision_request') or {}).get('request_id')) if waiting else None
+        if identity != self.profile_wait_kind:
+            profile.end_span(self.profile_wait_id)
+            self.profile_wait_kind = identity
+            self.profile_wait_id = profile.start_span('controller_wait', operation=waiting,
+                request_id=identity[-1]) if waiting else None
+
+    def profile_span(self, name, *, operation, request_id=None, snapshot_id=None):
+        profile = getattr(self, 'profile', None)
+        if profile is None or not profile.enabled:
+            return contextlib.nullcontext()
+        return profile.span(name, operation=operation,
+            parent_id=profile.current_span_id or getattr(self, 'profile_wait_id', None),
+            request_id=request_id, snapshot_id=snapshot_id)
+
+    def profile_broker_result(self, result, parent_id):
+        profile = getattr(self, 'profile', None)
+        if profile is None or not profile.enabled:
+            return
+        intervals = result.get('profile_intervals')
+        if not isinstance(intervals, list) or len(intervals) > 32:
+            return  # Old/missing timing evidence remains unknown round-trip time.
+        for interval in intervals:
+            if not isinstance(interval, dict):
+                continue
+            profile.record_interval(interval.get('name', 'broker_step'),
+                start_ns=interval.get('start_ns'), end_ns=interval.get('end_ns'),
+                operation=interval.get('operation'), parent_id=parent_id,
+                request_id=result.get('id'), receipt_id=result.get('id'))
+
+    def finish_profile(self):
+        profile = getattr(self, 'profile', None)
+        if profile is None or profile.path is None:
+            return
+        try:
+            profile.end_span(self.profile_wait_id)
+            profile.close(complete=False)
+            events, issues = read_events([profile.path])
+            report = summarize_events(events, issues)
+            paths = write_report(report, self.records / 'profile-summary')
+            self.state['profile'] = {'events': str(profile.path),
+                'reports': {kind: str(path) for kind, path in paths.items()},
+                'issues': len(report['issues']), 'error': profile.error,
+                'live_automation_verified': False}
+        except (OSError, ValueError, TypeError) as exc:
+            self.state['profile'] = {'events': str(profile.path), 'error': str(exc)}
+
     def log(self, value):
         item = {'time': now(), 'run_id': self.owner['run_id'], **redact(value)}
         with (self.records / 'journal.jsonl').open('a', encoding='utf8') as stream:
             stream.write(json.dumps(item, ensure_ascii=False) + '\n')
             stream.flush()
 
-    def save_frame(self, rid, label):
-        source = self.run / 'game-preview.png'
-        if not source.exists() or self.evidence_count >= 1000:
+    def save_frame(self, rid, label, source=None):
+        source = source or self.frame_path
+        if source is None or not source.exists() or self.evidence_count >= 1000:
             return None
         from PIL import Image
         target = self.records / (rid + '-' + label + '.jpg')
-        with Image.open(source) as image:
-            image.convert('RGB').save(target, quality=72)
+        with self.profile_span('evidence_image', operation='capture', request_id=rid):
+            with Image.open(source) as image:
+                image.convert('RGB').save(target, quality=72)
         self.evidence_count += 1
         return str(target)
 
@@ -2356,7 +2453,9 @@ class Worker:
         started = time.perf_counter()
         guarded = GuardedSubmission(self.c, publication_guard)
         try:
-            result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline)
+            with self.profile_span('broker_roundtrip', operation='unknown', request_id=rid) as timing:
+                result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline)
+                self.profile_broker_result(result, timing)
         except Exception as exc:
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
@@ -2365,9 +2464,17 @@ class Worker:
             if isinstance(exc, entry.SubmissionDeadlineExpired) and approval is not None and not guarded.publication_attempted:
                 raise BattleConfirmationRequired('needs_user_confirmation：战斗批准在发布前过期，已消费且不恢复') from exc
             raise
-        # Preserve the exact result and image BEFORE OCR or another request.
-        after = self.save_frame(rid, 'after-original') if result.get('observation') else None
+        # Persist the input receipt even if its subsequent observation failed.
+        # A new read-only observation must never resubmit these input tokens.
         self.c.write_json(self.records / (rid + '-result.json'), redact(result))
+        after = None
+        try:
+            with self.profile_span('result_frame_validation', operation='capture', request_id=rid):
+                frame = entry.observation_frame(self.run, result)
+            after = self.save_frame(rid, 'after-original', frame)
+        except entry.ObservationUnavailable as exc:
+            self.log({'event': 'observation_unavailable', 'request_id': rid,
+                      'reason': str(exc), 'input_resent': False})
         elapsed = (time.perf_counter() - started) * 1000
         completed = result.get('completed', [])
         self.state['statistics']['local_inputs'] += sum(a['type'] in ('click', 'key', 'drag', 'scroll') for a in completed)
@@ -2378,15 +2485,37 @@ class Worker:
                   'classification': None if result.get('ok') else 'control_guard_halt', 'error': result.get('error')})
         if not result.get('ok'):
             raise RuntimeError(result.get('error', 'broker拒绝动作'))
-        observed = self.read_frame()
+        try:
+            observed = self.read_frame(result)
+        except entry.ObservationUnavailable:
+            observed = self.observe()
         self.log({'event': 'actual_result', 'decision_id': rid, 'page': observed['page'],
                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
                   'after_evidence': after, 'expected_change': postcondition,
                   'classification': 'observed_after_input', 'outcome_confirmed': False})
         return observed
 
-    def read_frame(self):
-        observed = self.perception.read(self.run / 'game-preview.png')
+    def read_frame(self, result):
+        with self.profile_span('frame_validation', operation='capture', request_id=result.get('id')):
+            frame = entry.observation_frame(self.run, result)
+        try:
+            with self.profile_span('perception', operation='ocr', request_id=result.get('id')):
+                observed = self.perception.read(frame)
+        except (OSError, SyntaxError) as exc:
+            raise entry.ObservationUnavailable('本请求图像读取失败；只允许重新观察') from exc
+        if observed.get('snapshot_id') != result['observation']['snapshot_sha256']:
+            raise entry.ObservationUnavailable('读取结果与本请求完整帧摘要不符')
+        previous = getattr(self, 'frame_result', None)
+        self.frame_path, self.frame_result = frame, result
+        if previous is not None and previous['observation']['frame_id'] != result['observation']['frame_id']:
+            try:
+                entry.release_observation(self.run, previous)
+            except (OSError, ValueError) as exc:
+                self.log({'event': 'frame_release_deferred', 'request_id': previous.get('id'),
+                          'reason': str(exc), 'input_resent': False})
+        observed['capture_request_id'] = result['id']
+        observed['frame_id'] = result['observation']['frame_id']
+        observed['captured_at'] = result['observation']['captured_at']
         self.last_observation = observed
         self.state['statistics']['ocr_ms'] += observed['elapsed_ms']
         self.state['observation'] = {k: v for k, v in observed.items() if k != 'rows'}
@@ -2397,6 +2526,7 @@ class Worker:
             if isinstance(fact, dict):
                 self.strategy_reads[key] = {'value': fact, 'snapshot_id': observed['snapshot_id'],
                     'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'observed_at': now()}
+        self.profile_context()
         return observed
 
     def preparation_checklist(self, observed):
@@ -2815,14 +2945,23 @@ class Worker:
         return decision
 
     def observe(self):
-        rid = uuid.uuid4().hex
-        self.worker_request_ids = getattr(self, 'worker_request_ids', set())
-        self.worker_request_ids.add(rid)
-        result = entry.request(self.c, 'actions', ['observe'], rid, False)
-        if not result.get('ok') or not result.get('observation'):
-            raise RuntimeError('只读截图没有同请求的新鲜回帧')
-        self.state['statistics']['local_observations'] += 1
-        return self.read_frame()
+        for attempt in range(2):
+            rid = uuid.uuid4().hex
+            self.worker_request_ids = getattr(self, 'worker_request_ids', set())
+            self.worker_request_ids.add(rid)
+            with self.profile_span('observe_roundtrip', operation='unknown', request_id=rid) as timing:
+                result = entry.request(self.c, 'actions', ['observe'], rid, False)
+                self.profile_broker_result(result, timing)
+            self.state['statistics']['local_observations'] += 1
+            try:
+                if not result.get('ok'):
+                    raise entry.ObservationUnavailable('只读截图没有同请求的新鲜回帧')
+                return self.read_frame(result)
+            except entry.ObservationUnavailable as exc:
+                self.log({'event': 'observation_unavailable', 'request_id': rid,
+                          'attempt': attempt + 1, 'reason': str(exc), 'input_resent': False})
+                if attempt or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists():
+                    raise
 
     def click_text(self, observed, label, reason, exact=True, bounds=None):
         found = find_text(observed['rows'], label, bounds, exact)
@@ -2843,8 +2982,14 @@ class Worker:
             return
         rid = uuid.uuid4().hex
         evidence = self.save_frame(rid, 'strategy')
-        import shutil
-        shutil.copyfile(self.run / 'game-preview.png', self.run / 'request-original.png')
+        # This frame outlives its transport receipt and the runtime directory.
+        # Keep the exact PNG for delayed review; JPEG is only a display copy.
+        original_png = self.records / (rid + '-strategy-original.png')
+        payload = self.frame_path.read_bytes()
+        if hashlib.sha256(payload).hexdigest() != observed['snapshot_id']:
+            raise entry.ObservationUnavailable('战略请求原帧摘要不符')
+        with original_png.open('xb') as stream:
+            stream.write(payload)
         self.history[observed['snapshot_id']] = {'snapshot_id': observed['snapshot_id'], 'evidence_file': evidence,
             'observed_at': now(), 'page': observed['page'], 'rows': observed['rows'], 'match_id': self.active_match_id,
             'resume_epoch': self.epoch(), 'semantic': observed.get('semantic', {}), 'fields': observed.get('fields', {}),
@@ -2857,7 +3002,7 @@ class Worker:
                    'knowledge_boundary': 'static_knowledge仅历史参考；动态交易/库存/任务/站位必须当前局鲜帧proof',
                    'inspection_results': self.inspections, 'choices': choices,
                    'resume_epoch': self.epoch(), 'match_id': self.active_match_id,
-                   'evidence_file': evidence, 'original_png': str(self.run / 'request-original.png'), 'created_at': now(),
+                   'evidence_file': evidence, 'original_png': str(original_png), 'created_at': now(),
                    'deadline_at': (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
                    'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll',
                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
@@ -2903,7 +3048,7 @@ class Worker:
         free_lineup_key = None
         if free_lineup:
             if (request.get('match_id') != self.active_match_id
-                    or not stable_initial_free_lineup_navigation(reply, request, actual, self.run / 'game-preview.png')):
+                    or not stable_initial_free_lineup_navigation(reply, request, actual, self.frame_path)):
                 self.log({'event': 'free_lineup_guard_rejected', 'request_id': request['request_id'],
                           'request_snapshot_id': request['snapshot_id'], 'actual_snapshot_id': actual.get('snapshot_id'),
                           'request_match_id': request.get('match_id'), 'active_match_id': self.active_match_id,
@@ -2922,7 +3067,7 @@ class Worker:
         loot_key = None
         if loot_pickup:
             if (request.get('match_id') != self.active_match_id
-                    or not stable_native_loot_pickup(reply, request, actual, self.run / 'game-preview.png')):
+                    or not stable_native_loot_pickup(reply, request, actual, self.frame_path)):
                 raise ValueError('战利品须为本局原生备战的单个固定实圈点击')
             loot_key = (self.active_match_id, actual['fields']['stage'], reply['actions'][0]['target_evidence']['control_id'])
             if loot_key in self.loot_pickup_attempted:
@@ -2933,12 +3078,12 @@ class Worker:
                     or stable_peace_guide_tab_navigation(reply, request, actual)
                     or stable_advantages_navigation(reply, request, actual)
                     or stable_inspection_completion(reply, request, actual)
-                    or stable_lobby_entry_navigation(reply, request, actual, self.run / 'game-preview.png')
-                    or stable_standard_entry_navigation(reply, request, actual, self.run / 'game-preview.png')
-                    or stable_plane_intro_navigation(reply, request, actual, self.run / 'game-preview.png')
-                    or stable_semantic_plan(reply, request, actual, self.run / 'game-preview.png')
+                    or stable_lobby_entry_navigation(reply, request, actual, self.frame_path)
+                    or stable_standard_entry_navigation(reply, request, actual, self.frame_path)
+                    or stable_plane_intro_navigation(reply, request, actual, self.frame_path)
+                    or stable_semantic_plan(reply, request, actual, self.frame_path)
                     or len(reply['actions']) == 1 and stable_preparation_icon_target(
-                        reply['actions'][0], request, actual, self.run / 'game-preview.png')):
+                        reply['actions'][0], request, actual, self.frame_path)):
                 raise ValueError('战略回答到达时页面已变，拒绝旧计划')
             # OCR and anchor matching never replace the original request,
             # deadline, resume epoch, or exact source-frame identity checks.
@@ -3002,7 +3147,7 @@ class Worker:
             guide_navigation = (kind == 'click_point'
                 and action.get('target_evidence', {}).get('control_id') == PREPARATION_GUIDE_CONTROL)
             if guide_navigation and not stable_preparation_icon_target(
-                    action, request, actual, self.run / 'game-preview.png'):
+                    action, request, actual, self.frame_path):
                 raise ValueError('第二创业指南图标的双帧定位/页面/遮挡守卫拒绝，未提交')
             self.guard_preparation_action(action, actual, loot_pickup=loot_pickup,
                                           verified_navigation=guide_navigation)
@@ -3090,7 +3235,7 @@ class Worker:
                                     or self.last_observation.get('fields', {}).get('stage') != loot_key[1]):
                     raise ValueError('战利品点击后出现模态或页面/节点变化；停止，不重发')
                 if loot_pickup:
-                    if not native_loot_circle_disappeared(loot_key[2], self.run / 'game-preview.png',
+                    if not native_loot_circle_disappeared(loot_key[2], self.frame_path,
                                                         self.last_observation.get('snapshot_id')):
                         raise ValueError('战利品点击后未核实该圈消失；停止，不重发')
                     self.node_progress = getattr(self, 'node_progress', 0) + 1
@@ -3133,19 +3278,19 @@ class Worker:
             raise ValueError('本次请求原始帧已更换，拒绝坐标计划')
         if proof.get('control_id') == PREPARATION_GUIDE_CONTROL:
             if (request.get('match_id') != self.active_match_id
-                    or not stable_preparation_icon_target(action, request, actual, self.run / 'game-preview.png')):
+                    or not stable_preparation_icon_target(action, request, actual, self.frame_path)):
                 raise ValueError('固定第二创业指南导航图标的双帧守卫未通过')
             return
         if proof.get('control_id') in tuple(_NATIVE_LOOT_PICKUP_PROFILES):
             if (request.get('match_id') != self.active_match_id
                     or not stable_native_loot_pickup({'snapshot_id': request['snapshot_id'], 'actions': [action]},
-                        request, actual, self.run / 'game-preview.png')):
+                        request, actual, self.frame_path)):
                 raise ValueError('固定战利品圈的完整轮廓/原生备战守卫未通过')
             return
         if proof.get('control_id') in tuple(_FREE_LINEUP_PROFILES):
             if (request.get('match_id') != self.active_match_id
                     or not stable_initial_free_lineup_navigation(
-                        {'snapshot_id': request['snapshot_id'], 'actions': [action]}, request, actual, self.run / 'game-preview.png')):
+                        {'snapshot_id': request['snapshot_id'], 'actions': [action]}, request, actual, self.frame_path)):
                 raise ValueError('无花费上场的完整源Tile/固定空格双ROI未通过')
             return
         from PIL import Image
@@ -3176,7 +3321,7 @@ class Worker:
             raise ValueError('输入点不在指定目标ROI内')
         if action['type'] == 'drag' and not (box[0] <= values[2] < box[2] and box[1] <= values[3] < box[3]):
             raise ValueError('拖动终点也须在同一已核目标区域')
-        current_png = self.run / 'game-preview.png'
+        current_png = self.frame_path
         if tracking_portrait:
             from io import BytesIO
             current_bytes = current_png.read_bytes()
@@ -3188,10 +3333,10 @@ class Worker:
                                       or old.size != (1920, 1080) or fresh.size != (1920, 1080)):
                 raise ValueError('追踪头像须为完整1920×1080原生PNG')
             if old.crop(box).convert('RGB').tobytes() != fresh.crop(box).convert('RGB').tobytes():
-                if not stable_environment_card_animation(action, request, actual, self.run / 'game-preview.png'):
+                if not stable_environment_card_animation(action, request, actual, self.frame_path):
                     diagnostic = {}
-                    if (not stable_supply_card_animation(action, request, actual, self.run / 'game-preview.png', diagnostic)
-                            and not stable_semantic_target(action, request, actual, self.run / 'game-preview.png')):
+                    if (not stable_supply_card_animation(action, request, actual, self.frame_path, diagnostic)
+                            and not stable_semantic_target(action, request, actual, self.frame_path)):
                         if request.get('kind') == 'supply_strategy' and actual.get('page') == 'supply':
                             from PIL import ImageChops
                             delta = ImageChops.difference(old.crop(box).convert('RGB'), fresh.crop(box).convert('RGB'))
@@ -3202,7 +3347,7 @@ class Worker:
                                 'mean_abs_rgb': sum((i % 256) * count for i, count in enumerate(delta.histogram())) / (3 * pixels),
                                 'over32_fraction': sum(histogram[33:]) / pixels}
                             frames = {}
-                            for label, path in (('original', reference), ('current', self.run / 'game-preview.png')):
+                            for label, path in (('original', reference), ('current', self.frame_path)):
                                 try:
                                     frames[label] = {'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
                                 except OSError as exc:
@@ -3339,7 +3484,7 @@ class Worker:
         from io import BytesIO
         from PIL import Image
         for path, snapshot in ((request['original_png'], request['snapshot_id']),
-                               (self.run / 'game-preview.png', actual['snapshot_id'])):
+                               (self.frame_path, actual['snapshot_id'])):
             data = Path(path).read_bytes()
             if hashlib.sha256(data).hexdigest() != snapshot:
                 raise ValueError('购买原/鲜PNG字节身份不符，未发布输入')
@@ -3487,7 +3632,8 @@ class Worker:
             (self.run / 'decision-reply.json').unlink()
             input_count = self.state['statistics']['local_inputs']
             try:
-                self.execute_plan(reply)
+                with self.profile_span('execute_plan', operation='decision', request_id=request['request_id']):
+                    self.execute_plan(reply)
             except BattleConfirmationRequired as exc:
                 if self.state['statistics']['local_inputs'] != input_count:
                     raise RuntimeError('计划已有输入后缺少战斗批准；停止，不能重发旧计划') from exc
@@ -3664,6 +3810,9 @@ class Worker:
             nonlocal last_capture
             try:
                 self.observe()
+            except entry.ObservationUnavailable as exc:
+                self.log({'event': 'passive_observe_unavailable', 'reason': str(exc),
+                          'input_sent': False, 'input_resent': False})
             except RuntimeError as exc:
                 # submission_lock rejected before this request's publication.
                 if str(exc) != 'another request is pending; no concurrent submission':
@@ -3706,10 +3855,16 @@ class Worker:
                         self.pause_internal(str(exc))
                     continue
                 self.publish(control_mode='auto', phase='读取当前真实页面', reason=None)
-                observed = self.observe()
+                try:
+                    observed = self.observe()
+                except entry.ObservationUnavailable as exc:
+                    self.pause_internal('有界只读观察未取得完整帧：' + str(exc))
+                    last_capture = time.monotonic()
+                    continue
                 last_capture = time.monotonic()
                 try:
-                    self.tick(observed)
+                    with self.profile_span('tick', operation='decision', snapshot_id=observed.get('snapshot_id')):
+                        self.tick(observed)
                 except Exception as exc:
                     self.pause_internal(str(exc))
                 time.sleep(.25)
@@ -3789,7 +3944,10 @@ def _worker_cli(args):
                 worker.publish(control_mode='failed', reason=str(exc))
                 worker.log({'event': 'worker_failure', 'error': str(exc)})
             finally:
-                worker.shutdown()
+                try:
+                    worker.shutdown()
+                finally:
+                    worker.finish_profile()
         if worker:
             worker.state['cleanup'] = {'directory': str(run), 'removed': not run.exists(), 'pending_finally': False}
             worker.state['state_sequence'] += 1
@@ -3997,6 +4155,8 @@ def main():
     parser.add_argument('--max-seconds', type=int, default=7200)
     parser.add_argument('--max-matches', type=int, default=1)
     parser.add_argument('--continue-matches', action='store_true')
+    parser.add_argument('--profile', action='store_true', help='记录本节点真实阶段/操作耗时，退出时生成 JSON/CSV/HTML')
+    parser.add_argument('--profile-comparison-key', help='本机明确指定的同口径场景标识；不从单次结果推定可比')
     parser.add_argument('--handoff', action='store_true')
     parser.add_argument('--resume-guard-json')
     parser.add_argument('--reply-file')

@@ -10,6 +10,8 @@ from pathlib import Path
 import subprocess
 import threading
 import sys
+import tempfile
+import uuid
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -25,22 +27,23 @@ import currency_wars_source_guard as guard
 class RuntimeCompatibilityTests(unittest.TestCase):
     @contextlib.contextmanager
     def manual_bridge_fixture(self):
-        with artifacts.scratch_directory('currency-wars-manual-bridge-test') as outer:
+        with tempfile.TemporaryDirectory(prefix='currency-wars-manual-bridge-test-') as temporary:
+            outer = Path(temporary)
             runtime, records = outer / 'runtime', outer / 'debug' / 'records'
             runtime.mkdir()
             records.mkdir(parents=True)
             owner = {'run_id': 'owned-run', 'chat_id': 'owned-chat'}
             from PIL import Image
             before_png, after_png = io.BytesIO(), io.BytesIO()
-            Image.new('RGB', (8, 8), 'black').save(before_png, format='PNG')
-            Image.new('RGB', (8, 8), 'white').save(after_png, format='PNG')
+            Image.new('RGB', (1920, 1080), 'black').save(before_png, format='PNG')
+            Image.new('RGB', (1920, 1080), 'white').save(after_png, format='PNG')
             class Control:
                 ROOT = str(runtime)
                 OWNER = {'chat_id': 'owned-chat', 'run_token': 'owned-token'}
                 frame = before_png.getvalue()
                 published = []
                 def status(self):
-                    return {'ready': True, 'paused': False, 'input_halted': False}
+                    return {'ready': True, 'paused': False, 'input_halted': False, 'game_foreground': True}
                 def submission_lock(self):
                     return contextlib.nullcontext()
                 def validate_actions(self, value):
@@ -51,12 +54,22 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                     self.published.append(value)
                     if value.get('actions') and value['actions'][0]['type'] == 'click':
                         self.frame = after_png.getvalue()
-                    (runtime / 'game-preview.png').write_bytes(self.frame)
+                    frame_id = uuid.uuid4().hex
+                    directory = runtime / 'frames' / (hashlib.sha256(value['id'].encode()).hexdigest() + '-' + frame_id)
+                    directory.mkdir(parents=True)
+                    for filename in ('original.png', 'preview.png'):
+                        (directory / filename).write_bytes(self.frame)
+                    digest = hashlib.sha256(self.frame).hexdigest()
                     self.write_json(runtime / 'result.json', {'id': value['id'], 'ok': True,
-                        'completed': value.get('actions', []), 'observation': {'snapshot': str(runtime / 'game-preview.png')}})
+                        'completed': value.get('actions', []), 'observation': {
+                            'frame_protocol': 1, 'request_id': value['id'], 'frame_id': frame_id,
+                            'captured_at': runner.now(), 'snapshot': str(directory / 'preview.png'),
+                            'original': str(directory / 'original.png'), 'snapshot_sha256': digest,
+                            'original_sha256': digest, 'snapshot_size': [1920, 1080], 'original_size': [1920, 1080]}})
             control = Control()
             reader = SimpleNamespace(read=lambda path: {'snapshot_id': hashlib.sha256(Path(path).read_bytes()).hexdigest(),
-                'page': 'preparation', 'fields': {'stage': '2-3', 'deployed': '1/1'}, 'rows': [], 'semantic': {}})
+                'page': 'preparation', 'fields': {'stage': '2-3', 'deployed': '1/1'}, 'rows': [], 'semantic': {},
+                'elapsed_ms': 0.})
             control.write_json(records / 'owner.json', owner)
             control.write_json(runtime / 'runner-state.json', {**owner, 'match_id': 'match', 'preparation_stage': '2-3',
                 'journal_file': str(records / 'journal.jsonl')})
@@ -71,6 +84,86 @@ class RuntimeCompatibilityTests(unittest.TestCase):
         review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
                   'findings': 'Actual before/after reward review', 'all_claimed': True, 'rescanned_after_claim': True}
         return runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ['manual-click'], review, reader=reader)
+
+    def frame_worker(self, runtime, records, owner, control, reader):
+        worker = object.__new__(runner.Worker)
+        worker.run, worker.records, worker.owner, worker.c, worker.perception = runtime, records, owner, control, reader
+        worker.active_match_id, worker.last_preparation_stage = 'match', '2-3'
+        worker.deadline = runner.time.monotonic() + 60
+        worker.frame_path, worker.frame_result, worker.last_observation = None, None, None
+        worker.evidence_count, worker.strategy_reads = 0, {}
+        worker.worker_request_ids = set()
+        worker.state = {'statistics': {'local_inputs': 0, 'local_observations': 0, 'ocr_ms': 0., 'broker_ms': 0.},
+                        'decision_request': None}
+        worker.log = lambda event: None
+        return worker
+
+    def test_worker_reads_its_receipt_and_releases_only_consumed_previous_frame(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            first = entry.request(control, 'actions', ['observe'], 'first', False)
+            first_path = entry.observation_frame(runtime, first)
+            second = entry.request(control, 'actions', ['click:1:2'], 'second', False)
+            (runtime / 'game-preview.png').write_bytes(b'broken obsolete shared alias')
+            observed = worker.read_frame(first)
+            self.assertEqual(observed['snapshot_id'], first['observation']['snapshot_sha256'])
+            self.assertEqual(observed['capture_request_id'], 'first')
+            self.assertNotEqual(observed['snapshot_id'], second['observation']['snapshot_sha256'])
+            worker.read_frame(second)
+            self.assertFalse(first_path.exists())
+            self.assertTrue(worker.frame_path.exists())
+            count = len(control.published)
+            self.assertEqual(entry.request(control, 'actions', ['observe'], 'first', False), first)
+            self.assertEqual(len(control.published), count)
+            with self.assertRaises(entry.ObservationUnavailable):
+                entry.observation_frame(runtime, first)
+
+    def test_worker_capture_failure_reobserves_without_resending_completed_input(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            (runtime / 'runner-manual.json').unlink()
+            initial = entry.request(control, 'actions', ['observe'], 'initial', False)
+            worker.read_frame(initial)
+            worker.last_observation['rows'] = [
+                {'text': '备战阶段', 'confidence': .99, 'box': [420, 25, 530, 60]},
+                {'text': '出战', 'confidence': .99, 'box': [1760, 720, 1860, 770]},
+            ]
+            actual_request = entry.request
+            calls = []
+
+            def request(controller, kind, tokens, rid, handoff, **kwargs):
+                calls.append(tokens)
+                result = actual_request(controller, kind, tokens, rid, handoff, **kwargs)
+                if tokens[0].startswith('click:'):
+                    # The input really returned once; only its PNG became unusable.
+                    Path(result['observation']['snapshot']).write_bytes(b'truncated')
+                return result
+
+            with patch.object(entry, 'request', side_effect=request):
+                after = worker.command(['click:1:2'], 'fixture input', 'preparation', 'unknown effect')
+            self.assertEqual(calls, [['click:1:2'], ['observe']])
+            self.assertEqual(worker.state['statistics']['local_inputs'], 1)
+            self.assertEqual(after['snapshot_id'], hashlib.sha256(control.frame).hexdigest())
+            self.assertEqual(after['page'], 'preparation')
+
+    def test_worker_bad_observations_are_bounded_and_do_not_adopt_old_frame(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            result = entry.request(control, 'actions', ['observe'], 'initial', False)
+            old = worker.read_frame(result)
+            actual_request = entry.request
+            calls = []
+
+            def request(controller, kind, tokens, rid, handoff, **kwargs):
+                calls.append(tokens)
+                fresh = actual_request(controller, kind, tokens, rid, handoff, **kwargs)
+                Path(fresh['observation']['snapshot']).write_bytes(b'truncated')
+                return fresh
+
+            with patch.object(entry, 'request', side_effect=request), self.assertRaises(entry.ObservationUnavailable):
+                worker.observe()
+            self.assertEqual(calls, [['observe'], ['observe']])
+            self.assertIs(worker.last_observation, old)
 
     def resumed_manual_worker(self, runtime, records, owner, control, reader, item):
         entry.request(control, 'resume', [], 'new-epoch', True)

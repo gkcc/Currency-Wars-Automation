@@ -4,11 +4,15 @@ Only directory provenance and bounded request transport live here. All game
 input, pause, foreground and process guards remain in the pinned broker.
 """
 import argparse
+from datetime import datetime
 import errno
 import hashlib
 import importlib.util
+import io
 import json
+import re
 import secrets
+import stat
 import sys
 import time
 import uuid
@@ -17,7 +21,7 @@ from pathlib import Path
 import currency_wars_artifacts as artifacts
 
 SOURCE = Path(__file__).with_name('currency_wars_control.py')
-PINNED = '2B93583C57EE7593CA17CC951F078FA9CD4238285CA84AA83325646F45D86B54'
+PINNED = '187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5'
 
 
 def read_json(path, limit=2_000_000):
@@ -35,6 +39,118 @@ def read_json(path, limit=2_000_000):
             if getattr(exc, 'winerror', None) not in (5, 32) or time.monotonic() >= deadline:
                 raise
             time.sleep(.025)
+
+
+class ObservationUnavailable(ValueError):
+    """The receipt's frame is unusable; only a fresh observe may be requested."""
+
+
+def _observation_paths(run, result):
+    if not isinstance(result, dict):
+        raise ValueError('observation receipt is missing')
+    observation, request_id = result.get('observation'), result.get('id')
+    if (not isinstance(request_id, str) or not 1 <= len(request_id) <= 100
+            or not isinstance(observation, dict) or type(observation.get('frame_protocol')) is not int
+            or observation.get('frame_protocol') != 1
+            or observation.get('request_id') != request_id
+            or not re.fullmatch(r'[0-9a-f]{32}', str(observation.get('frame_id', '')))
+            or not isinstance(observation.get('captured_at'), str)
+            or datetime.fromisoformat(observation['captured_at']).tzinfo is None):
+        raise ValueError('immutable observation receipt identity or capture time is unavailable')
+    run = Path(run).absolute()
+    frame_dir = run / 'frames' / (hashlib.sha256(request_id.encode()).hexdigest() + '-' + observation['frame_id'])
+    if (observation.get('snapshot') != str(frame_dir / 'preview.png')
+            or observation.get('original') != str(frame_dir / 'original.png')):
+        raise ValueError('observation path does not belong to its request')
+    return frame_dir, observation
+
+
+def _no_frame_links(path):
+    for candidate in (path, *path.parents):
+        info = candidate.lstat()
+        if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
+            raise ValueError('observation path contains a link or junction')
+
+
+def _frame_payload(path, observation, role):
+    _no_frame_links(path)
+    info = path.stat()
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not 0 < info.st_size <= 64 * 1024 * 1024:
+        raise ValueError('observation file type or size is invalid')
+    expected, size = observation.get(role + '_sha256'), observation.get(role + '_size')
+    if (not isinstance(expected, str) or not re.fullmatch(r'[0-9a-f]{64}', expected)
+            or not isinstance(size, list) or len(size) != 2
+            or any(type(value) is not int or not 1 <= value <= 16384 for value in size)):
+        raise ValueError('observation hash or dimensions are invalid')
+    payload = path.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != expected:
+        raise ValueError('observation hash mismatch')
+    return payload, size
+
+
+def observation_frame(run, result, *, original=False):
+    """Validate and return this receipt's immutable frame, without input retries.
+
+    Bytes are read once and fully decoded from memory. The path remains stable
+    after this function returns because publication never reuses frame names.
+    Old mutable screenshot receipts deliberately do not satisfy this contract.
+    """
+    from PIL import Image
+    try:
+        frame_dir, observation = _observation_paths(run, result)
+        role, filename = ('original', 'original.png') if original else ('snapshot', 'preview.png')
+        path = frame_dir / filename
+        # Reading one immutable payload prevents an open/load race. Do not use
+        # LOAD_TRUNCATED_IMAGES, relax confidence, or recover an older image.
+        payload, size = _frame_payload(path, observation, role)
+        with Image.open(io.BytesIO(payload)) as image:
+            if image.format != 'PNG' or list(image.size) != size or (not original and image.size != (1920, 1080)):
+                raise ValueError('observation format or dimensions mismatch')
+            image.load()
+        with Image.open(io.BytesIO(payload)) as image:
+            image.verify()
+        return path
+    except (OSError, ValueError, TypeError, KeyError, SyntaxError, Image.DecompressionBombError) as error:
+        raise ObservationUnavailable(str(error) + '; request only a new observation, never resend input') from error
+
+
+def release_observation(run, result):
+    """Explicitly release a consumed, final receipt's pair; never remove ledger.
+
+    Callers must finish all reads and copy any durable proof first. Each caller
+    releases only its own request, so another request's readers keep their files.
+    An old receipt still returns its original input outcome after release; it
+    cannot be republished to obtain the screenshot again.
+    """
+    run = Path(run).absolute()
+    try:
+        frame_dir, observation = _observation_paths(run, result)
+        ledger = run / 'request-ledger' / (hashlib.sha256(result['id'].encode()).hexdigest() + '.json')
+        _no_frame_links(ledger)
+        receipt = read_json(ledger)
+        if (receipt.get('id') != result['id'] or not isinstance(receipt.get('request'), dict)
+                or receipt['request'].get('id') != result['id']
+                or receipt.get('result') != result):
+            raise ValueError('frame release requires this exact final receipt; pending or altered result is retained')
+        _no_frame_links(frame_dir.parent)
+        if not frame_dir.exists() and not frame_dir.is_symlink():
+            return {'released': False, 'already_released': True, 'released_bytes': 0}
+        _no_frame_links(frame_dir)
+        paths = [(frame_dir / 'original.png', 'original'), (frame_dir / 'preview.png', 'snapshot')]
+        present = {path.name for path in frame_dir.iterdir()}
+        if not present.issubset({'original.png', 'preview.png'}):
+            raise ValueError('frame directory has unrecognized contents; retained')
+        # Validate every remaining file before any removal. Hash checks bind
+        # release to the published bytes; readers already performed full decode.
+        payloads = [(path, len(_frame_payload(path, observation, role)[0]))
+                    for path, role in paths if path.name in present]
+        for path, unused_size in payloads:
+            path.unlink()
+        frame_dir.rmdir()
+        return {'released': True, 'already_released': False,
+                'released_bytes': sum(size for unused_path, size in payloads)}
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        raise ObservationUnavailable(str(error) + '; frame retained where possible; never resend input') from error
 
 
 def backend():
