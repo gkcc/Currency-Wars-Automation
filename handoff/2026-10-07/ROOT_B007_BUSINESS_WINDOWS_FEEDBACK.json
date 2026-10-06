@@ -1,0 +1,33 @@
+{
+  "schema": "currency-wars-offline-acceptance/v1",
+  "code_sha": "4830dfe8510171519b1961b2116968495d51a292",
+  "environment": "Windows installed Agent Workflow artifact provider",
+  "game_inputs": 0,
+  "installed_to_game_runtime": false,
+  "tests_run": 50,
+  "failures": 1,
+  "errors": 3,
+  "skipped": 0,
+  "seconds": 13.062,
+  "ok": false,
+  "temporary_run_removed": true,
+  "failed_cases": [
+    {
+      "test": "test_local_runtime_compatibility.RuntimeRootTests.test_worker_marker_child_registration_and_cleanup_keep_selected_root",
+      "summary": "completed expected, failed observed after installed-provider fixture mismatch"
+    },
+    {
+      "test": "test_currency_wars_business.BusinessTests.test_complete_original_receipt_is_redacted_immutable_and_archived_before_launch",
+      "summary": "currency_wars_input_bridge.BridgeError: 固定输入权限组件缺失或配置/权限无效；未改用其他运行目录，也不会反复请求Python管理员授权。"
+    },
+    {
+      "test": "test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels (emergency=False)",
+      "summary": "ValueError: 执行器归属、标准标记或创建身份不匹配"
+    },
+    {
+      "test": "test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels (emergency=True)",
+      "summary": "ValueError: 执行器归属、标准标记或创建身份不匹配"
+    }
+  ],
+  "new_business_case_root_cause": "Existing test calls real input_bridge.runtime_location; local older installed component is then validated against new broker pin and correctly rejects broker_hash_unapproved. Isolate the test dependency; do not modify host installation to make the test pass."
+}
