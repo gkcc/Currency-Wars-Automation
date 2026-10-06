@@ -1,0 +1,471 @@
+{
+  "schema": "currency-wars-local-resource-replay/v1",
+  "code_sha": "bcec3280677e6a419675cc7448bf0dca8fe36ec3",
+  "game_inputs": 0,
+  "fresh_game_captures": 0,
+  "cases": [
+    {
+      "index": 0,
+      "image_sha256": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+      "seconds": 3.299893,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 70,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "银枝",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "Saber",
+          "cost": 3,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "千冶·刃",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "乱破",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "忘归人",
+          "cost": 3,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    },
+    {
+      "index": 1,
+      "image_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+      "seconds": 1.56794,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 68,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "艾丝妲",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "艾丝妲",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "银狼LV.999",
+          "cost": 3,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "海瑟音",
+          "cost": 4,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "海瑟音",
+          "cost": 4,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    },
+    {
+      "index": 2,
+      "image_sha256": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+      "seconds": 1.527426,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 66,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "彦卿",
+          "cost": 4,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "娜塔莎",
+          "cost": 3,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "忘归人",
+          "cost": 3,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "绯英",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "绯英",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    },
+    {
+      "index": 3,
+      "image_sha256": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+      "seconds": 1.494618,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 64,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "卡芙卡",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "波提欧",
+          "cost": 4,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "丹恒·腾荒",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "绯英",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "三月七",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    },
+    {
+      "index": 4,
+      "image_sha256": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+      "seconds": 1.628005,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 62,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "缇宝",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "花火",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "吉尔伽美什",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "风堇",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "银枝",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    },
+    {
+      "index": 5,
+      "image_sha256": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+      "seconds": 1.70912,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 60,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "杰帕德",
+          "cost": 4,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "Saber",
+          "cost": 3,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "阮·梅",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "丹恒·饮月",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "花火",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    },
+    {
+      "index": 6,
+      "image_sha256": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023",
+      "seconds": 1.522962,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 58,
+      "shop_ok": true,
+      "shop_status": "ok",
+      "shop_errors": [],
+      "slots": [
+        {
+          "id": 1,
+          "name": "黑塔",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 2,
+          "name": "万敌",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 3,
+          "name": "海瑟音",
+          "cost": 4,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 4,
+          "name": "远坂凛",
+          "cost": 1,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        },
+        {
+          "id": 5,
+          "name": "不死途",
+          "cost": 2,
+          "recommended": false,
+          "verified": null,
+          "errors": null
+        }
+      ],
+      "team_fully_read": false,
+      "team_checked": false,
+      "known_board_units": 0,
+      "team_unknown_reasons": null,
+      "inventory_fully_read": null
+    }
+  ],
+  "local_data": {
+    "resource_files": 57,
+    "resource_bytes": 250477,
+    "resource_manifest_sha256": "43140034d88a7a7f01b2b6aa2a10b542a1bb6bb92b890fee135e6e54e7de88be",
+    "state_manifest_sha256": "899468c515b015e50638505528a616e3fc3b34456ab9ca929abeffc298069c74"
+  },
+  "knowledge_summary": {
+    "bytes": 53669,
+    "sha256": "c7c8f26f6ad9ed73a9d508f3495e2ad91d38c60de92e455e5a58452e4022179c",
+    "error": null,
+    "game_version": null,
+    "live_proof": false,
+    "version_verified": false,
+    "equipment_count": 33,
+    "roles_count": 22,
+    "investments_count": 13,
+    "user_rules_count": 16
+  },
+  "source_sha256": {
+    "currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3"
+  },
+  "observed_at_utc": "2026-10-06T20:33:50.099472+00:00",
+  "temporary_run_removed": true,
+  "limits": [
+    "Only existing seven-image sequence with exact existing local resource copies; no Worker autonomy/full preparation claimed.",
+    "Cache remains historical; raw assets and full knowledge content are not exported."
+  ]
+}

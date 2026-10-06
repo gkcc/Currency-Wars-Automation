@@ -1,0 +1,63 @@
+{
+  "schema": "currency-wars-offline-acceptance/v1",
+  "code_sha": "bcec3280677e6a419675cc7448bf0dca8fe36ec3",
+  "environment": "Windows actual installed artifact provider; unchanged repository standalone subcases",
+  "game_inputs": 0,
+  "fresh_game_captures": 0,
+  "installed_to_game_runtime": false,
+  "test_selection": [
+    "test_currency_wars_business.BusinessTests",
+    "test_currency_wars_economy.EconomyTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_preparation_reviews_survive_navigation_but_inventory_invalidates_downstream",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_unclaimed_rewards_block_spending_and_selling",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_selected_investment_requires_both_units_and_board_limits",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_live_guide_level_search_requires_mode_and_live_read_proof",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_runner_normalizes_real_perception_level_string_for_live_and_cached_phase",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_old_completed_reviews_do_not_allow_current_underfilled_battle_input",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_inventory_mutations_cannot_reuse_coordinates_within_a_plan",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_worker_capture_failure_reobserves_without_resending_completed_input",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_wait_does_not_spend_node_budget_or_extend_hard_deadline",
+    "test_local_runtime_compatibility.RuntimeRootTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_publishes_after_both_identity_registrations",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish",
+    "test_currency_wars_bridge_task.ProtocolTests.test_valid_fixed_protocol_and_config",
+    "test_currency_wars_bridge_task.ProtocolTests.test_config_rejects_unapproved_source_and_arbitrary_roots",
+    "test_currency_wars_preparation_replay.PreparationReplayTests"
+  ],
+  "actual_provider": "installed",
+  "tests_run": 58,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 8.55,
+  "ok": true,
+  "tested_at_utc": "2026-10-06T20:28:57.231535+00:00",
+  "failed_cases": [],
+  "source_sha256": {
+    "tools/currency_wars_bridge_task.py": "aff9cb2bccb5047ac9f160fee17b5eced0a61f4688f4a6c98b0a459f86819978",
+    "tools/currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "tools/currency_wars_control.py": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5",
+    "tools/currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "tools/currency_wars_input_bridge.py": "8870631f7b7de30484f65c95f35af91f2d4496d0fbf0a6ba55708ed2816b77da",
+    "tools/currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+    "tools/currency_wars_runner.py": "0a6248e2934f0544ebf4ddeb3f0342bf472c1c9a5c2f27db15eafd4b6873fe99",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/replay_currency_wars_preparation.py": "778805b12814a4a28f36677842d7f0d4c81b1cd1be29360134c761cf89774a4d",
+    "tools/test_currency_wars_business.py": "9ebd959d08a116ed8f4b084802ee0f1981a26d37259d2092ec501210719c7fa7",
+    "tools/test_currency_wars_economy.py": "80471f02296d9a5dca68c74e603e75a07b27e1b3e42fc138ba82ef9bc315940b",
+    "tools/test_currency_wars_preparation_replay.py": "9a0cd777569854f37f1f0fb0860679f1376f5db18b134a4a6be81d5cbfd9821e",
+    "tools/test_local_runtime_compatibility.py": "87a77851daa617fdfed480cda964ad8000d6deb98eb3b84bc960cb65731ecabe"
+  },
+  "preserved_pr10_reader_hash": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+  "limits": [
+    "Exact 58-check selection; no counts added across revisions. Inert receipt and synthetic transaction behavior, not a completed game preparation.",
+    "PR10 four actual PNG results remain separately verified with the same unchanged Perception hash; not rerun solely to increase test count.",
+    "Current semantic checks detect known observation changes. No atomic observation-to-input guarantee; asynchronous in-game popup window remains.",
+    "No GUI build, installed input package update, live game path or all-rewards completion."
+  ],
+  "temporary_run_removed": true,
+  "retained_prior_run": {
+    "path": "D:\\Codex\\Temp\\codex-agent-workflow\\currency-wars-pro-b007-windows-offline-txrevbqi",
+    "reason": "Previous hardlink/root guard refusal, not retried."
+  }
+}
