@@ -8,6 +8,10 @@ B-003 交付见 [B003_IMPLEMENTATION.md](B003_IMPLEMENTATION.md) 和 [B003_VERIF
 
 最新同局回报见 [COACHING_BACKLOG.md](COACHING_BACKLOG.md#2026-10-07-同局3-3最新同步)。run 为 `616b087bce2c4346a544d3802b2f19e0`：3-2 已胜，100血12连胜，进入3-3领奖，8级2/72、67金币，飞霄已三星。本局仍未结束，核心保持冻结。F（70）已有本机真实界面及金币/经验差额证明；B-008 额外500ms等待已在临时助手修正并实操通过，未改原broker的光标/按键/前台/CAS检查。
 
+随后本机在 `main` 的 [7e3400b4](https://github.com/gkcc/Currency-Wars-Automation/commit/7e3400b47dba338ddfc3694c2724bb615e8e008b) 上传了 [ROOT_PROFILE_SAMPLE.json](https://github.com/gkcc/Currency-Wars-Automation/blob/7e3400b47dba338ddfc3694c2724bb615e8e008b/handoff/2026-10-07/ROOT_PROFILE_SAMPLE.json)，仅新增文档、没有核心修改。样例捕获于2026-10-06 17:51:13 UTC；其中 checkpoint 为3-4战斗进行中、100血、58金币、8级2/72、8/8、飞霄三星，最后已确认胜利仍列3-2/12连胜，整局未完成。不能因3-3→3-4节点标签变化推断又赢了一战。53条计时的覆盖范围和未归因空档另作独立分析，不冒称整节点耗时或改后提速。
+
+B-004 叠加交付见 [B004_IMPLEMENTATION.md](B004_IMPLEMENTATION.md) 和 [B004_VERIFICATION.json](B004_VERIFICATION.json)：只为被容量阻塞的角色奖励单次腾位，按原收据和新帧核空槽/钱/独立溢出，合法恢复或当前完整人工复核后立即回领奖。非零/未知溢出和无已核出售控件仍待实机证据；特权卡新增当前资源候选，尚不宣称自动升级能力。
+
 ## 分工和同步约定
 
 - 本机 Codex：实际操作游戏、采集问题证据、按节点验收出战、验证修复后的真实效果，并负责 Git 同步。
