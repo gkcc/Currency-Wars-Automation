@@ -1,5 +1,6 @@
 # B-007：启动运行根目录一致性
 
+当前执行边界已由本机 [`9c3329c8` 离线交接](https://github.com/gkcc/Currency-Wars-Automation/blob/9c3329c8eaedf4f2b32a64ad3727b23e14b6c3fa/handoff/2026-10-07/OFFLINE_PERFORMANCE_BRIEF.md) 更新：仅离线工程优化，原 worker/broker 已核退出；以下 Windows 实机门槛须等用户重新授权，不能自动启动游戏。首批源码及13项验证仍对应 PR #7 / `dc4b26440e0cf95851493937628f9bb7f1691f76`。
 基准：`6e7d3eaceb3625cbd8a095a61273642426229fd0`。这是 B 类通用启动缺陷的代码修复；不代表本局已经结束、整局自动化通过或提速实测通过。
 
 ## 原有能力与缺口

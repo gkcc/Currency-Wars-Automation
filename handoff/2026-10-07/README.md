@@ -2,11 +2,19 @@
 
 本次交接日期：2026-10-07，Asia/Shanghai。用户的唯一业务目标是**尽快拿完所有可拿奖励**。
 
+## 当前边界：纯离线工程优化
+
+2026-10-06 UTC 已实际读取本机新增 `main` 提交 `9c3329c8eaedf4f2b32a64ad3727b23e14b6c3fa` 的[离线交接说明](https://github.com/gkcc/Currency-Wars-Automation/blob/9c3329c8eaedf4f2b32a64ad3727b23e14b6c3fa/handoff/2026-10-07/OFFLINE_PERFORMANCE_BRIEF.md)、Windows 验证、真图回放、99 条完整助手记录、宿主计时及 fixtures manifest。该交接记录用户撤回实时操作授权；本机已按原 PID/创建身份核 worker 和 broker 退出，并移除运行目录。**当前只做离线优化，不启动、不读取或干预用户游戏；不推断用户接管后的结算。** 后文局后实机门槛仅是未来重新授权后的待验项，不能据此自动恢复操作。
+
+本机对 PR1–6 / `6e7d3ea` 的 Windows 94 项去重检查通过，0 failure/error/skip、8.594 秒，仍是替身与离线回放；没有安装、游戏输入或整局成功。实际 `Perception.read` 四图回放仍把角色/首领等级污染为玩家99/90，真正Lv9仍可能未知。B-006人口子项没有解决这些问题。新资料下一批按B-002/B-005的主管往返和B-006字段来源处理；当前先独立交付B-007。
+
+## 已交付代码与历史实操证据
+
 第一批交付见 [FIRST_BATCH.md](FIRST_BATCH.md)：B-001 不可变帧、B-002 真实计时、聚焦验证与局后切版要求。本机已经独立 fetch 并用 gh 核对 PR #1 为草稿、HEAD 为 `beaea343ee7edf29bcba70ba8351a7dc462a83da`，尚未合入或安装。后续 B-003/B-004/B-005 按独立提交继续准备。
 
 B-003 交付见 [B003_IMPLEMENTATION.md](B003_IMPLEMENTATION.md) 和 [B003_VERIFICATION.json](B003_VERIFICATION.json)：原收据与业务效果分开、新epoch精确CAS事件、缺必要事实可暂缓并接受当前请求复核。根与独立审查分别通过同一23项选择，不相加计数；真实Windows/游戏验收仍待局后。通用方法及实际访问边界见 [SECOND_BATCH_RESEARCH.md](SECOND_BATCH_RESEARCH.md)。
 
-最新同局回报见 [COACHING_BACKLOG.md](COACHING_BACKLOG.md#2026-10-07-同局3-3最新同步)。run 为 `616b087bce2c4346a544d3802b2f19e0`：3-2 已胜，100血12连胜，进入3-3领奖，8级2/72、67金币，飞霄已三星。本局仍未结束，核心保持冻结。F（70）已有本机真实界面及金币/经验差额证明；B-008 额外500ms等待已在临时助手修正并实操通过，未改原broker的光标/按键/前台/CAS检查。
+先前同局回报见 [COACHING_BACKLOG.md](COACHING_BACKLOG.md#2026-10-07-同局3-3最新同步)。run 为 `616b087bce2c4346a544d3802b2f19e0`：3-2 已胜，100血12连胜，进入3-3领奖，8级2/72、67金币，飞霄已三星。当时本局仍未结束，核心保持冻结。F（70）已有本机真实界面及金币/经验差额证明；B-008 额外500ms等待已在临时助手修正并实操通过，未改原broker的光标/按键/前台/CAS检查。
 
 随后本机在 `main` 的 [7e3400b4](https://github.com/gkcc/Currency-Wars-Automation/commit/7e3400b47dba338ddfc3694c2724bb615e8e008b) 上传了 [ROOT_PROFILE_SAMPLE.json](https://github.com/gkcc/Currency-Wars-Automation/blob/7e3400b47dba338ddfc3694c2724bb615e8e008b/handoff/2026-10-07/ROOT_PROFILE_SAMPLE.json)，仅新增文档、没有核心修改。样例捕获于2026-10-06 17:51:13 UTC；其中 checkpoint 为3-4战斗进行中、100血、58金币、8级2/72、8/8、飞霄三星，最后已确认胜利仍列3-2/12连胜，整局未完成。不能因3-3→3-4节点标签变化推断又赢了一战。53条计时的覆盖范围和未归因空档另作独立分析，不冒称整节点耗时或改后提速。
 
@@ -22,13 +30,15 @@ B-005 已发布为 [草稿 PR #5](https://github.com/gkcc/Currency-Wars-Automati
 
 B-006 已发布为[草稿 PR #6](https://github.com/gkcc/Currency-Wars-Automation/pull/6)，最终 HEAD `6e7d3eaceb3625cbd8a095a61273642426229fd0`；其中末次提交只更新 Profile 协议文档。B-007 从该 SHA 继续交付运行根目录与 GUI 配套修复，见 [B007_RUNTIME_ROOT.md](B007_RUNTIME_ROOT.md)、[B007_RUNTIME_VERIFICATION.json](B007_RUNTIME_VERIFICATION.json) 和 [B007_RESEARCH.md](B007_RESEARCH.md)。启动位置在创建 run 前核定，GUI→start→worker 显式传递并重验，安装异常拒绝回退；打包也直接采用原固定 task 路径。根组合 13/13、0 skip；Rust 6 项已写而未执行，当前无 Cargo、无新 Windows 构建。本批不会延长 7200 秒硬界。跨租期业务续接另按后续独立提交验收。
 
+B-007 第一批已发布[草稿 PR #7](https://github.com/gkcc/Currency-Wars-Automation/pull/7)，HEAD `dc4b26440e0cf95851493937628f9bb7f1691f76`。同局业务续接在其上独立提交，见 [B007_BUSINESS.md](B007_BUSINESS.md) 与 [B007_BUSINESS_VERIFICATION.json](B007_BUSINESS_VERIFICATION.json)：原双进程身份、新租期当前复核、原收据归档、累计实花及未知输入延续，最终持久化成功后才允许清理。根最终组合50/50、0 skip、10.74188秒，详细验证按该JSON中的实际测试列表、源码哈希与限制核对。业务身份复核的人口容量与玩家等级已分域；它不修复B006原生字段来源，也不放行准备或出战。
+
 ## 分工和同步约定
 
-- 本机 Codex：实际操作游戏、采集问题证据、按节点验收出战、验证修复后的真实效果，并负责 Git 同步。
+- 本机 Codex：当前负责离线验版、整理已有实操证据与 Git 同步。实时游戏操作和逐次出战验收须等待用户重新授权。
 - ChatGPT Pro：代码修改、架构判断和外部调研。先看已有能力，抽象通用问题，查 GitHub/官方资料中的成熟做法，只采用能补上具体缺口的最小改动。
 - 每次发现问题、形成方案、提交修复和完成实机验收都同步；用提交 SHA、待办编号和实际结果，避免双方基于不同版本工作。
 - Pro 可提交 PR，或返回以明确基准 SHA 制作的补丁。本机集成和验证；不要让两个执行器同时控制游戏。
-- 完整对局期间保持核心源码冻结；Pro 可在 GitHub 分支并行准备修复，本机在本局结束后集成。以后改代码和调研优先交给 Pro。
+- Pro 在 GitHub 独立分支准备修复；本机先按 SHA 做离线核验。当前不合入或安装到游戏输入环境，不因旧局停止而自动恢复实时授权。以后改代码和调研优先交给 Pro。
 
 ## 3878f9c 交接时的进展与证据边界
 
