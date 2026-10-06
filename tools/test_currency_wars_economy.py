@@ -238,6 +238,73 @@ class EconomyTests(TestCase):
             with patch.object(shop_reader, 'RESOURCE_DIR', resource):
                 yield worker, record, control, rendered
 
+    def test_final_reserve_uses_current_sourced_confirmation_without_fabricating_ocr(self):
+        with self.worker() as (worker, record, control, frames):
+            request = worker.state['decision_request']
+            proof = {'source': 'supervisor_confirmation', 'reviewer': 'supervising_agent',
+                'remaining_interest_rounds': 0, 'proof': copy.deepcopy(record['proof']),
+                'request_id': request['request_id'], 'match_id': worker.active_match_id,
+                'stage': '2-3', 'mode': '标准博弈', 'confirmation_source': 'user_confirmation',
+                'reference': 'offline-fixture:current-user-confirmation',
+                'statement': '离线合同样例：当前节点已明确为最后备战；此句不是游戏规则或实机证据'}
+            record['value']['reserve'].update(coins=0, remaining_interest_rounds=0, rounds_evidence=proof)
+            record['value']['budget']['experience'] = 66
+            before = copy.deepcopy(worker.last_observation)
+            published = len(control.published)
+            for change in ({'request_id': 'old-request'}, {'match_id': 'other-match'}, {'stage': '3-7'},
+                           {'mode': '超频博弈'}, {'reference': ''}, {'statement': ''},
+                           {'confirmation_source': 'guess'}, {'source': 'unknown'},
+                           {'proof': {**record['proof'], 'resume_epoch': 'old-other-epoch'}}):
+                invalid = copy.deepcopy(record)
+                invalid['value']['reserve']['rounds_evidence'].update(change)
+                with self.subTest(change=change), self.assertRaises(ValueError):
+                    worker.accept_economy_plan(invalid)
+            invalid = copy.deepcopy(record)
+            invalid['value']['reserve']['remaining_interest_rounds'] = 1
+            invalid['value']['reserve']['rounds_evidence']['remaining_interest_rounds'] = 1
+            with self.assertRaisesRegex(ValueError, '末关确认'):
+                worker.accept_economy_plan(invalid)
+            worker.accept_economy_plan(record)
+            self.assertEqual(worker.economy_ledger('2-3')['policy']['reserve']['rounds_evidence'], proof)
+            self.assertEqual(worker.last_observation, before)
+            self.assertEqual(len(control.published), published)
+            self.assertEqual(worker.log_events[-1]['interest_source'], 'supervisor_confirmation')
+            self.assertEqual(worker.log_events[-1]['reserve_coins'], 0)
+
+    def test_screen_interest_proof_still_requires_current_reading_and_confidence(self):
+        with self.worker() as (worker, record, control, frames):
+            row = {'text': '剩余0次结息', 'confidence': .89, 'box': [100, 100, 280, 140]}
+            source = worker.history[record['proof']['snapshot_id']]
+            source['rows'].append(row)
+            record['value']['reserve'].update(coins=0, remaining_interest_rounds=0,
+                rounds_evidence={'remaining_interest_rounds': 0, 'proof': copy.deepcopy(record['proof']),
+                    'reading': row['text'], 'bounds': row['box']})
+            with self.assertRaisesRegex(ValueError, '屏幕结息来源'):
+                worker.accept_economy_plan(record)
+            row['confidence'] = .99
+            worker.accept_economy_plan(record)
+            self.assertEqual(worker.log_events[-1]['interest_source'], 'observed_screen')
+
+    def test_command_refuses_observed_page_mismatch_before_entry_publication(self):
+        with self.worker() as (worker, record, control, frames):
+            published = len(control.published)
+            for expected, action in (('preparation', None),
+                                     ('shop', {'type': 'click_point', 'expected_page': 'preparation'})):
+                with self.subTest(expected=expected), self.assertRaisesRegex(ValueError, '前置页面'):
+                    worker.command(['click:490:500'], '旧领奖位置可能已成为商店牌', expected, action=action)
+            self.assertEqual(len(control.published), published)
+
+    def test_click_text_refuses_old_snapshot_capture_or_stage_without_replaying(self):
+        with self.worker() as (worker, record, control, frames):
+            published = len(control.published)
+            for changes in ({'snapshot_id': '0' * 64}, {'page': 'preparation'},
+                            {'capture_request_id': 'old-observe'}, {'frame_id': 'old-frame'},
+                            {'fields': {**worker.last_observation['fields'], 'stage': '3-7'}}):
+                old = {**worker.last_observation, **changes}
+                with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, '旧帧/页面/节点'):
+                    worker.click_text(old, '刷新', '旧文字ROI不可继续输入')
+            self.assertEqual(len(control.published), published)
+
     def test_real_worker_plan_command_receipts_three_f_and_durable_actual_spend(self):
         with self.worker([values(coins=62, xp=[44, 52]), values(coins=58, xp=[48, 52]),
                           values(coins=54, level=8, xp=[0, 72])]) as (worker, record, control, frames):

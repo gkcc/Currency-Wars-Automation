@@ -158,7 +158,7 @@ def validate_budget(plan, observed, ledger):
         raise ValueError('超频无利息，不套用标准50金币储备')
     if plan['mode'] == '标准博弈' and amount < 50:
         if rounds is None or not isinstance(reserve.get('rounds_evidence'), dict):
-            raise ValueError('降低常规50储备须实读剩余结息回合及对应原帧proof，不能用节点字符串猜终盘')
+            raise ValueError('降低常规50储备须当前结息读数或有来源的末关确认及原帧proof，不能用节点字符串猜终盘')
         if rounds == 0 and amount != 0:
             raise ValueError('最后备战没有下轮利息，不为不存在的利息保留金币')
     if (any(budget[key] < ledger['spent'][key] for key in budget)
@@ -176,7 +176,9 @@ def validate_budget(plan, observed, ledger):
     allowance = max(0, reserve['critical_allowance'] - ledger['critical_spent'])
     if remaining > min(coins, max(0, coins - amount) + allowance):
         raise ValueError('购买、搜牌与经验剩余额度重复占用同一笔钱，超过新帧可用资金')
-    return {'reserve_coins': amount, 'remaining_interest_rounds': rounds}
+    return {'reserve_coins': amount, 'remaining_interest_rounds': rounds,
+            'interest_source': reserve.get('rounds_evidence', {}).get('source', 'observed_screen')
+                if rounds is not None else None}
 
 
 def required_fields(kind, values):

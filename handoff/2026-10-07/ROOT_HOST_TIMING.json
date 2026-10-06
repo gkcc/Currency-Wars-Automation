@@ -1,0 +1,3086 @@
+{
+  "schema": "codex-host-timing-evidence/v1",
+  "private_source_content_exported": false,
+  "window_start_utc": "2026-10-06T17:03:03.217392+00:00",
+  "window_end_utc": "2026-10-06T18:43:31.318613+00:00",
+  "window_seconds": 6028.101,
+  "helper_events": 99,
+  "helper_seconds": 543.739,
+  "host_tool_union_seconds": 773.025,
+  "host_outside_matched_tools_seconds": 5255.076,
+  "method": "paired response_item call_id UTC intervals; mathematical union; asynchronous exec cells can outlive host calls and remain unclassified",
+  "unpaired_calls": [],
+  "event_counts": {
+    "custom_tool_call_output": 144,
+    "reasoning": 186,
+    "custom_tool_call": 144,
+    "token_usage_record": 147,
+    "message": 31,
+    "compacted": 2,
+    "function_call": 1,
+    "function_call_output": 1
+  },
+  "usage_sum": {
+    "input_tokens": 18444434,
+    "cached_input_tokens": 18024064,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 116361,
+    "reasoning_output_tokens": 63232,
+    "total_tokens": 18560795
+  },
+  "usage_records_with_unique_response_id": 147,
+  "compactions": [
+    {
+      "time": "2026-10-06T17:44:08.339Z",
+      "kind": "compaction"
+    },
+    {
+      "time": "2026-10-06T18:43:14.585Z",
+      "kind": "compaction"
+    }
+  ],
+  "reasoning_completion_timestamps": [
+    "2026-10-06T17:03:13.743Z",
+    "2026-10-06T17:03:43.634Z",
+    "2026-10-06T17:04:06.612Z",
+    "2026-10-06T17:04:26.006Z",
+    "2026-10-06T17:04:55.475Z",
+    "2026-10-06T17:05:28.499Z",
+    "2026-10-06T17:06:01.242Z",
+    "2026-10-06T17:06:38.361Z",
+    "2026-10-06T17:07:09.839Z",
+    "2026-10-06T17:07:30.546Z",
+    "2026-10-06T17:07:52.512Z",
+    "2026-10-06T17:08:23.174Z",
+    "2026-10-06T17:08:49.875Z",
+    "2026-10-06T17:09:07.892Z",
+    "2026-10-06T17:09:37.542Z",
+    "2026-10-06T17:10:05.499Z",
+    "2026-10-06T17:10:17.305Z",
+    "2026-10-06T17:10:35.139Z",
+    "2026-10-06T17:10:58.404Z",
+    "2026-10-06T17:11:42.475Z",
+    "2026-10-06T17:12:31.987Z",
+    "2026-10-06T17:13:08.474Z",
+    "2026-10-06T17:13:38.823Z",
+    "2026-10-06T17:14:23.549Z",
+    "2026-10-06T17:14:43.986Z",
+    "2026-10-06T17:14:56.604Z",
+    "2026-10-06T17:15:16.702Z",
+    "2026-10-06T17:15:40.875Z",
+    "2026-10-06T17:15:58.725Z",
+    "2026-10-06T17:16:29.629Z",
+    "2026-10-06T17:17:11.298Z",
+    "2026-10-06T17:17:58.020Z",
+    "2026-10-06T17:18:19.350Z",
+    "2026-10-06T17:19:00.953Z",
+    "2026-10-06T17:19:31.678Z",
+    "2026-10-06T17:19:56.952Z",
+    "2026-10-06T17:20:15.711Z",
+    "2026-10-06T17:21:14.060Z",
+    "2026-10-06T17:21:48.207Z",
+    "2026-10-06T17:22:41.346Z",
+    "2026-10-06T17:23:16.168Z",
+    "2026-10-06T17:23:48.399Z",
+    "2026-10-06T17:24:01.010Z",
+    "2026-10-06T17:24:43.661Z",
+    "2026-10-06T17:25:23.343Z",
+    "2026-10-06T17:26:16.339Z",
+    "2026-10-06T17:27:00.288Z",
+    "2026-10-06T17:27:21.754Z",
+    "2026-10-06T17:27:57.746Z",
+    "2026-10-06T17:28:36.160Z",
+    "2026-10-06T17:28:59.292Z",
+    "2026-10-06T17:29:48.936Z",
+    "2026-10-06T17:30:10.442Z",
+    "2026-10-06T17:30:35.350Z",
+    "2026-10-06T17:31:11.919Z",
+    "2026-10-06T17:31:32.468Z",
+    "2026-10-06T17:32:12.019Z",
+    "2026-10-06T17:32:35.981Z",
+    "2026-10-06T17:33:06.076Z",
+    "2026-10-06T17:33:39.374Z",
+    "2026-10-06T17:34:13.392Z",
+    "2026-10-06T17:34:41.057Z",
+    "2026-10-06T17:35:16.578Z",
+    "2026-10-06T17:35:41.113Z",
+    "2026-10-06T17:36:17.048Z",
+    "2026-10-06T17:36:51.396Z",
+    "2026-10-06T17:37:12.269Z",
+    "2026-10-06T17:37:46.241Z",
+    "2026-10-06T17:38:54.861Z",
+    "2026-10-06T17:39:34.726Z",
+    "2026-10-06T17:44:26.530Z",
+    "2026-10-06T17:44:40.429Z",
+    "2026-10-06T17:44:55.202Z",
+    "2026-10-06T17:45:22.770Z",
+    "2026-10-06T17:45:44.426Z",
+    "2026-10-06T17:46:07.043Z",
+    "2026-10-06T17:46:26.841Z",
+    "2026-10-06T17:46:43.832Z",
+    "2026-10-06T17:47:01.218Z",
+    "2026-10-06T17:47:26.188Z",
+    "2026-10-06T17:47:52.860Z",
+    "2026-10-06T17:48:14.650Z",
+    "2026-10-06T17:48:47.235Z",
+    "2026-10-06T17:49:17.174Z",
+    "2026-10-06T17:49:53.966Z",
+    "2026-10-06T17:50:29.514Z",
+    "2026-10-06T17:51:28.430Z",
+    "2026-10-06T17:51:49.735Z",
+    "2026-10-06T17:52:08.920Z",
+    "2026-10-06T17:52:28.069Z",
+    "2026-10-06T17:52:50.156Z",
+    "2026-10-06T17:53:05.148Z",
+    "2026-10-06T17:53:29.661Z",
+    "2026-10-06T17:53:39.089Z",
+    "2026-10-06T17:54:14.265Z",
+    "2026-10-06T17:54:34.860Z",
+    "2026-10-06T17:54:52.018Z",
+    "2026-10-06T17:55:05.859Z",
+    "2026-10-06T17:55:24.251Z",
+    "2026-10-06T17:55:38.793Z",
+    "2026-10-06T17:56:17.727Z",
+    "2026-10-06T17:56:37.938Z",
+    "2026-10-06T17:56:59.476Z",
+    "2026-10-06T17:57:27.884Z",
+    "2026-10-06T17:58:22.283Z",
+    "2026-10-06T17:58:59.743Z",
+    "2026-10-06T17:59:21.974Z",
+    "2026-10-06T17:59:53.777Z",
+    "2026-10-06T18:00:31.298Z",
+    "2026-10-06T18:00:49.946Z",
+    "2026-10-06T18:01:24.885Z",
+    "2026-10-06T18:01:45.161Z",
+    "2026-10-06T18:02:02.006Z",
+    "2026-10-06T18:02:36.909Z",
+    "2026-10-06T18:03:24.479Z",
+    "2026-10-06T18:03:30.236Z",
+    "2026-10-06T18:04:00.351Z",
+    "2026-10-06T18:04:22.016Z",
+    "2026-10-06T18:04:41.985Z",
+    "2026-10-06T18:05:03.191Z",
+    "2026-10-06T18:05:42.398Z",
+    "2026-10-06T18:06:02.545Z",
+    "2026-10-06T18:06:34.916Z",
+    "2026-10-06T18:07:15.458Z",
+    "2026-10-06T18:07:36.394Z",
+    "2026-10-06T18:08:28.122Z",
+    "2026-10-06T18:08:49.610Z",
+    "2026-10-06T18:09:15.029Z",
+    "2026-10-06T18:09:24.943Z",
+    "2026-10-06T18:10:26.790Z",
+    "2026-10-06T18:11:01.815Z",
+    "2026-10-06T18:11:36.120Z",
+    "2026-10-06T18:12:17.307Z",
+    "2026-10-06T18:13:15.221Z",
+    "2026-10-06T18:13:39.080Z",
+    "2026-10-06T18:13:58.258Z",
+    "2026-10-06T18:14:40.917Z",
+    "2026-10-06T18:15:01.922Z",
+    "2026-10-06T18:15:26.512Z",
+    "2026-10-06T18:15:27.952Z",
+    "2026-10-06T18:16:22.963Z",
+    "2026-10-06T18:16:34.950Z",
+    "2026-10-06T18:17:20.795Z",
+    "2026-10-06T18:17:46.471Z",
+    "2026-10-06T18:18:20.426Z",
+    "2026-10-06T18:19:07.323Z",
+    "2026-10-06T18:19:31.416Z",
+    "2026-10-06T18:19:56.845Z",
+    "2026-10-06T18:20:09.417Z",
+    "2026-10-06T18:20:52.850Z",
+    "2026-10-06T18:21:04.045Z",
+    "2026-10-06T18:21:43.884Z",
+    "2026-10-06T18:22:28.790Z",
+    "2026-10-06T18:22:50.016Z",
+    "2026-10-06T18:23:22.420Z",
+    "2026-10-06T18:24:25.065Z",
+    "2026-10-06T18:24:52.913Z",
+    "2026-10-06T18:25:18.995Z",
+    "2026-10-06T18:25:42.879Z",
+    "2026-10-06T18:25:47.545Z",
+    "2026-10-06T18:26:34.054Z",
+    "2026-10-06T18:26:42.698Z",
+    "2026-10-06T18:27:31.892Z",
+    "2026-10-06T18:27:54.524Z",
+    "2026-10-06T18:28:21.292Z",
+    "2026-10-06T18:28:42.468Z",
+    "2026-10-06T18:28:54.059Z",
+    "2026-10-06T18:29:44.167Z",
+    "2026-10-06T18:30:34.029Z",
+    "2026-10-06T18:30:57.200Z",
+    "2026-10-06T18:31:14.927Z",
+    "2026-10-06T18:32:08.109Z",
+    "2026-10-06T18:32:34.809Z",
+    "2026-10-06T18:32:58.441Z",
+    "2026-10-06T18:33:40.938Z",
+    "2026-10-06T18:34:24.503Z",
+    "2026-10-06T18:34:32.198Z",
+    "2026-10-06T18:35:24.488Z",
+    "2026-10-06T18:35:40.100Z",
+    "2026-10-06T18:36:25.773Z",
+    "2026-10-06T18:36:28.680Z",
+    "2026-10-06T18:37:17.929Z",
+    "2026-10-06T18:37:40.236Z",
+    "2026-10-06T18:38:02.484Z",
+    "2026-10-06T18:38:50.994Z",
+    "2026-10-06T18:39:10.427Z"
+  ],
+  "tool_spans": [
+    {
+      "call_id": "call_4862e187d0954816a9945877ac57d319",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:03:03.217392+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "original_start_utc": "2026-10-06T17:03:01.369Z",
+      "original_end_utc": "2026-10-06T17:03:07.850Z",
+      "end_utc": "2026-10-06T17:03:07.850000+00:00",
+      "seconds": 4.633,
+      "window_clipped": true
+    },
+    {
+      "call_id": "call_lLJf4SgAOa3R421e6lOi6qT7",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:03:17.333000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:03:18.855000+00:00",
+      "seconds": 1.522,
+      "original_start_utc": "2026-10-06T17:03:17.333Z",
+      "original_end_utc": "2026-10-06T17:03:18.855Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_gxIhW3x8qLjrbFYoMceJnXFh",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:03:49.654000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:03:58.524000+00:00",
+      "seconds": 8.87,
+      "original_start_utc": "2026-10-06T17:03:49.654Z",
+      "original_end_utc": "2026-10-06T17:03:58.524Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_8947513dc302430baa93cf1980982e4c",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:04:08.360000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:04:16.958000+00:00",
+      "seconds": 8.598,
+      "original_start_utc": "2026-10-06T17:04:08.360Z",
+      "original_end_utc": "2026-10-06T17:04:16.958Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_Z3cSUd7H6XAT02nktdg3dYyP",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:04:30.225000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:04:41.982000+00:00",
+      "seconds": 11.757,
+      "original_start_utc": "2026-10-06T17:04:30.225Z",
+      "original_end_utc": "2026-10-06T17:04:41.982Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_KJQ344P7wlYfp3UX9qXKZVVH",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:04:58.364000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:05:07.569000+00:00",
+      "seconds": 9.205,
+      "original_start_utc": "2026-10-06T17:04:58.364Z",
+      "original_end_utc": "2026-10-06T17:05:07.569Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_POWsAHNOLjQtOyYdoOiRHnwM",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:05:32.331000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:05:43.115000+00:00",
+      "seconds": 10.784,
+      "original_start_utc": "2026-10-06T17:05:32.331Z",
+      "original_end_utc": "2026-10-06T17:05:43.115Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_b1y1nHGTMEjejt5sZdRClaHr",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:06:07.920000+00:00",
+      "tags": [
+        "repo_diagnostic",
+        "host_wait"
+      ],
+      "end_utc": "2026-10-06T17:06:10.040000+00:00",
+      "seconds": 2.12,
+      "original_start_utc": "2026-10-06T17:06:07.920Z",
+      "original_end_utc": "2026-10-06T17:06:10.040Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_d66ec84ca25e4ce0be89b6abffc5d431",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:06:51.420000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:07:02.678000+00:00",
+      "seconds": 11.258,
+      "original_start_utc": "2026-10-06T17:06:51.420Z",
+      "original_end_utc": "2026-10-06T17:07:02.678Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_nrlR7Fv2xZYwowXOIdDKyzTT",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:07:13.264000+00:00",
+      "tags": [
+        "host_wait"
+      ],
+      "end_utc": "2026-10-06T17:07:16.733000+00:00",
+      "seconds": 3.469,
+      "original_start_utc": "2026-10-06T17:07:13.264Z",
+      "original_end_utc": "2026-10-06T17:07:16.733Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_OweislbXo2FsFM9hP7rueNKh",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:07:34.706000+00:00",
+      "tags": [
+        "pro_browser",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:07:37.115000+00:00",
+      "seconds": 2.409,
+      "original_start_utc": "2026-10-06T17:07:34.706Z",
+      "original_end_utc": "2026-10-06T17:07:37.115Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_GAjfHwfUkErjqlnn0OPeT1kZ",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:07:55.431000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:07:56.959000+00:00",
+      "seconds": 1.528,
+      "original_start_utc": "2026-10-06T17:07:55.431Z",
+      "original_end_utc": "2026-10-06T17:07:56.959Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_okTjV2nYCUrXGHQJ9RooM8HB",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:08:26.228000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:08:38.120000+00:00",
+      "seconds": 11.892,
+      "original_start_utc": "2026-10-06T17:08:26.228Z",
+      "original_end_utc": "2026-10-06T17:08:38.120Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_7e06c957c583452aadf9a9fe1c2f2d25",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:08:54.886000+00:00",
+      "tags": [
+        "repo_diagnostic",
+        "host_wait"
+      ],
+      "end_utc": "2026-10-06T17:08:58.670000+00:00",
+      "seconds": 3.784,
+      "original_start_utc": "2026-10-06T17:08:54.886Z",
+      "original_end_utc": "2026-10-06T17:08:58.670Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_f744caabad1d48aab82487a46b2a8568",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:09:19.436000+00:00",
+      "tags": [
+        "pro_browser",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:09:21.871000+00:00",
+      "seconds": 2.435,
+      "original_start_utc": "2026-10-06T17:09:19.436Z",
+      "original_end_utc": "2026-10-06T17:09:21.871Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_9de2b63e009f49599deb697b5de9b784",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:09:48.233000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "pro_browser",
+        "host_wait"
+      ],
+      "end_utc": "2026-10-06T17:09:58.333000+00:00",
+      "seconds": 10.1,
+      "original_start_utc": "2026-10-06T17:09:48.233Z",
+      "original_end_utc": "2026-10-06T17:09:58.333Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0221fa2e5fe74a39b24dbd47258a80fa",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:10:07.814000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:10:08.585000+00:00",
+      "seconds": 0.771,
+      "original_start_utc": "2026-10-06T17:10:07.814Z",
+      "original_end_utc": "2026-10-06T17:10:08.585Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_IzwrN6yG5SKIMWq771V0L6MO",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:10:20.957000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:10:25.362000+00:00",
+      "seconds": 4.405,
+      "original_start_utc": "2026-10-06T17:10:20.957Z",
+      "original_end_utc": "2026-10-06T17:10:25.362Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_89aae8683f404671a8881bc0556e985b",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:10:41.201000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:10:45.900000+00:00",
+      "seconds": 4.699,
+      "original_start_utc": "2026-10-06T17:10:41.201Z",
+      "original_end_utc": "2026-10-06T17:10:45.900Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_Ps0wVh1es6bUVK1lk9go0Tur",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:11:03.306000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:11:13.148000+00:00",
+      "seconds": 9.842,
+      "original_start_utc": "2026-10-06T17:11:03.306Z",
+      "original_end_utc": "2026-10-06T17:11:13.148Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_FULyAEzJqrnsIq7kNtUfD1wW",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:12:04.467000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "pro_browser",
+        "git_sync"
+      ],
+      "end_utc": "2026-10-06T17:12:10.252000+00:00",
+      "seconds": 5.785,
+      "original_start_utc": "2026-10-06T17:12:04.467Z",
+      "original_end_utc": "2026-10-06T17:12:10.252Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_06Fbcm5SRdvbw9tF3Ve8dnyd",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:12:34.194000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:12:40.589000+00:00",
+      "seconds": 6.395,
+      "original_start_utc": "2026-10-06T17:12:34.194Z",
+      "original_end_utc": "2026-10-06T17:12:40.589Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_61801f75fb824fa99b819ffc8b60c91d",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:13:10.675000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "workflow_telemetry"
+      ],
+      "end_utc": "2026-10-06T17:13:13.777000+00:00",
+      "seconds": 3.102,
+      "original_start_utc": "2026-10-06T17:13:10.675Z",
+      "original_end_utc": "2026-10-06T17:13:13.777Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_luCkR5iQBvbA14oY4d6yKSSt",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:13:49.876000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "workflow_telemetry"
+      ],
+      "end_utc": "2026-10-06T17:13:56.594000+00:00",
+      "seconds": 6.718,
+      "original_start_utc": "2026-10-06T17:13:49.876Z",
+      "original_end_utc": "2026-10-06T17:13:56.594Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_014e002847a544b3b287d2e38c776f67",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:14:28.870000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "workflow_telemetry"
+      ],
+      "end_utc": "2026-10-06T17:14:36.176000+00:00",
+      "seconds": 7.306,
+      "original_start_utc": "2026-10-06T17:14:28.870Z",
+      "original_end_utc": "2026-10-06T17:14:36.176Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_ef9954f934b94cf9805781aab58d6b20",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:14:45.163000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:14:45.974000+00:00",
+      "seconds": 0.811,
+      "original_start_utc": "2026-10-06T17:14:45.163Z",
+      "original_end_utc": "2026-10-06T17:14:45.974Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_gEcvd31P2Uj2DZCqN5EOgvFK",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:14:58.206000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:15:02.175000+00:00",
+      "seconds": 3.969,
+      "original_start_utc": "2026-10-06T17:14:58.206Z",
+      "original_end_utc": "2026-10-06T17:15:02.175Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_646c9497d50945c5a299e5c4e6b5fb22",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:15:19.254000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:15:20.016000+00:00",
+      "seconds": 0.762,
+      "original_start_utc": "2026-10-06T17:15:19.254Z",
+      "original_end_utc": "2026-10-06T17:15:20.016Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_d5344cb2e1d94d98bc711d1646b6612f",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:15:42.693000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:15:50.587000+00:00",
+      "seconds": 7.894,
+      "original_start_utc": "2026-10-06T17:15:42.693Z",
+      "original_end_utc": "2026-10-06T17:15:50.587Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_55e819df92a6471db7d6d8c86d94e103",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:15:59.993000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:16:00.755000+00:00",
+      "seconds": 0.762,
+      "original_start_utc": "2026-10-06T17:15:59.993Z",
+      "original_end_utc": "2026-10-06T17:16:00.755Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_679226e853dc49719ece1fb97162049b",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:16:31.467000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:16:38.421000+00:00",
+      "seconds": 6.954,
+      "original_start_utc": "2026-10-06T17:16:31.467Z",
+      "original_end_utc": "2026-10-06T17:16:38.421Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_rvtSlCsjkpjeKEjI8r19XT48",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:17:15.860000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:17:24.773000+00:00",
+      "seconds": 8.913,
+      "original_start_utc": "2026-10-06T17:17:15.860Z",
+      "original_end_utc": "2026-10-06T17:17:24.773Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_bde165dfdede4bd09381e648c8210488",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:18:27.451000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:18:38.191000+00:00",
+      "seconds": 10.74,
+      "original_start_utc": "2026-10-06T17:18:27.451Z",
+      "original_end_utc": "2026-10-06T17:18:38.191Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_5870cf726ffe434089c305fc51a6aacb",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:19:03.237000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:19:10.590000+00:00",
+      "seconds": 7.353,
+      "original_start_utc": "2026-10-06T17:19:03.237Z",
+      "original_end_utc": "2026-10-06T17:19:10.590Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_63f5159b272b489ba59440441d24a489",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:19:34.948000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:19:43.907000+00:00",
+      "seconds": 8.959,
+      "original_start_utc": "2026-10-06T17:19:34.948Z",
+      "original_end_utc": "2026-10-06T17:19:43.907Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_SOx9zBwc3b5XMP2JFlhHZFAd",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:19:58.426000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:19:59.192000+00:00",
+      "seconds": 0.766,
+      "original_start_utc": "2026-10-06T17:19:58.426Z",
+      "original_end_utc": "2026-10-06T17:19:59.192Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_b827cdc4857d4806a0104798f42a69d2",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:20:32.048000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:20:37.796000+00:00",
+      "seconds": 5.748,
+      "original_start_utc": "2026-10-06T17:20:32.048Z",
+      "original_end_utc": "2026-10-06T17:20:37.796Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_KDSUbY9jic7mf9tTuQfOiGjp",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:21:17.059000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:21:18.339000+00:00",
+      "seconds": 1.28,
+      "original_start_utc": "2026-10-06T17:21:17.059Z",
+      "original_end_utc": "2026-10-06T17:21:18.339Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_5b307998b53645bea372eb2311385caf",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:21:57.453000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:22:08.206000+00:00",
+      "seconds": 10.753,
+      "original_start_utc": "2026-10-06T17:21:57.453Z",
+      "original_end_utc": "2026-10-06T17:22:08.206Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_fc8e7db4c54f4b679764be0238f2807f",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:22:52.322000+00:00",
+      "tags": [
+        "pro_browser",
+        "git_sync",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:22:53.754000+00:00",
+      "seconds": 1.432,
+      "original_start_utc": "2026-10-06T17:22:52.322Z",
+      "original_end_utc": "2026-10-06T17:22:53.754Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_LPiHK5xSoqbaqdAqgYCv6VnQ",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:23:19.800000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "pro_browser"
+      ],
+      "end_utc": "2026-10-06T17:23:22.117000+00:00",
+      "seconds": 2.317,
+      "original_start_utc": "2026-10-06T17:23:19.800Z",
+      "original_end_utc": "2026-10-06T17:23:22.117Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_9deccb70759b4f95adaf53e7fa866258",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:24:03.784000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "git_sync"
+      ],
+      "end_utc": "2026-10-06T17:24:11.524000+00:00",
+      "seconds": 7.74,
+      "original_start_utc": "2026-10-06T17:24:03.784Z",
+      "original_end_utc": "2026-10-06T17:24:11.524Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_SDbzvddnerfTb009oMvu2xAj",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:24:46.994000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "git_sync"
+      ],
+      "end_utc": "2026-10-06T17:24:54.326000+00:00",
+      "seconds": 7.332,
+      "original_start_utc": "2026-10-06T17:24:46.994Z",
+      "original_end_utc": "2026-10-06T17:24:54.326Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_EhxUAal7b6RxClGu3YFS8xwj",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:25:38.545000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "pro_browser"
+      ],
+      "end_utc": "2026-10-06T17:25:43.380000+00:00",
+      "seconds": 4.835,
+      "original_start_utc": "2026-10-06T17:25:38.545Z",
+      "original_end_utc": "2026-10-06T17:25:43.380Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_r0mkcRspktE6ZsXzSkOrAGzu",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:26:24.585000+00:00",
+      "tags": [
+        "pro_browser",
+        "saved_image_review",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:26:27.912000+00:00",
+      "seconds": 3.327,
+      "original_start_utc": "2026-10-06T17:26:24.585Z",
+      "original_end_utc": "2026-10-06T17:26:27.912Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_35f6f90ef5024bf592f497601c779f91",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:27:28.407000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:27:31.652000+00:00",
+      "seconds": 3.245,
+      "original_start_utc": "2026-10-06T17:27:28.407Z",
+      "original_end_utc": "2026-10-06T17:27:31.652Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_rLAaoTneKQLEcUAnBysdfsVf",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:28:02.929000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:28:06.148000+00:00",
+      "seconds": 3.219,
+      "original_start_utc": "2026-10-06T17:28:02.929Z",
+      "original_end_utc": "2026-10-06T17:28:06.148Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_x37O4wNyloTdi7sx0Ky40uvO",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:29:07.012000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:29:14.069000+00:00",
+      "seconds": 7.057,
+      "original_start_utc": "2026-10-06T17:29:07.012Z",
+      "original_end_utc": "2026-10-06T17:29:14.069Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_ba18a85658f34cdeaa35b7dbee98ed01",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:30:19.148000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:30:26.674000+00:00",
+      "seconds": 7.526,
+      "original_start_utc": "2026-10-06T17:30:19.148Z",
+      "original_end_utc": "2026-10-06T17:30:26.674Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0fd2fe2ca1184db4ae8c1036b545acce",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:30:37.072000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:30:44.070000+00:00",
+      "seconds": 6.998,
+      "original_start_utc": "2026-10-06T17:30:37.072Z",
+      "original_end_utc": "2026-10-06T17:30:44.070Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_W809VefRPvNaKn0ApihiNF6n",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:31:36.187000+00:00",
+      "tags": [
+        "saved_image_review",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:31:38.297000+00:00",
+      "seconds": 2.11,
+      "original_start_utc": "2026-10-06T17:31:36.187Z",
+      "original_end_utc": "2026-10-06T17:31:38.297Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_cb13fafc81444c83ac95ac735dc20826",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:33:09.692000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:33:20.139000+00:00",
+      "seconds": 10.447,
+      "original_start_utc": "2026-10-06T17:33:09.692Z",
+      "original_end_utc": "2026-10-06T17:33:20.139Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_kDEDFY88N02mcbf6dZM1pIWp",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:33:41.622000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:33:42.360000+00:00",
+      "seconds": 0.738,
+      "original_start_utc": "2026-10-06T17:33:41.622Z",
+      "original_end_utc": "2026-10-06T17:33:42.360Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_92ccf56f304b4ef4a19943f141b51e17",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:34:43.897000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:34:45.768000+00:00",
+      "seconds": 1.871,
+      "original_start_utc": "2026-10-06T17:34:43.897Z",
+      "original_end_utc": "2026-10-06T17:34:45.768Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_cWkOArGkXpDKH7xQdHdZfOBM",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:35:55.877000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:35:57.276000+00:00",
+      "seconds": 1.399,
+      "original_start_utc": "2026-10-06T17:35:55.877Z",
+      "original_end_utc": "2026-10-06T17:35:57.276Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_148133d9839544218276f0fd0f4d2e95",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:36:19.322000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:36:27.255000+00:00",
+      "seconds": 7.933,
+      "original_start_utc": "2026-10-06T17:36:19.322Z",
+      "original_end_utc": "2026-10-06T17:36:27.255Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_c1820b9c5bc44f7ab322fc550a09fe29",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:36:52.722000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:36:54.379000+00:00",
+      "seconds": 1.657,
+      "original_start_utc": "2026-10-06T17:36:52.722Z",
+      "original_end_utc": "2026-10-06T17:36:54.379Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_3dfe8f1cafe548a8b31300d1f84e2cad",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:37:14.801000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:37:16.637000+00:00",
+      "seconds": 1.836,
+      "original_start_utc": "2026-10-06T17:37:14.801Z",
+      "original_end_utc": "2026-10-06T17:37:16.637Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_6541f667b5f84f538cf34f5abcb23178",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:38:09.064000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:38:20.296000+00:00",
+      "seconds": 11.232,
+      "original_start_utc": "2026-10-06T17:38:09.064Z",
+      "original_end_utc": "2026-10-06T17:38:20.296Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_286dc5bfcf394c43bb3f779bd6ff9b05",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:38:59.452000+00:00",
+      "tags": [
+        "repo_diagnostic",
+        "host_wait"
+      ],
+      "end_utc": "2026-10-06T17:39:01.119000+00:00",
+      "seconds": 1.667,
+      "original_start_utc": "2026-10-06T17:38:59.452Z",
+      "original_end_utc": "2026-10-06T17:39:01.119Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_5375d381714948dc90225efa1ecde421",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:39:37.942000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:39:45.292000+00:00",
+      "seconds": 7.35,
+      "original_start_utc": "2026-10-06T17:39:37.942Z",
+      "original_end_utc": "2026-10-06T17:39:45.292Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_791b4fede628430dbc6076deebfe07cf",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:44:29.740000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:44:31.289000+00:00",
+      "seconds": 1.549,
+      "original_start_utc": "2026-10-06T17:44:29.740Z",
+      "original_end_utc": "2026-10-06T17:44:31.289Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0bfef47656f143818a929f4187721ddd",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:44:43.877000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "pro_browser"
+      ],
+      "end_utc": "2026-10-06T17:44:48.487000+00:00",
+      "seconds": 4.61,
+      "original_start_utc": "2026-10-06T17:44:43.877Z",
+      "original_end_utc": "2026-10-06T17:44:48.487Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_9d0c66a8d43544a3935312034bfaace8",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:44:59.504000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:45:08.829000+00:00",
+      "seconds": 9.325,
+      "original_start_utc": "2026-10-06T17:44:59.504Z",
+      "original_end_utc": "2026-10-06T17:45:08.829Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0VMSbXozft6BcIhNWJvsCAUz",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:45:29.121000+00:00",
+      "tags": [
+        "saved_image_review",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:45:31.114000+00:00",
+      "seconds": 1.993,
+      "original_start_utc": "2026-10-06T17:45:29.121Z",
+      "original_end_utc": "2026-10-06T17:45:31.114Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_541a8fa59cf847d08104ba3b47a4ec42",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:45:49.727000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:45:57.353000+00:00",
+      "seconds": 7.626,
+      "original_start_utc": "2026-10-06T17:45:49.727Z",
+      "original_end_utc": "2026-10-06T17:45:57.353Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_ptw0qAEnFwcU8H2iJ1Bna4EP",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:46:13.883000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:46:21.293000+00:00",
+      "seconds": 7.41,
+      "original_start_utc": "2026-10-06T17:46:13.883Z",
+      "original_end_utc": "2026-10-06T17:46:21.293Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_ghfE6b8FsdEHOes3alghcobW",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:46:30.128000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:46:37.894000+00:00",
+      "seconds": 7.766,
+      "original_start_utc": "2026-10-06T17:46:30.128Z",
+      "original_end_utc": "2026-10-06T17:46:37.894Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_X84dGLDR74vDvKWNzjTI26zD",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:46:47.148000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:46:54.346000+00:00",
+      "seconds": 7.198,
+      "original_start_utc": "2026-10-06T17:46:47.148Z",
+      "original_end_utc": "2026-10-06T17:46:54.346Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_fd7c6f64d41b4b88a641208536e3de13",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:47:04.524000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:47:11.832000+00:00",
+      "seconds": 7.308,
+      "original_start_utc": "2026-10-06T17:47:04.524Z",
+      "original_end_utc": "2026-10-06T17:47:11.832Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_izEFDOlraGMReBrFIXcoVddW",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:47:29.543000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:47:36.816000+00:00",
+      "seconds": 7.273,
+      "original_start_utc": "2026-10-06T17:47:29.543Z",
+      "original_end_utc": "2026-10-06T17:47:36.816Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_428cad75bd2142a3857f697f19ad9511",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:47:56.991000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:48:03.385000+00:00",
+      "seconds": 6.394,
+      "original_start_utc": "2026-10-06T17:47:56.991Z",
+      "original_end_utc": "2026-10-06T17:48:03.385Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_b7eccd84619c48a0bd7597aa234a116c",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:48:08.585000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:48:09.325000+00:00",
+      "seconds": 0.74,
+      "original_start_utc": "2026-10-06T17:48:08.585Z",
+      "original_end_utc": "2026-10-06T17:48:09.325Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_R08anHN2VZcfpewSTY33oBkn",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:48:19.071000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:48:29.173000+00:00",
+      "seconds": 10.102,
+      "original_start_utc": "2026-10-06T17:48:19.071Z",
+      "original_end_utc": "2026-10-06T17:48:29.173Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0DtkSNMy247dYHB3QLjV4eYQ",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:48:50.756000+00:00",
+      "tags": [
+        "pro_browser",
+        "git_sync",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:48:52.148000+00:00",
+      "seconds": 1.392,
+      "original_start_utc": "2026-10-06T17:48:50.756Z",
+      "original_end_utc": "2026-10-06T17:48:52.148Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_9a14aab134674b6c895b661400543685",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:49:21.584000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "git_sync",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:49:27.929000+00:00",
+      "seconds": 6.345,
+      "original_start_utc": "2026-10-06T17:49:21.584Z",
+      "original_end_utc": "2026-10-06T17:49:27.929Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_TZlHkVnvNYYcFRwsNp0GDUf5",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:49:57.934000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:50:01.188000+00:00",
+      "seconds": 3.254,
+      "original_start_utc": "2026-10-06T17:49:57.934Z",
+      "original_end_utc": "2026-10-06T17:50:01.188Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_5015a9edd4f9487cbd3c3c66570bb15f",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:51:13.063000+00:00",
+      "tags": [
+        "git_sync",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:51:14.397000+00:00",
+      "seconds": 1.334,
+      "original_start_utc": "2026-10-06T17:51:13.063Z",
+      "original_end_utc": "2026-10-06T17:51:14.397Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_c730e2d0956f4aaf867e6785e4abd331",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:51:32.137000+00:00",
+      "tags": [
+        "git_sync",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:51:33.528000+00:00",
+      "seconds": 1.391,
+      "original_start_utc": "2026-10-06T17:51:32.137Z",
+      "original_end_utc": "2026-10-06T17:51:33.528Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_299f99366ebf4a9990a3bc6251a69fe2",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:51:51.434000+00:00",
+      "tags": [
+        "git_sync"
+      ],
+      "end_utc": "2026-10-06T17:52:00.573000+00:00",
+      "seconds": 9.139,
+      "original_start_utc": "2026-10-06T17:51:51.434Z",
+      "original_end_utc": "2026-10-06T17:52:00.573Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_36a84b06dcb14a969bdf7d5d9809e0ee",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:52:14.710000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "workflow_telemetry"
+      ],
+      "end_utc": "2026-10-06T17:52:20.703000+00:00",
+      "seconds": 5.993,
+      "original_start_utc": "2026-10-06T17:52:14.710Z",
+      "original_end_utc": "2026-10-06T17:52:20.703Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_410919c51c9042a58a5c17c23ef012dc",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:52:34.513000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:52:41.111000+00:00",
+      "seconds": 6.598,
+      "original_start_utc": "2026-10-06T17:52:34.513Z",
+      "original_end_utc": "2026-10-06T17:52:41.111Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_5e34f51fcffd49caa726856701b07bec",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:52:56.443000+00:00",
+      "tags": [
+        "saved_image_review",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:52:58.533000+00:00",
+      "seconds": 2.09,
+      "original_start_utc": "2026-10-06T17:52:56.443Z",
+      "original_end_utc": "2026-10-06T17:52:58.533Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_5030c07f354c4deeb5becaec9b241a61",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:53:07.329000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:53:10.586000+00:00",
+      "seconds": 3.257,
+      "original_start_utc": "2026-10-06T17:53:07.329Z",
+      "original_end_utc": "2026-10-06T17:53:10.586Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_mfjOmfzFkemNjveZyaS5hMRE",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:53:30.472000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:53:31.215000+00:00",
+      "seconds": 0.743,
+      "original_start_utc": "2026-10-06T17:53:30.472Z",
+      "original_end_utc": "2026-10-06T17:53:31.215Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_D8XxtA9C6Ik22FE85vsMYYWV",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:53:42.324000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:53:51.280000+00:00",
+      "seconds": 8.956,
+      "original_start_utc": "2026-10-06T17:53:42.324Z",
+      "original_end_utc": "2026-10-06T17:53:51.280Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_VLIwsbFVoi2l5Hn0HW8Pktnk",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:54:18.853000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:54:27.647000+00:00",
+      "seconds": 8.794,
+      "original_start_utc": "2026-10-06T17:54:18.853Z",
+      "original_end_utc": "2026-10-06T17:54:27.647Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_2BtylJYGyj6NgKL1UUCt780d",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:54:35.615000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:54:36.361000+00:00",
+      "seconds": 0.746,
+      "original_start_utc": "2026-10-06T17:54:35.615Z",
+      "original_end_utc": "2026-10-06T17:54:36.361Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_WRkntnHked5cmV6392YIueYQ",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:54:54.570000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:54:55.824000+00:00",
+      "seconds": 1.254,
+      "original_start_utc": "2026-10-06T17:54:54.570Z",
+      "original_end_utc": "2026-10-06T17:54:55.824Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_40bd6892645e4527890b1ec7edccda83",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:55:08.730000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:55:15.911000+00:00",
+      "seconds": 7.181,
+      "original_start_utc": "2026-10-06T17:55:08.730Z",
+      "original_end_utc": "2026-10-06T17:55:15.911Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_4b51601ec4c64f9382f461c43b4b8469",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:55:24.702000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:55:25.454000+00:00",
+      "seconds": 0.752,
+      "original_start_utc": "2026-10-06T17:55:24.702Z",
+      "original_end_utc": "2026-10-06T17:55:25.454Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_50611a46db9841eb87f7bb540aacb8cf",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:55:43.306000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:55:51.236000+00:00",
+      "seconds": 7.93,
+      "original_start_utc": "2026-10-06T17:55:43.306Z",
+      "original_end_utc": "2026-10-06T17:55:51.236Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_UoqmaIv6eSe1zemTwnND8tzs",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:56:50.021000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:56:51.329000+00:00",
+      "seconds": 1.308,
+      "original_start_utc": "2026-10-06T17:56:50.021Z",
+      "original_end_utc": "2026-10-06T17:56:51.329Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_Sc4YBaKRaK3d4lh1yEFTXk98",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:57:05.305000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:57:13.797000+00:00",
+      "seconds": 8.492,
+      "original_start_utc": "2026-10-06T17:57:05.305Z",
+      "original_end_utc": "2026-10-06T17:57:13.797Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_389a793da1d74f9c89c2a1aa44a0d1c7",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:57:31.300000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T17:57:32.050000+00:00",
+      "seconds": 0.75,
+      "original_start_utc": "2026-10-06T17:57:31.300Z",
+      "original_end_utc": "2026-10-06T17:57:32.050Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_8XDwrN2h2GIgVs3B2c7Hkp5w",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:57:46.074000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:57:55.865000+00:00",
+      "seconds": 9.791,
+      "original_start_utc": "2026-10-06T17:57:46.074Z",
+      "original_end_utc": "2026-10-06T17:57:55.865Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_d638b9783db04988bcac11f37a92c6e7",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:58:28.406000+00:00",
+      "tags": [
+        "pro_browser",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T17:58:29.710000+00:00",
+      "seconds": 1.304,
+      "original_start_utc": "2026-10-06T17:58:28.406Z",
+      "original_end_utc": "2026-10-06T17:58:29.710Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_59190cf36b8241a88c33df703005a029",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:59:24.686000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T17:59:31.467000+00:00",
+      "seconds": 6.781,
+      "original_start_utc": "2026-10-06T17:59:24.686Z",
+      "original_end_utc": "2026-10-06T17:59:31.467Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_LpJ3rI4qxMiUxsvbQkrhjeoV",
+      "name": "exec",
+      "start_utc": "2026-10-06T17:59:56.009000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:00:00.243000+00:00",
+      "seconds": 4.234,
+      "original_start_utc": "2026-10-06T17:59:56.009Z",
+      "original_end_utc": "2026-10-06T18:00:00.243Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_2nObSG3ehMKiJsV8ffcOWMHp",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:00:52.383000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:00:53.672000+00:00",
+      "seconds": 1.289,
+      "original_start_utc": "2026-10-06T18:00:52.383Z",
+      "original_end_utc": "2026-10-06T18:00:53.672Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0df27836eb2e47b095a865d7fcf6daa0",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:02:02.587000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:02:08.399000+00:00",
+      "seconds": 5.812,
+      "original_start_utc": "2026-10-06T18:02:02.587Z",
+      "original_end_utc": "2026-10-06T18:02:08.399Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_9d83b4717cce47e183ca4bdd626c5b64",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:02:43.097000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:02:46.764000+00:00",
+      "seconds": 3.667,
+      "original_start_utc": "2026-10-06T18:02:43.097Z",
+      "original_end_utc": "2026-10-06T18:02:46.764Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_65e70cfa93924f349c3d9edc8f064149",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:03:33.700000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:03:34.488000+00:00",
+      "seconds": 0.788,
+      "original_start_utc": "2026-10-06T18:03:33.700Z",
+      "original_end_utc": "2026-10-06T18:03:34.488Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_ac5b71c78ad24c37a768bb0329e56ef4",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:04:03.298000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:04:11.914000+00:00",
+      "seconds": 8.616,
+      "original_start_utc": "2026-10-06T18:04:03.298Z",
+      "original_end_utc": "2026-10-06T18:04:11.914Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0P1VwLEj1AXjg0RsAxIFzzre",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:04:22.714000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:04:23.460000+00:00",
+      "seconds": 0.746,
+      "original_start_utc": "2026-10-06T18:04:22.714Z",
+      "original_end_utc": "2026-10-06T18:04:23.460Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_bc8fee450c1248f7ba5054830b0a4dc0",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:04:44.325000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:04:49.835000+00:00",
+      "seconds": 5.51,
+      "original_start_utc": "2026-10-06T18:04:44.325Z",
+      "original_end_utc": "2026-10-06T18:04:49.835Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_210e4f3cd7c443adb476050c7d03dbee",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:05:06.063000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:05:12.300000+00:00",
+      "seconds": 6.237,
+      "original_start_utc": "2026-10-06T18:05:06.063Z",
+      "original_end_utc": "2026-10-06T18:05:12.300Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_aefb094430ea49e2ae7d19cb3108be3f",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:05:22.559000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:05:23.321000+00:00",
+      "seconds": 0.762,
+      "original_start_utc": "2026-10-06T18:05:22.559Z",
+      "original_end_utc": "2026-10-06T18:05:23.321Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_e7c24e59b87e4a7b9c407e53ce115ddb",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:05:45.655000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:05:53.408000+00:00",
+      "seconds": 7.753,
+      "original_start_utc": "2026-10-06T18:05:45.655Z",
+      "original_end_utc": "2026-10-06T18:05:53.408Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_vIKSwP7qVHyXTMtMWP2fiYTU",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:06:03.615000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:06:04.366000+00:00",
+      "seconds": 0.751,
+      "original_start_utc": "2026-10-06T18:06:03.615Z",
+      "original_end_utc": "2026-10-06T18:06:04.366Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_e4bcd7dc0002462e9695fafd2937f590",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:06:38.015000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:06:45.598000+00:00",
+      "seconds": 7.583,
+      "original_start_utc": "2026-10-06T18:06:38.015Z",
+      "original_end_utc": "2026-10-06T18:06:45.598Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_AQompAZT3EdMJB4i0sPuV7qn",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:07:40.861000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:07:44.919000+00:00",
+      "seconds": 4.058,
+      "original_start_utc": "2026-10-06T18:07:40.861Z",
+      "original_end_utc": "2026-10-06T18:07:44.919Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_cae0ea0f3bdb425f8f5acecf26e5e652",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:07:59.568000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:08:00.332000+00:00",
+      "seconds": 0.764,
+      "original_start_utc": "2026-10-06T18:07:59.568Z",
+      "original_end_utc": "2026-10-06T18:08:00.332Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_D7e7L61t6txx0PdghjWNy8aA",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:09:27.992000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:09:35.701000+00:00",
+      "seconds": 7.709,
+      "original_start_utc": "2026-10-06T18:09:27.992Z",
+      "original_end_utc": "2026-10-06T18:09:35.701Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_7afc9445edcc46c496b5f2c9e61bf837",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:10:04.004000+00:00",
+      "tags": [
+        "saved_image_review",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:10:06.169000+00:00",
+      "seconds": 2.165,
+      "original_start_utc": "2026-10-06T18:10:04.004Z",
+      "original_end_utc": "2026-10-06T18:10:06.169Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_31b8913afb494595bb6864e2c4337a79",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:10:32.079000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:10:40.972000+00:00",
+      "seconds": 8.893,
+      "original_start_utc": "2026-10-06T18:10:32.079Z",
+      "original_end_utc": "2026-10-06T18:10:40.972Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_40122151053c4f8ea4d10da3cde80633",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:11:03.671000+00:00",
+      "tags": [
+        "pro_browser"
+      ],
+      "end_utc": "2026-10-06T18:11:04.599000+00:00",
+      "seconds": 0.928,
+      "original_start_utc": "2026-10-06T18:11:03.671Z",
+      "original_end_utc": "2026-10-06T18:11:04.599Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_bb5d627bb3814a4294a65dd226bb362e",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:11:42.189000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:11:47.369000+00:00",
+      "seconds": 5.18,
+      "original_start_utc": "2026-10-06T18:11:42.189Z",
+      "original_end_utc": "2026-10-06T18:11:47.369Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_fd555f1de3a2435ab0d450e6d612f520",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:12:21.155000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:12:29.463000+00:00",
+      "seconds": 8.308,
+      "original_start_utc": "2026-10-06T18:12:21.155Z",
+      "original_end_utc": "2026-10-06T18:12:29.463Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_VYRcMAEUjV21hKuIXwVRKx9y",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:13:20.365000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:13:28.112000+00:00",
+      "seconds": 7.747,
+      "original_start_utc": "2026-10-06T18:13:20.365Z",
+      "original_end_utc": "2026-10-06T18:13:28.112Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_QP5He4RfWDZs44UQRKPgOe6s",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:13:40.223000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:13:40.988000+00:00",
+      "seconds": 0.765,
+      "original_start_utc": "2026-10-06T18:13:40.223Z",
+      "original_end_utc": "2026-10-06T18:13:40.988Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_ozv3T8UevEzv99MxYeSh0GVq",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:14:01.462000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:14:08.895000+00:00",
+      "seconds": 7.433,
+      "original_start_utc": "2026-10-06T18:14:01.462Z",
+      "original_end_utc": "2026-10-06T18:14:08.895Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_75023a6969c24f0d9eedf579cb119e7a",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:15:31.453000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:15:37.726000+00:00",
+      "seconds": 6.273,
+      "original_start_utc": "2026-10-06T18:15:31.453Z",
+      "original_end_utc": "2026-10-06T18:15:37.726Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_0fddbe77a9f8492caf20d5ae40267ac7",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:15:50.250000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:15:50.994000+00:00",
+      "seconds": 0.744,
+      "original_start_utc": "2026-10-06T18:15:50.250Z",
+      "original_end_utc": "2026-10-06T18:15:50.994Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_CBhjhznVUtk9An8DfAFNxgfN",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:16:40.477000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:16:47.371000+00:00",
+      "seconds": 6.894,
+      "original_start_utc": "2026-10-06T18:16:40.477Z",
+      "original_end_utc": "2026-10-06T18:16:47.371Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_kLXLYtq3LYBnDzK1FfnJ43Ov",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:17:25.407000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:17:35.190000+00:00",
+      "seconds": 9.783,
+      "original_start_utc": "2026-10-06T18:17:25.407Z",
+      "original_end_utc": "2026-10-06T18:17:35.190Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_FtJFktZw95TJ2Zz5b7IeO9D7",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:17:47.523000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:17:48.268000+00:00",
+      "seconds": 0.745,
+      "original_start_utc": "2026-10-06T18:17:47.523Z",
+      "original_end_utc": "2026-10-06T18:17:48.268Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_923f30972be94efbbf34c05bc91815e4",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:18:23.231000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:18:29.643000+00:00",
+      "seconds": 6.412,
+      "original_start_utc": "2026-10-06T18:18:23.231Z",
+      "original_end_utc": "2026-10-06T18:18:29.643Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_1e5e6f4f6b214e2e923ea38c6c18212e",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:20:14.087000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:20:20.502000+00:00",
+      "seconds": 6.415,
+      "original_start_utc": "2026-10-06T18:20:14.087Z",
+      "original_end_utc": "2026-10-06T18:20:20.502Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_rTKoceuri25hDTccrXow3MpN",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:21:11.671000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:21:18.323000+00:00",
+      "seconds": 6.652,
+      "original_start_utc": "2026-10-06T18:21:11.671Z",
+      "original_end_utc": "2026-10-06T18:21:18.323Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_219cc05e258e4a09bc3371f454c95dfc",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:21:44.519000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:21:45.265000+00:00",
+      "seconds": 0.746,
+      "original_start_utc": "2026-10-06T18:21:44.519Z",
+      "original_end_utc": "2026-10-06T18:21:45.265Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_901cb7d738d84d8f924ce17ae33634b4",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:22:53.832000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:23:04.707000+00:00",
+      "seconds": 10.875,
+      "original_start_utc": "2026-10-06T18:22:53.832Z",
+      "original_end_utc": "2026-10-06T18:23:04.707Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_4a2b57d8c9284f8e88b101b3fee4626c",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:23:40.048000+00:00",
+      "tags": [
+        "saved_image_review",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:23:42.067000+00:00",
+      "seconds": 2.019,
+      "original_start_utc": "2026-10-06T18:23:40.048Z",
+      "original_end_utc": "2026-10-06T18:23:42.067Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_c40fb2ab75784e2db67a0b89018907d6",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:25:51.409000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:26:01.108000+00:00",
+      "seconds": 9.699,
+      "original_start_utc": "2026-10-06T18:25:51.409Z",
+      "original_end_utc": "2026-10-06T18:26:01.108Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_xm9weyrXhiXD8Wd17WWMhbZ7",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:26:48.087000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:26:55.450000+00:00",
+      "seconds": 7.363,
+      "original_start_utc": "2026-10-06T18:26:48.087Z",
+      "original_end_utc": "2026-10-06T18:26:55.450Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_jvEhnN8XETWW5h9WKVsrsizF",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:28:58.429000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:29:09.143000+00:00",
+      "seconds": 10.714,
+      "original_start_utc": "2026-10-06T18:28:58.429Z",
+      "original_end_utc": "2026-10-06T18:29:09.143Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_b2ddb5ac34b64400a6cd9bf99044e9c9",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:29:48.730000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:29:57.882000+00:00",
+      "seconds": 9.152,
+      "original_start_utc": "2026-10-06T18:29:48.730Z",
+      "original_end_utc": "2026-10-06T18:29:57.882Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_683U8Buj29KS6SwKodsRmpVZ",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:31:22.625000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:31:30.050000+00:00",
+      "seconds": 7.425,
+      "original_start_utc": "2026-10-06T18:31:22.625Z",
+      "original_end_utc": "2026-10-06T18:31:30.050Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_2fd1777a2bba4efbbefeba1c645fc3bf",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:33:07.919000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:33:18.938000+00:00",
+      "seconds": 11.019,
+      "original_start_utc": "2026-10-06T18:33:07.919Z",
+      "original_end_utc": "2026-10-06T18:33:18.938Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_8333a2268e5b4455bff55f04520b7601",
+      "name": "wait",
+      "start_utc": "2026-10-06T18:33:42.028000+00:00",
+      "tags": [
+        "host_wait"
+      ],
+      "end_utc": "2026-10-06T18:33:45.103000+00:00",
+      "seconds": 3.075,
+      "original_start_utc": "2026-10-06T18:33:42.028Z",
+      "original_end_utc": "2026-10-06T18:33:45.103Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_c18iDhd6dQaEGPlg3ZaoDWI1",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:34:41.248000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:34:47.147000+00:00",
+      "seconds": 5.899,
+      "original_start_utc": "2026-10-06T18:34:41.248Z",
+      "original_end_utc": "2026-10-06T18:34:47.147Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_Jag8uVyMGFdOFBFONsBFPkIP",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:35:41.883000+00:00",
+      "tags": [
+        "saved_image_review"
+      ],
+      "end_utc": "2026-10-06T18:35:42.623000+00:00",
+      "seconds": 0.74,
+      "original_start_utc": "2026-10-06T18:35:41.883Z",
+      "original_end_utc": "2026-10-06T18:35:42.623Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_997eb8fdc7ba4517b3399be2075ae1cb",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:36:32.048000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "end_utc": "2026-10-06T18:36:39.913000+00:00",
+      "seconds": 7.865,
+      "original_start_utc": "2026-10-06T18:36:32.048Z",
+      "original_end_utc": "2026-10-06T18:36:39.913Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_thJM5Te1HcAaKXSoeSTTww1Z",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:38:09.743000+00:00",
+      "tags": [
+        "gameplay_helper",
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:38:18.369000+00:00",
+      "seconds": 8.626,
+      "original_start_utc": "2026-10-06T18:38:09.743Z",
+      "original_end_utc": "2026-10-06T18:38:18.369Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_sKMZbNHU9ly0EhPAtS8FXkvc",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:39:15.501000+00:00",
+      "tags": [
+        "repo_diagnostic"
+      ],
+      "end_utc": "2026-10-06T18:39:17.980000+00:00",
+      "seconds": 2.479,
+      "original_start_utc": "2026-10-06T18:39:15.501Z",
+      "original_end_utc": "2026-10-06T18:39:17.980Z",
+      "window_clipped": false
+    },
+    {
+      "call_id": "call_edvI4qUeOuMgCeLyuuJf4YLT",
+      "name": "exec",
+      "start_utc": "2026-10-06T18:43:24.793000+00:00",
+      "tags": [
+        "gameplay_helper"
+      ],
+      "original_start_utc": "2026-10-06T18:43:24.793Z",
+      "original_end_utc": "2026-10-06T18:43:31.766Z",
+      "end_utc": "2026-10-06T18:43:31.318613+00:00",
+      "seconds": 6.526,
+      "window_clipped": true
+    }
+  ],
+  "host_gaps": [
+    {
+      "start_utc": "2026-10-06T17:03:07.850000+00:00",
+      "end_utc": "2026-10-06T17:03:17.333000+00:00",
+      "seconds": 9.483,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:03:18.855000+00:00",
+      "end_utc": "2026-10-06T17:03:49.654000+00:00",
+      "seconds": 30.799,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:03:58.524000+00:00",
+      "end_utc": "2026-10-06T17:04:08.360000+00:00",
+      "seconds": 9.836,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:04:16.958000+00:00",
+      "end_utc": "2026-10-06T17:04:30.225000+00:00",
+      "seconds": 13.267,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:04:41.982000+00:00",
+      "end_utc": "2026-10-06T17:04:58.364000+00:00",
+      "seconds": 16.382,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:05:07.569000+00:00",
+      "end_utc": "2026-10-06T17:05:32.331000+00:00",
+      "seconds": 24.762,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:05:43.115000+00:00",
+      "end_utc": "2026-10-06T17:06:07.920000+00:00",
+      "seconds": 24.805,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:06:10.040000+00:00",
+      "end_utc": "2026-10-06T17:06:51.420000+00:00",
+      "seconds": 41.38,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:07:02.678000+00:00",
+      "end_utc": "2026-10-06T17:07:13.264000+00:00",
+      "seconds": 10.586,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:07:16.733000+00:00",
+      "end_utc": "2026-10-06T17:07:34.706000+00:00",
+      "seconds": 17.973,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:07:37.115000+00:00",
+      "end_utc": "2026-10-06T17:07:55.431000+00:00",
+      "seconds": 18.316,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:07:56.959000+00:00",
+      "end_utc": "2026-10-06T17:08:26.228000+00:00",
+      "seconds": 29.269,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:08:38.120000+00:00",
+      "end_utc": "2026-10-06T17:08:54.886000+00:00",
+      "seconds": 16.766,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:08:58.670000+00:00",
+      "end_utc": "2026-10-06T17:09:19.436000+00:00",
+      "seconds": 20.766,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:09:21.871000+00:00",
+      "end_utc": "2026-10-06T17:09:48.233000+00:00",
+      "seconds": 26.362,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:09:58.333000+00:00",
+      "end_utc": "2026-10-06T17:10:07.814000+00:00",
+      "seconds": 9.481,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:10:08.585000+00:00",
+      "end_utc": "2026-10-06T17:10:20.957000+00:00",
+      "seconds": 12.372,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:10:25.362000+00:00",
+      "end_utc": "2026-10-06T17:10:41.201000+00:00",
+      "seconds": 15.839,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:10:45.900000+00:00",
+      "end_utc": "2026-10-06T17:11:03.306000+00:00",
+      "seconds": 17.406,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:11:13.148000+00:00",
+      "end_utc": "2026-10-06T17:12:04.467000+00:00",
+      "seconds": 51.319,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:12:10.252000+00:00",
+      "end_utc": "2026-10-06T17:12:34.194000+00:00",
+      "seconds": 23.942,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:12:40.589000+00:00",
+      "end_utc": "2026-10-06T17:13:10.675000+00:00",
+      "seconds": 30.086,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:13:13.777000+00:00",
+      "end_utc": "2026-10-06T17:13:49.876000+00:00",
+      "seconds": 36.099,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:13:56.594000+00:00",
+      "end_utc": "2026-10-06T17:14:28.870000+00:00",
+      "seconds": 32.276,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:14:36.176000+00:00",
+      "end_utc": "2026-10-06T17:14:45.163000+00:00",
+      "seconds": 8.987,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:14:45.974000+00:00",
+      "end_utc": "2026-10-06T17:14:58.206000+00:00",
+      "seconds": 12.232,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:15:02.175000+00:00",
+      "end_utc": "2026-10-06T17:15:19.254000+00:00",
+      "seconds": 17.079,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:15:20.016000+00:00",
+      "end_utc": "2026-10-06T17:15:42.693000+00:00",
+      "seconds": 22.677,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:15:50.587000+00:00",
+      "end_utc": "2026-10-06T17:15:59.993000+00:00",
+      "seconds": 9.406,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:16:00.755000+00:00",
+      "end_utc": "2026-10-06T17:16:31.467000+00:00",
+      "seconds": 30.712,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:16:38.421000+00:00",
+      "end_utc": "2026-10-06T17:17:15.860000+00:00",
+      "seconds": 37.439,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:17:24.773000+00:00",
+      "end_utc": "2026-10-06T17:18:27.451000+00:00",
+      "seconds": 62.678,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:18:38.191000+00:00",
+      "end_utc": "2026-10-06T17:19:03.237000+00:00",
+      "seconds": 25.046,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:19:10.590000+00:00",
+      "end_utc": "2026-10-06T17:19:34.948000+00:00",
+      "seconds": 24.358,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:19:43.907000+00:00",
+      "end_utc": "2026-10-06T17:19:58.426000+00:00",
+      "seconds": 14.519,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:19:59.192000+00:00",
+      "end_utc": "2026-10-06T17:20:32.048000+00:00",
+      "seconds": 32.856,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:20:37.796000+00:00",
+      "end_utc": "2026-10-06T17:21:17.059000+00:00",
+      "seconds": 39.263,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:21:18.339000+00:00",
+      "end_utc": "2026-10-06T17:21:57.453000+00:00",
+      "seconds": 39.114,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:22:08.206000+00:00",
+      "end_utc": "2026-10-06T17:22:52.322000+00:00",
+      "seconds": 44.116,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:22:53.754000+00:00",
+      "end_utc": "2026-10-06T17:23:19.800000+00:00",
+      "seconds": 26.046,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:23:22.117000+00:00",
+      "end_utc": "2026-10-06T17:24:03.784000+00:00",
+      "seconds": 41.667,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:24:11.524000+00:00",
+      "end_utc": "2026-10-06T17:24:46.994000+00:00",
+      "seconds": 35.47,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:24:54.326000+00:00",
+      "end_utc": "2026-10-06T17:25:38.545000+00:00",
+      "seconds": 44.219,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:25:43.380000+00:00",
+      "end_utc": "2026-10-06T17:26:24.585000+00:00",
+      "seconds": 41.205,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:26:27.912000+00:00",
+      "end_utc": "2026-10-06T17:27:28.407000+00:00",
+      "seconds": 60.495,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:27:31.652000+00:00",
+      "end_utc": "2026-10-06T17:28:02.929000+00:00",
+      "seconds": 31.277,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:28:06.148000+00:00",
+      "end_utc": "2026-10-06T17:29:07.012000+00:00",
+      "seconds": 60.864,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:29:14.069000+00:00",
+      "end_utc": "2026-10-06T17:30:19.148000+00:00",
+      "seconds": 65.079,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:30:26.674000+00:00",
+      "end_utc": "2026-10-06T17:30:37.072000+00:00",
+      "seconds": 10.398,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:30:44.070000+00:00",
+      "end_utc": "2026-10-06T17:31:36.187000+00:00",
+      "seconds": 52.117,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:31:38.297000+00:00",
+      "end_utc": "2026-10-06T17:33:09.692000+00:00",
+      "seconds": 91.395,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:33:20.139000+00:00",
+      "end_utc": "2026-10-06T17:33:41.622000+00:00",
+      "seconds": 21.483,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:33:42.360000+00:00",
+      "end_utc": "2026-10-06T17:34:43.897000+00:00",
+      "seconds": 61.537,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:34:45.768000+00:00",
+      "end_utc": "2026-10-06T17:35:55.877000+00:00",
+      "seconds": 70.109,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:35:57.276000+00:00",
+      "end_utc": "2026-10-06T17:36:19.322000+00:00",
+      "seconds": 22.046,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:36:27.255000+00:00",
+      "end_utc": "2026-10-06T17:36:52.722000+00:00",
+      "seconds": 25.467,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:36:54.379000+00:00",
+      "end_utc": "2026-10-06T17:37:14.801000+00:00",
+      "seconds": 20.422,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:37:16.637000+00:00",
+      "end_utc": "2026-10-06T17:38:09.064000+00:00",
+      "seconds": 52.427,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:38:20.296000+00:00",
+      "end_utc": "2026-10-06T17:38:59.452000+00:00",
+      "seconds": 39.156,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:39:01.119000+00:00",
+      "end_utc": "2026-10-06T17:39:37.942000+00:00",
+      "seconds": 36.823,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:39:45.292000+00:00",
+      "end_utc": "2026-10-06T17:44:29.740000+00:00",
+      "seconds": 284.448,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:44:31.289000+00:00",
+      "end_utc": "2026-10-06T17:44:43.877000+00:00",
+      "seconds": 12.588,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:44:48.487000+00:00",
+      "end_utc": "2026-10-06T17:44:59.504000+00:00",
+      "seconds": 11.017,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:45:08.829000+00:00",
+      "end_utc": "2026-10-06T17:45:29.121000+00:00",
+      "seconds": 20.292,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:45:31.114000+00:00",
+      "end_utc": "2026-10-06T17:45:49.727000+00:00",
+      "seconds": 18.613,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:45:57.353000+00:00",
+      "end_utc": "2026-10-06T17:46:13.883000+00:00",
+      "seconds": 16.53,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:46:21.293000+00:00",
+      "end_utc": "2026-10-06T17:46:30.128000+00:00",
+      "seconds": 8.835,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:46:37.894000+00:00",
+      "end_utc": "2026-10-06T17:46:47.148000+00:00",
+      "seconds": 9.254,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:46:54.346000+00:00",
+      "end_utc": "2026-10-06T17:47:04.524000+00:00",
+      "seconds": 10.178,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:47:11.832000+00:00",
+      "end_utc": "2026-10-06T17:47:29.543000+00:00",
+      "seconds": 17.711,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:47:36.816000+00:00",
+      "end_utc": "2026-10-06T17:47:56.991000+00:00",
+      "seconds": 20.175,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:48:03.385000+00:00",
+      "end_utc": "2026-10-06T17:48:08.585000+00:00",
+      "seconds": 5.2,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:48:09.325000+00:00",
+      "end_utc": "2026-10-06T17:48:19.071000+00:00",
+      "seconds": 9.746,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:48:29.173000+00:00",
+      "end_utc": "2026-10-06T17:48:50.756000+00:00",
+      "seconds": 21.583,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:48:52.148000+00:00",
+      "end_utc": "2026-10-06T17:49:21.584000+00:00",
+      "seconds": 29.436,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:49:27.929000+00:00",
+      "end_utc": "2026-10-06T17:49:57.934000+00:00",
+      "seconds": 30.005,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:50:01.188000+00:00",
+      "end_utc": "2026-10-06T17:51:13.063000+00:00",
+      "seconds": 71.875,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:51:14.397000+00:00",
+      "end_utc": "2026-10-06T17:51:32.137000+00:00",
+      "seconds": 17.74,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:51:33.528000+00:00",
+      "end_utc": "2026-10-06T17:51:51.434000+00:00",
+      "seconds": 17.906,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:52:00.573000+00:00",
+      "end_utc": "2026-10-06T17:52:14.710000+00:00",
+      "seconds": 14.137,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:52:20.703000+00:00",
+      "end_utc": "2026-10-06T17:52:34.513000+00:00",
+      "seconds": 13.81,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:52:41.111000+00:00",
+      "end_utc": "2026-10-06T17:52:56.443000+00:00",
+      "seconds": 15.332,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:52:58.533000+00:00",
+      "end_utc": "2026-10-06T17:53:07.329000+00:00",
+      "seconds": 8.796,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:53:10.586000+00:00",
+      "end_utc": "2026-10-06T17:53:30.472000+00:00",
+      "seconds": 19.886,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:53:31.215000+00:00",
+      "end_utc": "2026-10-06T17:53:42.324000+00:00",
+      "seconds": 11.109,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:53:51.280000+00:00",
+      "end_utc": "2026-10-06T17:54:18.853000+00:00",
+      "seconds": 27.573,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:54:27.647000+00:00",
+      "end_utc": "2026-10-06T17:54:35.615000+00:00",
+      "seconds": 7.968,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:54:36.361000+00:00",
+      "end_utc": "2026-10-06T17:54:54.570000+00:00",
+      "seconds": 18.209,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:54:55.824000+00:00",
+      "end_utc": "2026-10-06T17:55:08.730000+00:00",
+      "seconds": 12.906,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:55:15.911000+00:00",
+      "end_utc": "2026-10-06T17:55:24.702000+00:00",
+      "seconds": 8.791,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:55:25.454000+00:00",
+      "end_utc": "2026-10-06T17:55:43.306000+00:00",
+      "seconds": 17.852,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:55:51.236000+00:00",
+      "end_utc": "2026-10-06T17:56:50.021000+00:00",
+      "seconds": 58.785,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:56:51.329000+00:00",
+      "end_utc": "2026-10-06T17:57:05.305000+00:00",
+      "seconds": 13.976,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:57:13.797000+00:00",
+      "end_utc": "2026-10-06T17:57:31.300000+00:00",
+      "seconds": 17.503,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:57:32.050000+00:00",
+      "end_utc": "2026-10-06T17:57:46.074000+00:00",
+      "seconds": 14.024,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:57:55.865000+00:00",
+      "end_utc": "2026-10-06T17:58:28.406000+00:00",
+      "seconds": 32.541,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:58:29.710000+00:00",
+      "end_utc": "2026-10-06T17:59:24.686000+00:00",
+      "seconds": 54.976,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T17:59:31.467000+00:00",
+      "end_utc": "2026-10-06T17:59:56.009000+00:00",
+      "seconds": 24.542,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:00:00.243000+00:00",
+      "end_utc": "2026-10-06T18:00:52.383000+00:00",
+      "seconds": 52.14,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:00:53.672000+00:00",
+      "end_utc": "2026-10-06T18:02:02.587000+00:00",
+      "seconds": 68.915,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:02:08.399000+00:00",
+      "end_utc": "2026-10-06T18:02:43.097000+00:00",
+      "seconds": 34.698,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:02:46.764000+00:00",
+      "end_utc": "2026-10-06T18:03:33.700000+00:00",
+      "seconds": 46.936,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:03:34.488000+00:00",
+      "end_utc": "2026-10-06T18:04:03.298000+00:00",
+      "seconds": 28.81,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:04:11.914000+00:00",
+      "end_utc": "2026-10-06T18:04:22.714000+00:00",
+      "seconds": 10.8,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:04:23.460000+00:00",
+      "end_utc": "2026-10-06T18:04:44.325000+00:00",
+      "seconds": 20.865,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:04:49.835000+00:00",
+      "end_utc": "2026-10-06T18:05:06.063000+00:00",
+      "seconds": 16.228,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:05:12.300000+00:00",
+      "end_utc": "2026-10-06T18:05:22.559000+00:00",
+      "seconds": 10.259,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:05:23.321000+00:00",
+      "end_utc": "2026-10-06T18:05:45.655000+00:00",
+      "seconds": 22.334,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:05:53.408000+00:00",
+      "end_utc": "2026-10-06T18:06:03.615000+00:00",
+      "seconds": 10.207,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:06:04.366000+00:00",
+      "end_utc": "2026-10-06T18:06:38.015000+00:00",
+      "seconds": 33.649,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:06:45.598000+00:00",
+      "end_utc": "2026-10-06T18:07:40.861000+00:00",
+      "seconds": 55.263,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:07:44.919000+00:00",
+      "end_utc": "2026-10-06T18:07:59.568000+00:00",
+      "seconds": 14.649,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:08:00.332000+00:00",
+      "end_utc": "2026-10-06T18:09:27.992000+00:00",
+      "seconds": 87.66,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:09:35.701000+00:00",
+      "end_utc": "2026-10-06T18:10:04.004000+00:00",
+      "seconds": 28.303,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:10:06.169000+00:00",
+      "end_utc": "2026-10-06T18:10:32.079000+00:00",
+      "seconds": 25.91,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:10:40.972000+00:00",
+      "end_utc": "2026-10-06T18:11:03.671000+00:00",
+      "seconds": 22.699,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:11:04.599000+00:00",
+      "end_utc": "2026-10-06T18:11:42.189000+00:00",
+      "seconds": 37.59,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:11:47.369000+00:00",
+      "end_utc": "2026-10-06T18:12:21.155000+00:00",
+      "seconds": 33.786,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:12:29.463000+00:00",
+      "end_utc": "2026-10-06T18:13:20.365000+00:00",
+      "seconds": 50.902,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:13:28.112000+00:00",
+      "end_utc": "2026-10-06T18:13:40.223000+00:00",
+      "seconds": 12.111,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:13:40.988000+00:00",
+      "end_utc": "2026-10-06T18:14:01.462000+00:00",
+      "seconds": 20.474,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:14:08.895000+00:00",
+      "end_utc": "2026-10-06T18:15:31.453000+00:00",
+      "seconds": 82.558,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:15:37.726000+00:00",
+      "end_utc": "2026-10-06T18:15:50.250000+00:00",
+      "seconds": 12.524,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:15:50.994000+00:00",
+      "end_utc": "2026-10-06T18:16:40.477000+00:00",
+      "seconds": 49.483,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:16:47.371000+00:00",
+      "end_utc": "2026-10-06T18:17:25.407000+00:00",
+      "seconds": 38.036,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:17:35.190000+00:00",
+      "end_utc": "2026-10-06T18:17:47.523000+00:00",
+      "seconds": 12.333,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:17:48.268000+00:00",
+      "end_utc": "2026-10-06T18:18:23.231000+00:00",
+      "seconds": 34.963,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:18:29.643000+00:00",
+      "end_utc": "2026-10-06T18:20:14.087000+00:00",
+      "seconds": 104.444,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:20:20.502000+00:00",
+      "end_utc": "2026-10-06T18:21:11.671000+00:00",
+      "seconds": 51.169,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:21:18.323000+00:00",
+      "end_utc": "2026-10-06T18:21:44.519000+00:00",
+      "seconds": 26.196,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:21:45.265000+00:00",
+      "end_utc": "2026-10-06T18:22:53.832000+00:00",
+      "seconds": 68.567,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:23:04.707000+00:00",
+      "end_utc": "2026-10-06T18:23:40.048000+00:00",
+      "seconds": 35.341,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:23:42.067000+00:00",
+      "end_utc": "2026-10-06T18:25:51.409000+00:00",
+      "seconds": 129.342,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:26:01.108000+00:00",
+      "end_utc": "2026-10-06T18:26:48.087000+00:00",
+      "seconds": 46.979,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:26:55.450000+00:00",
+      "end_utc": "2026-10-06T18:28:58.429000+00:00",
+      "seconds": 122.979,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:29:09.143000+00:00",
+      "end_utc": "2026-10-06T18:29:48.730000+00:00",
+      "seconds": 39.587,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:29:57.882000+00:00",
+      "end_utc": "2026-10-06T18:31:22.625000+00:00",
+      "seconds": 84.743,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:31:30.050000+00:00",
+      "end_utc": "2026-10-06T18:33:07.919000+00:00",
+      "seconds": 97.869,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:33:18.938000+00:00",
+      "end_utc": "2026-10-06T18:33:42.028000+00:00",
+      "seconds": 23.09,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:33:45.103000+00:00",
+      "end_utc": "2026-10-06T18:34:41.248000+00:00",
+      "seconds": 56.145,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:34:47.147000+00:00",
+      "end_utc": "2026-10-06T18:35:41.883000+00:00",
+      "seconds": 54.736,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:35:42.623000+00:00",
+      "end_utc": "2026-10-06T18:36:32.048000+00:00",
+      "seconds": 49.425,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:36:39.913000+00:00",
+      "end_utc": "2026-10-06T18:38:09.743000+00:00",
+      "seconds": 89.83,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:38:18.369000+00:00",
+      "end_utc": "2026-10-06T18:39:15.501000+00:00",
+      "seconds": 57.132,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    },
+    {
+      "start_utc": "2026-10-06T18:39:17.980000+00:00",
+      "end_utc": "2026-10-06T18:43:24.793000+00:00",
+      "seconds": 246.813,
+      "classification": "no matched host tool active; includes model/queue/compaction/other waits, not pure reasoning"
+    }
+  ],
+  "limitations": [
+    "Recorded reasoning timestamps are completions, not model sampling start/end",
+    "No raw commands, private chat text, screenshots, owner tokens or account data exported",
+    "Tool tags may overlap; their totals must not be added",
+    "Does not measure GPU inference, OCR-only time or full battle time",
+    "UTC clock alignment is assumed, not independently measured"
+  ],
+  "diagnostic_refresh_groups": [
+    {
+      "labels": "3-4-paid-roll-",
+      "count": 6,
+      "window_seconds": 105.032,
+      "helper_seconds": 34.203,
+      "outside_helper_seconds": 70.829,
+      "same_code": true,
+      "matched_scenario": false,
+      "causal_speed_claim": false
+    },
+    {
+      "labels": "final-search-topaz-b",
+      "count": 5,
+      "window_seconds": 35.2,
+      "helper_seconds": 29.093,
+      "outside_helper_seconds": 6.107,
+      "same_code": true,
+      "matched_scenario": false,
+      "causal_speed_claim": false
+    }
+  ]
+}
