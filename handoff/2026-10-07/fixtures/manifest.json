@@ -1,0 +1,71 @@
+{
+  "schema": "currency-wars-redacted-real-fixtures/v1",
+  "purpose": "Pure offline field provenance replay; no live controller",
+  "coordinates": "1920x1080 broker preview pixels",
+  "redaction_roi": [
+    0,
+    1034,
+    300,
+    1080
+  ],
+  "original_images_exported": false,
+  "cases": [
+    {
+      "id": "shop_character_level_999",
+      "file": "shop_character_level_999.png",
+      "original_sha256": "a04e58454da484502bbf068f8b1a37b22242970fc42de9501b62fd5614ac851e",
+      "export_sha256": "b4bb0d6cb242aef43c88fbf9c088251ae2a20ef13462ac5f47d2494ace4971ac",
+      "expected": {
+        "player_level": 9,
+        "forbidden_levels": [
+          99,
+          999
+        ],
+        "page": "shop"
+      },
+      "acceptance": "A player level may stay unknown when unreadable; a card/boss level must never populate the player field"
+    },
+    {
+      "id": "shop_actual_player_level_8",
+      "file": "shop_actual_player_level_8.png",
+      "original_sha256": "e687846726df591b72b6b1a4c47c25f694bd939bf86c5cf06edc26ec42c91148",
+      "export_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+      "expected": {
+        "player_level": 8,
+        "forbidden_levels": [
+          99,
+          999
+        ],
+        "page": "shop"
+      },
+      "acceptance": "A player level may stay unknown when unreadable; a card/boss level must never populate the player field"
+    },
+    {
+      "id": "boss_level_90_intro",
+      "file": "boss_level_90_intro.png",
+      "original_sha256": "adf95d93fdc46fa282915217f12c2a1e71fbba0514d5a1b86495e5fdfbb018db",
+      "export_sha256": "26bd80bd377990d76c96899759cb582fbca19dd1c1f300170d8d7ca0337668b7",
+      "expected": {
+        "player_level": null,
+        "player_hud_visible": false,
+        "forbidden_levels": [
+          90
+        ],
+        "page": "unknown"
+      },
+      "acceptance": "A player level may stay unknown when unreadable; a card/boss level must never populate the player field"
+    },
+    {
+      "id": "final_preparation_player_level_9",
+      "file": "final_preparation_player_level_9.png",
+      "original_sha256": "cbf81287386db368cadb371f27400f1fec34a56e7ba24e841e447377196b5938",
+      "export_sha256": "f1b2e675f99d8c5fb0606aad48c1b8fa21da5c424d556dc303c822ded054adce",
+      "expected": {
+        "player_level": 9,
+        "deployed": "8/9",
+        "page": "preparation"
+      },
+      "acceptance": "A player level may stay unknown when unreadable; a card/boss level must never populate the player field"
+    }
+  ]
+}

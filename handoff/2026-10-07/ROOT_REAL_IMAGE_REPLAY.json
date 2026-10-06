@@ -1,0 +1,133 @@
+{
+  "schema": "currency-wars-real-image-offline-replay/v1",
+  "game_inputs": 0,
+  "fresh_game_captures": 0,
+  "fixture_origin": "previously retained request snapshots",
+  "engine": "installed rapidocr_onnxruntime; production Perception.read",
+  "limitations": [
+    "Four different real snapshots, one serial pass per code version; not a statistically sufficient speed comparison",
+    "First frame includes OCR engine setup; later frames reuse the same engine",
+    "No actual broker/Win32 input, game animation or complete node timing measured"
+  ],
+  "versions": [
+    {
+      "code_sha": "7e3400b47dba338ddfc3694c2724bb615e8e008b",
+      "exit_code": 0,
+      "rows": [
+        {
+          "case": "shop_character_level_999",
+          "image_basename": "cc93af38fcaf4b0d8b38b8424a8fb9d7-final-search-topaz-b1.png",
+          "sha256": "a04e58454da484502bbf068f8b1a37b22242970fc42de9501b62fd5614ac851e",
+          "seconds": 2.235316,
+          "page": "shop",
+          "fields": {
+            "stage": "3-7",
+            "level": "99",
+            "deployed": null
+          },
+          "engine_cold": true
+        },
+        {
+          "case": "shop_actual_player_level_8",
+          "image_basename": "cd02ed6728654ba5b83bf61c9cd9e6cb-3-4-paid-roll-1.png",
+          "sha256": "e687846726df591b72b6b1a4c47c25f694bd939bf86c5cf06edc26ec42c91148",
+          "seconds": 1.115308,
+          "page": "shop",
+          "fields": {
+            "stage": "3-4",
+            "level": "99",
+            "deployed": null
+          },
+          "engine_cold": false
+        },
+        {
+          "case": "boss_level_90_intro",
+          "image_basename": "5b0f49d4f44548cc97f50a5eabd3457d-3-6-continue-to-boss.png",
+          "sha256": "adf95d93fdc46fa282915217f12c2a1e71fbba0514d5a1b86495e5fdfbb018db",
+          "seconds": 0.455087,
+          "page": "unknown",
+          "fields": {
+            "stage": null,
+            "level": "90",
+            "deployed": null
+          },
+          "engine_cold": false
+        },
+        {
+          "case": "final_preparation_player_level_9",
+          "image_basename": "159f20cccc3e4438b09ffcb404eee10a-final-reopen-and-read-refreshed-shop.png",
+          "sha256": "cbf81287386db368cadb371f27400f1fec34a56e7ba24e841e447377196b5938",
+          "seconds": 0.840921,
+          "page": "preparation",
+          "fields": {
+            "stage": "3-7",
+            "level": null,
+            "deployed": "8/9"
+          },
+          "engine_cold": false
+        }
+      ],
+      "same_byte_cache_seconds": 0.001165
+    },
+    {
+      "code_sha": "6e7d3eaceb3625cbd8a095a61273642426229fd0",
+      "exit_code": 0,
+      "rows": [
+        {
+          "case": "shop_character_level_999",
+          "image_basename": "cc93af38fcaf4b0d8b38b8424a8fb9d7-final-search-topaz-b1.png",
+          "sha256": "a04e58454da484502bbf068f8b1a37b22242970fc42de9501b62fd5614ac851e",
+          "seconds": 2.040259,
+          "page": "shop",
+          "fields": {
+            "stage": "3-7",
+            "level": "99",
+            "deployed": null
+          },
+          "engine_cold": true
+        },
+        {
+          "case": "shop_actual_player_level_8",
+          "image_basename": "cd02ed6728654ba5b83bf61c9cd9e6cb-3-4-paid-roll-1.png",
+          "sha256": "e687846726df591b72b6b1a4c47c25f694bd939bf86c5cf06edc26ec42c91148",
+          "seconds": 1.016953,
+          "page": "shop",
+          "fields": {
+            "stage": "3-4",
+            "level": "99",
+            "deployed": null
+          },
+          "engine_cold": false
+        },
+        {
+          "case": "boss_level_90_intro",
+          "image_basename": "5b0f49d4f44548cc97f50a5eabd3457d-3-6-continue-to-boss.png",
+          "sha256": "adf95d93fdc46fa282915217f12c2a1e71fbba0514d5a1b86495e5fdfbb018db",
+          "seconds": 0.41463,
+          "page": "unknown",
+          "fields": {
+            "stage": null,
+            "level": "90",
+            "deployed": null
+          },
+          "engine_cold": false
+        },
+        {
+          "case": "final_preparation_player_level_9",
+          "image_basename": "159f20cccc3e4438b09ffcb404eee10a-final-reopen-and-read-refreshed-shop.png",
+          "sha256": "cbf81287386db368cadb371f27400f1fec34a56e7ba24e841e447377196b5938",
+          "seconds": 0.749574,
+          "page": "preparation",
+          "fields": {
+            "stage": "3-7",
+            "level": null,
+            "deployed": "8/9"
+          },
+          "engine_cold": false
+        }
+      ],
+      "same_byte_cache_seconds": 0.000995
+    }
+  ],
+  "temporary_run_removed": true
+}
