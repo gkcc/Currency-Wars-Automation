@@ -3,8 +3,10 @@
 Private captures are optional outside this checkout; no capture or input API.
 """
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 from PIL import Image
@@ -15,7 +17,7 @@ try:
 except ImportError:
     scratch_directory = None
 from currency_wars_state_reader import StateReader, RESOURCE_DIR, native_slots, native_capacity
-from currency_wars_perception import native_deployed_count
+from currency_wars_perception import DEPLOYED_COUNT_ROI, Perception, native_deployed_count
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +34,69 @@ class NativePopulationTests(unittest.TestCase):
         self.assertIsNone(native_deployed_count([{**row, 'box': [120, 520, 230, 565]}]))
         self.assertIsNone(native_deployed_count([row, row]))
         self.assertIsNone(native_deployed_count([{**row, 'raw_text': '5/4'}]))
+
+    def read_population(self, counts, crop_result, *, anchored=True):
+        def ocr_row(text, box, confidence=.99):
+            x1, y1, x2, y2 = [value / 1.5 for value in box]
+            return [[[x1, y1], [x2, y1], [x2, y2], [x1, y2]], text, confidence]
+        rows = [ocr_row('备战阶段', [420, 25, 530, 60]),
+                ocr_row('出战', [1770, 720, 1860, 780]),
+                ocr_row('商店', [1585, 960, 1660, 1005]),
+                ocr_row('3-3', [430, 65, 500, 95]),
+                ocr_row('100', [1430, 65, 1485, 95])]
+        if not anchored:
+            rows = [row for row in rows if row[1] != '商店']
+        rows.extend(ocr_row(text, [880, 212, 1020, 277], confidence) for text, confidence in counts)
+        reader = Perception()
+        reader.engine = Mock(side_effect=[(rows, None), (crop_result, None)])
+        with tempfile.TemporaryDirectory(prefix='cw-population-test-') as temporary:
+            path = Path(temporary) / 'frame.png'
+            Image.new('RGB', (1920, 1080), (150, 150, 150)).save(path)
+            observation = reader.read(path)
+        return observation, reader.engine
+
+    def test_invalid_icon_prefixed_count_uses_existing_digit_crop_without_rewriting_raw(self):
+        observed, engine = self.read_population([('18/8', .99)], [('8/8', .96)])
+        self.assertEqual(observed['fields']['deployed'], '8/8')
+        self.assertEqual(engine.call_count, 2)
+        self.assertEqual(engine.call_args.kwargs, {'use_det': False, 'use_cls': False})
+        self.assertEqual(engine.call_args.args[0].shape[:2], (70, 139))
+        raw = next(row for row in observed['rows'] if row['raw_text'] == '18/8')
+        self.assertEqual((raw['text'], raw['confidence'], raw['normalization_basis']), ('18/8', .99, None))
+        derived = next(row for row in observed['rows']
+                       if row.get('normalization_basis') == 'fixed_native_deployed_count_roi')
+        self.assertEqual((derived['raw_text'], derived['confidence'], derived['box']), ('8/8', .96, DEPLOYED_COUNT_ROI))
+        self.assertFalse(observed['semantic']['team']['checked'])
+
+    def test_valid_count_needs_no_additional_ocr(self):
+        observed, engine = self.read_population([('8/8', .99)], [('8/8', .99)])
+        self.assertEqual(observed['fields']['deployed'], '8/8')
+        self.assertEqual(engine.call_count, 1)
+
+    def test_invalid_low_confidence_or_missing_digit_read_stays_unknown(self):
+        for crop in ([('18/8', .99)], [('i8/8', .99)], [('8/8', .89)], None):
+            with self.subTest(crop=crop):
+                observed, engine = self.read_population([('18/8', .99)], crop)
+                self.assertIsNone(observed['fields']['deployed'])
+                self.assertEqual(engine.call_count, 2)
+
+    def test_population_conflicts_duplicates_and_missing_layout_remain_unknown(self):
+        for counts in ([('18/8', .99), ('7/8', .89)], [('8/8', .99), ('8/8', .99)]):
+            with self.subTest(counts=counts):
+                observed, unused = self.read_population(counts, [('8/8', .99)])
+                self.assertIsNone(observed['fields']['deployed'])
+        observed, engine = self.read_population([('18/8', .99)], [('8/8', .99)], anchored=False)
+        self.assertIsNone(observed['fields']['deployed'])
+        self.assertEqual(engine.call_count, 1)
+
+    def test_only_fixed_crop_may_resolve_an_impossible_original_count(self):
+        invalid = {'text': '18/8', 'raw_text': '18/8', 'confidence': .99, 'box': [880, 212, 1020, 277]}
+        fresh = {'text': '8/8', 'raw_text': '8/8', 'confidence': .99, 'box': list(DEPLOYED_COUNT_ROI),
+                 'normalization_basis': 'fixed_native_deployed_count_roi'}
+        self.assertEqual(native_deployed_count([invalid, fresh]), '8/8')
+        self.assertIsNone(native_deployed_count([invalid, {**fresh, 'normalization_basis': None}]))
+        self.assertIsNone(native_deployed_count([invalid, {**fresh, 'box': [900, 220, 1020, 270]}]))
+        self.assertIsNone(native_deployed_count([{**invalid, 'raw_text': '7/8'}, fresh]))
 
 
 class NativeCapacityTests(unittest.TestCase):

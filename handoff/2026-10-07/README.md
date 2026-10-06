@@ -16,6 +16,10 @@ B-005 继续叠加在 B-004 的 `c58f6a988194b25cef5c22f710f758692f864a3d` 之�
 
 53 条原始计时的独立纯文档分析已发布为 [草稿 PR #4](https://github.com/gkcc/Currency-Wars-Automation/pull/4)，HEAD 为 `b41510c27caa08de7e5d1f57ae7ef9402ee4a336`，与代码修复链分开。可读 [完整分析与 HTML/JSON/CSV 索引](https://github.com/gkcc/Currency-Wars-Automation/blob/b41510c27caa08de7e5d1f57ae7ef9402ee4a336/handoff/2026-10-07/profile/README.md)。287.461 秒 helper 合计与 2817.532157 秒估算窗口之间有 2530.071157 秒未知；未把旧 schema 填成完整节点或父子去重数据。
 
+B-005 已发布为 [草稿 PR #5](https://github.com/gkcc/Currency-Wars-Automation/pull/5)，HEAD `e05ed2cf45d4c1ba5bc7dd8c34b8aa26119e7414`。B-006 人口子项在其上另开 `fix/population-roi-20261007`，见 [B006_POPULATION.md](B006_POPULATION.md) / [B006_VERIFICATION.json](B006_VERIFICATION.json)。非法18/8现在触发既有数值区域重读，原始OCR不变；只有可靠新读数可消解不可能值，冲突仍未知，8/8不会自动批准出战。最终组合6人口+2容量检查通过，仍待本机原图与局后实机验收。
+
+已发布代码链为 PR #1 `beaea343` → PR #2 `ddcb460c` → PR #3 `c58f6a98` → PR #5 `e05ed2cf`，本 B-006 分支继续叠加。各 PR 的 base 是前一代码分支，纯分析 PR #4 的 base 为 main；请按实际完整 HEAD 与父提交验版，不按 PR 编号推断代码依赖。当前活动局尚未合入或安装这些核心变更。
+
 ## 分工和同步约定
 
 - 本机 Codex：实际操作游戏、采集问题证据、按节点验收出战、验证修复后的真实效果，并负责 Git 同步。
