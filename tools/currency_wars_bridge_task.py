@@ -820,7 +820,9 @@ def validate_game(control, binding, api, config, handles, reference):
     hwnd, rect = binding.get('hwnd'), binding.get('rect')
     if (type(hwnd) is not int or not 0 < hwnd < 2**64 or not isinstance(rect, list) or len(rect) != 4
             or any(type(v) is not int or abs(v) > 100000 for v in rect)
-            or rect[2] - rect[0] != 1920 or rect[3] - rect[1] != 1080):
+            # The pinned broker normalizes captures to 1920x1080 and maps
+            # logical input coordinates into the verified physical client.
+            or (rect[2] - rect[0], rect[3] - rect[1]) not in ((1920, 1080), (3840, 2160))):
         reject('binding_invalid')
     process = api.process(pid)
     handles.append(process)

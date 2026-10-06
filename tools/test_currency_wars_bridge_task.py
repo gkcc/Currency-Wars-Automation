@@ -422,7 +422,7 @@ class FilesystemTests(unittest.TestCase):
 
 class StartupTests(unittest.TestCase):
     def exercise(self, owned, *, request_change=None, owner_change=None, api_change=None, serve=False,
-                 stop=False, serve_error=False):
+                 stop=False, serve_error=False, client_rect=None, actual_rect=None):
         config, request = config_value(), request_value()
         if serve:
             request['kind'] = 'serve'
@@ -439,7 +439,8 @@ class StartupTests(unittest.TestCase):
         for name, value in ((bridge.MARKER, marker), ('runner-owner.json', runner), ('owner.json', owner)):
             (run / name).write_text(json.dumps(value), encoding='utf-8')
         (run / 'manual-pause.json').write_text('{"reason":"initial pause"}', encoding='utf-8')
-        binding = {'pid': 999, 'creation_id': 2345678, 'hwnd': 333, 'rect': [0, 0, 1920, 1080]}
+        binding = {'pid': 999, 'creation_id': 2345678, 'hwnd': 333,
+                   'rect': list(client_rect if client_rect is not None else (0, 0, 1920, 1080))}
         (run / 'binding.json').write_text(json.dumps(binding), encoding='utf-8')
         if stop:
             (run / 'broker-stop').touch()
@@ -466,7 +467,8 @@ class StartupTests(unittest.TestCase):
             self.assertIsNone(api.thread)
             if serve_error:
                 raise RuntimeError(request['run_token'])
-        control = SimpleNamespace(PROTOCOL_VERSION=2, win=lambda: (333, 999, (0, 0, 1920, 1080)), serve=fake_serve)
+        observed_rect = tuple(actual_rect if actual_rect is not None else binding['rect'])
+        control = SimpleNamespace(PROTOCOL_VERSION=2, win=lambda: (333, 999, observed_rect), serve=fake_serve)
         with patch.object(bridge, 'validate_run_directory', return_value=run), \
              patch.object(bridge, 'protected_write_denied', return_value=True), \
              patch.object(bridge, 'load_control', return_value=control) as load:
@@ -564,6 +566,29 @@ class StartupTests(unittest.TestCase):
             self.assertNotIn(request['run_token'], result)
             self.assertNotIn(request['run_token'], (run / 'broker-start-error.json').read_text())
             self.assertFalse(json.loads((run / 'bridge-exit.json').read_text())['process_exit_confirmed'])
+
+    def test_4k_game_client_can_start_with_the_same_verified_binding(self):
+        with artifacts.scratch_directory('currency-wars-bridge-4k-test', root=TEST_ROOT) as owned:
+            code, inbox, run, unused, calls, loads, request = self.exercise(
+                owned, serve=True, client_rect=(-3840, 100, 0, 2260))
+            self.assertEqual(code, 0)
+            self.assertEqual(calls, ['fixed serve'])
+            self.assertTrue((run / 'bridge-accepted.json').exists())
+
+    def test_unsupported_or_changed_game_client_never_starts_control(self):
+        cases = [((0, 0, 2560, 1440), None, 'binding_invalid'),
+                 ((0, 0, 3840, 1080), None, 'binding_invalid'),
+                 ((0, 0, 3840, 2160), (0, 0, 1920, 1080), 'game_window_mismatch'),
+                 ((0, 0, 3840, 2160), (10, 0, 3850, 2160), 'game_window_mismatch')]
+        for rect, actual, error in cases:
+            with self.subTest(rect=rect, actual=actual), artifacts.scratch_directory(
+                    'currency-wars-bridge-client-test', root=TEST_ROOT) as owned:
+                code, inbox, run, unused, calls, loads, request = self.exercise(
+                    owned, serve=True, client_rect=rect, actual_rect=actual)
+                self.assertEqual(code, 2)
+                self.assertEqual(calls, [])
+                self.assertFalse((run / 'broker-process.json').exists())
+                self.assertEqual(json.loads((run / 'broker-start-error.json').read_text())['error'], error)
 
     def test_unprotected_directory_and_source_mutation_are_rejected(self):
         with artifacts.scratch_directory('currency-wars-bridge-source-test', root=TEST_ROOT) as owned:

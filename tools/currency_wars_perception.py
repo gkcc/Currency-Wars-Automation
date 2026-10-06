@@ -15,6 +15,8 @@ OBSERVED_TEXT_ALIASES = {
     '进入标准博奔': ('进入标准博弈', 'human-read standard-entry-animation-fresh-5561.png SHA256 6e4a772f8e9518869d60016b37f1a99ba51c42eef5b2e2734572df63e93b5733; exact entry label font error'),
     '标准博奔': ('标准博弈', 'human-read d174-after-return-original.jpg; same exact OCR font error'),
     '超频博奔适用': ('超频博弈适用', 'human-read d007-after-guide-detail.jpg; exact label font error'),
+    '超频博奔': ('超频博弈', 'human-read debug/4k-coaching-current.png 2026-10-06 SSS settlement; exact mode label font error'),
+    '超频博奔|A5紫金3': ('超频博弈|A5紫金3', 'human-read same live SSS settlement; OCR merged mode and tier row'),
     '李生素数': ('孪生素数', 'human-read d061-after-three-strategies.jpg by root; exact title font error')
 }
 
@@ -111,7 +113,7 @@ def _native_node_result_stages(rows):
         if not (minimum <= row['confidence'] <= 1.
                 and 840 <= box[0] < box[2] <= 1080 and 250 <= box[1] < box[3] <= 320):
             continue
-        pattern = r'([1-3]-[1-9])[\u3400-\u9fff]{1,8}'
+        pattern = r'([1-3]-[1-9])(?:战斗|Y?遭遇|奖励)'
         if (row.get('normalization_basis') == 'fixed_native_node_result_stage_roi'
                 and box == NODE_RESULT_STAGE_CROP):
             pattern = r'([1-3]-[1-9])'
@@ -129,11 +131,13 @@ def _native_node_result_stages(rows):
         badge = streaks[0]['box']
         for row in rows:
             box = row['box']
-            match = re.fullmatch(r'([1-3]-[1-9])(?:战斗|Y?遭遇)', clean(row['text']))
-            if (match is not None and .90 <= row['confidence'] <= 1.
-                    and 760 <= box[0] < 840 and box[0] < box[2] <= 955
+            text = clean(row['text'])
+            match = re.fullmatch(r'([1-3]-[1-9])(?:X?战斗|Y?遭遇|奖励)', text)
+            minimum = .85 if re.fullmatch(r'[1-3]-[1-9]X战斗', text) else .90
+            if (match is not None and minimum <= row['confidence'] <= 1.
+                    and 760 <= box[0] < 840 and box[0] < box[2] <= 965
                     and 260 <= box[1] < box[3] <= 315
-                    and 0 <= badge[0] - box[2] <= 20
+                    and -4 <= badge[0] - box[2] <= 20
                     and abs(badge[1] - box[1]) <= 8 and abs(badge[3] - box[3]) <= 8):
                 stages.append(match.group(1))
     # A retained real crop and one agreeing X header describe the same field.
@@ -147,6 +151,23 @@ def _native_node_result_stage(rows):
     """Six unique high-confidence native anchors; a node result is not a match result."""
     stages = _native_node_result_stages(rows)
     return stages[0] if _native_node_result_labels(rows) and len(stages) == 1 else None
+
+
+def _native_boss_result_stage(rows):
+    """Retained final-boss progress page, before the real match settlement."""
+    for pattern, bounds in (
+            ('挑战成功', (800, 180, 1110, 280)),
+            (r'3-7首领', (760, 250, 970, 320)),
+            (r'[√✓]?剩余[1-9][0-9]?轮击败首领', (780, 320, 1045, 375)),
+            ('挑战进度', (860, 360, 1070, 415)),
+            ('前往结算', (860, 850, 1100, 935))):
+        matches = [row for row in rows if .90 <= row['confidence'] <= 1.
+                   and re.fullmatch(pattern, clean(row['text']))
+                   and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
+                   and bounds[1] <= row['box'][1] < row['box'][3] <= bounds[3]]
+        if len(matches) != 1:
+            return None
+    return '3-7'
 
 
 def _native_battle_stage(rows):
@@ -191,6 +212,8 @@ def classify(rows):
         return "settlement"
     if _native_node_result_stage(rows):
         return "node_result"
+    if _native_boss_result_stage(rows):
+        return 'boss_result'
     if "朝露公馆" in joined and "货币战争" in joined:
         return "world_entry"
     if sum(name in joined for name in ("创业指南", "优势布局", "羁绊链路", "预期收益")) >= 3:
@@ -280,7 +303,7 @@ def option_facts(rows, page):
                 tags = rows_in(rows, [box[0]+28, 420, box[2]-20, 546])
                 gear = rows_in(rows, [box[0]+90, 645, box[2]-20, 750])
                 effects = trial + tags + gear
-                if (not tags or len(gear) != 1 or len(trial) > 1
+                if (title[0]['confidence'] < .90 or not tags or len(gear) != 1 or len(trial) > 1
                         or any(clean(row['text']) != '试用' for row in trial)
                         or any(not .90 <= row['confidence'] <= 1. for row in effects)
                         or any(not (box[0] <= row['box'][0] < row['box'][2] <= box[2]
@@ -323,6 +346,33 @@ def option_facts(rows, page):
         cards.append({'card_index': index+1, 'bounds': list(box), 'title': titles[0]['text'],
                       'effect_lines': [r['text'] for r in effects]})
     return cards
+
+
+def supply_read_details(rows, page, options):
+    """Keep per-card evidence when one uncertain field blocks the whole choice."""
+    if page != 'supply':
+        return None
+    header = [row for row in rows if row.get('confidence', 0) >= .90
+        and clean(row.get('text', '')) == '补给阶段'
+        and 800 <= row['box'][0] < row['box'][2] <= 1120
+        and 120 <= row['box'][1] < row['box'][3] <= 190]
+    titles = [rows_in(rows, [box[0]+28, 540, box[2]-28, 600]) for box in SUPPLY_FIVE_CARD_LAYOUT]
+    if len(header) != 1 or not all(len(found) == 1 for found in titles):
+        return None
+    cards = []
+    for index, (box, title) in enumerate(zip(SUPPLY_FIVE_CARD_LAYOUT, titles), 1):
+        evidence = [row for row in rows if box[0] <= row['box'][0] < row['box'][2] <= box[2]
+            and box[1] <= row['box'][1] < row['box'][3] <= box[3]]
+        verified = next((item for item in options if item['card_index'] == index), None)
+        cards.append({'card_index': index, 'bounds': list(box),
+            'title': title[0]['text'] if title[0]['confidence'] >= .90 else None,
+            'candidate_title': title[0]['text'], 'verified_option': verified,
+            'evidence_rows': evidence,
+            'low_confidence_rows': [row for row in evidence if row.get('confidence', 0) < .90]})
+    return {'origin': 'native_five_card_read', 'complete': len(options) == 5,
+        'cards': cards, 'input_allowed': len(options) == 5,
+        'retry_regions': [card['bounds'] for card in cards if card['low_confidence_rows']],
+        'rule': '定向补读未知字段；完整卡片和确认按钮未核齐时不选择'}
 
 
 def selected_summary(rows, image):
@@ -419,6 +469,10 @@ def guide_targets(body_lines):
 def semantic_facts(rows, image, page, engine=None, snapshot_id=None):
     """Factual fields are produced locally, never from a strategy assertion."""
     facts = {'options': option_facts(rows, page)}
+    if page == 'settlement':
+        settlement = settlement_facts(rows, image, engine, snapshot_id)
+        if settlement is not None:
+            facts['settlement'] = settlement
     if page == 'guide' and find_text(rows, '攻略详情', [35, 25, 300, 105]):
         title_rows = rows_in(rows, [40, 109, 780, 155])
         body = rows_in(rows, [50, 810, 1870, 942])
@@ -498,6 +552,81 @@ def semantic_facts(rows, image, page, engine=None, snapshot_id=None):
     return facts
 
 
+def settlement_facts(rows, image, engine=None, snapshot_id=None):
+    """Complete native first settlement page, including real grade and rewards.
+
+    The gold SSS font needs its pale fill separated from the animated gold
+    background. This is OCR of a fixed complete grade crop, not a low-score
+    alias or a conclusion from a boss result. Other layouts remain unknown.
+    """
+    if image.size != (1920, 1080):
+        return None
+    evidence = {}
+    specs = {
+        'outcome': (r'对局(?:胜利|失败|结束)', (440, 160, 620, 235)),
+        'hp': (r'小队生命值(100|[1-9]?[0-9])', (1360, 160, 1630, 235)),
+        'tier': (r'A[1-9][^|]{1,12}', (520, 445, 705, 520)),
+        'promotion_level': (r'晋升等级([0-9]{1,3})', (290, 580, 460, 650)),
+        'material_reward': (r'[0-9]{1,6}', (670, 650, 745, 708)),
+        'promotion_points': (r'[0-9]{1,7}', (655, 708, 745, 775)),
+    }
+    values = {}
+    for key, (pattern, bounds) in specs.items():
+        found = [row for row in rows if .90 <= row.get('confidence', 0) <= 1.
+                 and re.fullmatch(pattern, clean(row['text']))
+                 and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
+                 and bounds[1] <= row['box'][1] < row['box'][3] <= bounds[3]]
+        if len(found) != 1:
+            return None
+        row = found[0]
+        match = re.fullmatch(pattern, clean(row['text']))
+        values[key] = int(match.group(1) if match.lastindex else row['text']) if key not in ('outcome', 'tier') else clean(row['text'])
+        evidence[key] = dict(bounds=row['box'], confidence=row['confidence'], method='native_row_ocr')
+    for label, bounds in (('奖励信息', (330, 515, 475, 575)),
+                          ('获取材料', (290, 650, 450, 710)),
+                          ('晋升点', (290, 708, 440, 775)),
+                          ('我的阵容', (760, 365, 910, 425)),
+                          ('下一页', (890, 865, 1030, 930))):
+        found = [row for row in rows if .90 <= row.get('confidence', 0) <= 1.
+                 and clean(row['text']) == label
+                 and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
+                 and bounds[1] <= row['box'][1] < row['box'][3] <= bounds[3]]
+        if len(found) != 1:
+            return None
+        evidence[label] = dict(bounds=found[0]['box'], confidence=found[0]['confidence'], method='native_row_ocr')
+    mode_bounds = [397, 450, 549, 515]
+    grade_bounds = [375, 280, 667, 410]
+    if engine is None:
+        return None
+    try:
+        raw, unused = engine(np.array(image.crop(mode_bounds)), use_cls=False)
+        modes = []
+        for unused_box, text, confidence in raw or []:
+            alias = OBSERVED_TEXT_ALIASES.get(str(text))
+            value = clean(alias[0] if alias else text)
+            if value in ('标准博弈', '超频博弈') and .90 <= float(confidence) <= 1.:
+                modes.append((value, float(confidence)))
+        if len(modes) != 1:
+            return None
+        import cv2
+        hsv = cv2.cvtColor(np.array(image.crop(grade_bounds)), cv2.COLOR_RGB2HSV)
+        mask = ((hsv[:, :, 1] < 160) & (hsv[:, :, 2] > 215)).astype(np.uint8) * 255
+        crop = cv2.copyMakeBorder(255-mask, 15, 15, 15, 15, cv2.BORDER_CONSTANT, value=255)
+        grade, unused = engine(cv2.cvtColor(crop, cv2.COLOR_GRAY2RGB), use_det=False, use_cls=False)
+        if grade is None or len(grade) != 1:
+            return None
+        rating, confidence = grade[0][-2:]
+        if str(rating).strip() != 'SSS' or not .90 <= float(confidence) <= 1.:
+            return None
+        values.update(mode=modes[0][0], rating='SSS', snapshot_id=snapshot_id)
+        evidence['mode'] = dict(bounds=mode_bounds, confidence=round(modes[0][1], 4), method='fixed_native_mode_ocr')
+        evidence['rating'] = dict(bounds=grade_bounds, confidence=round(float(confidence), 4), method='fixed_native_sss_fill_ocr')
+        values['evidence'] = evidence
+        return values
+    except Exception:
+        return None  # An unread grade/mode never relaxes the screen-change gate.
+
+
 def fingerprint(image):
     # Screen-change check, not a scene classifier. It is never sufficient alone.
     array = np.array(image.convert("L").resize((65, 36)))
@@ -511,10 +640,25 @@ def hash_distance(a, b):
     return sum((x ^ y).bit_count() for x, y in zip(left, right)) / (len(left) * 8)
 
 
+def native_deployed_count(rows):
+    """Unique, confident count from the native central roster HUD only."""
+    counts = [re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(row.get('raw_text', row.get('text', ''))))
+        for row in rows if .90 <= row.get('confidence', 0) <= 1.
+        and isinstance(row.get('box'), list) and len(row['box']) == 4
+        and 820 <= row['box'][0] < row['box'][2] <= 1050
+        and 190 <= row['box'][1] < row['box'][3] <= 300]
+    counts = [match.group(1) for match in counts if match]
+    if len(counts) != 1:
+        return None
+    occupied, capacity = map(int, counts[0].split('/'))
+    return counts[0] if 0 <= occupied <= capacity <= 10 and capacity >= 1 else None
+
+
 class Perception:
     def __init__(self):
         self.engine = None
         self.shop_reader = None
+        self.state_reader = None
         self.cache = None
 
     def read(self, path, force=False):
@@ -541,6 +685,24 @@ class Perception:
                          "confidence": round(float(confidence), 4),
                          "box": [round(min(xs)), round(min(ys)), round(max(xs)), round(max(ys))]})
         page = classify(rows)
+        if page == 'supply':
+            # The retained native controller decoration is read as "）".
+            # Normalize only this fixed button, with the full five-card page
+            # anchored; raw OCR and provenance remain available.
+            header = [row for row in rows if clean(row['text']) == '补给阶段'
+                      and .90 <= row['confidence'] <= 1.
+                      and 800 <= row['box'][0] < row['box'][2] <= 1120
+                      and 120 <= row['box'][1] < row['box'][3] <= 190]
+            titles = [rows_in(rows, [box[0]+28, 540, box[2]-28, 600])
+                      for box in SUPPLY_FIVE_CARD_LAYOUT]
+            if len(header) == 1 and all(len(found) == 1 and found[0]['confidence'] >= .90 for found in titles):
+                buttons = [row for row in rows if clean(row['raw_text']) in ('）确认', ')确认')
+                           and .90 <= row['confidence'] <= 1.
+                           and 1580 <= row['box'][0] < row['box'][2] <= 1810
+                           and 950 <= row['box'][1] < row['box'][3] <= 1025]
+                if len(buttons) == 1 and not find_text(rows, '确认', [1580, 950, 1810, 1025]):
+                    buttons[0]['text'] = '确认'
+                    buttons[0]['normalization_basis'] = 'fixed_native_supply_confirm_decoration'
         if page == "unknown":
             # Only the observed native second-plane transition's left digit.
             native_plane = all(len([row for row in rows
@@ -675,14 +837,44 @@ class Perception:
                                          "box": hp_bounds})
                 except Exception:
                     pass  # Missing or conflicting HP remains unread; no guessed value.
+        elif page in ('shop', 'investment_summary'):
+            fields['deployed'] = native_deployed_count(rows)
         elif page == "node_result":
             fields["stage"] = _native_node_result_stage(rows)
             fields["deployed"] = None
+        elif page == 'boss_result':
+            fields['stage'] = _native_boss_result_stage(rows)
+            fields['deployed'] = None
         elif page == "battle":
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
+        semantic = semantic_facts(rows, image, page, engine=self.engine, snapshot_id=digest)
+        option_read = supply_read_details(rows, page, semantic.get('options', []))
+        if option_read:
+            semantic['option_read'] = {**option_read, 'snapshot_id': digest}
+        state_read = None
+        if page in ('preparation', 'shop', 'investment_summary'):
+            from currency_wars_state_reader import StateReader
+            if self.state_reader is None:
+                self.state_reader = StateReader()
+            state_read = self.state_reader.read(path, rows=rows, page=page)
+            team = state_read['team']
+            population = re.fullmatch(r'([0-9]{1,2})/([0-9]{1,2})', native_deployed_count(rows) or '')
+            board = [unit for unit in team['units'] if unit['location'] == 'board']
+            # Complete card identity and star evidence plus the independent
+            # central HUD are required; partial geometry stays unchecked.
+            checked = bool(team['fully_read'] and population
+                and 0 <= int(population[1]) == len(board) <= int(population[2]) <= 10
+                and all(unit.get('position') in ('前台', '后台', '前后台') for unit in board))
+            semantic['team'] = {**team, 'checked': checked,
+                'count_reconciliation': {'hud': fields.get('deployed'), 'observed_board': len(board)}}
+            inventory = state_read['inventory']
+            semantic['inventory'] = {**inventory, 'items': [{**item,
+                'verified': bool(item.get('name') and item.get('confidence', 0) >= .90
+                    and item.get('evidence', {}).get('identity_margin', 0) >= .10)}
+                for item in inventory['items']]}
         result = {"snapshot_id": digest, "page": page, "rows": rows, "fields": fields,
                   "fingerprint": fingerprint(image), "shop": shop,
-                  "semantic": semantic_facts(rows, image, page, engine=self.engine, snapshot_id=digest),
+                  "semantic": semantic, "state_read": state_read,
                   "image": str(path), "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
         self.cache = digest, result
         return result

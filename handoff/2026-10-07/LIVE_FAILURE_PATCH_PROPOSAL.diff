@@ -1,0 +1,21 @@
+--- a/tools/currency_wars_perception.py
++++ b/tools/currency_wars_perception.py
+@@ -783,7 +783,7 @@
+                 if native_layout:
+                     # One complete native count crop, excluding the blue icon.
+                     # Keep original rows and reject conflicting central counts.
+-                    count_bounds = [890, 210, 1029, 280]
++                    count_bounds = [888, 210, 1030, 280]
+                     try:
+                         result, unused = self.engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
+                         if result is not None and len(result) == 1:
+@@ -792,7 +792,8 @@
+                             count = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})", raw)
+                             previous = [re.fullmatch(deployed_pattern, clean(row["raw_text"]))
+                                         for row in rows
+-                                        if 820 <= row["box"][0] < row["box"][2] <= 1050
++                                        if .90 <= row["confidence"] <= 1.
++                                        and 820 <= row["box"][0] < row["box"][2] <= 1050
+                                         and 190 <= row["box"][1] < row["box"][3] <= 300]
+                             if (count and .90 <= confidence <= 1.
+                                     and 0 <= int(count[1]) <= int(count[2]) <= 12 and int(count[2]) >= 1

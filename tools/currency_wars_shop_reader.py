@@ -95,6 +95,41 @@ def _unknown_slots(reason: str) -> list[dict]:
                  evidence={}, reasons=[reason]) for i in range(5)]
 
 
+def stable_purchase_slot(original: dict, actual: dict, slot_id: int,
+                         original_snapshot: str, actual_snapshot: str) -> dict | None:
+    """Same fully read native slot, including an unambiguous real badge.
+
+    This is an animation eligibility helper, not purchase authorization.
+    Missing recommendation resources remain unknown and cannot qualify.
+    """
+    slots = [purchase_slot(obs, slot_id, digest) for obs, digest in
+             ((original, original_snapshot), (actual, actual_snapshot))]
+    if any(slot is None for slot in slots):
+        return None
+    for key in ('slot', 'name', 'cost', 'bounds', 'position', 'recommended'):
+        if slots[0].get(key) != slots[1].get(key):
+            return None
+    if type(slots[0].get('recommended')) is not bool:
+        return None
+    for slot in slots:
+        badge = slot.get('evidence', {}).get('recommended', {})
+        if (badge.get('method') != 'yellow_gift_badge_template'
+                or type(badge.get('match_score')) not in (int, float)
+                or type(badge.get('yellow_fraction')) not in (int, float)):
+            return None
+        if slot['recommended']:
+            minimum = .90 if badge.get('match_region') == 'bounded_book_star_interior' else .72
+            if not minimum <= badge['match_score'] <= 1. or not .06 <= badge['yellow_fraction'] <= 1.:
+                return None
+        elif not (0 <= badge['match_score'] < .50 and 0 <= badge['yellow_fraction'] < .04
+                  and type(badge.get('whiteout_fraction')) in (int, float)
+                  and 0 <= badge['whiteout_fraction'] < .65
+                  and type(badge.get('blackout_fraction')) in (int, float)
+                  and 0 <= badge['blackout_fraction'] < .90):
+            return None
+    return slots[1]
+
+
 class ShopReader:
     """One reusable OCR instance; read() only reads its explicit image path."""
 
@@ -306,9 +341,21 @@ class ShopReader:
         if template is None:
             return None, dict(method="yellow_gift_badge_template", bounds=[x + 3, y + 3, 79, 77],
                               verified=False, reason="recommend_badge_template_missing")
+        # This crop is calibrated to the locally observed 47 x 51 badge.
+        # Other resource geometry needs calibration, not an inferred resize.
+        if template.shape != (51, 47):
+            return None, dict(method="yellow_gift_badge_template", verified=False,
+                              reason="recommend_badge_template_geometry_unsupported")
         patch = rgb[y + 3:y + 80, x + 3:x + 82]
         gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
-        score, point = self._match(gray, template)
+        whole_score, whole_point = self._match(gray, template)
+        # The original crop includes portrait pixels outside the gold circle.
+        # Match the book/star strokes inside the circle instead, in the narrow
+        # observed top-left position band (including card-outline jitter).
+        score, point = self._match(gray[10:48, 10:47], template[12:39, 10:36])
+        score = max(0., score)
+        if point is not None:
+            point = [point[0] + 10, point[1] + 10]
         whiteout = float(np.mean(np.all(patch > 240, axis=2)))
         blackout = float(np.mean(np.max(patch, axis=2) < 60))
         hsv = cv2.cvtColor(patch, cv2.COLOR_RGB2HSV)
@@ -316,8 +363,11 @@ class ShopReader:
                                & (hsv[:, :, 1] > 130) & (hsv[:, :, 2] > 130)))
         evidence = dict(method="yellow_gift_badge_template", bounds=[x + 3, y + 3, 79, 77],
                         match_score=round(score, 4), yellow_fraction=round(yellow, 4),
-                        whiteout_fraction=round(whiteout, 4), blackout_fraction=round(blackout, 4), match_offset=point)
-        if score >= .72 and yellow >= .06:
+                        whiteout_fraction=round(whiteout, 4), blackout_fraction=round(blackout, 4), match_offset=point,
+                        match_region="bounded_book_star_interior", whole_template_score=round(whole_score, 4),
+                        whole_template_offset=whole_point, search_bounds=[x + 13, y + 13, 37, 38],
+                        template_interior_bounds=[10, 12, 26, 27])
+        if score >= .90 and yellow >= .06:
             return True, evidence
         if score < .50 and yellow < .04 and whiteout < .65 and blackout < .90:
             return False, evidence

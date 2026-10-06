@@ -23,6 +23,11 @@ import currency_wars_input_bridge as input_bridge
 from currency_wars_source_guard import activity
 from currency_wars_perception import Perception, clean, find_text, hash_distance, GOLD_HUD
 from currency_wars_shop_reader import purchase_slot
+import currency_wars_coaching as coaching
+from currency_wars_progression import progression_plan
+from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target,
+    stable_preparation_icon_target, PREPARATION_GUIDE_CONTROL,
+    PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT)
 
 artifacts = entry.artifacts
 PROJECT = Path(__file__).resolve().parent.parent
@@ -284,9 +289,8 @@ def preparation_decision(observed, facts):
             candidates.append({'priority': rank, 'basis': reason, 'action': {'type': 'buy_shop',
                 'slot': slot_id, 'name': name, 'cost': slot['cost'], 'expected_page': 'shop', 'reason': reason}})
     candidates.sort(key=lambda value: (value['priority'], value['action']['cost'], value['action']['slot']))
-    phase = semantic.get('strategy_phase')
-    if phase not in ('early', 'transition', 'core'):
-        phase = None  # Plane number alone does not establish the guide's operating phase.
+    phase_evidence = coaching.guide_phase(guide, observed, facts.get('guide_proof'))
+    phase = phase_evidence['phase']
     economic_actions = []
     xp = semantic.get('xp', {})
     full_population = bool(count and 1 <= int(count[1]) == int(count[2]) <= 12)
@@ -312,7 +316,8 @@ def preparation_decision(observed, facts):
             'needs_user_guidance': missing, 'inspection_actions': actions,
             'purchase_candidates': candidates, 'economic_actions': economic_actions,
             'recommended_actions': actions[:1] or [value['action'] for value in candidates[:1]] or economic_actions[:1],
-            'operating_rules': rules, 'reroll_allowed': phase is not None and phase not in rules.get('no_reroll_phases', []),
+            'operating_rules': rules, 'strategy_phase': phase_evidence,
+            'reroll_allowed': phase_evidence['reroll_allowed'] and phase not in rules.get('no_reroll_phases', []),
             'economy_policy': '对子/上场/小羁绊/早期经济成长优先于长线囤钱；未知经验费用或刷新收益时不盲花',
             'unknown_fields': ['未实读的星级、装备兼容性、羁绊贡献、经验费用与刷新收益不推造']}
 
@@ -475,6 +480,188 @@ def manual_state(run):
     return max(pending, key=lambda value: (value.get('priority_ns', 0), value['manual_id'])) if pending else None
 
 
+def await_existing_receipt(run, control, rid, timeout=5):
+    """Reconcile one already published ID. Never submit, publish or resend."""
+    target = run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    end = time.monotonic() + min(5, max(0, timeout))
+    while True:
+        receipt = optional(target)
+        if (not receipt or receipt.get('id') != rid or not isinstance(receipt.get('request'), dict)
+                or receipt['request'].get('id') != rid
+                or receipt['request'].get('chat_id') != control.OWNER['chat_id']
+                or receipt['request'].get('run_token') != control.OWNER['run_token']):
+            raise ValueError('既有回执身份不符；不重发输入')
+        result = receipt.get('result')
+        if result is None:
+            # A takeover can finish before Entry's submitting caller folds the
+            # exact broker result into its ledger. Only this ID can reconcile.
+            candidate = optional(run / 'result.json')
+            if candidate and candidate.get('id') == rid:
+                result = candidate
+        if result is not None:
+            if not isinstance(result, dict) or result.get('id') != rid:
+                raise ValueError('结果身份不符；不重发输入')
+            return {**receipt, 'result': result}
+        if time.monotonic() >= end:
+            raise TimeoutError('既有请求结果仍PENDING/UNKNOWN；不重发输入')
+        time.sleep(.05)
+
+
+def _drain_manual_receipts(run, control):
+    pending = []
+    for index, path in enumerate((run / 'request-ledger').glob('*.json')):
+        if index >= 4096:
+            raise ValueError('回执数量超出有界容量')
+        receipt = entry.read_json(path)
+        if receipt.get('result') is None:
+            pending.append(receipt['id'])
+    end = time.monotonic() + 5
+    reconciled = [await_existing_receipt(run, control, rid, end - time.monotonic()) for rid in pending]
+    # The original submitting caller may still hold its Entry lock while
+    # folding that exact outcome. Await its release rather than racing a new
+    # request into it or retrying any old game input.
+    while pending and (run / 'client-submit.lock').exists():
+        if time.monotonic() >= end:
+            raise TimeoutError('确切既有结果已知，但原提交尚未结束；保持手动，不重发')
+        for rid in pending:
+            await_existing_receipt(run, control, rid, 0)
+        time.sleep(.05)
+    return reconciled
+
+
+def _manual_binding(run, owner, control, manual_id):
+    manual = manual_state(run)
+    state = entry.read_json(run / 'runner-state.json')
+    if (not manual or manual.get('manual_id') != manual_id
+            or state.get('run_id') != owner['run_id'] or state.get('chat_id') != owner['chat_id']
+            or (run / 'runner-stop').exists() or (run / 'broker-stop').exists()):
+        raise ValueError('当前接管/所属run已改变；人工结果保持未知')
+    stage = canonical_stage(state.get('preparation_stage'))
+    if not stage or not state.get('match_id'):
+        raise ValueError('没有当前局/节点绑定；人工结果保持未知')
+    records = Path(state['journal_file']).parent
+    if (records.resolve().parent != (PROJECT / 'debug').resolve()
+            or entry.read_json(records / 'owner.json').get('run_id') != owner['run_id']):
+        raise ValueError('人工结果持久证据目录不属于当前run')
+    return {'run_id': owner['run_id'], 'match_id': state['match_id'], 'stage': stage,
+            'manual_id': manual_id, 'old_epoch': (optional(run / 'runner-resume-epoch.json') or {}).get('id')}, records
+
+
+def _manual_capture(run, owner, control, binding, records, label, reader):
+    rid = uuid.uuid4().hex
+    # Existing broker observe is read-only, including while paused. This API
+    # never focuses, resumes or performs a desktop input.
+    result = entry.request(control, 'actions', ['observe'], rid, False)
+    if not result.get('ok') or not result.get('observation'):
+        raise ValueError('人工结果缺少同请求的新观察')
+    target = records / (label + '-' + rid + '.png')
+    with control.submission_lock():
+        if (optional(run / 'result.json') or {}).get('id') != rid:
+            raise ValueError('人工观察已被另一请求替换；保持未知')
+        data = (run / 'game-preview.png').read_bytes()
+        watermark = [entry.read_json(path)['id'] for path in (run / 'request-ledger').glob('*.json')]
+        if len(watermark) > 4096:
+            raise ValueError('人工观察回执数量超出有界容量')
+    with target.open('xb') as stream:
+        stream.write(data)
+    observed = reader.read(target)
+    digest = hashlib.sha256(data).hexdigest()
+    if observed.get('snapshot_id') != digest:
+        raise ValueError('人工观察原帧身份不符')
+    stage = canonical_stage(observed.get('fields', {}).get('stage'))
+    if stage and stage != binding['stage']:
+        raise ValueError('人工操作已改变节点；旧节点完成项不继承')
+    current, _ = _manual_binding(run, owner, control, binding['manual_id'])
+    if current != binding:
+        raise ValueError('观察期间发生新接管/新局；结果保持未知')
+    return {'receipt_id': rid, 'observed_at': now(), 'snapshot_id': digest,
+            'evidence_file': str(target), 'observation': observed, 'receipt_watermark': watermark}
+
+
+def begin_manual_phase(run, owner, control, manual_id, phase, *, reader=None):
+    """Checkpoint before root's bounded inputs through the SAME broker."""
+    with file_lock(run, 'manual-checkpoint.lock', timeout=5):
+        return _begin_manual_phase(run, owner, control, manual_id, phase, reader=reader)
+
+
+def _begin_manual_phase(run, owner, control, manual_id, phase, *, reader=None):
+    if phase not in coaching.PHASES:
+        raise ValueError('未知人工准备阶段')
+    binding, records = _manual_binding(run, owner, control, manual_id)
+    directory = run / 'manual-results'
+    directory.mkdir(exist_ok=True)
+    existing = [entry.read_json(path) for path in directory.glob('*.json')]
+    completed = {item['phase'] for item in existing if item.get('binding') == binding and item.get('status') == 'completed'}
+    expected = next((key for key in coaching.PHASES if key not in completed), None)
+    if phase != expected or any(item.get('binding') == binding and item.get('status') == 'pending' for item in existing):
+        raise ValueError('人工阶段须按准备顺序且只有一个在途checkpoint')
+    reconciled = _drain_manual_receipts(run, control)
+    checkpoint_id = uuid.uuid4().hex
+    before = _manual_capture(run, owner, control, binding, records, 'manual-' + checkpoint_id + '-before', reader or Perception())
+    item = {'schema': 'manual-preparation-result/v1', 'checkpoint_id': checkpoint_id, 'binding': binding,
+            'phase': phase, 'status': 'pending', 'before': before, 'reconciled_receipts': redact(reconciled),
+            'prior_receipt_ids': before['receipt_watermark']}
+    current, _ = _manual_binding(run, owner, control, manual_id)
+    if current != binding:
+        raise ValueError('人工checkpoint发布前交接身份已变')
+    control.write_json(directory / (checkpoint_id + '.json'), item)
+    control.write_json(records / ('manual-' + checkpoint_id + '.json'), redact(item))
+    return item
+
+
+def finish_manual_phase(run, owner, control, checkpoint_id, input_receipt_ids, review, *, reader=None):
+    """Store known outcomes + actual before/after PNG; no game input/resume."""
+    with file_lock(run, 'manual-checkpoint.lock', timeout=5):
+        return _finish_manual_phase(run, owner, control, checkpoint_id, input_receipt_ids, review, reader=reader)
+
+
+def _finish_manual_phase(run, owner, control, checkpoint_id, input_receipt_ids, review, *, reader=None):
+    if not isinstance(checkpoint_id, str) or not re.fullmatch(r'[0-9a-f]{32}', checkpoint_id):
+        raise ValueError('人工checkpoint身份无效')
+    path = run / 'manual-results' / (checkpoint_id + '.json')
+    item = entry.read_json(path)
+    binding, records = _manual_binding(run, owner, control, item['binding']['manual_id'])
+    if item['binding'] != binding or item.get('status') != 'pending':
+        raise ValueError('人工checkpoint已失效/已消费')
+    if (not isinstance(input_receipt_ids, list) or len(input_receipt_ids) > 64
+            or any(not isinstance(rid, str) for rid in input_receipt_ids)
+            or len(set(input_receipt_ids)) != len(input_receipt_ids)
+            or any(rid in item['prior_receipt_ids'] for rid in input_receipt_ids)):
+        raise ValueError('人工输入须为checkpoint之后的唯一真实回执')
+    if (not isinstance(review, dict) or review.get('phase') != item['phase']
+            or review.get('stage') != binding['stage'] or review.get('completed') is not True
+            or review.get('reviewer') != 'supervising_agent'
+            or not isinstance(review.get('findings'), str) or not review['findings'].strip()):
+        raise ValueError('人工结果须监督助手逐阶段实际复核')
+    receipts = []
+    end = time.monotonic() + 5
+    for rid in input_receipt_ids:
+        receipt = await_existing_receipt(run, control, rid, end - time.monotonic())
+        result, request = receipt['result'], receipt['request']
+        if (request.get('kind') != 'actions' or result.get('ok') is not True
+                or result.get('completed') != request.get('actions') or not result.get('observation')):
+            raise ValueError('人工输入回执缺失/部分完成/失败；保持PENDING，不重发')
+        receipts.append(receipt)
+    # An omitted concurrent request is also unknown. Capturing a later frame
+    # cannot silently certify that omitted request's outcome.
+    _drain_manual_receipts(run, control)
+    actual_ids = {entry.read_json(p)['id'] for p in (run / 'request-ledger').glob('*.json')}
+    if actual_ids - set(item['prior_receipt_ids']) != set(input_receipt_ids):
+        raise ValueError('checkpoint之后有未列出的回执；人工结果保持PENDING')
+    after = _manual_capture(run, owner, control, binding, records, 'manual-' + checkpoint_id + '-after', reader or Perception())
+    current = entry.read_json(path)
+    latest_binding, _ = _manual_binding(run, owner, control, binding['manual_id'])
+    if current != item or current.get('status') != 'pending' or latest_binding != binding:
+        raise ValueError('人工结果提交前checkpoint状态/交接身份已变；未覆盖')
+    if set(after['receipt_watermark']) - set(item['prior_receipt_ids']) != set(input_receipt_ids) | {after['receipt_id']}:
+        raise ValueError('人工后帧之前有未列出的回执；保持PENDING')
+    item.update(status='completed', after=after, review=review, input_receipts=redact(receipts),
+                outcome='verified_change' if item['before']['snapshot_id'] != after['snapshot_id'] else 'verified_no_change')
+    control.write_json(path, item)
+    control.write_json(records / ('manual-' + checkpoint_id + '.json'), redact(item))
+    return item
+
+
 def resume_guard_snapshot(run, owner, control, *, status=None, pending=None):
     status = control.status() if status is None else status
     pending = pending_manual_intents(run) if pending is None else pending
@@ -598,7 +785,7 @@ def explicit_resume(run, owner, control, rid, expected_manual_id=None, expected_
             # All old strategy replies become invalid across explicit handoff.
             old = optional(run / 'runner-resume-epoch.json') or {}
             consumed_ids = sorted(set(old.get('consumed_manual_ids', [])) | captured_ids)
-            control.write_json(run / 'runner-resume-epoch.json', {'id': rid, 'time': now(),
+            control.write_json(run / 'runner-resume-epoch.json', {'id': rid, 'time': now(), 'previous_epoch': old.get('id'),
                 'consumed_manual_id': epoch,
                 'consumed_manual_ids': consumed_ids})
         return {**result, 'guard_matched': True, 'resume_epoch': rid, 'consumed_manual_ids': consumed_ids}
@@ -704,14 +891,14 @@ def validate_plan(reply, request, epoch):
     actions = reply.get('actions')
     if not isinstance(actions, list) or not 1 <= len(actions) <= 8:
         raise ValueError('计划须含1–8个有限语义动作')
-    allowed = {'click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll',
+    allowed = {'click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'finish_preparation_review',
                'finish_inspection', 'confirm_match_result'}
     for action in actions:
         if not isinstance(action, dict) or action.get('type') not in allowed:
             raise ValueError('未知语义动作')
         if not isinstance(action.get('reason'), str) or not 1 <= len(action['reason']) <= 1000:
             raise ValueError('每个动作须有具体中文理由')
-        if action['type'] not in ('finish_inspection', 'confirm_match_result') and not action.get('expected_page'):
+        if action['type'] not in ('finish_inspection', 'confirm_match_result', 'finish_preparation_review') and not action.get('expected_page'):
             raise ValueError('游戏输入须指定实际页面前置条件')
         if action['type'] in ('click_point', 'drag', 'scroll', 'key'):
             if not isinstance(action.get('guard_texts'), list) or not action['guard_texts']:
@@ -724,6 +911,13 @@ def validate_plan(reply, request, epoch):
             if (not isinstance(box, list) or len(box) != 4 or any(type(x) is not int for x in box)
                     or not 0 <= box[0] < box[2] <= 1920 or not 0 <= box[1] < box[3] <= 1080):
                 raise ValueError('目标ROI边界无效')
+            if proof.get('control_id') == PREPARATION_GUIDE_CONTROL and (
+                    action['type'] != 'click_point' or len(actions) != 1
+                    or request.get('kind') != 'preparation_strategy'
+                    or action.get('expected_page') != 'preparation'
+                    or box != PREPARATION_GUIDE_BOUNDS or action.get('args') != PREPARATION_GUIDE_POINT
+                    or any(type(value) is not int for value in action.get('args', []))):
+                raise ValueError('创业指南图标仅允许固定导航单动作；提交前仍须双帧视觉验证')
         if action['type'] == 'finish_inspection' and action.get('panel') not in dict(PANELS):
             raise ValueError('仅可核实当前领奖/优势面板')
         if action['type'] == 'confirm_match_result' and (request['kind'] != 'settlement_verify'
@@ -731,6 +925,13 @@ def validate_plan(reply, request, epoch):
             raise ValueError('仅真实整局结算请求可确认match结果')
         if action['type'] == 'buy_xp' and (type(action.get('count')) is not int or not 1 <= action['count'] <= 5):
             raise ValueError('单计划经验次数须1–5')
+    if any(coaching.inventory_mutation(action) for action in actions) and len(actions) != 1:
+        raise ValueError('库存改变须独立单动作；重新定位后再操作下一件，禁止沿用旧坐标')
+    if (len(actions) != 1 and any(action['type'] == 'click_point'
+            and action.get('expected_page') in ('preparation', 'shop', 'unit_gear') for action in actions)):
+        raise ValueError('备战库存区域坐标动作须单次回读，不在同批沿用可能重排的坐标')
+    if any(action['type'] == 'buy_xp' and action['count'] != 1 for action in actions):
+        raise ValueError('经验购买须一次一笔，回读新资源后重新决策')
     if sum(action.get('count', 1) if action['type'] == 'buy_xp' else 1 for action in actions) > 16:
         raise ValueError('单战略计划底层操作预算超过16')
     return reply
@@ -1806,6 +2007,53 @@ def stable_supply_card_animation(action, request, actual, current_png, diagnosti
                         winerror=getattr(exc, 'winerror', None))
 
 
+def broker_activity(ledger, worker_request_ids):
+    """Count completed broker actions, including callers outside this worker.
+
+    Outside-worker attribution does not identify a human or supervising agent.
+    Missing/incomplete receipts remain unknown and never certify automation.
+    """
+    counts = {'script_inputs': 0, 'external_inputs': 0, 'observations': 0,
+              'pending_requests': 0, 'unreadable_receipts': 0, 'coverage': 'complete'}
+    counts['completed_inputs_observed'] = 0
+    files = []
+    try:
+        if not Path(ledger).is_dir():
+            counts['coverage'] = 'partial'
+            counts['reason'] = 'receipt_directory_unavailable'
+            return counts
+        for path in Path(ledger).glob('*.json'):
+            if len(files) == 4096:
+                counts['coverage'] = 'partial'
+                break
+            files.append(path)
+    except OSError:
+        counts['coverage'] = 'partial'
+        counts['reason'] = 'receipt_listing_incomplete'
+    for path in files:
+        try:
+            item = entry.read_json(path)
+            rid, request, result = item.get('id'), item.get('request'), item.get('result')
+            if not isinstance(rid, str) or not isinstance(request, dict) or request.get('id') != rid:
+                raise ValueError('unbound receipt')
+            if result is None:
+                counts['pending_requests'] += 1
+                continue
+            completed = result.get('completed') if isinstance(result, dict) else None
+            if (result.get('id') != rid or not isinstance(completed, list)
+                    or any(not isinstance(action, dict) for action in completed)):
+                raise ValueError('unbound result')
+            key = 'script_inputs' if rid in worker_request_ids else 'external_inputs'
+            counts[key] += sum(action.get('type') in ('click', 'key', 'drag', 'scroll') for action in completed)
+            counts['observations'] += sum(action.get('type') == 'observe' for action in completed)
+        except (OSError, ValueError, TypeError, AttributeError):
+            counts['unreadable_receipts'] += 1
+    if counts['pending_requests'] or counts['unreadable_receipts']:
+        counts['coverage'] = 'partial'
+    counts['completed_inputs_observed'] = counts['script_inputs'] + counts['external_inputs']
+    return counts
+
+
 class Worker:
     def __init__(self, args, run, control, marker):
         self.args, self.run, self.c, self.marker = args, run, control, marker
@@ -1840,7 +2088,7 @@ class Worker:
         self.inspections = {}
         self.context = {'guide': None, 'guide_tracking': None, 'investments': None,
                         'environment': None, 'team': None, 'bonds': None, 'gear': None,
-                        'tasks': None, 'hp': None, 'coins': None, 'xp': None,
+                        'tasks': None, 'hp': None, 'coins': None, 'xp': None, 'preparation_review': None, 'guide_reference': None,
                         'unknown_fields': ['guide', 'guide_tracking', 'investments', 'environment',
                                            'team', 'bonds', 'gear', 'tasks', 'hp', 'coins', 'xp']}
         self.last_observation = None
@@ -1863,6 +2111,11 @@ class Worker:
         self.node_result_attempted = set()
         self.loot_pickup_attempted = set()
         self.strategy_reads = {}
+        self.knowledge = coaching.load_knowledge(PROJECT / 'docs' / 'GAME_KNOWLEDGE.json')
+        self.preparation_reviews = {}
+        self.preparation_scope = None
+        self.live_mode = None
+        self.cached_guide_binding = None
         self.inspection_attempted = set()
         self.reroll_attempted = set()
         self.last_preparation_stage = None
@@ -1873,6 +2126,10 @@ class Worker:
         self.history = {}
         self.node_key, self.node_attempts, self.node_started = None, 0, None
         self.node_last_page, self.node_consecutive = None, 0
+        self.node_progress = 0
+        self.node_progress_seen = 0
+        self.worker_request_ids = set()
+        self.broker_activity_at = 0.
         self.c.write_json(run / 'runner-owner.json', self.owner)
         self.c.write_json(run / 'owner.json', self.c.OWNER)
         # Bind and latch before publishing discovery. GUI can safely pause the
@@ -1891,6 +2148,12 @@ class Worker:
 
     def publish(self, **updates):
         self.state.update(updates)
+        self.state['match_id'] = self.active_match_id
+        self.state['preparation_stage'] = self.last_preparation_stage
+        if time.monotonic() - getattr(self, 'broker_activity_at', 0.) >= 15:
+            self.state['statistics']['broker_activity'] = broker_activity(
+                self.run / 'request-ledger', getattr(self, 'worker_request_ids', set()))
+            self.broker_activity_at = time.monotonic()
         self.state['state_sequence'] += 1
         self.state['heartbeat_at'] = now()
         self.state['elapsed_seconds'] = round(time.monotonic() - self.started, 2)
@@ -2015,6 +2278,9 @@ class Worker:
         state = self.c.status()
         if not state['ready'] or state['paused'] or state['input_halted'] or not state['game_foreground']:
             raise RuntimeError('游戏输入健康检查未通过')
+        planned_inputs = sum(token.split(':', 1)[0] in ('click', 'key', 'drag', 'scroll') for token in tokens)
+        if self.state['statistics']['local_inputs'] + planned_inputs > 1200:
+            raise RuntimeError('本次worker已到1200次硬输入上限，未发布动作')
         captured_epoch, captured_match = self.epoch(), self.active_match_id
         observed = self.last_observation or {}
         request = self.state.get('decision_request') or {}
@@ -2081,6 +2347,8 @@ class Worker:
                     raise entry.SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
 
         rid = uuid.uuid4().hex
+        self.worker_request_ids = getattr(self, 'worker_request_ids', set())
+        self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
         self.log({'event': 'decision', 'decision_id': rid, 'tokens': tokens, 'reason': reason,
                   'expected_page': expected_page, 'expected_change': postcondition,
@@ -2131,6 +2399,361 @@ class Worker:
                     'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'observed_at': now()}
         return observed
 
+    def preparation_checklist(self, observed):
+        # Reuse UFO's explicit re-observe/return-to-supervisor idea inside the
+        # existing broker workflow; this is not a second desktop controller.
+        stage = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
+        scope = (self.active_match_id, stage, self.epoch())
+        if scope != getattr(self, 'preparation_scope', None):
+            self.preparation_scope, self.preparation_reviews = scope, {}
+        reviews = getattr(self, 'preparation_reviews', {})
+        return coaching.preparation_status(reviews)
+
+    def invalidate_preparation(self, effect):
+        reviews = getattr(self, 'preparation_reviews', {})
+        keys = ('inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'inventory' else (
+            'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'economy' else ()
+        for key in keys:
+            reviews.pop(key, None)
+        if keys:
+            for key in ('team', 'gear', 'bonds', 'xp'):
+                self.strategy_reads.pop(key, None)
+                self.context[key] = None
+            self.log({'event': 'preparation_reviews_invalidated', 'effect': effect, 'phases': list(keys)})
+
+    def review_preparation(self, record, *, manual_record=None):
+        if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
+            raise ValueError('准备复核须有当前局真实原帧proof')
+        source = self.verified_source(record['proof'], 180)
+        fresh_source = source
+        panel_source = None
+        if manual_record is not None:
+            # New-epoch screen proof remains mandatory. Historical manual
+            # evidence is an explicit trace, never copied into history/epoch.
+            panel_source = self.verified_manual_source(manual_record, source)
+        value = record.get('value')
+        if not isinstance(value, dict):
+            raise ValueError('准备复核缺少结构化value')
+        phase = value.get('phase')
+        if panel_source is not None and phase in ('rewards', 'startup_guide'):
+            source = panel_source
+        status = self.preparation_checklist(self.last_observation)
+        stage = self.preparation_scope[1]
+        request = self.state.get('decision_request') or {}
+        if (value.get('reviewer') != 'supervising_agent' or value.get('completed') is not True
+                or phase not in coaching.PHASES or value.get('stage') != stage or not stage
+                or source.get('preparation_stage') != stage
+                or record['proof'].get('snapshot_id') != request.get('snapshot_id')
+                or phase != status['phase'] or not isinstance(value.get('findings'), str) or not value['findings'].strip()):
+            raise ValueError('复核须按当前节点准备顺序、当前请求鲜帧，由监督助手写明实际检查结果')
+        if phase == 'rewards' and (source['page'] != 'preparation' or value.get('all_claimed') is not True
+                or value.get('rescanned_after_claim') is not True):
+            raise ValueError('领奖须关闭商店后重新扫全场，奖励球及待选奖励确认领空')
+        startup_title = find_text(source['rows'], '创业指南', exact=True) if phase == 'startup_guide' else None
+        if phase == 'startup_guide' and (value.get('entry_index') != 2 or value.get('rewards_claimed') is not True
+                or not isinstance(value.get('goals'), list)
+                or not startup_title or startup_title.get('confidence', 0) < .90):
+            raise ValueError('须实读第二入口创业指南、当前章节目标并领空已完成奖励')
+        if phase in ('inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') and source['page'] not in ('preparation', 'shop'):
+            raise ValueError('库存/经济/阵容验收须回到当前备战或商店鲜帧')
+        if phase == 'lineup_equipment':
+            team = value.get('team')
+            investments = value.get('investments')
+            if (not isinstance(team, dict) or team.get('checked') is not True or value.get('gear_checked') is not True
+                    or value.get('investments_checked') is not True or not isinstance(investments, list)
+                    or any(not isinstance(item, dict) or not isinstance(item.get('name'), str)
+                           or not isinstance(item.get('effect'), str) for item in investments)):
+                raise ValueError('上场/装备须逐角色实名位置与穿戴、合成机会实读')
+            known = self.live_investments()
+            if known and investments != known:
+                raise ValueError('监督复核投资与本局已实读策略不符，先复核冲突')
+            requirements = coaching.lineup_requirements(investments, team, self.knowledge)
+            population = re.fullmatch(r'([0-9]+)/([0-9]+)', source.get('fields', {}).get('deployed') or '')
+            board_count = sum(unit.get('location') == 'board' for unit in team.get('units', []))
+            if manual_record is not None:
+                native_team = fresh_source.get('semantic', {}).get('team') or {}
+                board_identity = lambda value: sorted((unit.get('row'), unit.get('slot'), unit.get('name'))
+                    for unit in value.get('units', []) if unit.get('location') == 'board')
+                fresh_requirements = coaching.lineup_requirements(investments, native_team, self.knowledge)
+                if (native_team.get('checked') is not True
+                        or board_identity(native_team) != board_identity(team)
+                        or fresh_requirements['verified'] is not True or fresh_requirements['needs_lineup_plan']):
+                    raise ValueError('新交接鲜帧的场上实名/槽位未完整匹配；阵容仍待当前监督复核')
+            if (not requirements['verified'] or requirements['needs_lineup_plan'] or not population
+                    or board_count != int(population[1])):
+                raise ValueError('前4/后6、角色位置或已选投资同时上场条件未满足')
+            value = {**value, 'lineup_requirements': requirements}
+        if phase == 'battle_acceptance':
+            deployed = source.get('fields', {}).get('deployed')
+            match = re.fullmatch(r'([0-9]+)/([0-9]+)', deployed or '')
+            if not match or not 1 <= int(match[1]) == int(match[2]) <= 10:
+                raise ValueError('出战验收须实际人口已满且不超过10，不能用文字批准补造')
+        mode = value.get('mode')
+        if mode in ('标准博弈', '超频博弈'):
+            self.live_mode = {'value': mode, 'match_id': self.active_match_id, 'origin': 'supervising_agent',
+                              'proof': record['proof']}
+        self.preparation_reviews[phase] = {**value, 'proof': record['proof'], 'origin': 'supervising_agent',
+                                           'observed_at': source['observed_at']}
+        if phase == 'startup_guide':
+            actual = panel_source or source
+            actual_snapshot = actual.get('snapshot_id', record['proof']['snapshot_id'])
+            self.preparation_reviews[phase]['goals'] = coaching.reviewed_goals(value['goals'], actual_snapshot)
+            self.preparation_reviews[phase]['task_source'] = {
+                'snapshot_id': actual_snapshot,
+                'evidence_file': manual_record['after']['evidence_file'] if manual_record else record['proof']['evidence_file'],
+                'observed_at': actual['observed_at'], 'match_id': self.active_match_id,
+                'stage': stage, 'resume_epoch': self.epoch(), 'source': 'validated_preparation_review'}
+        self.context['preparation_review'] = {'value': self.preparation_reviews, 'origin': 'supervising_agent'}
+        self.node_progress = getattr(self, 'node_progress', 0) + 1
+        self.log({'event': 'preparation_phase_verified', 'phase': phase, 'stage': stage,
+                  'origin': 'supervising_agent', 'proof': record['proof']})
+
+    def verified_manual_source(self, item, fresh):
+        epoch = optional(self.run / 'runner-resume-epoch.json') or {}
+        binding = item.get('binding', {})
+        if (item.get('schema') != 'manual-preparation-result/v1' or item.get('status') != 'completed'
+                or binding.get('run_id') != self.owner['run_id'] or binding.get('match_id') != self.active_match_id
+                or binding.get('stage') != self.preparation_scope[1]
+                or binding.get('manual_id') != epoch.get('consumed_manual_id')
+                or binding.get('old_epoch') != epoch.get('previous_epoch')
+                or binding.get('old_epoch') == self.epoch() or manual_state(self.run)
+                or fresh.get('preparation_stage') != binding.get('stage')
+                or canonical_stage(fresh.get('fields', {}).get('stage')) != binding.get('stage')
+                or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
+            raise ValueError('人工trace不属于当前局/节点/新交接代次')
+        resume = await_existing_receipt(self.run, self.c, self.epoch(), 0)
+        if (resume['request'].get('kind') != 'resume' or resume['result'].get('ok') is not True
+                or resume['result'].get('resumed') is not True):
+            raise ValueError('同broker恢复回执未确认；人工结果保持未知')
+        times = [datetime.fromisoformat(item[key]['observed_at']) for key in ('before', 'after')]
+        resumed = datetime.fromisoformat(epoch['time'])
+        fresh_time = datetime.fromisoformat(fresh['observed_at'])
+        if not times[0] <= times[1] <= resumed <= fresh_time or (fresh_time - times[1]).total_seconds() > 3600:
+            raise ValueError('人工trace时序/期限不符；重新观察')
+        self.verify_manual_mutation_fence(item)
+        for saved in item.get('input_receipts', []):
+            receipt = await_existing_receipt(self.run, self.c, saved['id'], 0)
+            if (receipt['result'].get('ok') is not True
+                    or receipt['result'].get('completed') != receipt['request'].get('actions')
+                    or not receipt['result'].get('observation')):
+                raise ValueError('人工输入回执不再完整；不重发')
+        for key in ('before', 'after'):
+            frame = item[key]
+            path = Path(frame['evidence_file'])
+            if path.resolve().parent != self.records.resolve() or hashlib.sha256(path.read_bytes()).hexdigest() != frame['snapshot_id']:
+                raise ValueError('人工前后原帧缺失/改变')
+            receipt = await_existing_receipt(self.run, self.c, frame['receipt_id'], 0)
+            if (receipt['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                    or receipt['result'].get('ok') is not True or not receipt['result'].get('observation')):
+                raise ValueError('人工观察回执未确认')
+        source = self.perception.read(Path(item['after']['evidence_file']))
+        stage = canonical_stage(source.get('fields', {}).get('stage'))
+        if stage and stage != binding['stage']:
+            raise ValueError('人工后帧节点已改变')
+        return {**source, 'preparation_stage': binding['stage'], 'observed_at': item['after']['observed_at']}
+
+    def verify_manual_mutation_fence(self, item):
+        watermark = item.get('after', {}).get('receipt_watermark')
+        if not isinstance(watermark, list):
+            raise ValueError('人工阶段缺少确切回执watermark；保持未知')
+        allowed = set()
+        phase_index = coaching.PHASES.index(item['phase'])
+        for path in (self.run / 'manual-results').glob('*.json'):
+            later = entry.read_json(path)
+            if (later.get('binding') == item['binding'] and later.get('status') == 'completed'
+                    and later.get('phase') in coaching.PHASES[phase_index + 1:]):
+                allowed.update(saved['id'] for saved in later.get('input_receipts', []))
+        known = set(watermark)
+        for index, path in enumerate((self.run / 'request-ledger').glob('*.json')):
+            if index >= 4096:
+                raise ValueError('回执fence超出有界容量')
+            raw = entry.read_json(path)
+            rid = raw.get('id')
+            if rid in known:
+                continue
+            receipt = await_existing_receipt(self.run, self.c, rid, 0)
+            request, result = receipt['request'], receipt['result']
+            if request.get('kind') == 'resume' and rid == self.epoch():
+                continue
+            if request.get('kind') != 'actions' or not isinstance(request.get('actions'), list):
+                raise ValueError('阶段之后出现不属于恢复的请求；人工结果未知')
+            mutation = any(action.get('type') not in ('observe', 'wait') for action in request['actions'])
+            if mutation and (item['phase'] in ('lineup_equipment', 'battle_acceptance') or rid not in allowed):
+                raise ValueError('人工阶段之后存在未覆盖的输入变化；旧准备结果不继承')
+            if (result.get('ok') is not True or result.get('completed') != request['actions']
+                    or not result.get('observation')):
+                raise ValueError('阶段之后的请求仍未完整确认；不重发')
+
+    def reviewed_task_context(self, observed):
+        stage = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
+        scope = {'match_id': self.active_match_id, 'stage': stage, 'resume_epoch': self.epoch()}
+        review = getattr(self, 'preparation_reviews', {}).get('startup_guide') or {}
+        source = review.get('task_source') or {}
+        if (review.get('completed') is not True or source.get('source') != 'validated_preparation_review'
+                or any(source.get(key) != value for key, value in scope.items())):
+            return None, scope
+        return {'tasks': review.get('goals', []), 'source_snapshot_id': source['snapshot_id'],
+                **scope, 'validated': True}, scope
+
+    def consume_manual_results(self):
+        request = self.state.get('decision_request') or {}
+        if not request or request.get('resume_epoch') != self.epoch() or manual_state(self.run):
+            return False
+        epoch = optional(self.run / 'runner-resume-epoch.json') or {}
+        directory = self.run / 'manual-results'
+        items = [entry.read_json(path) for path in directory.glob('*.json')]
+        self.preparation_checklist(self.last_observation)
+        used = getattr(self, 'manual_results_consumed', set())
+        rejected = getattr(self, 'manual_results_rejected', set())
+        changed = False
+        for phase in coaching.PHASES:
+            candidates = [item for item in items if item.get('phase') == phase
+                and item.get('status') == 'completed' and item.get('binding', {}).get('manual_id') == epoch.get('consumed_manual_id')]
+            if not candidates:
+                break
+            if len(candidates) != 1:
+                raise ValueError('人工阶段trace重复；保持未知')
+            item = candidates[0]
+            identity = (self.epoch(), item['checkpoint_id'])
+            if identity in used:
+                continue
+            if identity in rejected:
+                break
+            if self.preparation_checklist(self.last_observation)['phase'] != phase:
+                break
+            proof = {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
+                     'evidence_file': request['evidence_file'], 'resume_epoch': self.epoch()}
+            fresh_data = Path(request.get('original_png') or request['evidence_file']).read_bytes()
+            if hashlib.sha256(fresh_data).hexdigest() != request['snapshot_id']:
+                raise ValueError('新交接的原始PNG与当前请求不符；人工结果保持未知')
+            try:
+                self.review_preparation({'value': item['review'], 'proof': proof}, manual_record=item)
+            except ValueError as exc:
+                # An incomplete visual read needs a current supervising review,
+                # not a new takeover that erases already accepted phases.
+                # Keep this exact trace unaccepted and never retry its input.
+                rejected.add(identity)
+                self.manual_results_rejected = rejected
+                self.log({'event': 'manual_phase_unverified', 'phase': phase,
+                    'checkpoint_id': item['checkpoint_id'], 'new_epoch': self.epoch(),
+                    'error': str(exc), 'input_resent': False, 'next_step': '当前请求鲜帧复核未完成阶段'})
+                break
+            fresh_path = self.records / ('manual-' + item['checkpoint_id'] + '-reobserved-' + hashlib.sha256(self.epoch().encode()).hexdigest()[:12] + '.png')
+            with fresh_path.open('wb') as stream:
+                stream.write(fresh_data)
+            item['reconciliation'] = {'run_id': self.owner['run_id'], 'match_id': self.active_match_id,
+                'stage': self.preparation_scope[1], 'manual_id': item['binding']['manual_id'],
+                'new_epoch': self.epoch(), 'fresh_proof': proof, 'fresh_original_png': str(fresh_path),
+                'resume_receipt': redact(await_existing_receipt(self.run, self.c, self.epoch(), 0)),
+                'reconciled_at': now(), 'input_resent': False}
+            self.c.write_json(self.records / ('manual-' + item['checkpoint_id'] + '.json'), redact(item))
+            self.preparation_reviews[phase]['manual_trace'] = {'checkpoint_id': item['checkpoint_id'],
+                'manual_id': item['binding']['manual_id'], 'before': item['before']['evidence_file'],
+                'after': item['after']['evidence_file'], 'outcome': item['outcome'], 'new_epoch': self.epoch()}
+            used.add(identity)
+            self.manual_results_consumed = used
+            self.log({'event': 'manual_phase_reconciled', 'phase': phase, 'checkpoint_id': item['checkpoint_id'],
+                      'manual_id': item['binding']['manual_id'], 'new_epoch': self.epoch(),
+                      'proof': proof, 'outcome': item['outcome'], 'input_resent': False})
+            changed = True
+        if changed:
+            self.context['preparation_review'] = {'value': self.preparation_reviews, 'origin': 'supervising_agent'}
+            self.publish(decision_request=None, control_mode='auto', reason='已核对人工结果；下一周期重新观察剩余阶段')
+        return changed
+
+    def live_investments(self):
+        record = self.context.get('investments') or {}
+        if record.get('match_id') == self.active_match_id:
+            return record.get('value', [])
+        return getattr(self, 'preparation_reviews', {}).get('lineup_equipment', {}).get('investments', [])
+
+    def guard_preparation_action(self, action, actual, *, loot_pickup=False, verified_navigation=False):
+        if actual.get('page') not in ('preparation', 'shop', 'unit_gear'):
+            return
+        status = self.preparation_checklist(actual)
+        reviews = self.preparation_reviews
+        if verified_navigation:
+            if status['phase'] != 'startup_guide' or reviews.get('rewards', {}).get('completed') is not True:
+                raise ValueError('须先领奖领空，再进入第二创业指南；固定图标不跳过准备顺序')
+            return
+        if battle_input(actual, action):
+            if not status['battle_ready']:
+                raise ValueError('出战前准备清单未完成：' + status['next_step'])
+            population = re.fullmatch(r'([0-9]+)/([0-9]+)', actual.get('fields', {}).get('deployed') or '')
+            if not population or not 1 <= int(population[1]) == int(population[2]) <= 10:
+                raise ValueError('当前出战鲜帧人口未满/未知；旧验收不能批准变化后的阵容')
+            return
+        effect = coaching.action_effect(action)
+        if effect == 'economy' or action.get('type') == 'buy_shop':
+            if not status['economy_allowed']:
+                raise ValueError('奖励/创业指南/清库存未核，不执行购买、刷新或升级')
+        elif effect == 'inventory':
+            if not all(reviews.get(key, {}).get('completed') is True for key in ('rewards', 'startup_guide')):
+                raise ValueError('奖励未领空或第二入口创业指南未核，禁止出售/装备等库存改变')
+        elif action.get('type') == 'click_point' and not loot_pickup:
+            if reviews.get('rewards', {}).get('completed') is not True:
+                raise ValueError('奖励未确认领空；未知备战坐标动作须先回传，不能花钱')
+            # A point cannot bypass the semantic refresh/XP guards.
+            point = action.get('args', [])
+            if len(point) >= 2:
+                for label in ('刷新', '购买经验', '出售'):
+                    target = find_text(actual.get('rows', []), label, exact=label != '购买经验')
+                    if target and target['box'][0] <= point[0] <= target['box'][2] and target['box'][1] <= point[1] <= target['box'][3]:
+                        raise ValueError('经济按钮必须用语义动作和实价守卫，不能以坐标绕过：' + label)
+        if action.get('type') == 'key' and action.get('args') not in ([27], [68], [69], [46]):
+            if not status['economy_allowed']:
+                raise ValueError('准备清单未完成，不允许未知快捷键改变资源')
+
+    def record_node_progress(self, before, after):
+        if not isinstance(before, dict) or not isinstance(after, dict):
+            return
+        def coins(observed):
+            evidence = observed.get('semantic', {}).get('coins', {})
+            value = evidence.get('value')
+            if (observed.get('page') in ('preparation', 'shop') and type(value) is int and value >= 0
+                    and evidence.get('bounds') == GOLD_HUD
+                    and .15 <= evidence.get('currency_icon_gold_fraction', 0) <= 1.
+                    and .90 <= evidence.get('confidence', 1.) <= 1.):
+                return value
+            return None
+
+        def shop(observed):
+            evidence = observed.get('shop') or {}
+            if (observed.get('page') != 'shop' or evidence.get('ok') is not True
+                    or evidence.get('status') != 'ok'
+                    or evidence.get('input', {}).get('sha256') != observed.get('snapshot_id')):
+                return None
+            slots = evidence.get('slots', [])
+            if len(slots) != 5 or {slot.get('slot') for slot in slots} != {1, 2, 3, 4, 5}:
+                return None
+            values = []
+            for slot in slots:
+                if slot.get('status') == 'empty':
+                    values.append((slot['slot'], None, None))
+                elif (slot.get('status') == 'recognized' and isinstance(slot.get('name'), str)
+                        and slot['name'] and type(slot.get('cost')) is int and slot['cost'] > 0):
+                    values.append((slot['slot'], slot['name'], slot['cost']))
+                else:
+                    return None
+            return sorted(values)
+
+        old_coins, new_coins = coins(before), coins(after)
+        old_shop, new_shop = shop(before), shop(after)
+        pages = (before.get('page'), after.get('page'))
+        changed = []
+        if pages[0] != pages[1] and all(isinstance(page, str) and page not in ('', 'unknown') for page in pages):
+            changed.append('recognized_page')
+        if old_coins is not None and new_coins is not None and old_coins != new_coins:
+            changed.append('native_coins')
+        if old_shop is not None and new_shop is not None and old_shop != new_shop:
+            changed.append('complete_shop')
+        # Plain OCR fields, missing facts and partial inventories are not proof
+        # of progress. Reviews and verified loot removals have explicit events.
+        if changed:
+            self.node_progress = getattr(self, 'node_progress', 0) + 1
+            self.log({'event': 'node_observable_progress', 'page_before': before.get('page'),
+                      'page_after': after.get('page'), 'snapshot_id': after.get('snapshot_id'), 'verified_changes': changed})
+
     def preparation_policy(self, observed):
         facts = {}
         for key, record in self.strategy_reads.items():
@@ -2138,7 +2761,40 @@ class Worker:
             if (record['match_id'] == self.active_match_id and record['resume_epoch'] == self.epoch()
                     and 0 <= age <= (3600 if key in ('guide', 'guide_tracking') else 180)):
                 facts[key] = record['value']
-        decision = preparation_decision(observed, facts)
+                if key == 'guide':
+                    facts['guide_proof'] = {field: record.get(field) for field in
+                        ('snapshot_id', 'match_id', 'resume_epoch', 'observed_at')}
+        binding = getattr(self, 'cached_guide_binding', None)
+        if (not facts.get('guide') and binding and binding['match_id'] == self.active_match_id
+                and binding['resume_epoch'] == self.epoch()):
+            facts['guide'] = {**self.knowledge['guide'], 'mode_label': binding['value']['mode']}
+            facts['guide_proof'] = {'origin': 'cached_guide_with_live_application',
+                'cache_source': self.knowledge['source'], 'cache_sha256': self.knowledge['sha256'],
+                'application_proof': binding['proof'], 'match_id': self.active_match_id,
+                'resume_epoch': self.epoch(), 'game_version_verified': False}
+        phase_fields = dict(observed.get('fields', {}))
+        raw_level = phase_fields.get('level')
+        if isinstance(raw_level, str) and re.fullmatch(r'[1-9]|10', raw_level):
+            phase_fields['level'] = int(raw_level)
+        phase_observation = {**observed, 'fields': phase_fields}
+        if self.live_mode and self.live_mode['match_id'] == self.active_match_id:
+            phase_observation['fields']['mode'] = self.live_mode['value']
+        decision = preparation_decision(phase_observation, facts)
+        task_context, observation_scope = self.reviewed_task_context(observed)
+        decision['progression_plan'] = progression_plan(self.knowledge, observed,
+            guide_candidates=observed.get('semantic', {}).get('guide_candidates'),
+            reviewed_task_context=task_context, observation_scope=observation_scope)
+        checklist = self.preparation_checklist(observed)
+        decision['preparation_checklist'] = checklist
+        native_team = observed.get('semantic', {}).get('team') or {}
+        retained_team = facts.get('team') or {}
+        team = native_team if native_team.get('checked') is True else retained_team if retained_team.get('checked') is True else native_team
+        decision['lineup_requirements'] = coaching.lineup_requirements(self.live_investments(), team, self.knowledge)
+        if not checklist['economy_allowed']:
+            decision['purchase_candidates'], decision['economic_actions'] = [], []
+            decision['reroll_allowed'] = False
+            decision['phase'] = checklist['phase']
+            decision['needs_user_guidance'].insert(0, '当前待核：' + checklist['next_step'])
         stage = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
         semantic = observed.get('semantic', {})
         inspection_unit = (semantic.get('unit_preview') or {}).get('name') or (semantic.get('gear') or {}).get('unit_name')
@@ -2147,10 +2803,21 @@ class Worker:
         decision['recommended_actions'] = decision['inspection_actions'][:1] or [item['action'] for item in decision['purchase_candidates'][:1]]
         if not decision['recommended_actions']:
             decision['recommended_actions'] = decision['economic_actions'][:1]
+        if checklist['phase'] in ('rewards', 'startup_guide', 'inventory_cleanup'):
+            decision['recommended_actions'] = []
+        if checklist['phase'] == 'startup_guide' and observed.get('page') == 'preparation':
+            decision['recommended_actions'] = [{'type': 'click_point',
+                'args': list(PREPARATION_GUIDE_POINT), 'expected_page': 'preparation',
+                'guard_texts': ['备战阶段', '出战', '商店'],
+                'target_evidence': {'snapshot_id': observed['snapshot_id'],
+                    'bounds': list(PREPARATION_GUIDE_BOUNDS), 'control_id': PREPARATION_GUIDE_CONTROL},
+                'reason': '奖励已领空，进入第二创业指南核对章节任务；执行前仍须双帧图标验证'}]
         return decision
 
     def observe(self):
         rid = uuid.uuid4().hex
+        self.worker_request_ids = getattr(self, 'worker_request_ids', set())
+        self.worker_request_ids.add(rid)
         result = entry.request(self.c, 'actions', ['observe'], rid, False)
         if not result.get('ok') or not result.get('observation'):
             raise RuntimeError('只读截图没有同请求的新鲜回帧')
@@ -2180,18 +2847,27 @@ class Worker:
         shutil.copyfile(self.run / 'game-preview.png', self.run / 'request-original.png')
         self.history[observed['snapshot_id']] = {'snapshot_id': observed['snapshot_id'], 'evidence_file': evidence,
             'observed_at': now(), 'page': observed['page'], 'rows': observed['rows'], 'match_id': self.active_match_id,
-            'resume_epoch': self.epoch(), 'semantic': observed.get('semantic', {})}
+            'resume_epoch': self.epoch(), 'semantic': observed.get('semantic', {}), 'fields': observed.get('fields', {}),
+            'preparation_stage': canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage}
         if len(self.history) > 256:
             self.history.pop(next(iter(self.history)))
         request = {'request_id': rid, 'snapshot_id': observed['snapshot_id'], 'kind': kind,
                    'reason': reason, 'observation': observed, 'context': self.context,
+                   'static_knowledge': self.knowledge,
+                   'knowledge_boundary': 'static_knowledge仅历史参考；动态交易/库存/任务/站位必须当前局鲜帧proof',
                    'inspection_results': self.inspections, 'choices': choices,
                    'resume_epoch': self.epoch(), 'match_id': self.active_match_id,
                    'evidence_file': evidence, 'original_png': str(self.run / 'request-original.png'), 'created_at': now(),
                    'deadline_at': (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
                    'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll',
-                                            'finish_inspection', 'confirm_match_result'],
+                                            'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
                    'reply_path': str(self.run / 'decision-reply.json')}
+        request['preparation_checklist'] = self.preparation_checklist(observed)
+        task_context, observation_scope = self.reviewed_task_context(observed)
+        request['progression_plan'] = progression_plan(self.knowledge, observed,
+            guide_candidates=choices if kind == 'guide_strategy' and isinstance(choices, list)
+                else observed.get('semantic', {}).get('guide_candidates'),
+            reviewed_task_context=task_context, observation_scope=observation_scope)
         if kind in ('preparation_strategy', 'shop_strategy', 'guide_strategy', 'unit_gear_strategy'):
             request['preparation_decision'] = self.preparation_policy(observed)
         request['battle_stage'] = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
@@ -2259,7 +2935,10 @@ class Worker:
                     or stable_inspection_completion(reply, request, actual)
                     or stable_lobby_entry_navigation(reply, request, actual, self.run / 'game-preview.png')
                     or stable_standard_entry_navigation(reply, request, actual, self.run / 'game-preview.png')
-                    or stable_plane_intro_navigation(reply, request, actual, self.run / 'game-preview.png')):
+                    or stable_plane_intro_navigation(reply, request, actual, self.run / 'game-preview.png')
+                    or stable_semantic_plan(reply, request, actual, self.run / 'game-preview.png')
+                    or len(reply['actions']) == 1 and stable_preparation_icon_target(
+                        reply['actions'][0], request, actual, self.run / 'game-preview.png')):
                 raise ValueError('战略回答到达时页面已变，拒绝旧计划')
             # OCR and anchor matching never replace the original request,
             # deadline, resume epoch, or exact source-frame identity checks.
@@ -2274,6 +2953,11 @@ class Worker:
                 raise RuntimeError('手动接管使未执行计划失效')
             actual = self.last_observation
             kind = action['type']
+            if kind == 'finish_preparation_review':
+                if (not any(key in reply.get('context_update', {}) for key in ('preparation_review', 'guide_reference'))
+                        or len(reply['actions']) != 1):
+                    raise ValueError('准备复核须独立无输入动作及当前帧context_update.preparation_review')
+                continue
             if kind == 'finish_inspection':
                 if not isinstance(action.get('result'), dict) or not action['result'].get('evidence'):
                     raise ValueError('核查完成须有实读结果和证据，不以点击结束冒称领奖')
@@ -2288,6 +2972,16 @@ class Worker:
                 continue
             if kind == 'confirm_match_result':
                 result = action['result']
+                settlement = actual.get('semantic', {}).get('settlement')
+                if isinstance(settlement, dict) or any(key in result for key in ('rating', 'hp', 'materials', 'promotion_points', 'tier', 'promotion_level')):
+                    mapping = {'mode': 'mode', 'outcome': 'outcome', 'rating': 'rating', 'hp': 'hp',
+                               'materials': 'material_reward', 'promotion_points': 'promotion_points'}
+                    if (not isinstance(settlement, dict) or settlement.get('snapshot_id') != actual.get('snapshot_id')
+                            or any(result.get(key) != settlement.get(field) or settlement.get(field) is None
+                                   for key, field in mapping.items())
+                            or any(type(result.get(key)) is not int for key in ('hp', 'materials', 'promotion_points'))
+                            or any(key in result and result[key] != settlement.get(key) for key in ('tier', 'promotion_level'))):
+                        raise ValueError('评级/血量/奖励/晋升须逐项等于当前结算鲜帧事实；未知不能补造')
                 if (actual['page'] != 'settlement' or result.get('evidence') != request['evidence_file']
                         or self.match_result_confirmed or self.active_match_id in self.consumed_match_results
                         or result.get('mode') not in ('标准博弈', '超频博弈')
@@ -2305,6 +2999,13 @@ class Worker:
                 continue
             if actual['page'] != action['expected_page']:
                 raise ValueError('计划前置页面变化；后续动作停止')
+            guide_navigation = (kind == 'click_point'
+                and action.get('target_evidence', {}).get('control_id') == PREPARATION_GUIDE_CONTROL)
+            if guide_navigation and not stable_preparation_icon_target(
+                    action, request, actual, self.run / 'game-preview.png'):
+                raise ValueError('第二创业指南图标的双帧定位/页面/遮挡守卫拒绝，未提交')
+            self.guard_preparation_action(action, actual, loot_pickup=loot_pickup,
+                                          verified_navigation=guide_navigation)
             for label in action.get('guard_texts', []):
                 if not any(clean(label) in clean(row['text']) and row['confidence'] >= .78 for row in actual['rows']):
                     raise ValueError('新画面缺少计划守卫：' + label)
@@ -2331,8 +3032,7 @@ class Worker:
                     raise ValueError('商店卡片购买必须使用buy_shop实名/实价/单槽守卫，不以普通点击绕过')
                 if kind == 'key' and action.get('args') not in ([27], [68], [69]):
                     raise ValueError('商店键盘不作为未经单槽核验的购买入口')
-            if (kind in ('buy_shop', 'buy_xp') or (actual['page'] == 'shop'
-                    and not (kind == 'click_text' and action.get('text') == '收起'))
+            if (kind in ('buy_shop', 'buy_xp')
                     or (kind == 'key' and action.get('args') in ([68], [69]))
                     or (kind == 'click_text' and '购买经验' in action.get('text', ''))):
                 self.require_strategy_context(actual)
@@ -2393,11 +3093,19 @@ class Worker:
                     if not native_loot_circle_disappeared(loot_key[2], self.run / 'game-preview.png',
                                                         self.last_observation.get('snapshot_id')):
                         raise ValueError('战利品点击后未核实该圈消失；停止，不重发')
-                    progress = ('verified_loot_pickup', loot_key[1], loot_key[2])
-                    self.node_key, self.node_last_page = progress, progress
+                    self.node_progress = getattr(self, 'node_progress', 0) + 1
                     self.log({'event': 'verified_loot_pickup', 'match_id': self.active_match_id,
                               'stage': loot_key[1], 'control_id': loot_key[2],
                               'snapshot_id': self.last_observation['snapshot_id'], 'retry_allowed': False})
+            effect = coaching.action_effect(action)
+            if guide_navigation:
+                effect = 'navigation'
+            elif kind == 'click_point' and not loot_pickup and actual['page'] in ('preparation', 'shop'):
+                effect = 'inventory'  # Unknown point effects cannot preserve old inventory/lineup proof.
+            self.invalidate_preparation(effect)
+            if loot_pickup or actual['page'] in ('investment', 'environment', 'supply'):
+                self.preparation_reviews.clear()
+            self.record_node_progress(actual, self.last_observation)
         if request['kind'] == 'new_match' and self.last_observation['page'] in ('opponents', 'environment', 'investment'):
             # A new game identity is admitted only at a real setup screen,
             # never merely because a caller supplied a different request ID.
@@ -2412,6 +3120,7 @@ class Worker:
             self.last_preparation_stage = None
             self.match_result_confirmed = False
             self.context = {key: None for key in self.context}
+            self.preparation_reviews, self.preparation_scope, self.live_mode, self.cached_guide_binding = {}, None, None, None
         self.log({'event': 'plan_consumed', 'request_id': request['request_id'], 'actions': len(reply['actions'])})
         self.publish(control_mode='auto', decision_request=None, reason=None, needs_user_confirmation=False)
 
@@ -2422,6 +3131,11 @@ class Worker:
         reference = Path(request['original_png'])
         if hashlib.sha256(reference.read_bytes()).hexdigest() != request['snapshot_id']:
             raise ValueError('本次请求原始帧已更换，拒绝坐标计划')
+        if proof.get('control_id') == PREPARATION_GUIDE_CONTROL:
+            if (request.get('match_id') != self.active_match_id
+                    or not stable_preparation_icon_target(action, request, actual, self.run / 'game-preview.png')):
+                raise ValueError('固定第二创业指南导航图标的双帧守卫未通过')
+            return
         if proof.get('control_id') in tuple(_NATIVE_LOOT_PICKUP_PROFILES):
             if (request.get('match_id') != self.active_match_id
                     or not stable_native_loot_pickup({'snapshot_id': request['snapshot_id'], 'actions': [action]},
@@ -2476,7 +3190,8 @@ class Worker:
             if old.crop(box).convert('RGB').tobytes() != fresh.crop(box).convert('RGB').tobytes():
                 if not stable_environment_card_animation(action, request, actual, self.run / 'game-preview.png'):
                     diagnostic = {}
-                    if not stable_supply_card_animation(action, request, actual, self.run / 'game-preview.png', diagnostic):
+                    if (not stable_supply_card_animation(action, request, actual, self.run / 'game-preview.png', diagnostic)
+                            and not stable_semantic_target(action, request, actual, self.run / 'game-preview.png')):
                         if request.get('kind') == 'supply_strategy' and actual.get('page') == 'supply':
                             from PIL import ImageChops
                             delta = ImageChops.difference(old.crop(box).convert('RGB'), fresh.crop(box).convert('RGB'))
@@ -2521,6 +3236,33 @@ class Worker:
             raise ValueError('未知战略context字段')
         for key, record in updates.items():
             if key == 'unknown_fields':
+                continue
+            if key == 'preparation_review':
+                self.review_preparation(record)
+                continue
+            if key == 'guide_reference':
+                if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
+                    raise ValueError('缓存攻略引用须当前应用状态鲜帧proof')
+                source = self.verified_source(record['proof'], 180)
+                value = record.get('value')
+                cached = self.knowledge.get('guide', {})
+                request = self.state.get('decision_request') or {}
+                if (not isinstance(value, dict) or value.get('reviewer') != 'supervising_agent'
+                        or value.get('title') != cached.get('title') or value.get('cache_sha256') != self.knowledge.get('sha256')
+                        or value.get('applied') is not True or value.get('no_conflict') is not True
+                        or value.get('no_version_update') is not True or value.get('mode') not in ('标准博弈', '超频博弈')
+                        or not value.get('compatibility_reason')
+                        or record['proof'].get('snapshot_id') != request.get('snapshot_id')
+                        or not (find_text(source['rows'], cached.get('title', ''), exact=True)
+                                or clean(source.get('semantic', {}).get('guide', {}).get('title', '')) == clean(cached.get('title', '')))
+                        or not any(clean(row.get('text', '')) in ('取消应用', '已应用', '攻略已应用')
+                                   and row.get('confidence', 0) >= .90 for row in source['rows'])):
+                    raise ValueError('须鲜读当前已应用攻略title、模式适配与缓存sha；冲突/更新须只重读受影响正文')
+                binding = {**record, 'match_id': self.active_match_id, 'resume_epoch': self.epoch(),
+                           'origin': 'cached_guide_with_live_application'}
+                self.cached_guide_binding, self.context[key] = binding, binding
+                self.live_mode = {'value': value['mode'], 'match_id': self.active_match_id,
+                                  'origin': 'supervising_agent', 'proof': record['proof']}
                 continue
             if key not in ('guide', 'guide_tracking', 'investments', 'coins', 'environment', 'team', 'gear', 'bonds', 'xp'):
                 raise ValueError('v1尚无可信本地字段读取器，保留unknown：' + key)
@@ -2587,6 +3329,8 @@ class Worker:
         if (not isinstance(coin_fact, dict) or coin_fact.get('bounds') != GOLD_HUD
                 or type(coin_fact.get('value')) is not int or not 0 <= coin_fact['value'] <= 1_000_000):
             raise ValueError('新鲜金币HUD无法可信读取，停止购买')
+        if not self.preparation_checklist(actual)['economy_allowed']:
+            raise ValueError('经济动作前须按顺序核领奖领空→第二入口创业指南→清库存；当前未完成')
         if isinstance(self.context.get('coins'), dict):
             self.context['coins']['value'] = coin_fact['value']
         self.log({'event': 'live_coins_roi', **coin_fact, 'snapshot_id': actual['snapshot_id']})
@@ -2638,13 +3382,21 @@ class Worker:
         key = ('panel', self.panel_index, self.panel_state) if in_panel else (page, observed['fields'].get('stage'))
         if key != self.node_key:
             self.node_key, self.node_attempts, self.node_started = key, 0, time.monotonic()
+        progress = getattr(self, 'node_progress', 0)
+        if progress != getattr(self, 'node_progress_seen', 0):
+            self.node_attempts, self.node_consecutive = 0, 0
+            # Budget measures time without verified progress. A completed
+            # review or observed resource/board change starts the next bounded
+            # step; merely waiting or another screenshot cannot reset it.
+            self.node_started = time.monotonic()
+            self.node_progress_seen = progress
         if page != getattr(self, 'node_last_page', None):
             self.node_last_page, self.node_consecutive = page, 0
         self.node_consecutive += 1
         maximum, seconds = (70, 180) if in_panel else (30, 240) if page == 'battle' else (6, 180) if page == 'guide' else (6, 60)
         if (self.node_attempts >= maximum or time.monotonic() - self.node_started >= seconds
                 or (page != 'battle' and self.node_consecutive > 6)):
-            self.pause_internal(f'本地节点{key}超过{maximum}次/{seconds}秒有界预算，停止重复输入')
+            self.pause_internal(f'本地节点{key}超过{maximum}次无进展/{seconds}秒有界预算，停止重复输入')
             return False
         self.node_attempts += 1
         return True
@@ -2695,6 +3447,8 @@ class Worker:
             return False
         if datetime.now(timezone.utc) > datetime.fromisoformat(request['deadline_at']):
             self.pause_internal('战略等待15分钟期限已到；没有无限未知循环')
+            return False
+        if self.consume_manual_results():
             return False
         if request['kind'] == 'unknown_page' and request['observation'].get('page') == 'unknown':
             # Reuse actual known pages from the existing 90-second passive capture.
@@ -2816,15 +3570,30 @@ class Worker:
             else:
                 self.ask(observed, 'new_match', '补领奖/优势清单核完，按用户标准博弈当前等级开局；保留已有奖励选项。')
         elif page == 'shop':
+            checklist = self.preparation_checklist(observed)
+            if checklist['phase'] == 'rewards':
+                close = find_text(observed['rows'], '收起', exact=True)
+                if close:
+                    self.click_text(observed, '收起', '自动展开商店时先收起，回读全场奖励；未确认领空不花钱')
+                else:
+                    self.ask(observed, 'shop_strategy', '先关闭自动展开商店并扫场领奖领空；当前禁止购买、出售、刷新和升级。')
+                return
             if shop_key is not None:
                 self.shop_stages.add(shop_key)
             self.ask(observed, 'shop_strategy',
+                     '当前先完成：' + checklist['next_step'] + '；第二入口创业指南优先，动态复核须当前帧proof。'
+                     if not checklist['economy_allowed'] else
                      '优先装备利用、对子升星、过渡上场、小羁绊与早期经济成长，再考虑攻略长线；实读金币与目标槽后有限购买，不机械囤50。'
                      if (observed.get('shop') or {}).get('ok') is True
                      else '商店仍有未知槽位/推荐标记；独立确认实名、实价和完整槽框的目标可单次购买，未知目标继续等待检查。')
         elif page == 'preparation':
             policy = self.preparation_policy(observed)
-            if policy['inspection_actions']:
+            checklist = policy['preparation_checklist']
+            if not checklist['economy_allowed']:
+                self.ask(observed, 'preparation_strategy',
+                         '按顺序处理当前待办：' + checklist['next_step'] + '。领奖后重新扫全场；第二入口创业指南读当前目标并领奖；清库存后再统一经济。'
+                         '可用当前帧proof提交supervising_agent复核，未知项回传，缓存不代替进度。')
+            elif policy['inspection_actions']:
                 self.ask(observed, 'preparation_strategy', '先按已选攻略检查追踪、可用装备与场上阵容；攻略推荐不是库存，也不默认装备已生效。')
             elif shop_key is None:
                 self.ask(observed, 'preparation_strategy', '当前备战节点stage缺失或异常，停止自动开店；先核真实节点与角色/装备。')
@@ -2852,6 +3621,18 @@ class Worker:
                                         bounds=(880, 850, 1045, 935))
                 if after['page'] == 'node_result':
                     self.ask(after, 'node_result_unverified', '单次继续后仍在节点结果页，停止重复点击；先核实际状态。')
+        elif page == 'boss_result':
+            stage = canonical_stage(observed.get('fields', {}).get('stage'))
+            key = (self.active_match_id, 'boss_result', stage)
+            if stage != '3-7':
+                self.ask(observed, 'boss_result_unverified', '首领结果缺少原生3-7节点，不自动前往结算。')
+            elif key in self.node_result_attempted:
+                self.ask(observed, 'boss_result_unverified', '本局首领前往结算已尝试一次；先核实际状态，不重复点击。')
+            else:
+                self.node_result_attempted.add(key)
+                after = self.click_text(observed, '前往结算', '原生3-7首领结果只前往结算一次；整局仍待正式结算鲜帧核实', exact=True)
+                if after['page'] == 'boss_result':
+                    self.ask(after, 'boss_result_unverified', '单次前往结算后仍在首领结果页，保持待核，不计整局完成。')
         elif page == 'battle':
             if elapsed > 240:
                 self.pause_internal('战斗等待超过240秒，未编写胜负')
@@ -2866,7 +3647,7 @@ class Worker:
         elif page in ('environment', 'investment', 'opponents', 'supply', 'guide', 'unit_gear'):
             if page == 'investment':
                 self.context['investments'] = None
-            self.ask(observed, page + '_strategy', '新战略分岔：实读全部选项/代价，黄色小书优先，核投资与第一推荐正文/追踪匹配后给有限计划。')
+            self.ask(observed, page + '_strategy', '新战略分岔：实读全部选项/代价，黄色小书优先，结合未完成目标选攻略，核投资与所选正文/追踪匹配后给有限计划。')
         else:
             self.ask(observed, 'unknown_page', '当前页本地未可靠识别，停止点击；请由现有代理读原帧给有限守卫计划，不能盲点或重复试局。')
 
@@ -2982,6 +3763,7 @@ class Worker:
             time.sleep(.05)
         artifacts.protect_children(self.run, self.children, root=artifacts.default_root(), complete=True)
         final_mode = self.state['control_mode'] if self.state['control_mode'] in ('completed', 'failed') else 'stopped'
+        self.broker_activity_at = -float('inf')  # Preserve all final receipts before the runtime is removed.
         self.publish(control_mode=final_mode, exit_evidence=evidence, reason=self.state.get('reason'),
                      cleanup={'directory': str(self.run), 'removed': False, 'pending_finally': True})
         self.log({'event': 'owned_shutdown', 'exit_evidence': evidence})
@@ -3030,6 +3812,17 @@ def command_cli(args):
     run, owner, binding, control = load(args.run_dir, args.chat_id, args.run_token, emergency=emergency)
     if args.command == 'status':
         return envelope(current_state(run, owner, control), command_id=rid)
+    if args.command == 'manual-checkpoint':
+        item = begin_manual_phase(run, owner, control, args.manual_id, args.phase)
+        return {'ok': True, 'checkpoint_id': item['checkpoint_id'], 'phase': item['phase'],
+                'status': item['status'], 'binding': item['binding'], 'before': item['before']['evidence_file']}
+    if args.command == 'manual-result':
+        review = entry.read_json(Path(args.reply_file).absolute(), limit=100_000)
+        item = finish_manual_phase(run, owner, control, args.checkpoint_id,
+                                   json.loads(args.input_receipt_ids_json), review)
+        return {'ok': True, 'checkpoint_id': item['checkpoint_id'], 'phase': item['phase'],
+                'status': item['status'], 'outcome': item['outcome'], 'binding': item['binding'],
+                'before': item['before']['evidence_file'], 'after': item['after']['evidence_file']}
     if args.command in ('pause', 'takeover'):
         intent_error = None
         try:
@@ -3197,7 +3990,7 @@ def command_cli(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', '_worker'])
+    parser.add_argument('command', choices=['start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', '_worker'])
     parser.add_argument('--chat-id', required=True)
     parser.add_argument('--run-dir')
     parser.add_argument('--run-token')
@@ -3213,6 +4006,10 @@ def main():
     parser.add_argument('--snapshot-id')
     parser.add_argument('--stage')
     parser.add_argument('--resume-epoch')
+    parser.add_argument('--manual-id')
+    parser.add_argument('--phase', choices=coaching.PHASES)
+    parser.add_argument('--checkpoint-id')
+    parser.add_argument('--input-receipt-ids-json', default='[]')
     args = parser.parse_args()
     if args.command == '_worker':
         worker_cli(args)

@@ -61,7 +61,7 @@ function renderCoaching(value){
  const policy=obj(value),enabled=policy.enabled!==false;
  $('coaching-mode').setAttribute('aria-pressed',String(enabled));$('coaching-mode').disabled=coachingBusy;
  put('coaching-mode',enabled?'带教模式 · 点击切换全托管':'全托管 · 点击切换带教模式');
- put('coaching-status',coachingBusy?'正在保存模式…':policy.error|| (enabled?'带教模式：进入战斗前等待你的确认。':'全托管模式：自主推进；已有暂停仍需明确继续。'));
+ put('coaching-status',coachingBusy?'正在保存模式…':policy.error|| (enabled?'带教模式：每次出战前由助手验收，可向你请教战略。':'全托管模式：自主推进；已有暂停仍需明确继续。'));
 }
 async function setCoachingMode(enabled){
  if(coachingBusy)return;coachingBusy=true;renderCoaching(current.coaching);
@@ -85,7 +85,7 @@ function renderHud(data){
  else if(data.fresh===true&&data.manual_latch===true&&obj(data.attention).input_yield===true){label=data.input_release_confirmed?'临时让位':'正在让位';tone='paused';}
  else if(data.fresh===true&&mode==='manual'){label='已暂停';tone='paused';}
  else if(data.fresh===true&&mode==='halted'){label='输入已锁定';tone='paused';}
- else if(data.fresh===true&&data.manual_latch!==true&&mode==='waiting_decision'){label=obj(data.coaching).enabled!==false&&obj(data.runner).needs_user_confirmation===true?'待你确认':'待助手决策';tone='waiting';}
+ else if(data.fresh===true&&data.manual_latch!==true&&mode==='waiting_decision'){label=obj(data.coaching).enabled!==false&&obj(data.runner).needs_user_confirmation===true?'待出战验收':'待助手决策';tone='waiting';}
  else if(data.fresh===true&&data.manual_latch!==true&&mode==='auto'){label='运行中';tone='running';}
  hudAction=(terminal||mode==='unconnected'||mode==='manual')?'start':'pause';
  const blocked=hudAction==='start'&&$('start').disabled,verb=hudAction==='pause'?'暂停':mode==='manual'?'继续自动':terminal?'重新开始':'开始';
