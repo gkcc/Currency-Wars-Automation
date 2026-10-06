@@ -418,6 +418,16 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             {'text': '出战', 'box': [1750, 725, 1850, 770], 'confidence': .99}]}
         with self.assertRaises(ValueError):
             worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        # This isolates the population arithmetic gate, not full lineup proof
+        # or a supported 12-slot layout. Player level remains a different field.
+        actual['fields']['level'] = '9'
+        for count in ('7/12', '13/12', '12/13', '18/8', None):
+            actual['fields']['deployed'] = count
+            with self.subTest(count=count), self.assertRaises(ValueError):
+                worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        actual['fields']['deployed'] = '12/12'
+        worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        self.assertEqual(actual['fields']['level'], '9')
 
     def test_two_manual_checkpoint_writers_publish_only_one_pending_phase(self):
         with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):

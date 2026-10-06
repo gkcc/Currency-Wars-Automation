@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -33,6 +34,11 @@ SUPPLY_FIVE_CARD_LAYOUT = ((84, 292, 419, 783), (439, 292, 774, 783),
                            (1501, 292, 1836, 783))
 GOLD_HUD = [1613, 892, 1687, 950]
 DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
+# Complete native player Lv label and number, including the taller numeral.
+# This is the lower-left purchase-experience panel, never a card/boss title.
+PLAYER_LEVEL_ROI = [240, 880, 358, 936]
+# Current parsing support, not a claim about the game's permanent maximum.
+MAX_SUPPORTED_POPULATION = 12
 
 
 def clean(text):
@@ -641,12 +647,72 @@ def hash_distance(a, b):
     return sum((x ^ y).bit_count() for x, y in zip(left, right)) / (len(left) * 8)
 
 
+def valid_population_counts(occupied, capacity):
+    """Team capacity is independent of player level and visible slot geometry."""
+    return (type(occupied) is int and type(capacity) is int
+            and 0 <= occupied <= capacity <= MAX_SUPPORTED_POPULATION and capacity >= 1)
+
+
 def _valid_population_match(text):
     match = re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(text))
     if match is None:
         return None
     occupied, capacity = map(int, match[1].split('/'))
-    return match if 0 <= occupied <= capacity <= 10 and capacity >= 1 else None
+    return match if valid_population_counts(occupied, capacity) else None
+
+
+def native_player_hud(rows, image, page, engine, snapshot_id):
+    """A player-owned panel and full Lv read; no global level fallback."""
+    result = {'actor': 'player', 'origin': 'native_player_hud', 'snapshot_id': snapshot_id,
+              'layout': 'native_purchase_experience_1920x1080/v1',
+              'level': None, 'xp': None, 'evidence': {}, 'reason': 'player_hud_not_visible'}
+    if page not in ('preparation', 'shop'):
+        return result
+
+    def inside(row, bounds):
+        box = row.get('box')
+        return (isinstance(box, list) and len(box) == 4
+                and bounds[0] <= box[0] < box[2] <= bounds[2]
+                and bounds[1] <= box[1] < box[3] <= bounds[3])
+
+    labels = [row for row in rows if clean(row.get('raw_text', row.get('text'))) == '购买经验'
+              and .90 <= row.get('confidence', 0) <= 1. and inside(row, [235, 835, 360, 883])]
+    progress = [(row, re.fullmatch(r'([0-9]{1,4})/([0-9]{1,4})', clean(row.get('raw_text', row.get('text')))))
+                for row in rows if .90 <= row.get('confidence', 0) <= 1.
+                and inside(row, [250, 933, 346, 969])]
+    progress = [(row, match) for row, match in progress if match and 0 <= int(match[1]) < int(match[2])]
+    if len(labels) != 1 or len(progress) != 1:
+        return result
+    result['xp'] = [int(progress[0][1][1]), int(progress[0][1][2])]
+    result['evidence'] = {'purchase_experience': labels[0], 'experience_progress': progress[0][0]}
+    # Preserve the original OCR rows, including low-confidence or partial Lv.
+    # A differing plausible number cannot be voted away by another crop.
+    candidates = [(row, re.fullmatch(r'Lv\.?([0-9]+)', clean(row.get('raw_text', row.get('text'))), re.I))
+                  for row in rows if inside(row, [235, 875, 363, 943])]
+    candidates = [(row, int(match[1])) for row, match in candidates if match]
+    if len(candidates) > 1 or any(not re.fullmatch(r'Lv\.?([1-9]|10)',
+            clean(row.get('raw_text', row.get('text'))), re.I) for row, unused in candidates):
+        result['reason'] = 'conflicting_or_invalid_player_level'
+        return result
+    if candidates and .90 <= candidates[0][0].get('confidence', 0) <= 1.:
+        row, value = candidates[0]
+        result.update(level=value, reason=None)
+        result['evidence']['level'] = {'source': 'current_player_hud_row', 'row': row}
+        return result
+    result['reason'] = 'player_level_unreadable'
+    try:
+        recognized, unused = engine(np.array(image.crop(PLAYER_LEVEL_ROI)), use_det=False, use_cls=False)
+        if recognized is not None and len(recognized) == 1:
+            raw, confidence = recognized[0][-2:]
+            raw, confidence = str(raw), float(confidence)
+            match = re.fullmatch(r'Lv\.?([1-9]|10)', clean(raw), re.I)
+            result['evidence']['level'] = {'source': 'complete_player_level_roi', 'raw_text': raw,
+                'confidence': confidence, 'bounds': list(PLAYER_LEVEL_ROI)}
+            if match and .90 <= confidence <= 1. and all(value == int(match[1]) for unused, value in candidates):
+                result.update(level=int(match[1]), reason=None)
+    except Exception:
+        pass  # A failed focused read is unknown; no fabricated OCR row.
+    return result
 
 
 def native_deployed_count(rows):
@@ -691,6 +757,12 @@ class Perception:
                 raise ValueError("1920x1080 broker preview required")
             image = opened.convert("RGB")
         if self.engine is None:
+            # Offline image reading does not authorize ORT telemetry. Set the
+            # documented initialization switch before importing the runtime;
+            # its API alone can be later than the initial telemetry event.
+            os.environ['ORT_DISABLE_TELEMETRY'] = '1'
+            import onnxruntime
+            onnxruntime.disable_telemetry_events()
             from rapidocr_onnxruntime import RapidOCR
             self.engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
         raw, unused = self.engine(np.array(image.resize((1280, 720))), use_cls=False)
@@ -778,11 +850,11 @@ class Perception:
         # guessed into HP/gold/promotion fields.
         fields = {}
         joined = "|".join(clean(r["text"]) for r in rows)
-        for name, pattern in (("stage", r"(?:备战|战斗中).*?(\d[-－]\d)"),
-                              ("level", r"(?:Lv\.?|等级)(\d{1,2})"),
-                              ("deployed", r"(\d{1,2}/\d{1,2})")):
-            matched = re.search(pattern, joined, re.I)
-            fields[name] = matched.group(1) if matched else None
+        matched = re.search(r"(?:备战|战斗中).*?(\d[-－]\d)", joined)
+        player = native_player_hud(rows, image, page, self.engine, digest)
+        fields = {'stage': matched.group(1) if matched else None,
+                  'level': str(player['level']) if player['level'] is not None else None,
+                  'deployed': None}
         if page == "preparation":
             if native_deployed_count(rows) is None:
                 native_layout = all(len([row for row in rows
@@ -832,8 +904,8 @@ class Perception:
                                          ("出战", (1760, 710, 1875, 790)),
                                          ("商店", (1575, 950, 1675, 1020))))
             count = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})", fields["deployed"] or "")
-            if (native_hp_layout and count and 0 <= int(count[1]) <= int(count[2]) <= 12
-                    and int(count[2]) >= 1 and not any(row["confidence"] >= .90 for row in hp_rows)):
+            if (native_hp_layout and count and valid_population_counts(int(count[1]), int(count[2]))
+                    and not any(row["confidence"] >= .90 for row in hp_rows)):
                 try:
                     result, unused = self.engine(np.array(image.crop(hp_bounds)), use_det=False, use_cls=False)
                     if result is not None and len(result) == 1:
@@ -857,25 +929,32 @@ class Perception:
         elif page == "battle":
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
         semantic = semantic_facts(rows, image, page, engine=self.engine, snapshot_id=digest)
+        semantic['player_hud'] = player
         option_read = supply_read_details(rows, page, semantic.get('options', []))
         if option_read:
             semantic['option_read'] = {**option_read, 'snapshot_id': digest}
         state_read = None
         if page in ('preparation', 'shop', 'investment_summary'):
-            from currency_wars_state_reader import StateReader
+            from currency_wars_state_reader import StateReader, native_slots
             if self.state_reader is None:
                 self.state_reader = StateReader()
             state_read = self.state_reader.read(path, rows=rows, page=page)
             team = state_read['team']
             population = re.fullmatch(r'([0-9]{1,2})/([0-9]{1,2})', native_deployed_count(rows) or '')
             board = [unit for unit in team['units'] if unit['location'] == 'board']
+            supported_board_slots = len([slot for slot in native_slots() if slot['location'] == 'board'])
             # Complete card identity and star evidence plus the independent
             # central HUD are required; partial geometry stays unchecked.
             checked = bool(team['fully_read'] and population
-                and 0 <= int(population[1]) == len(board) <= int(population[2]) <= 10
+                and valid_population_counts(int(population[1]), int(population[2]))
+                # Numeric capacity up to 12 does not prove an expanded layout:
+                # this reader only has the observed front4/back6 board slots.
+                and int(population[2]) <= supported_board_slots
+                and int(population[1]) == len(board)
                 and all(unit.get('position') in ('前台', '后台', '前后台') for unit in board))
             semantic['team'] = {**team, 'checked': checked,
-                'count_reconciliation': {'hud': fields.get('deployed'), 'observed_board': len(board)}}
+                'count_reconciliation': {'hud': fields.get('deployed'), 'observed_board': len(board),
+                    'supported_board_slots': supported_board_slots}}
             inventory = state_read['inventory']
             semantic['inventory'] = {**inventory, 'items': [{**item,
                 'verified': bool(item.get('name') and item.get('confidence', 0) >= .90
