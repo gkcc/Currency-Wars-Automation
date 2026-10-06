@@ -1,0 +1,116 @@
+{
+  "schema": "currency-wars-reward-resource-replay/v1",
+  "code_sha": "bcec3280677e6a419675cc7448bf0dca8fe36ec3",
+  "fresh_game_captures": 0,
+  "game_inputs": 0,
+  "cases": [
+    {
+      "file": "q00.png",
+      "image_sha256": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+      "seconds": 3.494095,
+      "page": "shop",
+      "fields": {
+        "stage": "3-6",
+        "level": "8",
+        "deployed": null
+      },
+      "coins": 65,
+      "shop_ok": true,
+      "team_fully_read": false,
+      "team_checked": false,
+      "board_units": 0,
+      "team_count_reconciliation": {
+        "hud": null,
+        "observed_board": 0,
+        "supported_board_slots": 10
+      },
+      "native_reward_keys": [],
+      "inventory_keys": [
+        "checked",
+        "items",
+        "unknown_slots",
+        "reason",
+        "snapshot_id"
+      ],
+      "inventory_items": 0
+    },
+    {
+      "file": "q01.png",
+      "image_sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "seconds": 1.011929,
+      "page": "preparation",
+      "fields": {
+        "stage": "3-6",
+        "level": "8",
+        "deployed": "8/8"
+      },
+      "coins": 65,
+      "shop_ok": null,
+      "team_fully_read": false,
+      "team_checked": false,
+      "board_units": 5,
+      "team_count_reconciliation": {
+        "hud": "8/8",
+        "observed_board": 5,
+        "supported_board_slots": 10
+      },
+      "native_reward_keys": [],
+      "inventory_keys": [
+        "checked",
+        "items",
+        "unknown_slots",
+        "reason",
+        "snapshot_id"
+      ],
+      "inventory_items": 0
+    },
+    {
+      "file": "q02.png",
+      "image_sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+      "seconds": 1.071504,
+      "page": "preparation",
+      "fields": {
+        "stage": "3-6",
+        "level": "8",
+        "deployed": "8/8"
+      },
+      "coins": 65,
+      "shop_ok": null,
+      "team_fully_read": false,
+      "team_checked": false,
+      "board_units": 5,
+      "team_count_reconciliation": {
+        "hud": "8/8",
+        "observed_board": 5,
+        "supported_board_slots": 10
+      },
+      "native_reward_keys": [],
+      "inventory_keys": [
+        "checked",
+        "items",
+        "unknown_slots",
+        "reason",
+        "snapshot_id"
+      ],
+      "inventory_items": 1
+    }
+  ],
+  "resource_overlay": {
+    "unchanged_files": 57,
+    "folders": {
+      ".": 13,
+      "state_reader": 44
+    }
+  },
+  "source_sha256": {
+    "currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2"
+  },
+  "temporary_run_removed": true,
+  "observed_at_utc": "2026-10-06T20:52:32.035648+00:00",
+  "limitations": [
+    "Independent OCR of three new historical fixtures only; no game input or complete preparation autonomy.",
+    "Manual visual orb expectations are separate from current production OCR; missing semantic keys stay missing.",
+    "Folder counts describe local assets, not inferred template completeness or automatic detection capability."
+  ]
+}
