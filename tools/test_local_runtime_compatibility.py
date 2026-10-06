@@ -1489,36 +1489,74 @@ class RuntimeCompatibilityTests(unittest.TestCase):
 
 class RuntimeRootTests(unittest.TestCase):
     """No-input root routing; native SID/ACL/TaskScheduler remain Windows gates."""
+    def artifact_providers(self):
+        """Use the actual installed provider if selected, plus real fallback code."""
+        selected = artifacts
+        if hasattr(selected, 'installed'):
+            yield 'installed', selected
+            spec = importlib.util.spec_from_file_location(
+                '_currency_wars_standalone_root_test', Path(selected.__file__))
+            standalone = importlib.util.module_from_spec(spec)
+            with patch.dict(os.environ, {'CW_ARTIFACTS_STANDALONE': '1'}):
+                spec.loader.exec_module(standalone)
+            self.assertFalse(hasattr(standalone, 'installed'))
+            yield 'standalone', standalone
+        else:
+            yield 'standalone', selected
+
+    @contextlib.contextmanager
+    def artifact_provider(self, provider):
+        # Installed create/protect/close functions use their module globals,
+        # not the public aliases exported by currency_wars_artifacts.
+        identity = Mock(return_value=('unknown', None))
+        with contextlib.ExitStack() as stack:
+            for consumer in (sys.modules[__name__], runner, entry, runner.input_bridge):
+                stack.enter_context(patch.object(consumer, 'artifacts', provider))
+            native = getattr(provider, 'installed', provider)
+            stack.enter_context(patch.object(provider, 'process_identity', identity))
+            if native is not provider:
+                stack.enter_context(patch.object(native, 'process_identity', identity))
+            creator = native.create_owned_directory if native is not provider else provider.scratch_directory
+            creator = getattr(creator, '__wrapped__', creator)
+            self.assertIs(creator.__globals__['process_identity'], identity)
+            self.assertIs(native.protect_children.__globals__['process_identity'], identity)
+            yield identity
+
     def test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels(self):
-        with tempfile.TemporaryDirectory(prefix='currency-wars-load-root-') as temporary:
-            selected_root = Path(temporary) / 'selected-root'
-            other_root = Path(temporary) / 'unrelated-default'
-            with patch.object(artifacts, 'process_identity', return_value=('active', 'windows:41')):
-                with artifacts.scratch_directory('runner-load-test', root=selected_root) as runtime:
-                    marker = artifacts.read_marker(runtime, root=selected_root)
-                    common = {'chat_id': 'load-root-fixture', 'run_token': 'fixture-token',
-                              'artifact_chat_id': marker.get('session_hint', {}).get('id')}
-                    broker_owner = {**common, 'owner': 'currency-wars-control',
-                                    'artifact_run_id': marker['run_id']}
-                    runner_owner = {**common, 'owner': 'currency-wars-runner',
-                                    'run_id': marker['run_id'], 'runner_pid': marker['pid'],
-                                    'runner_creation_id': '41'}
-                    for name, value in [('owner.json', broker_owner), ('runner-owner.json', runner_owner),
-                                        ('binding.json', {'fixture': True})]:
-                        (runtime / name).write_text(json.dumps(value), encoding='utf8')
-                    with patch.object(artifacts, 'default_root', return_value=other_root) as default, \
-                            patch.object(entry, 'backend', side_effect=lambda: SimpleNamespace()):
-                        for emergency in (False, True):
-                            with self.subTest(emergency=emergency):
-                                loaded, owner, binding, control = runner.load(
-                                    runtime, common['chat_id'], common['run_token'], emergency=emergency)
-                                self.assertEqual(loaded, runtime)
-                                self.assertEqual(owner, runner_owner)
-                                self.assertEqual(control.ROOT, str(runtime))
-                                self.assertEqual(binding, None if emergency else {'fixture': True})
-                                with self.assertRaises(ValueError):
-                                    runner.load(runtime, common['chat_id'], 'wrong-token', emergency=emergency)
-                        default.assert_not_called()
+        for name, provider in self.artifact_providers():
+            with self.subTest(provider=name), self.artifact_provider(provider) as identity:
+                with tempfile.TemporaryDirectory(prefix='currency-wars-load-root-') as temporary:
+                    selected_root = Path(temporary) / 'selected-root'
+                    other_root = Path(temporary) / 'unrelated-default'
+                    identity.return_value = ('active', 'windows:41')
+                    with artifacts.scratch_directory('runner-load-test', root=selected_root) as runtime:
+                        marker = artifacts.read_marker(runtime, root=selected_root)
+                        self.assertEqual(marker['process_identity'], 'windows:41')
+                        common = {'chat_id': 'load-root-fixture', 'run_token': 'fixture-token',
+                                  'artifact_chat_id': marker.get('session_hint', {}).get('id')}
+                        broker_owner = {**common, 'owner': 'currency-wars-control',
+                                        'artifact_run_id': marker['run_id']}
+                        runner_owner = {**common, 'owner': 'currency-wars-runner',
+                                        'run_id': marker['run_id'], 'runner_pid': marker['pid'],
+                                        'runner_creation_id': '41'}
+                        for name, value in [('owner.json', broker_owner), ('runner-owner.json', runner_owner),
+                                            ('binding.json', {'fixture': True})]:
+                            (runtime / name).write_text(json.dumps(value), encoding='utf8')
+                        with patch.object(artifacts, 'default_root', return_value=other_root) as default, \
+                                patch.object(entry, 'backend', side_effect=lambda: SimpleNamespace()):
+                            for emergency in (False, True):
+                                with self.subTest(emergency=emergency):
+                                    loaded, owner, binding, control = runner.load(
+                                        runtime, common['chat_id'], common['run_token'], emergency=emergency)
+                                    self.assertEqual(loaded, runtime)
+                                    self.assertEqual(owner, runner_owner)
+                                    self.assertEqual(control.ROOT, str(runtime))
+                                    self.assertEqual(binding, None if emergency else {'fixture': True})
+                                    with self.assertRaises(ValueError):
+                                        runner.load(runtime, common['chat_id'], 'wrong-token', emergency=emergency)
+                            default.assert_not_called()
+
+                identity.assert_any_call(os.getpid())
 
     @contextlib.contextmanager
     def roots(self, installed=True):
@@ -1656,59 +1694,65 @@ class RuntimeRootTests(unittest.TestCase):
                 launch.assert_not_called()
 
     def test_worker_marker_child_registration_and_cleanup_keep_selected_root(self):
-        with self.roots() as (outer, c_root, d_root, default):
-            selected = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
-            args = SimpleNamespace(chat_id='root-fixture', runtime_location_json=json.dumps(selected),
-                                   max_seconds=60, max_matches=1, continue_matches=False)
-            seen, child_state, case = [], ['active'], self
-            register, shutdown = runner.Worker.register, runner.Worker.shutdown
-            def identity(pid):
-                return ('active', 'windows:1') if pid == os.getpid() else (child_state[0], 'windows:2')
-            control = SimpleNamespace(process_probe=lambda *args: {'state': 'absent'},
-                write_json=lambda path, value: Path(path).write_text(json.dumps(value), encoding='utf8'))
-            class InertWorker:
-                def __init__(self, args, run, control, marker):
-                    self.args, self.run, self.c, self.children, self.token = args, run, control, [], 'fixture-token'
-                    self.owner = {'run_id': marker['run_id'], 'runner_pid': os.getpid(),
-                                  'runner_creation_id': '1', 'launch_id': 'fixture-launch'}
-                    self.state = {'state_sequence': 0, 'control_mode': 'completed'}
-                    self.broker_launcher, self.bridge_launch = None, None
-                    seen.append(run)
-                    self.assert_root = marker['root'] == str(d_root) and args.runtime_location == selected
-                def run_loop(self):
-                    if not self.assert_root:
-                        raise AssertionError('selected root did not reach marker and worker')
-                    register(self, 424242, '2')
-                    marker = artifacts.read_marker(self.run, root=d_root)
-                    if marker['root'] != str(d_root) or not marker['children_incomplete']:
-                        raise AssertionError('child registration did not use selected root')
-                    child_state[0] = 'unknown'
-                    with case.assertRaises(artifacts.ArtifactError):
-                        artifacts.protect_children(self.run, [], root=d_root, complete=True)
-                    case.assertTrue(self.run.exists())
-                def shutdown(self):
-                    child_state[0] = 'dead'
-                    shutdown(self)
-                def publish(self, **changes):
-                    self.state.update(changes)
-                def log(self, _):
-                    pass
-                def finish_profile(self):
-                    pass
-            with patch.object(runner.input_bridge, 'configuration', return_value={
-                    'runtime_root': str(d_root), 'installation_id': 'a' * 32}), \
-                    patch.object(entry, 'backend', return_value=control), patch.object(runner, 'Worker', InertWorker), \
-                    patch.object(artifacts, 'process_identity', side_effect=identity), \
-                    patch.object(runner, 'CURRENT', outer / 'current.json'):
-                runner._worker_cli(args)
-            self.assertEqual(len(seen), 1)
-            self.assertEqual(seen[0].parent, d_root)
-            self.assertFalse(seen[0].exists())
-            self.assertFalse(c_root.exists())
-            final = json.loads((outer / 'current.json').read_text())
-            self.assertEqual(final['control_mode'], 'completed')
-            self.assertTrue(final['cleanup']['removed'])
-            default.assert_not_called()
+        for name, provider in self.artifact_providers():
+            with self.subTest(provider=name), self.artifact_provider(provider) as identity:
+                with self.roots() as (outer, c_root, d_root, default):
+                    selected = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+                    args = SimpleNamespace(chat_id='root-fixture', runtime_location_json=json.dumps(selected),
+                                           max_seconds=60, max_matches=1, continue_matches=False)
+                    seen, child_state, case = [], ['active'], self
+                    register, shutdown = runner.Worker.register, runner.Worker.shutdown
+                    def process_identity(pid):
+                        return ('active', 'windows:1') if pid == os.getpid() else (child_state[0], 'windows:2')
+                    control = SimpleNamespace(process_probe=lambda *args: {'state': 'absent'},
+                        write_json=lambda path, value: Path(path).write_text(json.dumps(value), encoding='utf8'))
+                    class InertWorker:
+                        def __init__(self, args, run, control, marker):
+                            self.args, self.run, self.c, self.children, self.token = args, run, control, [], 'fixture-token'
+                            self.owner = {'run_id': marker['run_id'], 'runner_pid': os.getpid(),
+                                          'runner_creation_id': '1', 'launch_id': 'fixture-launch'}
+                            self.state = {'state_sequence': 0, 'control_mode': 'completed'}
+                            self.broker_launcher, self.bridge_launch = None, None
+                            seen.append(run)
+                            case.assertEqual(marker['process_identity'], 'windows:1')
+                            self.assert_root = marker['root'] == str(d_root) and args.runtime_location == selected
+                        def run_loop(self):
+                            if not self.assert_root:
+                                raise AssertionError('selected root did not reach marker and worker')
+                            register(self, 424242, '2')
+                            marker = artifacts.read_marker(self.run, root=d_root)
+                            if marker['root'] != str(d_root) or not marker['children_incomplete']:
+                                raise AssertionError('child registration did not use selected root')
+                            child_state[0] = 'unknown'
+                            with case.assertRaises(artifacts.ArtifactError):
+                                artifacts.protect_children(self.run, [], root=d_root, complete=True)
+                            case.assertTrue(self.run.exists())
+                        def shutdown(self):
+                            child_state[0] = 'dead'
+                            shutdown(self)
+                        def publish(self, **changes):
+                            self.state.update(changes)
+                        def log(self, _):
+                            pass
+                        def finish_profile(self):
+                            pass
+                    identity.side_effect = process_identity
+                    with patch.object(runner.input_bridge, 'configuration', return_value={
+                            'runtime_root': str(d_root), 'installation_id': 'a' * 32}), \
+                            patch.object(entry, 'backend', return_value=control), patch.object(runner, 'Worker', InertWorker), \
+                            patch.object(runner, 'CURRENT', outer / 'current.json'):
+                        runner._worker_cli(args)
+                    self.assertEqual(len(seen), 1)
+                    self.assertEqual(seen[0].parent, d_root)
+                    self.assertFalse(seen[0].exists())
+                    self.assertFalse(c_root.exists())
+                    final = json.loads((outer / 'current.json').read_text())
+                    self.assertEqual(final['control_mode'], 'completed')
+                    self.assertTrue(final['cleanup']['removed'])
+                    default.assert_not_called()
+
+                identity.assert_any_call(os.getpid())
+                identity.assert_any_call(424242)
 
 
 if __name__ == '__main__':

@@ -142,10 +142,13 @@ class BusinessTests(TestCase):
             control.k = SimpleNamespace(CreateMutexW=lambda *a: 1, CloseHandle=lambda *a: None, ReleaseMutex=lambda *a: None)
             lease = SimpleNamespace(children=lambda *a, **k: None)
             args = SimpleNamespace(chat_id=worker.owner['chat_id'], max_seconds=60, max_matches=1, continue_matches=False)
+            location = {'schema': 1, 'source': 'standalone',
+                        'runtime_root': str(worker.run.parent.resolve()), 'installation_id': None}
             class LaunchReached(Exception):
                 pass
             def launch(command, **unused):
                 self.assertIn('--business-resume-json', command)
+                self.assertEqual(json.loads(command[command.index('--runtime-location-json') + 1]), location)
                 self.assertTrue((worker.records / 'business-archive.json').exists())
                 archived = runner.entry.read_json(worker.records / 'business-receipts' /
                     (hashlib.sha256(b'external-original').hexdigest() + '.json'))
@@ -154,10 +157,12 @@ class BusinessTests(TestCase):
                 self.assertNotIn('run_token', json.dumps(archived))
                 raise LaunchReached()
             with patch.object(runner, 'CURRENT', current), patch.object(runner.entry, 'backend', return_value=control), \
+                    patch.object(runner.input_bridge, 'runtime_location', return_value=location) as select_root, \
                     patch.object(runner.subprocess, 'Popen', side_effect=launch), \
                     patch.object(runner.subprocess, 'CREATE_NO_WINDOW', 0, create=True):
                 with self.assertRaises(LaunchReached):
                     runner._start_cli(args, lease)
+                select_root.assert_called_once_with(runner.entry.PINNED, inherited=None)
             item = runner.await_existing_receipt(worker.run, control, 'external-original', 0)
             changed = copy.deepcopy(item)
             changed['result']['ok'] = False
