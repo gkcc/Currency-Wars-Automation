@@ -367,7 +367,7 @@ def load(run, chat, token, emergency=False):
     else:
         run, broker_owner, binding = entry.load(run, chat, token, control)
     owner = entry.read_json(run / 'runner-owner.json')
-    marker = artifacts.read_marker(run)
+    marker = artifacts.read_marker(run, root=run.parent)
     if (owner.get('owner') != 'currency-wars-runner' or owner.get('chat_id') != chat
             or not secrets.compare_digest(str(owner.get('run_token', '')), str(token))
             or owner.get('run_id') != marker['run_id']
@@ -1011,9 +1011,13 @@ def _start_cli(args, lease):
                 owner = entry.read_json(Path(discovered['run_dir'], 'runner-owner.json'))
                 run, owner, binding, c = load(discovered['run_dir'], args.chat_id, owner['run_token'])
                 return envelope(current_state(run, owner, c))
+        inherited = getattr(args, 'runtime_location_json', None)
+        runtime_location = input_bridge.runtime_location(entry.PINNED,
+            inherited=json.loads(inherited) if inherited is not None else None)
         launch = uuid.uuid4().hex
         command = [sys.executable, '-B', '-X', 'utf8', str(SELF), '_worker',
                    '--chat-id', args.chat_id, '--launch-id', launch,
+                   '--runtime-location-json', json.dumps(runtime_location),
                    '--max-seconds', str(args.max_seconds), '--max-matches', str(args.max_matches)]
         if args.continue_matches:
             command.append('--continue-matches')
@@ -2242,6 +2246,9 @@ class Worker:
                       'run_id': marker['run_id'], 'run_token': self.token,
                       'artifact_chat_id': marker.get('session_hint', {}).get('id'),
                       'runner_pid': os.getpid(), 'runner_creation_id': str(identity['creation_id']),
+                      'runtime_location': getattr(args, 'runtime_location',
+                          {'schema': 1, 'source': 'standalone', 'runtime_root': str(run.parent),
+                           'installation_id': None}),
                       'launch_id': args.launch_id, 'created_at': now()}
         self.c.ROOT = str(run)
         self.c.OWNER = {'owner': 'currency-wars-control', 'chat_id': args.chat_id, 'run_token': self.token,
@@ -2444,7 +2451,7 @@ class Worker:
     def register(self, pid, creation):
         item = {'pid': int(pid), 'process_identity': 'windows:' + str(creation)}
         self.children.append(item)
-        artifacts.protect_children(self.run, self.children, root=artifacts.default_root(), complete=False)
+        artifacts.protect_children(self.run, self.children, root=self.run.parent, complete=False)
 
     def startup(self):
         access = artifacts.prepare_elevated_ipc_access(self.run, root=self.run.parent,
@@ -2469,7 +2476,7 @@ class Worker:
         try:
             # Unknown late children must protect the directory even before a
             # Popen handle or creation identity becomes available.
-            artifacts.protect_children(self.run, self.children, root=artifacts.default_root(), complete=False)
+            artifacts.protect_children(self.run, self.children, root=self.run.parent, complete=False)
             if own['integrity_rid'] < game['integrity_rid']:
                 self.bridge_launch = input_bridge.prepare_launch(self.run, self.owner, entry.PINNED)
                 input_bridge.dispatch(self.bridge_launch)
@@ -4883,7 +4890,7 @@ class Worker:
             if time.monotonic() >= end:
                 raise RuntimeError('owned子进程退出未确认，保留标准运行目录')
             time.sleep(.05)
-        artifacts.protect_children(self.run, self.children, root=artifacts.default_root(), complete=True)
+        artifacts.protect_children(self.run, self.children, root=self.run.parent, complete=True)
         final_mode = self.state['control_mode'] if self.state['control_mode'] in ('completed', 'failed') else 'stopped'
         self.broker_activity_at = -float('inf')  # Preserve all final receipts before the runtime is removed.
         self.publish(control_mode=final_mode, exit_evidence=evidence, reason=self.state.get('reason'),
@@ -4897,13 +4904,17 @@ def worker_cli(args):
 
 
 def _worker_cli(args):
+    inherited = getattr(args, 'runtime_location_json', None)
+    args.runtime_location = input_bridge.runtime_location(entry.PINNED,
+        inherited=json.loads(inherited) if inherited is not None else None)
+    runtime_root = Path(args.runtime_location['runtime_root'])
     control = entry.backend()
     artifact_chat = os.environ.get('CODEX_THREAD_ID', 'unbound')
     purpose = 'currency-wars-runner-' + artifact_chat[:8].lower()
     worker, run = None, None
     try:
-        with artifacts.scratch_directory(purpose, root=artifacts.default_root()) as run:
-            marker = artifacts.read_marker(run)
+        with artifacts.scratch_directory(purpose, root=runtime_root) as run:
+            marker = artifacts.read_marker(run, root=runtime_root)
             worker = Worker(args, run, control, marker)
             try:
                 worker.run_loop()
@@ -5132,6 +5143,7 @@ def main():
     parser.add_argument('--reply-file')
     parser.add_argument('--reason', default='')
     parser.add_argument('--launch-id')
+    parser.add_argument('--runtime-location-json', help=argparse.SUPPRESS)
     parser.add_argument('--request-id')
     parser.add_argument('--snapshot-id')
     parser.add_argument('--stage')

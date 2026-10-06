@@ -3,6 +3,7 @@ import ast
 import contextlib
 import copy
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -15,7 +16,7 @@ import tempfile
 import uuid
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from concurrent.futures import ThreadPoolExecutor
 
 import currency_wars_artifacts as artifacts
@@ -26,6 +27,70 @@ import currency_wars_source_guard as guard
 
 
 class RuntimeCompatibilityTests(unittest.TestCase):
+    def gui_launcher(self):
+        path=Path(__file__).resolve().parent.parent/'gui'/'launch.py'
+        spec=importlib.util.spec_from_file_location('currency_wars_gui_launch_test',path)
+        module=importlib.util.module_from_spec(spec)
+        with patch.object(sys,'path',[str(path.parent),*sys.path]):
+            spec.loader.exec_module(module)
+        return module
+
+    def test_gui_runtime_registration_publishes_after_both_identity_registrations(self):
+        launch=self.gui_launcher()
+        with tempfile.TemporaryDirectory(prefix='currency-wars-gui-launch-') as temporary:
+            root=Path(temporary)/'selected-runtime-root';root.mkdir()
+            runtime=root/'owned-gui';runtime.mkdir()
+            location={'schema':1,'source':'standalone','runtime_root':str(root),'installation_id':None}
+            marker={'pid':os.getpid(),'process_identity':'windows:41','run_id':'a'*32}
+            events=[]
+            lease=SimpleNamespace(children=lambda children,complete:events.append(('lease',children,complete)))
+            real_write=launch.input_bridge.write_object
+            def identity(pid):return ('active','windows:41' if pid==os.getpid() else 'windows:42')
+            def protect(path,children,*,root,complete):
+                self.assertEqual(path,runtime);self.assertEqual(root,runtime.parent)
+                events.append(('marker',children,complete))
+            def read(path,*,root):
+                self.assertEqual(path,runtime);self.assertEqual(root,runtime.parent)
+                self.assertEqual([event[0] for event in events],['lease','marker'])
+                self.assertFalse((runtime/'runtime-location.json').exists())
+                return marker
+            def write(path,value):
+                self.assertEqual([event[0] for event in events],['lease','marker'])
+                real_write(path,value)
+            records={}
+            with patch.object(launch.artifacts,'process_identity',side_effect=identity), \
+                 patch.object(launch.artifacts,'protect_children',side_effect=protect), \
+                 patch.object(launch.artifacts,'read_marker',side_effect=read), \
+                 patch.object(launch.input_bridge,'write_object',side_effect=write):
+                result=launch.register_runtime_location(runtime,location,'chat',123456,lease,records)
+            self.assertEqual(result,'windows:42')
+            record=json.loads((runtime/'runtime-location.json').read_text())
+            self.assertEqual(record,{'schema':1,'owner':'currency-wars-gui-runtime','run_id':'a'*32,'chat_id':'chat',
+                                    'runtime_location':location,'launcher_pid':os.getpid(),'launcher_creation_id':'41',
+                                    'gui_pid':123456,'gui_creation_id':'42'})
+            self.assertEqual(events[0][1],events[1][1])
+            self.assertFalse(events[0][2]);self.assertFalse(events[1][2])
+
+    def test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish(self):
+        launch=self.gui_launcher()
+        with tempfile.TemporaryDirectory(prefix='currency-wars-gui-launch-') as temporary:
+            runtime=Path(temporary)
+            marker={'pid':os.getpid(),'process_identity':'windows:41','run_id':'a'*32}
+            location={'schema':1,'source':'standalone','runtime_root':str(runtime.parent),'installation_id':None}
+            cases=[ [('unknown',None)],
+                    [('active','windows:42'),('active','windows:41'),('active','windows:43')],
+                    [('active','windows:42'),('active','windows:99')] ]
+            for identities in cases:
+                with self.subTest(identities=identities), \
+                     patch.object(launch.artifacts,'process_identity',side_effect=identities), \
+                     patch.object(launch.artifacts,'protect_children') as protect, \
+                     patch.object(launch.artifacts,'read_marker',return_value=marker), \
+                     patch.object(launch.input_bridge,'write_object') as publish:
+                    with self.assertRaises(RuntimeError):
+                        launch.register_runtime_location(runtime,location,'chat',123456,SimpleNamespace(children=lambda *a,**k:None),{})
+                    publish.assert_not_called()
+                    if len(identities)==1:protect.assert_not_called()
+
     @contextlib.contextmanager
     def manual_bridge_fixture(self):
         with tempfile.TemporaryDirectory(prefix='currency-wars-manual-bridge-test-') as temporary:
@@ -1420,6 +1485,229 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             self.assertFalse(result['game_foreground'])
             self.assertIsNone(result['broker_pid'])
             self.assertEqual(result['foreground'], 0)
+
+
+class RuntimeRootTests(unittest.TestCase):
+    """No-input root routing; native SID/ACL/TaskScheduler remain Windows gates."""
+    def test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels(self):
+        with tempfile.TemporaryDirectory(prefix='currency-wars-load-root-') as temporary:
+            selected_root = Path(temporary) / 'selected-root'
+            other_root = Path(temporary) / 'unrelated-default'
+            with patch.object(artifacts, 'process_identity', return_value=('active', 'windows:41')):
+                with artifacts.scratch_directory('runner-load-test', root=selected_root) as runtime:
+                    marker = artifacts.read_marker(runtime, root=selected_root)
+                    common = {'chat_id': 'load-root-fixture', 'run_token': 'fixture-token',
+                              'artifact_chat_id': marker.get('session_hint', {}).get('id')}
+                    broker_owner = {**common, 'owner': 'currency-wars-control',
+                                    'artifact_run_id': marker['run_id']}
+                    runner_owner = {**common, 'owner': 'currency-wars-runner',
+                                    'run_id': marker['run_id'], 'runner_pid': marker['pid'],
+                                    'runner_creation_id': '41'}
+                    for name, value in [('owner.json', broker_owner), ('runner-owner.json', runner_owner),
+                                        ('binding.json', {'fixture': True})]:
+                        (runtime / name).write_text(json.dumps(value), encoding='utf8')
+                    with patch.object(artifacts, 'default_root', return_value=other_root) as default, \
+                            patch.object(entry, 'backend', side_effect=lambda: SimpleNamespace()):
+                        for emergency in (False, True):
+                            with self.subTest(emergency=emergency):
+                                loaded, owner, binding, control = runner.load(
+                                    runtime, common['chat_id'], common['run_token'], emergency=emergency)
+                                self.assertEqual(loaded, runtime)
+                                self.assertEqual(owner, runner_owner)
+                                self.assertEqual(control.ROOT, str(runtime))
+                                self.assertEqual(binding, None if emergency else {'fixture': True})
+                                with self.assertRaises(ValueError):
+                                    runner.load(runtime, common['chat_id'], 'wrong-token', emergency=emergency)
+                        default.assert_not_called()
+
+    @contextlib.contextmanager
+    def roots(self, installed=True):
+        with tempfile.TemporaryDirectory(prefix='currency-wars-root-test-') as temporary:
+            outer = Path(temporary)
+            c_root, d_root, installation = (outer / name for name in ('C-temp-root', 'D-fixed-root', 'installed'))
+            if installed:
+                installation.mkdir()
+            with patch.object(runner.input_bridge, 'INSTALL_ROOT', installation), \
+                    patch.object(artifacts, 'default_root', return_value=c_root) as default:
+                yield outer, c_root, d_root, default
+
+    def test_installed_root_overrides_default_and_revalidates_in_child(self):
+        with self.roots() as (_, c_root, d_root, default):
+            config = {'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            with patch.object(runner.input_bridge, 'configuration', return_value=config) as verify:
+                before_env, before_cache = dict(os.environ), tempfile.tempdir
+                selected = runner.input_bridge.runtime_location(entry.PINNED)
+                self.assertEqual(selected, {'schema': 1, 'source': 'installed_bridge',
+                    'runtime_root': str(d_root), 'installation_id': 'a' * 32})
+                self.assertNotEqual(Path(selected['runtime_root']), c_root)
+                self.assertEqual(runner.input_bridge.runtime_location(entry.PINNED, inherited=selected), selected)
+                self.assertEqual(verify.call_count, 2)
+                verify.assert_called_with(entry.PINNED)
+                default.assert_not_called()
+                self.assertEqual(dict(os.environ), before_env)
+                self.assertEqual(tempfile.tempdir, before_cache)
+
+    def test_absent_installation_preserves_parent_standalone_root(self):
+        with self.roots(installed=False) as (_, c_root, d_root, default):
+            with patch.object(runner.input_bridge, 'configuration') as verify:
+                selected = runner.input_bridge.runtime_location(entry.PINNED)
+                self.assertEqual(selected, {'schema': 1, 'source': 'standalone',
+                    'runtime_root': str(c_root), 'installation_id': None})
+                default.return_value = d_root  # Another process may inherit different TEMP.
+                self.assertEqual(runner.input_bridge.runtime_location(entry.PINNED, inherited=selected), selected)
+                self.assertEqual(default.call_count, 1)
+                verify.assert_not_called()
+
+    def test_invalid_or_unreadable_installation_never_falls_back_or_creates_worker_run(self):
+        with self.roots() as (_, _, _, default):
+            with patch.object(runner.input_bridge, 'configuration', side_effect=runner.input_bridge.BridgeError('invalid installed config')), \
+                    patch.object(artifacts, 'scratch_directory') as create, \
+                    patch.object(entry, 'backend') as backend:
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner._worker_cli(SimpleNamespace())
+                create.assert_not_called()
+                backend.assert_not_called()
+                default.assert_not_called()
+            with patch.object(Path, 'lstat', side_effect=PermissionError('inaccessible installation')), \
+                    patch.object(runner.input_bridge, 'configuration') as verify:
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner.input_bridge.runtime_location(entry.PINNED)
+                default.assert_not_called()
+                verify.assert_not_called()
+
+    def test_configuration_uses_unchanged_fixed_task_root_contract(self):
+        import currency_wars_bridge_task as task
+        config = {'schema': 1, 'installation_id': 'a' * 32, 'user_sid': 'S-1-5-21-1-2-3-1001',
+            'runtime_root': task.RUNTIME_ROOT, 'inbox': task.INBOX, 'game_path': r'D:\Game\StarRail.exe',
+            'game_sha256': 'A' * 64, 'broker_sha256': entry.PINNED, 'driver_sha256': 'B' * 64,
+            'task_name': runner.input_bridge.task_name('S-1-5-21-1-2-3-1001')}
+        self.assertIs(task.validate_config(config), config)
+        with self.roots() as (_, _, _, default):
+            for key, invalid in [('runtime_root', r'C:\Temp\codex-agent-workflow'),
+                                 ('inbox', r'D:\Other\inbox'), ('broker_sha256', 'F' * 64)]:
+                with self.subTest(field=key), \
+                        patch.object(runner.input_bridge, 'InstallationAccess') as access, \
+                        patch.object(runner.input_bridge, 'verify_installation') as verify, \
+                        patch.object(runner.input_bridge, 'read_object', return_value={**config, key: invalid}):
+                    with self.assertRaises(runner.input_bridge.BridgeError):
+                        runner.input_bridge.runtime_location(entry.PINNED)
+                    verify.assert_called_once_with(access.return_value)
+                    access.return_value.close.assert_called_once()
+            default.assert_not_called()
+
+    def test_changed_disappeared_and_malformed_launch_binding_are_rejected(self):
+        with self.roots() as (_, _, d_root, default):
+            location = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            with patch.object(runner.input_bridge, 'configuration', return_value={
+                    'runtime_root': str(d_root), 'installation_id': 'b' * 32}):
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner.input_bridge.runtime_location(entry.PINNED, inherited=location)
+            runner.input_bridge.INSTALL_ROOT.rmdir()
+            with self.assertRaises(runner.input_bridge.BridgeError):
+                runner.input_bridge.runtime_location(entry.PINNED, inherited=location)
+            for invalid in ({**location, 'schema': True}, {**location, 'source': 'standalone'},
+                            {**location, 'installation_id': 123}, {'runtime_root': str(d_root)}):
+                with self.subTest(binding=invalid), self.assertRaises(runner.input_bridge.BridgeError):
+                    runner.input_bridge.runtime_location(entry.PINNED, inherited=invalid)
+            default.assert_not_called()
+
+    def test_public_start_passes_verified_root_and_invalid_config_never_launches(self):
+        with self.roots() as (outer, _, d_root, _):
+            control = SimpleNamespace(C=SimpleNamespace(set_last_error=lambda _: None, get_last_error=lambda: 0),
+                                      k=Mock(CreateMutexW=Mock(return_value=1)))
+            args = SimpleNamespace(chat_id='root-fixture', max_seconds=60, max_matches=1, continue_matches=False)
+            config = {'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            with patch.object(entry, 'backend', return_value=control), patch.object(runner, 'CURRENT', outer / 'absent.json'), \
+                    patch.object(runner.input_bridge, 'configuration', return_value=config) as verify, \
+                    patch.object(subprocess, 'CREATE_NO_WINDOW', 0, create=True), \
+                    patch.object(subprocess, 'Popen', side_effect=RuntimeError('fixture stops before process launch')) as launch:
+                with self.assertRaisesRegex(RuntimeError, 'fixture stops'):
+                    runner._start_cli(args, Mock())
+                command = launch.call_args.args[0]
+                location = json.loads(command[command.index('--runtime-location-json') + 1])
+                self.assertEqual(location['runtime_root'], str(d_root))
+                self.assertEqual(location['installation_id'], config['installation_id'])
+                self.assertEqual(location['source'], 'installed_bridge')
+                launch.reset_mock()
+                # The GUI's verified launch selection is a parent contract too.
+                args.runtime_location_json = json.dumps(location)
+                verify.return_value = {**config, 'installation_id': 'b' * 32}
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner._start_cli(args, Mock())
+                launch.assert_not_called()
+                verify.side_effect = runner.input_bridge.BridgeError('invalid installed config')
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner._start_cli(args, Mock())
+                launch.assert_not_called()
+                self.assertEqual(control.k.ReleaseMutex.call_count, 3)
+
+    def test_unknown_existing_worker_prevents_root_selection_and_second_launch(self):
+        with self.roots() as (outer, _, _, _):
+            current = outer / 'current.json'
+            current.write_text(json.dumps({'chat_id': 'root-fixture', 'runner_pid': 42, 'runner_creation_id': '2'}))
+            control = SimpleNamespace(C=SimpleNamespace(set_last_error=lambda _: None, get_last_error=lambda: 0),
+                k=Mock(CreateMutexW=Mock(return_value=1)), process_probe=lambda *args: {'state': 'unknown'})
+            args = SimpleNamespace(chat_id='root-fixture', max_seconds=60, max_matches=1, continue_matches=False)
+            with patch.object(entry, 'backend', return_value=control), patch.object(runner, 'CURRENT', current), \
+                    patch.object(runner.input_bridge, 'runtime_location') as select, patch.object(subprocess, 'Popen') as launch:
+                with self.assertRaisesRegex(RuntimeError, '退出未知'):
+                    runner._start_cli(args, Mock())
+                select.assert_not_called()
+                launch.assert_not_called()
+
+    def test_worker_marker_child_registration_and_cleanup_keep_selected_root(self):
+        with self.roots() as (outer, c_root, d_root, default):
+            selected = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            args = SimpleNamespace(chat_id='root-fixture', runtime_location_json=json.dumps(selected))
+            seen, child_state, case = [], ['active'], self
+            register, shutdown = runner.Worker.register, runner.Worker.shutdown
+            def identity(pid):
+                return ('active', 'windows:1') if pid == os.getpid() else (child_state[0], 'windows:2')
+            control = SimpleNamespace(process_probe=lambda *args: {'state': 'absent'},
+                write_json=lambda path, value: Path(path).write_text(json.dumps(value), encoding='utf8'))
+            class InertWorker:
+                def __init__(self, args, run, control, marker):
+                    self.args, self.run, self.c, self.children, self.token = args, run, control, [], 'fixture-token'
+                    self.owner = {'run_id': marker['run_id'], 'runner_pid': os.getpid(),
+                                  'runner_creation_id': '1', 'launch_id': 'fixture-launch'}
+                    self.state = {'state_sequence': 0, 'control_mode': 'completed'}
+                    self.broker_launcher, self.bridge_launch = None, None
+                    seen.append(run)
+                    self.assert_root = marker['root'] == str(d_root) and args.runtime_location == selected
+                def run_loop(self):
+                    if not self.assert_root:
+                        raise AssertionError('selected root did not reach marker and worker')
+                    register(self, 424242, '2')
+                    marker = artifacts.read_marker(self.run, root=d_root)
+                    if marker['root'] != str(d_root) or not marker['children_incomplete']:
+                        raise AssertionError('child registration did not use selected root')
+                    child_state[0] = 'unknown'
+                    with case.assertRaises(artifacts.ArtifactError):
+                        artifacts.protect_children(self.run, [], root=d_root, complete=True)
+                    case.assertTrue(self.run.exists())
+                def shutdown(self):
+                    child_state[0] = 'dead'
+                    shutdown(self)
+                def publish(self, **changes):
+                    self.state.update(changes)
+                def log(self, _):
+                    pass
+                def finish_profile(self):
+                    pass
+            with patch.object(runner.input_bridge, 'configuration', return_value={
+                    'runtime_root': str(d_root), 'installation_id': 'a' * 32}), \
+                    patch.object(entry, 'backend', return_value=control), patch.object(runner, 'Worker', InertWorker), \
+                    patch.object(artifacts, 'process_identity', side_effect=identity), \
+                    patch.object(runner, 'CURRENT', outer / 'current.json'):
+                runner._worker_cli(args)
+            self.assertEqual(len(seen), 1)
+            self.assertEqual(seen[0].parent, d_root)
+            self.assertFalse(seen[0].exists())
+            self.assertFalse(c_root.exists())
+            final = json.loads((outer / 'current.json').read_text())
+            self.assertEqual(final['control_mode'], 'completed')
+            self.assertTrue(final['cleanup']['removed'])
+            default.assert_not_called()
 
 
 if __name__ == '__main__':

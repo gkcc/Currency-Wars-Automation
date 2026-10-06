@@ -20,6 +20,8 @@ B-005 已发布为 [草稿 PR #5](https://github.com/gkcc/Currency-Wars-Automati
 
 已发布代码链为 PR #1 `beaea343` → PR #2 `ddcb460c` → PR #3 `c58f6a98` → PR #5 `e05ed2cf`，本 B-006 分支继续叠加。各 PR 的 base 是前一代码分支，纯分析 PR #4 的 base 为 main；请按实际完整 HEAD 与父提交验版，不按 PR 编号推断代码依赖。当前活动局尚未合入或安装这些核心变更。
 
+B-006 已发布为[草稿 PR #6](https://github.com/gkcc/Currency-Wars-Automation/pull/6)，最终 HEAD `6e7d3eaceb3625cbd8a095a61273642426229fd0`；其中末次提交只更新 Profile 协议文档。B-007 从该 SHA 继续交付运行根目录与 GUI 配套修复，见 [B007_RUNTIME_ROOT.md](B007_RUNTIME_ROOT.md)、[B007_RUNTIME_VERIFICATION.json](B007_RUNTIME_VERIFICATION.json) 和 [B007_RESEARCH.md](B007_RESEARCH.md)。启动位置在创建 run 前核定，GUI→start→worker 显式传递并重验，安装异常拒绝回退；打包也直接采用原固定 task 路径。根组合 13/13、0 skip；Rust 6 项已写而未执行，当前无 Cargo、无新 Windows 构建。本批不会延长 7200 秒硬界。跨租期业务续接另按后续独立提交验收。
+
 ## 分工和同步约定
 
 - 本机 Codex：实际操作游戏、采集问题证据、按节点验收出战、验证修复后的真实效果，并负责 Git 同步。
