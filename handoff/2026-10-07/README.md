@@ -12,6 +12,10 @@ B-003 交付见 [B003_IMPLEMENTATION.md](B003_IMPLEMENTATION.md) 和 [B003_VERIF
 
 B-004 叠加交付见 [B004_IMPLEMENTATION.md](B004_IMPLEMENTATION.md) 和 [B004_VERIFICATION.json](B004_VERIFICATION.json)：只为被容量阻塞的角色奖励单次腾位，按原收据和新帧核空槽/钱/独立溢出，合法恢复或当前完整人工复核后立即回领奖。非零/未知溢出和无已核出售控件仍待实机证据；特权卡新增当前资源候选，尚不宣称自动升级能力。
 
+B-005 继续叠加在 B-004 的 `c58f6a988194b25cef5c22f710f758692f864a3d` 之上，见 [B005_IMPLEMENTATION.md](B005_IMPLEMENTATION.md) 与 [B005_VERIFICATION.json](B005_VERIFICATION.json)。当前缺口→免费刷新→明确付费预算/停止→经验的依赖现已进入真实 Worker；F（70）逐笔核差额，统一节点预算和原收据台账跨 epoch 保留。正常情况一次有界预算可在本地连续处理，每笔仍有新帧与原守卫。根组合 28/28、0 skip，独立选择 15+8 通过，计数重叠；没有新 Windows 构建、实机安装或提速结论。
+
+53 条原始计时的独立纯文档分析已发布为 [草稿 PR #4](https://github.com/gkcc/Currency-Wars-Automation/pull/4)，HEAD 为 `b41510c27caa08de7e5d1f57ae7ef9402ee4a336`，与代码修复链分开。可读 [完整分析与 HTML/JSON/CSV 索引](https://github.com/gkcc/Currency-Wars-Automation/blob/b41510c27caa08de7e5d1f57ae7ef9402ee4a336/handoff/2026-10-07/profile/README.md)。287.461 秒 helper 合计与 2817.532157 秒估算窗口之间有 2530.071157 秒未知；未把旧 schema 填成完整节点或父子去重数据。
+
 ## 分工和同步约定
 
 - 本机 Codex：实际操作游戏、采集问题证据、按节点验收出战、验证修复后的真实效果，并负责 Git 同步。
