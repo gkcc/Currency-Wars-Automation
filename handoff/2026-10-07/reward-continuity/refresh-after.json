@@ -1,0 +1,2225 @@
+{
+  "schema": "currency-wars-refresh-replay/v1",
+  "offline_only": true,
+  "physical_inputs": 0,
+  "fresh_game_captures": 0,
+  "manifest_sha256": "a444318a7a84c61b355f06237ddcfb2099ae441fcdf31054dc83817aa95d12f5",
+  "machine": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "node": "971a7bcb66f9",
+    "python": "3.12.14"
+  },
+  "source": {
+    "currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+    "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+    "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+  },
+  "source_historical_core_sha": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+  "archival_receipts": [
+    {
+      "index": 1,
+      "original_receipt": {
+        "id": "dd530acf761345c2b599deb36bf316d1",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "original_receipt_sha256": "306a12a216bacc698ee8ab57618a47099fc021b1d60731f4a21e07f1bb130048",
+      "original_hash_verification": "Original unredacted receipt bytes were not exported; the supplied source hash is provenance, not independently recomputed here.",
+      "hypothetical_current_request_actions": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "exact_current_protocol_delivery": {
+        "request_id": "dd530acf761345c2b599deb36bf316d1",
+        "state": "unknown",
+        "unknown_input": true,
+        "input_attempted": null
+      },
+      "delta_requested_wait_seconds": 0.3,
+      "historical_input_identity": "One completed D68; original wait parameter .4 retained verbatim.",
+      "timing_source": {
+        "id": "dd530acf761345c2b599deb36bf316d1",
+        "kind": "actions",
+        "label": "3-4-paid-roll-1",
+        "seconds": 5.562,
+        "time": "2026-10-06T17:45:56.931701+00:00"
+      },
+      "live_authorization": false
+    },
+    {
+      "index": 2,
+      "original_receipt": {
+        "id": "2a8b83a6654c482394a3da17d4312618",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "original_receipt_sha256": "3393f75c04d3dd466c0c4b148c8f334dd0f5943e88b2a5594385c50b2e042cdf",
+      "original_hash_verification": "Original unredacted receipt bytes were not exported; the supplied source hash is provenance, not independently recomputed here.",
+      "hypothetical_current_request_actions": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "exact_current_protocol_delivery": {
+        "request_id": "2a8b83a6654c482394a3da17d4312618",
+        "state": "unknown",
+        "unknown_input": true,
+        "input_attempted": null
+      },
+      "delta_requested_wait_seconds": 0.3,
+      "historical_input_identity": "One completed D68; original wait parameter .4 retained verbatim.",
+      "timing_source": {
+        "id": "2a8b83a6654c482394a3da17d4312618",
+        "kind": "actions",
+        "label": "3-4-paid-roll-2",
+        "seconds": 5.64,
+        "time": "2026-10-06T17:46:20.878257+00:00"
+      },
+      "live_authorization": false
+    },
+    {
+      "index": 3,
+      "original_receipt": {
+        "id": "ade674258051402bb173ce236d643026",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "original_receipt_sha256": "d4650e62dc6c85cff8cf0e7a8605d8733255b65a7f76a38d3f4e894a5ebe489d",
+      "original_hash_verification": "Original unredacted receipt bytes were not exported; the supplied source hash is provenance, not independently recomputed here.",
+      "hypothetical_current_request_actions": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "exact_current_protocol_delivery": {
+        "request_id": "ade674258051402bb173ce236d643026",
+        "state": "unknown",
+        "unknown_input": true,
+        "input_attempted": null
+      },
+      "delta_requested_wait_seconds": 0.3,
+      "historical_input_identity": "One completed D68; original wait parameter .4 retained verbatim.",
+      "timing_source": {
+        "id": "ade674258051402bb173ce236d643026",
+        "kind": "actions",
+        "label": "3-4-paid-roll-3",
+        "seconds": 5.766,
+        "time": "2026-10-06T17:46:37.011501+00:00"
+      },
+      "live_authorization": false
+    },
+    {
+      "index": 4,
+      "original_receipt": {
+        "id": "98ef84847fe94ad3a31467dbd3de962a",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "original_receipt_sha256": "d5ae4e3189d0ebbd21b7400cce28a5b4cd93670190c7962f9404e0d3826dfc17",
+      "original_hash_verification": "Original unredacted receipt bytes were not exported; the supplied source hash is provenance, not independently recomputed here.",
+      "hypothetical_current_request_actions": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "exact_current_protocol_delivery": {
+        "request_id": "98ef84847fe94ad3a31467dbd3de962a",
+        "state": "unknown",
+        "unknown_input": true,
+        "input_attempted": null
+      },
+      "delta_requested_wait_seconds": 0.3,
+      "historical_input_identity": "One completed D68; original wait parameter .4 retained verbatim.",
+      "timing_source": {
+        "id": "98ef84847fe94ad3a31467dbd3de962a",
+        "kind": "actions",
+        "label": "3-4-paid-roll-4",
+        "seconds": 5.672,
+        "time": "2026-10-06T17:46:53.918362+00:00"
+      },
+      "live_authorization": false
+    },
+    {
+      "index": 5,
+      "original_receipt": {
+        "id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "original_receipt_sha256": "3215806d6e8d44d2d48472e3878c401acd9b5771542449f6a2117f21935fb6d1",
+      "original_hash_verification": "Original unredacted receipt bytes were not exported; the supplied source hash is provenance, not independently recomputed here.",
+      "hypothetical_current_request_actions": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "exact_current_protocol_delivery": {
+        "request_id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+        "state": "unknown",
+        "unknown_input": true,
+        "input_attempted": null
+      },
+      "delta_requested_wait_seconds": 0.3,
+      "historical_input_identity": "One completed D68; original wait parameter .4 retained verbatim.",
+      "timing_source": {
+        "id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+        "kind": "actions",
+        "label": "3-4-paid-roll-5",
+        "seconds": 5.797,
+        "time": "2026-10-06T17:47:11.418612+00:00"
+      },
+      "live_authorization": false
+    },
+    {
+      "index": 6,
+      "original_receipt": {
+        "id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "original_receipt_sha256": "1c80ef3daec7c51d5a703a71cf3e241810fc11dd83302872c9a028523149a494",
+      "original_hash_verification": "Original unredacted receipt bytes were not exported; the supplied source hash is provenance, not independently recomputed here.",
+      "hypothetical_current_request_actions": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "exact_current_protocol_delivery": {
+        "request_id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+        "state": "unknown",
+        "unknown_input": true,
+        "input_attempted": null
+      },
+      "delta_requested_wait_seconds": 0.3,
+      "historical_input_identity": "One completed D68; original wait parameter .4 retained verbatim.",
+      "timing_source": {
+        "id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+        "kind": "actions",
+        "label": "3-4-paid-roll-6",
+        "seconds": 5.766,
+        "time": "2026-10-06T17:47:36.401796+00:00"
+      },
+      "live_authorization": false
+    }
+  ],
+  "protocol": {
+    "kind": "generated_number_worker_entry_contract_correlated_to_archival_six_d",
+    "normal_root_requests": 1,
+    "exception_root_requests": 0,
+    "request_kinds": [
+      "shop_strategy"
+    ],
+    "initial_root_request": "Existing EconomyTests fixture calls Worker.ask before timed budget binding.",
+    "spent": {
+      "purchase": 0,
+      "refresh": 12,
+      "experience": 0
+    },
+    "paid_refreshes": 6,
+    "observed_coin_change": -12,
+    "observed_coin_spent": 12,
+    "accounting_note": "spent is the formally reconciled ledger. Observed coin change is retained separately; a zero ledger with pending does not mean the game charged nothing.",
+    "pending": false,
+    "economy_completed": true,
+    "pending_request_id": null,
+    "cached_acknowledgement": null,
+    "simulated_input_count": 6,
+    "no_replay_on_next_advance": true,
+    "next_phase": "lineup_equipment",
+    "battle_ready": false,
+    "phase_coverage": {
+      "tested": [
+        "economy"
+      ],
+      "fixture_preconditions_only": [
+        "rewards",
+        "startup_guide",
+        "inventory_cleanup"
+      ],
+      "not_tested": [
+        "lineup_equipment",
+        "battle_acceptance"
+      ],
+      "real_complete_preparation_count": 0
+    },
+    "fixture_preconditions": [
+      "Synthetic stage 2-3 in the existing EconomyTests fixture; historical label is 3-4.",
+      "Fixture marks rewards/startup_guide/inventory_cleanup complete; no historical proof of these phases.",
+      "Synthetic standard-mode budget 5 purchase / 12 refresh / 0 experience; reserve 50.",
+      "Synthetic applied guide body says level 8 reroll; no actual historical guide authorization exported.",
+      "Generated numeric frames bind level 8, free_refreshes 0, refresh_cost 2, XP fields.",
+      "Generated shop is five verified-empty slots; the real seven shops contain cards, and ROOT reported readable local slots separately. This does not verify real shop recognition.",
+      "No team.checked/fully_read is injected; no purchase occurs.",
+      "Synthetic immutable frame IDs/current epochs and matched receipts exist only in a temporary inert runtime.",
+      "Wait(.7) is a generated protocol acknowledgement; the archival receipt records wait(.4)."
+    ],
+    "generated_frame_sequence": [
+      "d6e8955adc87ae1065295a304fd479b27cbdd13ab2a139279feb303d18279d65",
+      "e6372b41c8021de423ba4283c1297d07ad6e618191c865957d7a2af0f5e69c8d",
+      "578b852af73a7b83cd0e70e774a7e864cb89a9c807921ab788a575a13766f777",
+      "9ea25b747d37d6be88dbef989026e7fafc5a59e935a3ed440868231a5a607c29",
+      "549d4c78f1e0a67bebc0516e78b971a9d123266660a1a34c41312e00fccbb01a",
+      "f731daec728a92eeeb656f2e2dc710a636e2f51146bc7f4d22d247c90ef4fd05",
+      "574cb6ea724f3533b71a53aebdc68bbc4cb4e000249872a1bfb3b78c52760108"
+    ],
+    "historical_frame_sequence": [
+      "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+      "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+      "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+      "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+      "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+      "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+      "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023"
+    ],
+    "correlations": [
+      {
+        "index": 1,
+        "origin": "inert_protocol_adapter",
+        "historical_receipt_id": "dd530acf761345c2b599deb36bf316d1",
+        "generated_request_id": "cc34823e52bc4d689a71d7fc1b1fe4db",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+        "after_historical_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "generated_frame_is_historical_png": false
+      },
+      {
+        "index": 2,
+        "origin": "inert_protocol_adapter",
+        "historical_receipt_id": "2a8b83a6654c482394a3da17d4312618",
+        "generated_request_id": "05b0688213e4428588efe369aa6af3c5",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "after_historical_sha256": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+        "generated_frame_is_historical_png": false
+      },
+      {
+        "index": 3,
+        "origin": "inert_protocol_adapter",
+        "historical_receipt_id": "ade674258051402bb173ce236d643026",
+        "generated_request_id": "eda8cd37d83f41d6996649006be34635",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+        "after_historical_sha256": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+        "generated_frame_is_historical_png": false
+      },
+      {
+        "index": 4,
+        "origin": "inert_protocol_adapter",
+        "historical_receipt_id": "98ef84847fe94ad3a31467dbd3de962a",
+        "generated_request_id": "3061237e091e4e6cbbbc926d8795d982",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+        "after_historical_sha256": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+        "generated_frame_is_historical_png": false
+      },
+      {
+        "index": 5,
+        "origin": "inert_protocol_adapter",
+        "historical_receipt_id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+        "generated_request_id": "4dcc0b7b7fdc425c83c50704d5d76421",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+        "after_historical_sha256": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+        "generated_frame_is_historical_png": false
+      },
+      {
+        "index": 6,
+        "origin": "inert_protocol_adapter",
+        "historical_receipt_id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+        "generated_request_id": "192e577195ae48f8a871841c142edee9",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+        "after_historical_sha256": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023",
+        "generated_frame_is_historical_png": false
+      }
+    ],
+    "effects": [
+      {
+        "request_id": "cc34823e52bc4d689a71d7fc1b1fe4db",
+        "kind": "refresh",
+        "outcome": "success",
+        "observed_spent": 2,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 2,
+          "experience": 0
+        },
+        "input_resent": false
+      },
+      {
+        "request_id": "05b0688213e4428588efe369aa6af3c5",
+        "kind": "refresh",
+        "outcome": "success",
+        "observed_spent": 2,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 4,
+          "experience": 0
+        },
+        "input_resent": false
+      },
+      {
+        "request_id": "eda8cd37d83f41d6996649006be34635",
+        "kind": "refresh",
+        "outcome": "success",
+        "observed_spent": 2,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 6,
+          "experience": 0
+        },
+        "input_resent": false
+      },
+      {
+        "request_id": "3061237e091e4e6cbbbc926d8795d982",
+        "kind": "refresh",
+        "outcome": "success",
+        "observed_spent": 2,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 8,
+          "experience": 0
+        },
+        "input_resent": false
+      },
+      {
+        "request_id": "4dcc0b7b7fdc425c83c50704d5d76421",
+        "kind": "refresh",
+        "outcome": "success",
+        "observed_spent": 2,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 10,
+          "experience": 0
+        },
+        "input_resent": false
+      },
+      {
+        "request_id": "192e577195ae48f8a871841c142edee9",
+        "kind": "refresh",
+        "outcome": "success",
+        "observed_spent": 2,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 12,
+          "experience": 0
+        },
+        "input_resent": false
+      }
+    ],
+    "timing": {
+      "steps": [
+        {
+          "recognition": 0.016641405000882514,
+          "rules": 0.015120131999537989,
+          "publication_simulation": 0.0002503870000509778,
+          "entry_io_unattributed": 0.01721928599909006,
+          "step": "fixture_budget_binding",
+          "active_total": 0.04923120999956154,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.014575551000234555,
+          "rules": 0.0007975229991643573,
+          "publication_simulation": 0.0006042309996701078,
+          "entry_io_unattributed": 0.08071321500119666,
+          "step": "paid_refresh_1",
+          "active_total": 0.09669052000026568,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.0294017200012604,
+          "rules": 0.0003089040001214016,
+          "publication_simulation": 0.003101934999904188,
+          "entry_io_unattributed": 0.0778550399982123,
+          "step": "paid_refresh_2",
+          "active_total": 0.1106675989994983,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.028724899999360787,
+          "rules": 0.0003060119997826405,
+          "publication_simulation": 0.0005631679996440653,
+          "entry_io_unattributed": 0.07654434100186336,
+          "step": "paid_refresh_3",
+          "active_total": 0.10613842100065085,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.028716677999909734,
+          "rules": 0.0002933510013463092,
+          "publication_simulation": 0.0006258339999476448,
+          "entry_io_unattributed": 0.07728828299877932,
+          "step": "paid_refresh_4",
+          "active_total": 0.10692414599998301,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.029334729998481635,
+          "rules": 0.00030346599942276953,
+          "publication_simulation": 0.00048414000048069283,
+          "entry_io_unattributed": 0.07778739600144036,
+          "step": "paid_refresh_5",
+          "active_total": 0.10790973199982545,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.030737161999240925,
+          "rules": 0.0003546449997884338,
+          "publication_simulation": 0.0005349169996406999,
+          "entry_io_unattributed": 0.07792920900101308,
+          "step": "paid_refresh_6",
+          "active_total": 0.10955593299968314,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.014566256999387406,
+          "rules": 0.0011308450011711102,
+          "publication_simulation": 0.0,
+          "entry_io_unattributed": 2.276399936818052e-05,
+          "step": "economy_completion",
+          "active_total": 0.015719865999926697,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        }
+      ],
+      "exclusive_totals": {
+        "recognition": 0.19269840299875796,
+        "rules": 0.01861487800033501,
+        "publication_simulation": 0.006164611999338376,
+        "entry_io_unattributed": 0.4853595340009633
+      },
+      "active_total": 0.7028374269993947,
+      "game_animation_wait": null,
+      "supervisor_wait": null,
+      "contract": "Deepest active category owns each measured interval once. Rules includes existing policy/guard/effect calls; uninstrumented Entry/file work remains entry_io_unattributed. Historical waits and helper timings are separate, never added. No physical waits or supervisor waiting are simulated."
+    },
+    "physical_inputs": 0,
+    "fresh_game_captures": 0,
+    "receipt_origin": "inert_protocol_adapter"
+  },
+  "protocol_original_completed": {
+    "kind": "generated_number_worker_entry_contract_correlated_to_archival_six_d",
+    "normal_root_requests": 1,
+    "exception_root_requests": 1,
+    "request_kinds": [
+      "shop_strategy",
+      "economy_result"
+    ],
+    "initial_root_request": "Existing EconomyTests fixture calls Worker.ask before timed budget binding.",
+    "spent": {
+      "purchase": 0,
+      "refresh": 0,
+      "experience": 0
+    },
+    "paid_refreshes": 0,
+    "observed_coin_change": -2,
+    "observed_coin_spent": 2,
+    "accounting_note": "spent is the formally reconciled ledger. Observed coin change is retained separately; a zero ledger with pending does not mean the game charged nothing.",
+    "pending": true,
+    "economy_completed": false,
+    "pending_request_id": "f08f7df7f75a4785a8f9b5ce030704fe",
+    "cached_acknowledgement": {
+      "attempted": true,
+      "entrypoint": "Worker.accept_economy_plan",
+      "cached_after_png_present": true,
+      "cached_receipt_present": true,
+      "original_completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        }
+      ],
+      "requested_actions": [
+        {
+          "type": "key",
+          "args": [
+            68.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "rejected": true,
+      "reason": "经济原completed/输入交付不确定；资源差额不能代替原收据，保持pending",
+      "observed_coin_change": -2,
+      "formally_reconciled_spent": {
+        "purchase": 0,
+        "refresh": 0,
+        "experience": 0
+      },
+      "pending_request_before": "f08f7df7f75a4785a8f9b5ce030704fe",
+      "pending_request_after": "f08f7df7f75a4785a8f9b5ce030704fe",
+      "in_memory_ledger_unchanged": true,
+      "durable_ledger_unchanged": true,
+      "no_new_publication": true,
+      "fixture_scope": "Current source only; explicit same-frame supervisor budget acknowledgement over the existing generated numeric/Entry fixture, not a retained historical ROOT reply.",
+      "timing_included": false
+    },
+    "simulated_input_count": 1,
+    "no_replay_on_next_advance": true,
+    "next_phase": "economy",
+    "battle_ready": false,
+    "phase_coverage": {
+      "tested": [
+        "economy"
+      ],
+      "fixture_preconditions_only": [
+        "rewards",
+        "startup_guide",
+        "inventory_cleanup"
+      ],
+      "not_tested": [
+        "lineup_equipment",
+        "battle_acceptance"
+      ],
+      "real_complete_preparation_count": 0
+    },
+    "fixture_preconditions": [
+      "Synthetic stage 2-3 in the existing EconomyTests fixture; historical label is 3-4.",
+      "Fixture marks rewards/startup_guide/inventory_cleanup complete; no historical proof of these phases.",
+      "Synthetic standard-mode budget 5 purchase / 12 refresh / 0 experience; reserve 50.",
+      "Synthetic applied guide body says level 8 reroll; no actual historical guide authorization exported.",
+      "Generated numeric frames bind level 8, free_refreshes 0, refresh_cost 2, XP fields.",
+      "Generated shop is five verified-empty slots; the real seven shops contain cards, and ROOT reported readable local slots separately. This does not verify real shop recognition.",
+      "No team.checked/fully_read is injected; no purchase occurs.",
+      "Synthetic immutable frame IDs/current epochs and matched receipts exist only in a temporary inert runtime.",
+      "Original completed wait(.4) is inserted verbatim into an inert current wait(.7) request; this is the exact mismatch negative, never a successful historical transport replay."
+    ],
+    "generated_frame_sequence": [
+      "d6e8955adc87ae1065295a304fd479b27cbdd13ab2a139279feb303d18279d65",
+      "e6372b41c8021de423ba4283c1297d07ad6e618191c865957d7a2af0f5e69c8d",
+      "578b852af73a7b83cd0e70e774a7e864cb89a9c807921ab788a575a13766f777",
+      "9ea25b747d37d6be88dbef989026e7fafc5a59e935a3ed440868231a5a607c29",
+      "549d4c78f1e0a67bebc0516e78b971a9d123266660a1a34c41312e00fccbb01a",
+      "f731daec728a92eeeb656f2e2dc710a636e2f51146bc7f4d22d247c90ef4fd05",
+      "574cb6ea724f3533b71a53aebdc68bbc4cb4e000249872a1bfb3b78c52760108"
+    ],
+    "historical_frame_sequence": [
+      "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+      "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+      "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+      "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+      "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+      "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+      "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023"
+    ],
+    "correlations": [
+      {
+        "index": 1,
+        "origin": "archival_completed_on_inert_transport",
+        "historical_receipt_id": "dd530acf761345c2b599deb36bf316d1",
+        "generated_request_id": "f08f7df7f75a4785a8f9b5ce030704fe",
+        "historical_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "requested_actions": [
+          {
+            "type": "key",
+            "args": [
+              68.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.7
+            ]
+          }
+        ],
+        "generated_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "delta_requested_wait_seconds": 0.3,
+        "before_historical_sha256": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+        "after_historical_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "generated_frame_is_historical_png": false
+      }
+    ],
+    "effects": [
+      {
+        "request_id": "f08f7df7f75a4785a8f9b5ce030704fe",
+        "kind": "refresh",
+        "outcome": "unknown",
+        "observed_spent": null,
+        "actual_spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 0
+        },
+        "input_resent": false
+      }
+    ],
+    "timing": {
+      "steps": [
+        {
+          "recognition": 0.016303786000207765,
+          "rules": 0.015003215999968234,
+          "publication_simulation": 0.00025297100000898354,
+          "entry_io_unattributed": 0.01674038399960409,
+          "step": "fixture_budget_binding",
+          "active_total": 0.048300356999789074,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.014518866999424063,
+          "rules": 0.0002381269996476476,
+          "publication_simulation": 0.0005786519996036077,
+          "entry_io_unattributed": 0.09995104600147897,
+          "step": "paid_refresh_1",
+          "active_total": 0.11528669200015429,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 0.0,
+          "rules": 0.0,
+          "publication_simulation": 0.0,
+          "entry_io_unattributed": 8.762999641476199e-06,
+          "step": "paid_refresh_2",
+          "active_total": 8.762999641476199e-06,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        }
+      ],
+      "exclusive_totals": {
+        "recognition": 0.030822652999631828,
+        "rules": 0.015241342999615881,
+        "publication_simulation": 0.0008316229996125912,
+        "entry_io_unattributed": 0.11670019300072454
+      },
+      "active_total": 0.16359581199958484,
+      "game_animation_wait": null,
+      "supervisor_wait": null,
+      "contract": "Deepest active category owns each measured interval once. Rules includes existing policy/guard/effect calls; uninstrumented Entry/file work remains entry_io_unattributed. Historical waits and helper timings are separate, never added. No physical waits or supervisor waiting are simulated."
+    },
+    "physical_inputs": 0,
+    "fresh_game_captures": 0,
+    "receipt_origin": "archival_completed_on_inert_transport"
+  },
+  "comparison": {
+    "before_source": {
+      "currency_wars_runner.py": "0a6248e2934f0544ebf4ddeb3f0342bf472c1c9a5c2f27db15eafd4b6873fe99",
+      "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+      "currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+      "currency_wars_profile.py": "6dd66183322d10e14785e1e6598c753805b2de1ed6396be95a61c9ab7e9ad964",
+      "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+    },
+    "after_source": {
+      "currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+      "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+      "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+      "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+      "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+    },
+    "protocol": {
+      "normal_root_requests": [
+        1,
+        1
+      ],
+      "exception_root_requests": [
+        0,
+        0
+      ],
+      "refresh_spent": [
+        12,
+        12
+      ],
+      "next_phase": [
+        "lineup_equipment",
+        "lineup_equipment"
+      ],
+      "offline_active_seconds": [
+        0.8159722420000435,
+        0.7028374269993947
+      ]
+    },
+    "original_completed_negative": {
+      "normal_root_requests": [
+        2,
+        1
+      ],
+      "exception_root_requests": [
+        0,
+        1
+      ],
+      "simulated_inputs": [
+        6,
+        1
+      ],
+      "formally_reconciled_refresh_spent": [
+        12,
+        0
+      ],
+      "observed_coin_change": [
+        -12,
+        -2
+      ],
+      "pending": [
+        false,
+        true
+      ],
+      "next_phase": [
+        "economy",
+        "economy"
+      ],
+      "no_replay_on_next_advance": [
+        true,
+        true
+      ]
+    },
+    "real_ocr_seconds": [
+      9.551859388999674,
+      10.596462278999752
+    ],
+    "real_ocr_source": [
+      {
+        "currency_wars_runner.py": "0a6248e2934f0544ebf4ddeb3f0342bf472c1c9a5c2f27db15eafd4b6873fe99",
+        "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+        "currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+        "currency_wars_profile.py": "6dd66183322d10e14785e1e6598c753805b2de1ed6396be95a61c9ab7e9ad964",
+        "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+      },
+      {
+        "currency_wars_runner.py": "d20ba5bee7c28c5bd689c236d1a053e39130eb76818ca2bffde097922634704f",
+        "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+        "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+        "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+        "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+      }
+    ],
+    "same_machine": true,
+    "speed_claim": "No speedup inferred from single passes, generated protocol timings, or different historical sequences; this records the same-machine same-sequence comparison."
+  },
+  "real_png": {
+    "kind": "real_retained_png_ocr_no_injected_business_facts",
+    "frames": [
+      {
+        "index": 0,
+        "snapshot_sha256": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+        "engine_cold": true,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 70,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1473.62,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      {
+        "index": 1,
+        "snapshot_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "engine_cold": false,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 68,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1396.54,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      {
+        "index": 2,
+        "snapshot_sha256": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+        "engine_cold": false,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 66,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1591.16,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      {
+        "index": 3,
+        "snapshot_sha256": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+        "engine_cold": false,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 64,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1369.86,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      {
+        "index": 4,
+        "snapshot_sha256": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+        "engine_cold": false,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 62,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1479.67,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      {
+        "index": 5,
+        "snapshot_sha256": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+        "engine_cold": false,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 60,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1566.2,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      {
+        "index": 6,
+        "snapshot_sha256": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023",
+        "engine_cold": false,
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 58,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "shop_slots": [
+          {
+            "slot": 1,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 2,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 3,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 4,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          },
+          {
+            "slot": 5,
+            "name": null,
+            "cost": null,
+            "status": "unknown",
+            "reasons": [
+              "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+            ]
+          }
+        ],
+        "team_fully_read": false,
+        "team_checked": false,
+        "known_board_units": 0,
+        "perception_reported_elapsed_ms": 1404.02,
+        "phase": "rewards",
+        "phase_completed": [],
+        "policy_dispatched": false,
+        "normal_root_requests": 0,
+        "exception_root_requests": 0,
+        "request_count_scope": "No Worker.tick or synthetic preparation/strategy review in this read-only layer.",
+        "references_match": {
+          "coins": true,
+          "player_level": true,
+          "stage": true
+        },
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      }
+    ],
+    "coin_effects": [
+      {
+        "index": 1,
+        "independently_read_coin_delta": 2,
+        "historical_recorded_delta": 2,
+        "strict_effect_result": {
+          "outcome": "unknown",
+          "reason": "刷新后免费次数/完整五槽未实读",
+          "observed_spent": 2
+        },
+        "original_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "unsupported_fields": [
+          "current budget/reviewer",
+          "free_refreshes binding",
+          "five-slot transaction proof",
+          "prior preparation phases"
+        ]
+      },
+      {
+        "index": 2,
+        "independently_read_coin_delta": 2,
+        "historical_recorded_delta": 2,
+        "strict_effect_result": {
+          "outcome": "unknown",
+          "reason": "刷新后免费次数/完整五槽未实读",
+          "observed_spent": 2
+        },
+        "original_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "unsupported_fields": [
+          "current budget/reviewer",
+          "free_refreshes binding",
+          "five-slot transaction proof",
+          "prior preparation phases"
+        ]
+      },
+      {
+        "index": 3,
+        "independently_read_coin_delta": 2,
+        "historical_recorded_delta": 2,
+        "strict_effect_result": {
+          "outcome": "unknown",
+          "reason": "刷新后免费次数/完整五槽未实读",
+          "observed_spent": 2
+        },
+        "original_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "unsupported_fields": [
+          "current budget/reviewer",
+          "free_refreshes binding",
+          "five-slot transaction proof",
+          "prior preparation phases"
+        ]
+      },
+      {
+        "index": 4,
+        "independently_read_coin_delta": 2,
+        "historical_recorded_delta": 2,
+        "strict_effect_result": {
+          "outcome": "unknown",
+          "reason": "刷新后免费次数/完整五槽未实读",
+          "observed_spent": 2
+        },
+        "original_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "unsupported_fields": [
+          "current budget/reviewer",
+          "free_refreshes binding",
+          "five-slot transaction proof",
+          "prior preparation phases"
+        ]
+      },
+      {
+        "index": 5,
+        "independently_read_coin_delta": 2,
+        "historical_recorded_delta": 2,
+        "strict_effect_result": {
+          "outcome": "unknown",
+          "reason": "刷新后免费次数/完整五槽未实读",
+          "observed_spent": 2
+        },
+        "original_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "unsupported_fields": [
+          "current budget/reviewer",
+          "free_refreshes binding",
+          "five-slot transaction proof",
+          "prior preparation phases"
+        ]
+      },
+      {
+        "index": 6,
+        "independently_read_coin_delta": 2,
+        "historical_recorded_delta": 2,
+        "strict_effect_result": {
+          "outcome": "unknown",
+          "reason": "刷新后免费次数/完整五槽未实读",
+          "observed_spent": 2
+        },
+        "original_completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "unsupported_fields": [
+          "current budget/reviewer",
+          "free_refreshes binding",
+          "five-slot transaction proof",
+          "prior preparation phases"
+        ]
+      }
+    ],
+    "independently_read_total_coin_spent": 12,
+    "timing": {
+      "steps": [
+        {
+          "recognition": 1.4736833039996782,
+          "rules": 5.886899998586159e-05,
+          "publication_simulation": 0.0015561479999632866,
+          "entry_io_unattributed": 0.04090019200066308,
+          "step": "historical_shop_frame_0",
+          "active_total": 1.5161985130002904,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 1.3966050260000884,
+          "rules": 5.7716999890544685e-05,
+          "publication_simulation": 0.0016170999997484614,
+          "entry_io_unattributed": 0.0410274149999168,
+          "step": "historical_shop_frame_1",
+          "active_total": 1.4393072579996442,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 1.5912908629998128,
+          "rules": 5.732599993280019e-05,
+          "publication_simulation": 0.0016162290003194357,
+          "entry_io_unattributed": 0.04211182999961238,
+          "step": "historical_shop_frame_2",
+          "active_total": 1.6350762479996774,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 1.3699280920000092,
+          "rules": 5.7347000165464124e-05,
+          "publication_simulation": 0.0016298880000249483,
+          "entry_io_unattributed": 0.048136518999399414,
+          "step": "historical_shop_frame_3",
+          "active_total": 1.419751845999599,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 1.479743273999702,
+          "rules": 5.6475999826943735e-05,
+          "publication_simulation": 0.0015824369997972099,
+          "entry_io_unattributed": 0.04458357000066826,
+          "step": "historical_shop_frame_4",
+          "active_total": 1.5259657569999945,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 1.5662734460001957,
+          "rules": 5.748700004915008e-05,
+          "publication_simulation": 0.001486813000155962,
+          "entry_io_unattributed": 0.04085746900000231,
+          "step": "historical_shop_frame_5",
+          "active_total": 1.6086752150004031,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        },
+        {
+          "recognition": 1.4041035679997549,
+          "rules": 7.314999993468518e-05,
+          "publication_simulation": 0.0016033189999689057,
+          "entry_io_unattributed": 0.04570740500048487,
+          "step": "historical_shop_frame_6",
+          "active_total": 1.4514874420001433,
+          "game_animation_wait": null,
+          "supervisor_wait": null,
+          "scope": "offline_in_process_only"
+        }
+      ],
+      "exclusive_totals": {
+        "recognition": 10.281627572999241,
+        "rules": 0.0004183719997854496,
+        "publication_simulation": 0.01109193399997821,
+        "entry_io_unattributed": 0.3033244000007471
+      },
+      "active_total": 10.596462278999752,
+      "game_animation_wait": null,
+      "supervisor_wait": null,
+      "contract": "Deepest active category owns each measured interval once. Rules includes existing policy/guard/effect calls; uninstrumented Entry/file work remains entry_io_unattributed. Historical waits and helper timings are separate, never added. No physical waits or supervisor waiting are simulated."
+    },
+    "completed_preparation_phases": [],
+    "endpoint": "Seven archived observations only; no current authorization for any preparation phase.",
+    "source": {
+      "currency_wars_runner.py": "d20ba5bee7c28c5bd689c236d1a053e39130eb76818ca2bffde097922634704f",
+      "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+      "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+      "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+      "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+    }
+  },
+  "source_scope": "Final protocol execution. The real_png.source map preserves the earlier completed real OCR execution; it is not reattributed to this final runner.",
+  "execution_segments": {
+    "real_png": {
+      "source": {
+        "currency_wars_runner.py": "d20ba5bee7c28c5bd689c236d1a053e39130eb76818ca2bffde097922634704f",
+        "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+        "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+        "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+        "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+      },
+      "execution": "Retained completed seven-PNG production OCR run. No OCR rerun for final receipt/acknowledgement guard and profile edits."
+    },
+    "protocol": {
+      "source": {
+        "currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+        "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+        "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+        "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+        "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+      },
+      "execution": "Final completed protocol-only execution includes original-completed cached acknowledgement rejection."
+    },
+    "timings_combined_across_segments": false
+  }
+}

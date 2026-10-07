@@ -25,7 +25,8 @@ PHASES = {'rewards': '奖励', 'startup_guide': '指南', 'inventory_cleanup': '
           'battle_acceptance': '出战验收', 'battle': '战斗',
           'settlement': '结算切换', 'recovery': '恢复', 'unknown': '未知阶段'}
 OPERATIONS = {'capture': '采集', 'ocr': 'OCR', 'takeover': '接管',
-              'input_animation': '输入动画', 'decision': '决策', 'unknown': '未知空档'}
+              'input_animation': '输入动画', 'decision': '决策', 'rules': '规则',
+              'publication': '发布', 'unknown': '未知空档'}
 _MISSING = object()
 
 
@@ -125,7 +126,7 @@ class ProfileRecorder:
             self._emit('phase_begin', self.phase_id, stamp=stamp, phase=self.phase)
 
     def start_span(self, name, *, phase=None, operation=None, parent_id=None,
-                   request_id=None, receipt_id=None, snapshot_id=None):
+                   request_id=None, receipt_id=None, snapshot_id=None, business_step=None):
         if not self.enabled:
             return None
         item_id = uuid.uuid4().hex
@@ -134,7 +135,8 @@ class ProfileRecorder:
                   'phase': phase if isinstance(phase, str) and phase in PHASES else None,
                   'operation': operation if isinstance(operation, str) and operation in OPERATIONS else None,
                   'parent_id': parent_id or (parents[-1] if parents else None),
-                  'request_id': request_id, 'receipt_id': receipt_id, 'snapshot_id': snapshot_id}
+                  'request_id': request_id, 'receipt_id': receipt_id, 'snapshot_id': snapshot_id,
+                  'business_step': business_step}
         self._spans[item_id] = record
         self._emit('span_begin', item_id, **record)
         return item_id
@@ -148,6 +150,11 @@ class ProfileRecorder:
         record = self._spans.pop(span_id, None)
         if record:
             self._emit('span_end', span_id, context=record['context'], outcome=outcome)
+
+    def record_return(self, *, category, business_step, reason, request_id, snapshot_id):
+        self._emit('root_return', uuid.uuid4().hex, phase=self.phase,
+                   category=category, business_step=business_step, reason=reason,
+                   request_id=request_id, snapshot_id=snapshot_id)
 
     def record_interval(self, name, *, start_ns, end_ns, phase=None, operation=None,
                         parent_id=None, request_id=None, receipt_id=None, snapshot_id=None):
@@ -249,7 +256,7 @@ def summarize_events(events, issues=None):
                 or any(not isinstance(event.get(key), str) or not event[key]
                        for key in ('event_id', 'session_id', 'run_id', 'clock_id', 'kind', 'id'))
                 or any(event.get(key) is not None and not isinstance(event[key], str)
-                       for key in ('phase', 'operation', 'match_id', 'stage', 'parent_id', 'comparison_key',
+                       for key in ('phase', 'operation', 'match_id', 'stage', 'parent_id', 'comparison_key', 'business_step',
                                    'source', 'source_sha', 'utc'))):
             issues.append({'reason': 'unsupported_or_invalid_event'})
             continue
@@ -260,9 +267,13 @@ def summarize_events(events, issues=None):
             continue
         seen[key] = event
         valid.append(event)
-    paired, last = defaultdict(dict), defaultdict(int)
+    paired, last, returns = defaultdict(dict), defaultdict(int), []
     for event in valid:
         last[event['session_id']] = max(last[event['session_id']], event['monotonic_ns'])
+        if event['kind'] == 'root_return':
+            returns.append({key: event.get(key) for key in ('run_id', 'clock_id', 'match_id', 'stage',
+                'phase', 'business_step', 'category', 'reason', 'request_id', 'snapshot_id')})
+            continue
         if event['kind'] == 'diagnostic':
             issues.append({'reason': event.get('reason', 'recorder_diagnostic'), 'event_id': event['event_id']})
             continue
@@ -333,7 +344,7 @@ def summarize_events(events, issues=None):
             return next(iter(names)), False
         return 'unknown', len(names) > 1
 
-    buckets, totals = {}, {'observed_ns': 0, 'unassigned_ns': 0, 'node_conflict_ns': 0}
+    buckets, step_buckets, totals = {}, {}, {'observed_ns': 0, 'unassigned_ns': 0, 'node_conflict_ns': 0}
     domains = defaultdict(list)
     for item in intervals:
         domains[item['domain']].append(item)
@@ -367,6 +378,16 @@ def summarize_events(events, issues=None):
                         bucket[dimension + '_ns'][name] += duration
                         if dimension == 'operation' and conflict:
                             bucket['overlap_unknown_ns'] += duration
+                    tagged = [item for item in current if item['type'] == 'span' and item.get('business_step')]
+                    leaves = [item for item in tagged if not any(item['key'] in ancestors.get(other['key'], ())
+                                                                 for other in tagged)]
+                    steps = {item['business_step'] for item in leaves}
+                    step = next(iter(steps)) if len(steps) == 1 else 'unassigned'
+                    step_key = (*key, step)
+                    measured = step_buckets.setdefault(step_key, {'total_ns': 0, 'operations': defaultdict(int)})
+                    measured['total_ns'] += duration
+                    operation, unused = category(current, 'operation')
+                    measured['operations'][operation] += duration
             for index in changes['remove']:
                 active.pop(index, None)
             for index in changes['add']:
@@ -407,7 +428,7 @@ def summarize_events(events, issues=None):
         children = [(max(span['start'], child['start']), min(span['end'], child['end']))
                     for child in spans.values() if key in ancestors.get(child['key'], ())]
         span_rows.append({name: span.get(name) for name in ('id', 'parent_id', 'source', 'run_id', 'clock_id',
-            'match_id', 'stage', 'name', 'phase', 'operation', 'request_id', 'receipt_id', 'snapshot_id', 'outcome')} | {
+            'match_id', 'stage', 'name', 'phase', 'operation', 'business_step', 'request_id', 'receipt_id', 'snapshot_id', 'outcome')} | {
             'inclusive_seconds': _seconds(span['end'] - span['start']),
             'exclusive_seconds': _seconds(span['end'] - span['start'] - union_ns(children))})
     comparison_keys = {event.get('comparison_key') for event in valid}
@@ -424,7 +445,11 @@ def summarize_events(events, issues=None):
             'utc_start': min((event.get('utc', '') for event in valid), default=None),
             'utc_end': max((event.get('utc', '') for event in valid), default=None),
             'nodes': nodes, 'plane_first_nodes': [node for node in nodes if node['stage'].endswith('-1')],
-            'planes': planes, 'spans': span_rows, 'issues': issues,
+            'planes': planes, 'spans': span_rows, 'issues': issues, 'root_returns': returns,
+            'business_steps': [dict(zip(('run_id', 'clock_id', 'match_id', 'stage', 'business_step'), key)) | {
+                'total_seconds': _seconds(value['total_ns']),
+                'operation_seconds': {operation: _seconds(value['operations'][operation]) for operation in OPERATIONS}}
+                for key, value in sorted(step_buckets.items())],
             'operation_totals_seconds': operation_totals,
             'largest_measured_operations': sorted(
                 [{'operation': key, 'seconds': value} for key, value in operation_totals.items() if key != 'unknown' and value > 0],
@@ -442,6 +467,9 @@ def compare_reports(before, after):
         return {'comparable': False, 'reason': '计时生产者覆盖不同，不能直接比较只有 worker 与另含主管子段的报告。'}
     if before.get('issues') or after.get('issues'):
         return {'comparable': False, 'reason': '日志存在缺失或冲突，先修正证据覆盖；没有生成提升比例。'}
+    if any(set(node.get('operation_seconds', {})) != set(OPERATIONS)
+           for report in (before, after) for node in report.get('nodes', [])):
+        return {'comparable': False, 'reason': '操作分类覆盖不同，旧报告不能补造新增规则或发布计时。'}
     left, right = defaultdict(list), defaultdict(list)
     for target, report in ((left, before), (right, after)):
         for node in report.get('nodes', []):
@@ -474,6 +502,13 @@ def render_html(report):
     sections += '<h2>节点与阶段</h2>' + timing_table(report['nodes'], 'phase', PHASES)
     sections += '<h2>节点与操作</h2>' + timing_table(report['nodes'], 'operation', OPERATIONS)
     sections += '<h2>各位面首节点</h2>' + timing_table(report['plane_first_nodes'], 'phase', PHASES)
+    sections += '<h2>业务步骤</h2><p>与节点耗时是同一段时间的另一种分解，不可再次相加。未标注步骤保持未归类。</p>' + table(
+        ['节点', '步骤', '秒数'] + list(OPERATIONS.values()),
+        [[row['stage'], row['business_step'], f"{row['total_seconds']:.3f}"] +
+         [f"{row['operation_seconds'][key]:.3f}" for key in OPERATIONS] for row in report.get('business_steps', [])])
+    sections += '<h2>主管回传</h2>' + table(['节点', '阶段', '步骤', '类别', '实际原因'],
+        [[row['stage'], row['phase'], row['business_step'], row['category'], row['reason']]
+         for row in report.get('root_returns', [])])
     sections += '<h2>位面汇总</h2><p>仅合计日志实际覆盖的节点，不推定整个位面已测全。</p>' + table(
         ['位面', '运行', '已记录节点', '秒数'], [[p['plane'], p['run_id'][:12], ', '.join(p['included_nodes']), f"{p['total_seconds']:.3f}"] for p in report['planes']])
     if 'comparison' in report:

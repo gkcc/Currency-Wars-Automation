@@ -476,6 +476,9 @@ def guide_targets(body_lines):
 def semantic_facts(rows, image, page, engine=None, snapshot_id=None):
     """Factual fields are produced locally, never from a strategy assertion."""
     facts = {'options': option_facts(rows, page)}
+    if page in ('preparation', 'shop'):
+        from currency_wars_rewards import detect
+        facts['rewards'] = detect(image, page, rows, snapshot_id)
     if page == 'settlement':
         settlement = settlement_facts(rows, image, engine, snapshot_id)
         if settlement is not None:

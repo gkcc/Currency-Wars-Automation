@@ -1,0 +1,41 @@
+{
+  "schema": "currency-wars-refresh-verification/v1",
+  "offline_only": true,
+  "physical_inputs": 0,
+  "fresh_game_captures": 0,
+  "command": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+    "-B",
+    "-m",
+    "unittest",
+    "test_currency_wars_refresh_replay"
+  ],
+  "test_selection": [
+    "test_currency_wars_refresh_replay.RefreshReplayTests.test_six_d_current_worker_has_one_budget_request_and_twelve_actual_fixture_spent",
+    "test_currency_wars_refresh_replay.RefreshReplayTests.test_archival_wait_is_never_rewritten_as_a_current_protocol_receipt",
+    "test_currency_wars_refresh_replay.RefreshReplayTests.test_original_wait_mismatch_stops_first_transaction_without_erasing_observed_charge",
+    "test_currency_wars_refresh_replay.RefreshReplayTests.test_tampered_png_refuses_before_any_replay_or_source_field_reuse",
+    "test_currency_wars_refresh_replay.RefreshReplayTests.test_cached_after_and_receipt_cannot_approve_mismatched_original_completed"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 2.2089899080001487,
+  "stdout": "",
+  "stderr": ".....\n----------------------------------------------------------------------\nRan 5 tests in 2.111s\n\nOK\n",
+  "source_sha256_before": {
+    "tools/currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+    "tools/currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "tools/currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "tools/currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+    "tools/replay_currency_wars_refresh.py": "3acee997a5a1da648b8dcfa5b548282b205f4d890121168a159f6765e6b36183",
+    "tools/test_currency_wars_refresh_replay.py": "e9ca5e02acc56993b4012b8dd9fda383ebb6374d23a1e523b5ec21372b6d84f6"
+  },
+  "source_sha256_after": {
+    "tools/currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+    "tools/currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "tools/currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "tools/currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+    "tools/replay_currency_wars_refresh.py": "3acee997a5a1da648b8dcfa5b548282b205f4d890121168a159f6765e6b36183",
+    "tools/test_currency_wars_refresh_replay.py": "e9ca5e02acc56993b4012b8dd9fda383ebb6374d23a1e523b5ec21372b6d84f6"
+  },
+  "source_unchanged_during_tests": true
+}

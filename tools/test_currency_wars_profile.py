@@ -27,6 +27,34 @@ def window(end=10):
 
 
 class ProfileTests(unittest.TestCase):
+    def test_business_steps_partition_nested_time_and_keep_actual_return_reasons(self):
+        events = window() + [
+            event('span_begin', 'scan', 0, operation='rules', business_step='reward_scan'),
+            event('span_end', 'scan', 10),
+            event('span_begin', 'claim', 2, operation='rules', business_step='blue_orb', parent_id='scan'),
+            event('span_end', 'claim', 8),
+            event('span_begin', 'ocr', 3, operation='ocr', parent_id='claim'), event('span_end', 'ocr', 5),
+            event('span_begin', 'publish', 5, operation='publication', parent_id='claim'), event('span_end', 'publish', 6),
+            event('root_return', 'return', 9, phase='rewards', business_step='reward_scan',
+                  category='capability', reason='Full-field reward sweep not available', request_id='r', snapshot_id='s')]
+        report = summarize_events(events + events)
+        steps = {row['business_step']: row for row in report['business_steps']}
+        self.assertEqual(report['issues'], [])
+        self.assertEqual(sum(row['total_seconds'] for row in steps.values()), 10)
+        self.assertEqual(steps['reward_scan']['total_seconds'], 4)
+        self.assertEqual(steps['blue_orb']['total_seconds'], 6)
+        self.assertEqual(steps['blue_orb']['operation_seconds']['ocr'], 2)
+        self.assertEqual(steps['blue_orb']['operation_seconds']['publication'], 1)
+        self.assertEqual(steps['blue_orb']['operation_seconds']['rules'], 3)
+        self.assertEqual(len(report['root_returns']), 1)
+        self.assertEqual(report['root_returns'][0]['category'], 'capability')
+        self.assertEqual([row['stage'] for row in report['plane_first_nodes']], ['1-1'])
+
+    def test_old_operation_coverage_is_not_silently_upgraded_for_comparison(self):
+        before, after = summarize_events(window()), summarize_events(window())
+        before['nodes'][0]['operation_seconds'].pop('publication')
+        self.assertFalse(compare_reports(before, after)['comparable'])
+
     def test_nested_parent_and_overlapping_children_are_not_added(self):
         events = window() + [
             event('span_begin', 'parent', 0, operation='decision'), event('span_end', 'parent', 10),

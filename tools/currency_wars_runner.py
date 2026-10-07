@@ -174,6 +174,9 @@ def archive_business_run(state, control):
         capacity = optional(run / 'reward-capacity.json')
         if capacity:
             control.write_json(records / 'business-reward-capacity.json', redact(capacity))
+        reward = optional(run / 'reward-step.json')
+        if reward:
+            control.write_json(records / 'business-reward-step.json', redact(reward))
         last_result = optional(run / 'result.json')
         if last_result:
             # A broker can finish before the caller folds this reply into its
@@ -207,6 +210,15 @@ def pending_business_requests(business):
             pending[lease['run_id'] + ':' + rid] = {'origin_run_id': lease['run_id'], 'request_id': rid,
                 'outcome': 'unknown', 'kind': 'reward_capacity', 'amount': None,
                 'record_file': str(records / 'business-reward-capacity.json')}
+        for path in records.glob('reward-step-*.json'):
+            reward = entry.read_json(path)
+            if (reward.get('request_id') in lease.get('entry_receipt_watermark', [])
+                    or reward.get('match_id') != business['match_id']):
+                continue  # Keep old evidence without assigning it to a later match.
+            if reward.get('status') not in ('verified', 'refused') and reward.get('request_id'):
+                rid = reward['request_id']
+                pending[lease['run_id'] + ':' + rid] = {'origin_run_id': lease['run_id'], 'request_id': rid,
+                    'outcome': 'unknown', 'kind': 'reward', 'amount': None, 'record_file': str(path)}
     for stage, stored in business.get('economy', {}).items():
         item = stored['ledger'].get('pending')
         if item and item.get('request_id'):
@@ -285,8 +297,8 @@ class ManualReviewDeferred(ValueError):
 
 class GuardedSubmission:
     """Delegate unchanged Entry semantics; guard only its locked publication."""
-    def __init__(self, control, guard):
-        self.control, self.guard = control, guard
+    def __init__(self, control, guard, publication_span=None):
+        self.control, self.guard, self.publication_span = control, guard, publication_span
         self.publication_attempted = False
 
     def __getattr__(self, name):
@@ -305,7 +317,8 @@ class GuardedSubmission:
                 receipt.unlink()
             raise
         self.publication_attempted = True
-        return self.control.publish_request(value)
+        with self.publication_span() if self.publication_span else contextlib.nullcontext():
+            return self.control.publish_request(value)
 
 
 def coaching_policy():
@@ -2814,13 +2827,13 @@ class Worker:
             self.profile_wait_id = profile.start_span('controller_wait', operation=waiting,
                 request_id=identity[-1]) if waiting else None
 
-    def profile_span(self, name, *, operation, request_id=None, snapshot_id=None):
+    def profile_span(self, name, *, operation, request_id=None, snapshot_id=None, business_step=None):
         profile = getattr(self, 'profile', None)
         if profile is None or not profile.enabled:
             return contextlib.nullcontext()
         return profile.span(name, operation=operation,
             parent_id=profile.current_span_id or getattr(self, 'profile_wait_id', None),
-            request_id=request_id, snapshot_id=snapshot_id)
+            request_id=request_id, snapshot_id=snapshot_id, business_step=business_step)
 
     def profile_broker_result(self, result, parent_id):
         profile = getattr(self, 'profile', None)
@@ -3040,6 +3053,17 @@ class Worker:
                 if (not status['ready'] or status['paused'] or status['input_halted'] or not status['game_foreground']
                         or manual_state(self.run) or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
                     raise RuntimeError('发布前健康/前台/接管/停止检查拒绝，未提交')
+                if planned_inputs:
+                    pending_reward = self.pending_reward_step(current)
+                    first_reward = (reward is not None and pending_reward is not None
+                        and pending_reward.get('step_id') == reward['step_id']
+                        and pending_reward.get('request_id') == rid
+                        and pending_reward.get('publication_attempted') is False)
+                    if pending_reward and not first_reward:
+                        original = await_existing_receipt(self.run, self.c, pending_reward['request_id'], 0)
+                        delivery = manual_receipt_state(original)
+                        if delivery['unknown_input'] or delivery['state'] != 'completed':
+                            raise ValueError('原领奖输入交付仍未确认；主管回复也不能发布后续物理输入')
                 latest = coaching_policy()
                 if approval and latest['revision'] != approval['policy_revision']:
                     raise BattleConfirmationRequired('needs_user_confirmation：发布前带教修订已改变，批准不恢复或重用')
@@ -3057,6 +3081,10 @@ class Worker:
                     transaction['publication_attempted'] = True
                     transaction['broker_actions'] = value['actions']
                     self.save_economy_ledger(transaction['before']['stage'])
+                if reward is not None:
+                    self.guard_reward_step(reward, current)
+                    reward.update(publication_attempted=True, broker_actions=value['actions'])
+                    self.save_reward_step(reward)
                 if hasattr(self, 'business'):
                     self.save_business()  # Original lease CAS still owns this publication.
                     # This is an intent before the actual publisher. A crash
@@ -3076,6 +3104,10 @@ class Worker:
         if transaction is not None:
             transaction['request_id'] = rid
             self.save_economy_ledger(transaction['before']['stage'])
+        reward = getattr(self, 'reward_inflight', None)
+        if reward is not None:
+            reward['request_id'] = rid
+            self.save_reward_step(reward)
         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
         self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
@@ -3083,7 +3115,8 @@ class Worker:
                   'expected_page': expected_page, 'expected_change': postcondition,
                   'observation': self.last_observation, 'before_evidence': before})
         started = time.perf_counter()
-        guarded = GuardedSubmission(self.c, publication_guard)
+        guarded = GuardedSubmission(self.c, publication_guard,
+            lambda: self.profile_span('publish_request', operation='publication', request_id=rid))
         try:
             with self.profile_span('broker_roundtrip', operation='unknown', request_id=rid) as timing:
                 result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline)
@@ -3099,6 +3132,9 @@ class Worker:
                 transaction['publication_attempted'] = guarded.publication_attempted
                 transaction['error'] = str(exc)
                 self.save_economy_ledger(transaction['before']['stage'])
+            if reward is not None:
+                reward.update(publication_attempted=guarded.publication_attempted, error=str(exc))
+                self.save_reward_step(reward)
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
@@ -3118,6 +3154,9 @@ class Worker:
             transaction['publication_attempted'] = guarded.publication_attempted
             transaction['receipt'] = redact(result)
             self.save_economy_ledger(transaction['before']['stage'])
+        if reward is not None:
+            reward.update(publication_attempted=guarded.publication_attempted, receipt=redact(result))
+            self.save_reward_step(reward)
         self.c.write_json(self.records / (rid + '-result.json'), redact(result))
         after = None
         try:
@@ -3590,6 +3629,210 @@ class Worker:
             return record.get('value', [])
         return getattr(self, 'preparation_reviews', {}).get('lineup_equipment', {}).get('investments', [])
 
+    @staticmethod
+    def reward_coins(observed):
+        value = observed.get('semantic', {}).get('coins', {})
+        if (value.get('bounds') == GOLD_HUD and type(value.get('value')) is int and value['value'] >= 0
+                and .15 <= value.get('currency_icon_gold_fraction', 0) <= 1.):
+            return value['value']
+        return None
+
+    def save_reward_step(self, pending):
+        self.c.write_json(self.records / ('reward-step-' + pending['step_id'] + '.json'), redact(pending))
+        self.c.write_json(self.run / 'reward-step.json', redact(pending))
+
+    def pending_reward_step(self, observed):
+        pending = optional(self.run / 'reward-step.json')
+        if (pending and pending.get('status') not in ('verified', 'refused')
+                and pending.get('match_id') == self.active_match_id
+                and pending.get('before', {}).get('stage') == (canonical_stage(observed.get('fields', {}).get('stage'))
+                                                               or self.last_preparation_stage)):
+            return pending
+        return None
+
+    def guard_reward_step(self, pending, observed):
+        """Same submission lock as command; this does not make screen/input atomic."""
+        before, latest = pending['before'], optional(self.run / 'result.json') or {}
+        stored = optional(self.run / 'reward-step.json') or {}
+        if (stored.get('step_id') != pending['step_id'] or stored.get('request_id') != pending['request_id']
+                or any(stored.get(key) != pending.get(key) for key in ('before', 'target', 'match_id', 'resume_epoch', 'kind'))
+                or pending['match_id'] != self.active_match_id or not pending['resume_epoch']
+                or pending['resume_epoch'] != self.epoch()
+                or self.preparation_checklist(observed)['phase'] != 'rewards'
+                or canonical_stage(observed.get('fields', {}).get('stage')) != before['stage']
+                or any(observed.get(key) != before['observation'].get(key)
+                       for key in ('page', 'snapshot_id', 'capture_request_id', 'frame_id'))
+                or latest.get('id') != observed.get('capture_request_id')
+                or hashlib.sha256(self.frame_path.read_bytes()).hexdigest() != observed['snapshot_id']
+                or hashlib.sha256(Path(pending['before_png']).read_bytes()).hexdigest() != observed['snapshot_id']
+                or self.pending_reward_capacity()):
+            raise ValueError('领奖发布前帧/阶段/epoch/原pending已变化，未提交')
+
+    def reconcile_reward_step(self, pending, observed):
+        """Verify one control effect. No absent-orb inference clears a phase."""
+        with self.c.submission_lock():
+            if (pending['match_id'] != self.active_match_id or pending['resume_epoch'] != self.epoch()
+                    or canonical_stage(observed.get('fields', {}).get('stage')) != pending['before']['stage']):
+                raise ValueError('领奖后页面/节点/epoch变化，原效果待复核')
+            self.verify_economy_fence(pending)  # The existing original-request/read-only-successor fence.
+            item = await_existing_receipt(self.run, self.c, pending['request_id'], 0)
+            delivery = manual_receipt_state(item)
+            if (delivery['unknown_input'] or delivery['state'] != 'completed'
+                    or item['result'].get('ok') is not True
+                    or len([a for a in item['request']['actions'] if a['type'] not in ('wait', 'observe')]) != 1):
+                raise ValueError('领奖原回执不是一笔完整确定输入，保持pending且不重发')
+            frame = self.frame_result.get('observation', {})
+            latest = optional(self.run / 'result.json') or {}
+            if (latest.get('id') != observed.get('capture_request_id')
+                    or frame.get('request_id') != observed.get('capture_request_id')
+                    or frame.get('frame_id') != observed.get('frame_id')
+                    or frame.get('snapshot_sha256') != observed['snapshot_id']
+                    or hashlib.sha256(self.frame_path.read_bytes()).hexdigest() != observed['snapshot_id']):
+                raise ValueError('领奖后图不是当前不可变同请求帧，保持pending')
+            path = self.records / ('reward-step-' + pending['step_id'] + '-after.png')
+            path.write_bytes(self.frame_path.read_bytes())
+            after_coins, before_coins = self.reward_coins(observed), pending['before']['coins']
+            scan = observed.get('semantic', {}).get('rewards', {})
+            pending.update(after_png=str(path), after_snapshot_id=observed['snapshot_id'],
+                           after_capture_request_id=observed.get('capture_request_id'),
+                           after_coins=after_coins, receipt=redact(item['result']))
+            self.save_reward_step(pending)
+            if after_coins is None or before_coins is None or after_coins < before_coins:
+                raise ValueError('免费领奖/收店后的金币未知或下降，不能记0实花或继续')
+            if (observed.get('page') != 'preparation' or scan.get('snapshot_id') != observed['snapshot_id']
+                    or scan.get('scanned') is not True or scan.get('uncertain')
+                    or scan.get('area_fully_visible') is not True or scan.get('interaction_required')):
+                raise ValueError('领奖后有选择/遮挡或扫描未知；只回传当前证据')
+            if pending['kind'] == 'close_shop':
+                if after_coins != before_coins:
+                    raise ValueError('收店后金币变化，不能归为纯导航')
+                effect = 'shop_collapsed'
+            else:
+                before_targets = pending['before']['observation']['semantic']['rewards']['targets']
+                remaining = [target for target in before_targets if target != pending['target']]
+                after_targets = list(scan['targets'])
+                if len(after_targets) != len(before_targets) - 1:
+                    raise ValueError('单次领奖后控件数量未恰好减少1；组回执或缺中间图不能拆成功')
+                for target in remaining:
+                    matches = [other for other in after_targets if other['template_id'] == target['template_id']
+                               and max(abs(a-b) for a, b in zip(other['center'], target['center'])) <= 8]
+                    if len(matches) != 1:
+                        raise ValueError('未点击控件的后图身份/位置不明，不能用旧位置消失证明领取')
+                    after_targets.remove(matches[0])
+                effect = 'one_visible_orb_removed'
+            pending.update(status='verified', outcome=effect, observed_coin_delta=after_coins-before_coins,
+                           all_rewards_cleared=None, verified_at=now())
+            self.save_reward_step(pending)
+        self.node_progress = getattr(self, 'node_progress', 0) + 1
+        self.log({'event': 'reward_control_effect', 'business_step': pending['kind'],
+                  'request_id': pending['request_id'], 'stage': pending['before']['stage'],
+                  'before_snapshot_id': pending['before']['observation']['snapshot_id'],
+                  'after_snapshot_id': observed['snapshot_id'], 'outcome': effect,
+                  'all_rewards_cleared': None, 'input_resent': False})
+
+    def advance_rewards(self, observed):
+        with self.profile_span('reward_scan', operation='rules', business_step='reward_scan',
+                               snapshot_id=observed.get('snapshot_id')):
+            return self._advance_rewards(observed)
+
+    def _advance_rewards(self, observed):
+        if self.preparation_checklist(observed)['phase'] != 'rewards':
+            return False
+        for unused in range(8):
+            pending = self.pending_reward_step(observed)
+            if pending:
+                self.ask(observed, 'reward_result', '原单次领奖效果仍待复核；只补原回执/后图或当前全场复核，不重发。',
+                         choices={'pending': pending}, category='exception', business_step=pending['kind'])
+                return True
+            if self.pending_reward_capacity():
+                self.ask(observed, 'reward_result', '先按已提交腾位的原收据核容量，当前不发新的领奖输入。',
+                         category='exception', business_step='reward_capacity')
+                return True
+            scan = observed.get('semantic', {}).get('rewards', {})
+            if scan.get('interaction_required'):
+                self.ask(observed, 'reward_selection', '当前出现奖励相关选择/推荐提示，先核当前选项与策略联动。',
+                         choices={'rewards': scan}, category='strategy', business_step='reward_selection')
+                return True
+            close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
+            is_close = observed.get('page') == 'shop' and close and close.get('confidence', 0) >= .90
+            if not is_close and (observed.get('page') != 'preparation'
+                    or scan.get('snapshot_id') != observed['snapshot_id'] or not scan.get('input_allowed')):
+                self.ask(observed, 'preparation_strategy', '当前限定奖励区域未有可继续的确定控件；须全场领奖复核，不能按未见球判领空。',
+                         choices={'rewards': scan}, category='capability', business_step='reward_scan')
+                return True
+            if self.reward_coins(observed) is None or not canonical_stage(observed.get('fields', {}).get('stage')):
+                self.ask(observed, 'reward_result', '收店/免费领奖缺当前节点或绑定HUD的金币，无法核异常扣费。',
+                         category='capability', business_step='reward_scan')
+                return True
+            # Re-observe and relocate only this semantic step. An asynchronous
+            # popup AFTER this check remains a residual screenshot/input race.
+            fresh = self.observe()
+            if (fresh.get('page') != observed.get('page')
+                    or fresh.get('fields', {}).get('stage') != observed.get('fields', {}).get('stage')):
+                self.log({'event': 'reward_relocate', 'reason': 'page_or_stage_changed', 'input_sent': False})
+                return True
+            observed = fresh
+            scan = observed.get('semantic', {}).get('rewards', {})
+            close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
+            if is_close:
+                if not close or close.get('confidence', 0) < .90:
+                    return True
+                box = close['box']
+                target = {'kind': 'close_shop', 'bounds': box,
+                          'center': [(box[0]+box[2])/2, (box[1]+box[3])/2]}
+            elif not scan.get('input_allowed') or scan.get('snapshot_id') != observed['snapshot_id']:
+                continue
+            else:
+                target = scan['targets'][0]
+            coins = self.reward_coins(observed)
+            if coins is None:
+                continue
+            step_id = uuid.uuid4().hex
+            before_png = self.records / ('reward-step-' + step_id + '-before.png')
+            before_png.write_bytes(self.frame_path.read_bytes())
+            pending = {'step_id': step_id, 'kind': target['kind'], 'match_id': self.active_match_id,
+                       'resume_epoch': self.epoch(), 'status': 'pending', 'outcome': 'unknown',
+                       'request_id': None, 'publication_attempted': False, 'target': target,
+                       'before_png': str(before_png), 'prior_receipt_ids': self.economy_receipt_watermark(),
+                       'before': {'stage': canonical_stage(observed['fields']['stage']), 'coins': coins,
+                                  'observation': copy.deepcopy(observed)}, 'all_rewards_cleared': None}
+            self.save_reward_step(pending)
+            self.reward_inflight = pending
+            try:
+                with self.profile_span('reward_control', operation='rules', business_step=target['kind'],
+                                       snapshot_id=observed['snapshot_id']):
+                    point = target['center']
+                    after = self.command([f'click:{point[0]}:{point[1]}', 'wait:0.7'],
+                        '当前单个收店/蓝球控件；后图验证后再定位下一目标', observed['page'],
+                        '单控件效果，不代表全部领空', action={'type': 'click_point', 'purpose': 'local_reward',
+                            'args': point, 'expected_page': observed['page']})
+                    if target['kind'] == 'blue_orb':
+                        self.invalidate_preparation('inventory')
+                    self.reconcile_reward_step(pending, after)
+            except (ValueError, RuntimeError) as exc:
+                pending['reason'] = str(exc)
+                if pending.get('publication_attempted') is False:
+                    pending.update(status='refused', outcome='not_published')
+                self.save_reward_step(pending)
+                after = self.last_observation or observed
+                selection = (after.get('page') in ('investment', 'environment', 'supply', 'reward_overlay')
+                             or after.get('semantic', {}).get('rewards', {}).get('interaction_required'))
+                if selection:
+                    try:
+                        delivery = manual_receipt_state(await_existing_receipt(self.run, self.c, pending['request_id'], 0))
+                        selection = not delivery['unknown_input'] and delivery['state'] == 'completed'
+                    except (ValueError, RuntimeError, OSError, TypeError):
+                        selection = False
+                self.state['decision_request'] = None
+                self.ask(after, 'reward_selection' if selection else 'reward_result', str(exc),
+                         choices={'pending': pending}, category='strategy' if selection else 'exception',
+                         business_step=target['kind'])
+                return True
+            finally:
+                self.reward_inflight = None
+            observed = self.last_observation
+        return True
+
     def pending_reward_capacity(self):
         record = optional(self.run / 'reward-capacity.json') if getattr(self, 'run', None) else None
         if record and record.get('run_id') != self.owner['run_id']:
@@ -3981,6 +4224,12 @@ class Worker:
         return result
 
     def accept_economy_plan(self, record):
+        # Budget replacement and acknowledged pending reconciliation commit
+        # under the same existing input submission fence.
+        with self.c.submission_lock():
+            return self._accept_economy_plan(record)
+
+    def _accept_economy_plan(self, record):
         from io import BytesIO
         from PIL import Image
         if getattr(self, 'business_needs_review', False):
@@ -4081,7 +4330,7 @@ class Worker:
                     pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
             if outcome['outcome'] == 'unknown':
                 raise ValueError('该笔原始后帧仍不能证明实际经济效果；不重发已发布输入')
-            self.apply_economy_result(proposed, pending, outcome, acknowledged=True, persist=False)
+            self._apply_economy_result(proposed, pending, outcome, acknowledged=True, persist=False)
         details = economy.validate_budget(plan, observed, proposed)
         if plan['budget']['refresh']:
             # Existing role costs help reserve enough for a found card; the
@@ -4173,8 +4422,21 @@ class Worker:
         return {'kind': kind, 'cost': cost, 'observation': observation, 'plan': plan, 'ledger': ledger}
 
     def apply_economy_result(self, ledger, pending, result, *, acknowledged=False, persist=True):
+        with self.c.submission_lock():
+            return self._apply_economy_result(ledger, pending, result, acknowledged=acknowledged, persist=persist)
+
+    def _apply_economy_result(self, ledger, pending, result, *, acknowledged=False, persist=True):
         outcome, spent = result['outcome'], result.get('observed_spent')
         if outcome == 'success' or acknowledged and outcome in ('zero', 'partial'):
+            self.verify_economy_fence(pending)
+            original = await_existing_receipt(self.run, self.c, pending['request_id'], 0)
+            delivery = manual_receipt_state(original)
+            allowed = (not delivery['unknown_input'] and (
+                delivery['state'] == 'completed' and (acknowledged or original['result'].get('ok') is True)
+                or acknowledged and delivery['state'] == 'partial'
+                or acknowledged and delivery['state'] == 'zero_input' and outcome == 'zero' and spent == 0))
+            if not allowed:
+                raise ValueError('经济原completed/输入交付不确定；资源差额不能代替原收据，保持pending')
             if type(spent) is not int or not 0 <= spent <= pending['before']['values']['coins']:
                 raise ValueError('经济效果的实花无法归属原交易，保持待验')
             ledger['spent'][pending['kind']] += spent
@@ -4192,6 +4454,12 @@ class Worker:
                   'actual_spent': dict(ledger['spent']), 'input_resent': False})
 
     def execute_economic_action(self, action, actual, request):
+        with self.profile_span('economic_action', operation='rules',
+                               business_step=economy.economic_action(action, actual.get('page')),
+                               snapshot_id=actual.get('snapshot_id')):
+            return self._execute_economic_action(action, actual, request)
+
+    def _execute_economic_action(self, action, actual, request):
         info = self.require_economic_action(action, actual)
         kind, ledger = info['kind'], info['ledger']
         if kind == 'purchase':
@@ -4226,14 +4494,20 @@ class Worker:
         pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
         outcome = economy.classify_effect(kind, info['observation'], observed, expected_cost=info['cost'],
             target_level=info['plan']['experience']['target_level'], slot=action.get('slot'))
-        self.apply_economy_result(ledger, pending, outcome)
+        try:
+            self.apply_economy_result(ledger, pending, outcome)
+        except ValueError as exc:
+            outcome = {'outcome': 'unknown', 'observed_spent': None, 'reason': str(exc)}
+            self.apply_economy_result(ledger, pending, outcome)
         # Only explicitly planned useful purchases occur here; the completed
         # initial unwanted-card cleanup remains valid. Dynamic team proof does not.
         self.invalidate_preparation('economy')
         self.record_node_progress(actual, after)
         if outcome['outcome'] != 'success':
+            self.state['decision_request'] = None
             self.ask(after, 'economy_result', '本笔经济效果为' + outcome['outcome'] + '，原请求' + str(pending['request_id'])
-                     + '；补读原后帧或给明确剩余计划，不重发已发布输入。', choices={'pending': pending, 'outcome': outcome})
+                     + '；补读原后帧或给明确剩余计划，不重发已发布输入。', choices={'pending': pending, 'outcome': outcome},
+                     category='exception', business_step=kind)
             return False
         return True
 
@@ -4526,7 +4800,7 @@ class Worker:
     def epoch(self):
         return (optional(self.run / 'runner-resume-epoch.json') or {}).get('id')
 
-    def ask(self, observed, kind, reason, choices=None):
+    def ask(self, observed, kind, reason, choices=None, *, category='unclassified', business_step=None):
         old = self.state.get('decision_request')
         if old and old['snapshot_id'] == observed['snapshot_id'] and old['resume_epoch'] == self.epoch():
             return
@@ -4560,6 +4834,8 @@ class Worker:
                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
+        request['return_reason'] = {'category': category, 'business_step': business_step or request['preparation_checklist']['phase'],
+                                    'reason': reason, 'origin': 'native_worker'}
         if kind == 'business_resume':
             request['business_receipt_watermark'] = self.economy_receipt_watermark()
         request['reward_capacity_pending'] = self.pending_reward_capacity()
@@ -4574,6 +4850,11 @@ class Worker:
         request['coaching'] = coaching_policy()
         self.c.write_json(self.run / 'decision-request.json', request)
         self.state['statistics']['decisions'] += 1
+        profile = getattr(self, 'profile', None)
+        if profile is not None and profile.enabled:
+            self.profile_context()
+            profile.record_return(category=category, business_step=request['return_reason']['business_step'],
+                                  reason=reason, request_id=rid, snapshot_id=observed['snapshot_id'])
         self.log({'event': 'strategy_request', 'request': request})
         self.publish(control_mode='waiting_decision', phase=kind, reason=reason, decision_request=request)
 
@@ -5243,6 +5524,17 @@ class Worker:
                          'unresolved_requests': self.business_unknown, 'previous_status': self.business['status'],
                          'previous_observation_reference': self.business_previous_observation})
             return
+        pending = self.pending_reward_step(observed)
+        if pending:
+            try:
+                delivery = manual_receipt_state(await_existing_receipt(self.run, self.c, pending['request_id'], 0))
+                known = not delivery['unknown_input'] and delivery['state'] == 'completed'
+            except (ValueError, RuntimeError, OSError, TypeError):
+                known = False
+            if not known:
+                self.ask(observed, 'reward_result', '原领奖输入交付仍未确认，不能先关闭模态或发送选择。',
+                         choices={'pending': pending}, category='exception', business_step=pending['kind'])
+                return
         if not self.node_guard(observed):
             return
         page = observed['page']
@@ -5300,11 +5592,7 @@ class Worker:
         elif page == 'shop':
             checklist = self.preparation_checklist(observed)
             if checklist['phase'] == 'rewards':
-                close = find_text(observed['rows'], '收起', exact=True)
-                if close:
-                    self.click_text(observed, '收起', '自动展开商店时先收起，回读全场奖励；未确认领空不花钱')
-                else:
-                    self.ask(observed, 'shop_strategy', '先关闭自动展开商店并扫场领奖领空；当前禁止购买、出售、刷新和升级。')
+                self.advance_rewards(observed)
                 return
             if shop_key is not None:
                 self.shop_stages.add(shop_key)
@@ -5318,6 +5606,9 @@ class Worker:
                      if (observed.get('shop') or {}).get('ok') is True
                      else '商店仍有未知槽位/推荐标记；独立确认实名、实价和完整槽框的目标可单次购买，未知目标继续等待检查。')
         elif page == 'preparation':
+            if self.preparation_checklist(observed)['phase'] == 'rewards':
+                self.advance_rewards(observed)
+                return
             policy = self.preparation_policy(observed)
             checklist = policy['preparation_checklist']
             if checklist['phase'] == 'economy' and self.advance_economy(observed):
