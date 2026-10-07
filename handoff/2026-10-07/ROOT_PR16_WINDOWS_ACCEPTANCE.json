@@ -1,0 +1,80 @@
+{
+  "schema": "currency-wars-root-pr16-windows/v1",
+  "candidate_sha": "5938648de4cfd4b5cd3cd723898abb3c2f806a48",
+  "parents": [
+    "060ec1cfea03af1d474e0296f5ec0df73b16fa91",
+    "b5da98042a07d91a41e11baaacd34cc1f55e7c34"
+  ],
+  "tests": {
+    "selectors": [
+      "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_low_confidence_question_mark_zero_and_failed_crop_remain_unknown",
+      "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_missing_label_conflicts_and_digit_overflow_do_not_trigger_more_ocr",
+      "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_three_declared_coin_occlusions_are_refused_without_numeric_ocr",
+      "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_three_retained_pngs_keep_native_rows_and_unknown_player_fields",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_current_paid_price_over_budget_publishes_no_action",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_free_counts_and_changed_paid_prices_use_each_original_transaction_cost",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_free_refresh_does_not_require_level_experience_or_team",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache",
+      "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending",
+      "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated",
+      "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "test_currency_wars_economy.EconomyTests.test_actual_effects_zero_partial_unknown_and_single_level_transition",
+      "test_currency_wars_economy.EconomyTests.test_free_d_is_zero_spend_and_unknown_paid_price_is_not_fabricated",
+      "test_currency_wars_economy.EconomyTests.test_real_b003_resume_cas_repairs_pending_economy_without_replaying_f",
+      "test_currency_wars_primary_reuse.PrimaryEvidenceReuseTests.test_raw_evidence_and_scope_semantics_have_independent_ownership"
+    ],
+    "tests_run": 20,
+    "failures": [],
+    "errors": [],
+    "skipped": [],
+    "passed": true,
+    "seconds": 10.454758200008655,
+    "python": "3.12.2",
+    "platform": "Windows"
+  },
+  "source_sha256": {
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_perception.py": "5f6ea6f6e874aa4719cf4dc15c35bac4ec15ddb050a638e0c505254e1c04293b",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_runner.py": "5ea9659bc43c0fc1af1ce08968a135fdc03acffb9158d0686d4cbba126bf9e53",
+    "tools/replay_currency_wars_refresh_offer.py": "b884937fe0aec629955ee8f264062d2c7d4d5c64c70ca5077388f028a9d555f7",
+    "tools/test_currency_wars_refresh_offer.py": "e4645b9076ee412937c4f744fcd7cd440dffa1a6d703ccc8f9963de01c10c00a",
+    "tools/test_currency_wars_refresh_offer_flow.py": "7f20a47b1bc5547a658a7920a03ad8497634c82a15985f8977b8cdf8526fd415",
+    "tools/test_currency_wars_perception_scope.py": "e68c41c53d993e7890f581cd9d25e106d0e3438bd2d753d9603b135ef7e2a61a",
+    "tools/refresh_offer_resources/currency_coin.png": "188d753bb9d38ee7c85e72c8ef69fe4d4a7ec78a73e7930e214b48cae8f907de",
+    "tools/refresh_offer_resources/SOURCES.json": "374dea48b2c896e2e6674d94c253d3042bc36c2ad3e0850150e9a4fe7cdf89bc"
+  },
+  "source_sha256_after": {
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_perception.py": "5f6ea6f6e874aa4719cf4dc15c35bac4ec15ddb050a638e0c505254e1c04293b",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_runner.py": "5ea9659bc43c0fc1af1ce08968a135fdc03acffb9158d0686d4cbba126bf9e53",
+    "tools/replay_currency_wars_refresh_offer.py": "b884937fe0aec629955ee8f264062d2c7d4d5c64c70ca5077388f028a9d555f7",
+    "tools/test_currency_wars_refresh_offer.py": "e4645b9076ee412937c4f744fcd7cd440dffa1a6d703ccc8f9963de01c10c00a",
+    "tools/test_currency_wars_refresh_offer_flow.py": "7f20a47b1bc5547a658a7920a03ad8497634c82a15985f8977b8cdf8526fd415",
+    "tools/test_currency_wars_perception_scope.py": "e68c41c53d993e7890f581cd9d25e106d0e3438bd2d753d9603b135ef7e2a61a",
+    "tools/refresh_offer_resources/currency_coin.png": "188d753bb9d38ee7c85e72c8ef69fe4d4a7ec78a73e7930e214b48cae8f907de",
+    "tools/refresh_offer_resources/SOURCES.json": "374dea48b2c896e2e6674d94c253d3042bc36c2ad3e0850150e9a4fe7cdf89bc"
+  },
+  "source_unchanged": true,
+  "real_read_passed": true,
+  "resources": {
+    "shop_resources": 57,
+    "resource_bytes": 250477,
+    "copy_hashes_verified": true,
+    "resources_exported": false,
+    "note": "Driver resource_limit describes the Pro public checkout. ROOT copied its original 57 resources into this independent clone; actual shop result follows."
+  },
+  "offline_only": true,
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "candidate_installed": false,
+  "whole_preparation_or_game_speed_verified": false,
+  "protocol_costs_not_real_transactions": true,
+  "temporary_run_removed": true
+}
