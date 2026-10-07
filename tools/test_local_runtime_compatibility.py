@@ -1661,6 +1661,9 @@ class RuntimeRootTests(unittest.TestCase):
 
     def test_public_start_passes_verified_root_and_invalid_config_never_launches(self):
         with self.roots() as (outer, _, d_root, _):
+            # The child TEMP protocol retains the real provider's final root
+            # component; these are still declared paths, not a Windows task.
+            d_root = d_root / artifacts.TOOL
             control = SimpleNamespace(C=SimpleNamespace(set_last_error=lambda _: None, get_last_error=lambda: 0),
                                       k=Mock(CreateMutexW=Mock(return_value=1)))
             args = SimpleNamespace(chat_id='root-fixture', max_seconds=60, max_matches=1, continue_matches=False)
@@ -1676,6 +1679,9 @@ class RuntimeRootTests(unittest.TestCase):
                 self.assertEqual(location['runtime_root'], str(d_root))
                 self.assertEqual(location['installation_id'], config['installation_id'])
                 self.assertEqual(location['source'], 'installed_bridge')
+                child_environment = launch.call_args.kwargs['env']
+                for variable in ('TEMP', 'TMP', 'TMPDIR'):
+                    self.assertEqual(child_environment[variable], str(d_root.parent))
                 launch.reset_mock()
                 # The GUI's verified launch selection is a parent contract too.
                 args.runtime_location_json = json.dumps(location)

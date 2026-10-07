@@ -154,11 +154,15 @@ def release_observation(run, result):
 
 
 def backend():
-    if hashlib.sha256(SOURCE.read_bytes()).hexdigest().upper() != PINNED:
+    payload = SOURCE.read_bytes()
+    if hashlib.sha256(payload).hexdigest().upper() != PINNED:
         raise ValueError('safety broker source changed; no operation permitted')
     spec = importlib.util.spec_from_file_location('currency_wars_safety', SOURCE)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    if SOURCE.read_bytes() != payload:
+        raise ValueError('safety broker source changed during loading; no operation permitted')
+    # Execute exactly the verified bytes, never a second loader read or pyc.
+    exec(compile(payload, str(SOURCE), 'exec'), module.__dict__)
     return module
 
 

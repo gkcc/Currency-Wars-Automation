@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 
@@ -14,13 +15,33 @@ import currency_wars_broker_entry as entry
 import currency_wars_input_bridge as input_bridge
 import psutil
 from processes import stop_identity
-from currency_wars_source_guard import activity, mutation_lock
+from currency_wars_source_guard import activity, mutation_lock, runtime_provider
 from currency_wars_update import launch_prerequisites, update, write_status
 
 PROJECT=Path(__file__).resolve().parent.parent
 
 
-def register_runtime_location(runtime, location, chat, child_pid, lease, records):
+def runtime_launch_environment(location, *, inherited=False, arguments=None):
+    """Return an environment for this verified root, or relaunch its helper.
+
+    A fresh Python child initializes the optional installed artifact provider
+    after TEMP selection. The caller's environment/cache are never rewritten.
+    No lifecycle directory or native GUI has been created at this boundary.
+    """
+    environment=input_bridge.runtime_child_environment(entry.PINNED,location)
+    expected=Path(location['runtime_root']).parent
+    if os.name=='nt' and os.path.normcase(os.path.abspath(tempfile.gettempdir()))!=os.path.normcase(os.path.abspath(expected)):
+        if inherited:
+            raise RuntimeError('子进程临时目录仍与已验证运行根不一致；未启动界面或控制器')
+        command=[sys.executable,'-B','-X','utf8',str(Path(__file__).resolve()),
+                 *(sys.argv[1:] if arguments is None else arguments),
+                 '--skip-update',
+                 '--runtime-location-json',json.dumps(location,ensure_ascii=False)]
+        return environment,subprocess.call(command,env=environment)
+    return environment,None
+
+
+def register_runtime_location(runtime, location, chat, child_pid, lease, records, *, provider=None):
     """Publish only after both owners have recorded the actual native child."""
     state, identity=artifacts.process_identity(child_pid)
     if state!='active' or not identity or not identity.startswith('windows:'):
@@ -33,11 +54,14 @@ def register_runtime_location(runtime, location, chat, child_pid, lease, records
             or artifacts.process_identity(os.getpid())!=('active',marker['process_identity'])
             or artifacts.process_identity(child_pid)!=('active',identity)):
         raise RuntimeError('GUI launch identities changed before publication')
-    input_bridge.write_object(runtime/'runtime-location.json',{
+    registration={
         'schema':1,'owner':'currency-wars-gui-runtime','run_id':marker['run_id'],
         'chat_id':chat,'runtime_location':location,'launcher_pid':marker['pid'],
         'launcher_creation_id':marker['process_identity'].split(':',1)[1],
-        'gui_pid':child_pid,'gui_creation_id':identity.split(':',1)[1]})
+        'gui_pid':child_pid,'gui_creation_id':identity.split(':',1)[1]}
+    if provider is not None:
+        registration['runtime_provider']=provider
+    input_bridge.write_object(runtime/'runtime-location.json',registration)
     return identity
 
 
@@ -48,6 +72,7 @@ def main():
     parser.add_argument('--test-mode',action='store_true')
     parser.add_argument('--test-runner')
     parser.add_argument('--project-dir')
+    parser.add_argument('--runtime-location-json',help=argparse.SUPPRESS)
     parser.add_argument('--debug-port')
     parser.add_argument('--skip-update', action='store_true')
     parser.add_argument('--start', action='store_true')
@@ -62,6 +87,11 @@ def main():
         print(json.dumps(status,ensure_ascii=False),flush=True)
         if status.get('applied'):
             os.execv(sys.executable,[sys.executable,'-B','-X','utf8',str(Path(__file__).resolve()),*sys.argv[1:],'--skip-update'])
+    inherited=json.loads(args.runtime_location_json) if args.runtime_location_json is not None else None
+    location=input_bridge.runtime_location(entry.PINNED,inherited=inherited)
+    child_environment,relaunched=runtime_launch_environment(location,inherited=inherited is not None)
+    if relaunched is not None:
+        return relaunched
     (project / 'docs').mkdir(exist_ok=True)
     records={}
     child=None
@@ -73,7 +103,6 @@ def main():
         lifecycle=activity(project,'gui')
         lease=lifecycle.__enter__()
     try:
-      location=input_bridge.runtime_location(entry.PINNED)
       with artifacts.scratch_directory('currency-wars-native-gui-'+os.environ.get('CODEX_THREAD_ID','local')[:8],root=Path(location['runtime_root'])) as runtime:
         try:
             command=[str(binary),'--runtime-dir',str(runtime),'--chat-id',args.chat_id,'--project-dir',str(project),'--python',sys.executable,
@@ -86,8 +115,10 @@ def main():
             with (runtime/'native.stdout.log').open('wb') as output,(runtime/'native.stderr.log').open('wb') as error:
                 lease.children([],complete=False)
                 artifacts.protect_children(runtime,[],root=runtime.parent,complete=False)
-                child=subprocess.Popen(command,stdout=output,stderr=error,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-                identity=register_runtime_location(runtime,location,args.chat_id,child.pid,lease,records)
+                child=subprocess.Popen(command,stdout=output,stderr=error,env=child_environment,
+                                       creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+                identity=register_runtime_location(runtime,location,args.chat_id,child.pid,lease,records,
+                                                   provider=runtime_provider())
                 print(json.dumps({'gui_runtime':str(runtime),'native_pid':child.pid,'native_identity':identity,'framework':'Rust/Tauri'},ensure_ascii=False),flush=True)
                 while child.poll() is None:
                     try:
@@ -116,7 +147,7 @@ def main():
 
 
 if __name__=='__main__':
-    try:main()
+    try:sys.exit(main() or 0)
     except Exception as error:
         import ctypes
         ctypes.WinDLL('user32').MessageBoxW(None,str(error),'Currency Wars startup',0x10)

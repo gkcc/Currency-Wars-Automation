@@ -21,7 +21,7 @@ import psutil
 
 import currency_wars_broker_entry as entry
 import currency_wars_input_bridge as input_bridge
-from currency_wars_source_guard import activity
+from currency_wars_source_guard import activity, verify_runtime_sources
 from currency_wars_perception import (Perception, clean, find_text, hash_distance, GOLD_HUD,
                                      valid_population_counts, READ_CONTRACT_VERSION)
 from currency_wars_shop_reader import purchase_slot
@@ -30,7 +30,7 @@ import currency_wars_coaching as coaching
 import currency_wars_economy as economy
 from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
-from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target,
+from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target, navigation_target,
     stable_preparation_icon_target, PREPARATION_GUIDE_CONTROL,
     PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT)
 
@@ -1204,7 +1204,24 @@ def explicit_resume(run, owner, control, rid, expected_manual_id=None, expected_
 
 def start_cli(args):
     with activity(PROJECT, 'start') as lease:
+        reviewed_runtime_sources(args.chat_id)
         return _start_cli(args, lease)
+
+
+def reviewed_runtime_sources(chat_id):
+    """Normal startup consumes the same review and bytes as native GUI ready.
+
+    Emergency pause/takeover/stop deliberately do not depend on this gate.
+    A source activity lease serializes updates; it is not a byte approval.
+    """
+    ready = entry.read_json(PROJECT / 'docs/RUNNER_READY.json', limit=200_000)
+    review = ready.get('independent_review', {})
+    if (ready.get('ready') is not True or ready.get('owner') != 'currency-wars-runner'
+            or ready.get('chat_id') != chat_id or not isinstance(review, dict)
+            or review.get('status') != 'PASS' or not review.get('reviewer_chat_id')
+            or not review.get('reviewed_at')):
+        raise ValueError('启动须有归属一致的独立审查及完整来源记录')
+    return verify_runtime_sources(PROJECT, ready)
 
 
 def registered_worker_identity(value, launch, chat_id, child_pid, child_identity, control):
@@ -1279,7 +1296,8 @@ def _start_cli(args, lease):
             command.extend(['--profile-comparison-key', args.profile_comparison_key])
         lease.children([], complete=False)
         child = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                                 stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+                                 stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW,
+                                 env=input_bridge.runtime_child_environment(entry.PINNED, runtime_location))
         child_state, child_identity = artifacts.process_identity(child.pid)
         if child_state != 'active' or child_identity is None:
             raise RuntimeError('worker创建身份未知；保留原始启动归属')
@@ -1330,6 +1348,9 @@ def validate_plan(reply, request, epoch):
             raise ValueError('每个动作须有具体中文理由')
         if action['type'] not in ('finish_inspection', 'confirm_match_result', 'finish_preparation_review') and not action.get('expected_page'):
             raise ValueError('游戏输入须指定实际页面前置条件')
+        if action['type'] == 'click_text' and (not isinstance(action.get('text'), str)
+                or not clean(action['text']) or type(action.get('exact', True)) is not bool):
+            raise ValueError('文字点击须有非空目标及布尔exact，不能用空子串或隐式类型匹配')
         if action['type'] in ('click_point', 'drag', 'scroll', 'key'):
             if not isinstance(action.get('guard_texts'), list) or not action['guard_texts']:
                 raise ValueError('坐标/按键动作须提供新画面文字守卫')
@@ -2932,7 +2953,8 @@ class Worker:
             else:
                 self.broker_launcher = subprocess.Popen(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', command],
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            creationflags=subprocess.CREATE_NO_WINDOW)
+                            creationflags=subprocess.CREATE_NO_WINDOW,
+                            env=input_bridge.runtime_child_environment(entry.PINNED, self.owner['runtime_location']))
                 probe = self.c.process_probe(self.broker_launcher.pid)
                 if probe['state'] != 'running':
                     raise RuntimeError('本次owned启动器身份未确认')
@@ -5133,6 +5155,17 @@ class Worker:
         original = request['observation']
         if actual['page'] != original['page']:
             raise ValueError('战略回答到达时页面已变，拒绝旧计划')
+        local_navigation = any(navigation_target(action, request) is not None for action in reply['actions'])
+        navigation_verified = False
+        if local_navigation:
+            navigation_verified = stable_semantic_plan(reply, request, actual, self.frame_path)
+            if not navigation_verified:
+                raise ValueError('导航目标/锚点/页面语义或局部暴露已变或未知，拒绝旧计划')
+            # Always validate these controls, including a small global delta:
+            # moving a small button must not bypass the local target contract.
+            self.log({'event': 'local_navigation_guard_matched', 'request_id': request['request_id'],
+                      'control_id': navigation_target(reply['actions'][0], request),
+                      'snapshot_id': actual['snapshot_id'], 'input_sent': False})
         if any(isinstance(action.get('target_evidence'), dict)
                and action['target_evidence'].get('control_id') in ('peace_guide_tab_4', 'peace_guide_tab_5', 'peace_guide_cosmic_strife_tab')
                for action in reply['actions']):
@@ -5169,7 +5202,7 @@ class Worker:
             if loot_key in self.loot_pickup_attempted:
                 raise ValueError('本局本节点该固定战利品已尝试，不重发')
         if request.get('kind') != 'business_resume' and hash_distance(actual['fingerprint'], original['fingerprint']) > .10:
-            if not (stable_world_menu_navigation(reply, request, actual)
+            if not (navigation_verified or stable_world_menu_navigation(reply, request, actual)
                     or stable_phone_guide_navigation(reply, request, actual)
                     or stable_peace_guide_tab_navigation(reply, request, actual)
                     or stable_advantages_navigation(reply, request, actual)
@@ -6073,6 +6106,7 @@ class Worker:
 
 def worker_cli(args):
     with activity(PROJECT, 'runner'):
+        reviewed_runtime_sources(args.chat_id)
         return _worker_cli(args)
 
 

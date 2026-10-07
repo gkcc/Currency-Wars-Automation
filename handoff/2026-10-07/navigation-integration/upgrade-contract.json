@@ -1,0 +1,32 @@
+{
+  "schema": "currency-wars-integration-upgrade/v1",
+  "production_main_sha": "4cf23830e7832ee68b4ef40ba688b006ee3064fc",
+  "code_baseline_sha": "290b9b9006309c02f2542931d97eb5f8b0a045b1",
+  "files": {
+    "tools/currency_wars_control.py": {
+      "main_sha256": "2b93583c57ee7593ca17cc951f078fa9cd4238285ca84aa83325646f45d86b54",
+      "pr17_sha256": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5",
+      "candidate_sha256": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5"
+    },
+    "tools/currency_wars_bridge_task.py": {
+      "main_sha256": "b0f7616f478ccde4b1e519b60078a60daece9f6acdf6b6a796db41634a054d9d",
+      "pr17_sha256": "aff9cb2bccb5047ac9f160fee17b5eced0a61f4688f4a6c98b0a459f86819978",
+      "candidate_sha256": "aff9cb2bccb5047ac9f160fee17b5eced0a61f4688f4a6c98b0a459f86819978"
+    },
+    "tools/install_input_bridge_admin.ps1": {
+      "main_sha256": "75ed2eeb8cf4d23c677080eba7fbabd3d0d5a1aa39f8fa00ee5dd5e14771ea0a",
+      "pr17_sha256": "75ed2eeb8cf4d23c677080eba7fbabd3d0d5a1aa39f8fa00ee5dd5e14771ea0a",
+      "candidate_sha256": "75ed2eeb8cf4d23c677080eba7fbabd3d0d5a1aa39f8fa00ee5dd5e14771ea0a"
+    },
+    "requirements.txt": {
+      "main_sha256": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+      "pr17_sha256": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+      "candidate_sha256": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a"
+    }
+  },
+  "installed_component_inspected": false,
+  "installed_component_matches_candidate": null,
+  "component_repair_required_if_installed_hashes_differ": true,
+  "package_build_or_install_performed": false,
+  "prior_requirement": "handoff/2026-10-07/FIRST_BATCH.md section 6: B-001 requires the original reviewed repair package/install path; a source pull alone does not update the fixed component."
+}

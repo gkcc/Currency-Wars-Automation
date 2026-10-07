@@ -302,6 +302,23 @@ def runtime_location(expected_broker_hash, *, inherited=None):
         raise BridgeError('启动运行根目录无法验证；未改用其他目录') from error
 
 
+def runtime_child_environment(expected_broker_hash, location, *, environ=None):
+    """Revalidate one selected root and configure only a newly spawned child.
+
+    The installed artifact provider derives its approved base from TEMP. A
+    parent may retain another process's C: TEMP/cache while the input component
+    uses D:. Do not mutate os.environ, tempfile.tempdir, or an imported provider.
+    """
+    selected = runtime_location(expected_broker_hash, inherited=location)
+    root = Path(selected['runtime_root'])
+    if root.name.casefold() != artifacts.TOOL.casefold():
+        raise BridgeError('运行根不符合已验证的临时目录协议；不更改子进程环境')
+    child = dict(os.environ if environ is None else environ)
+    base = str(root.parent)
+    child.update(TEMP=base, TMP=base, TMPDIR=base)
+    return child
+
+
 @contextlib.contextmanager
 def inbox_lock(inbox):
     inbox = Path(inbox)

@@ -21,6 +21,7 @@ pub struct ResumeProof {pub before:ResumeGuard,pub epoch:String,pub consumed_ids
 pub struct RuntimeAuthority {
     location: Option<Value>,
     legacy_temp: Option<PathBuf>,
+    runtime_provider: Value,
 }
 
 fn check_location(value:&Value)->Result<(),String>{
@@ -46,7 +47,7 @@ fn check_location(value:&Value)->Result<(),String>{
 }
 
 fn gui_registration(marker:&Value,record:&Value,root:&Path,chat:&str,location:&Value,
-                    gui_pid:u64,gui_creation:&str,parent_probe:&Value)->Result<(),String>{
+                    gui_pid:u64,gui_creation:&str,parent_probe:&Value)->Result<Value,String>{
     let parent_pid=marker["pid"].as_u64().unwrap_or(0);
     let parent_creation=text(marker,"process_identity").strip_prefix("windows:").unwrap_or("");
     let children=marker["protected_children"].as_array().ok_or("GUI子进程登记缺失")?;
@@ -72,15 +73,17 @@ fn gui_registration(marker:&Value,record:&Value,root:&Path,chat:&str,location:&V
         || identity(parent_probe,"creation_id")!=parent_creation || text(parent_probe,"state")!="running"{
         return Err("GUI父启动链、真实进程登记或运行位置未通过核验".into());
     }
-    Ok(())
+    Ok(record["runtime_provider"].clone())
 }
 
 impl RuntimeAuthority {
     pub fn legacy()->Result<Self,String>{
-        Ok(Self{location:None,legacy_temp:Some(std::env::temp_dir().canonicalize().map_err(|e|e.to_string())?)})
+        Ok(Self{location:None,legacy_temp:Some(std::env::temp_dir().canonicalize().map_err(|e|e.to_string())?),runtime_provider:Value::Null})
     }
 
     pub fn location(&self)->Option<&Value>{self.location.as_ref()}
+
+    pub fn runtime_provider(&self)->&Value{&self.runtime_provider}
 
     pub fn from_gui(root:&Path,chat:&str,declared:Option<&str>)->Result<Self,String>{
         no_links(root)?;
@@ -101,7 +104,7 @@ impl RuntimeAuthority {
         check_location(&declared)?;
         // Failure of an unrelated system TEMP disables legacy compatibility;
         // it must not block an explicitly verified installed/standalone root.
-        let authority=Self{location:Some(declared.clone()),legacy_temp:std::env::temp_dir().canonicalize().ok()};
+        let mut authority=Self{location:Some(declared.clone()),legacy_temp:std::env::temp_dir().canonicalize().ok(),runtime_provider:Value::Null};
         authority.check_canonical_root(root,Some(&declared))?;
         // Popen can run Rust before Python registers its child. Only absence
         // of this atomically published record is transient, once at startup.
@@ -122,7 +125,7 @@ impl RuntimeAuthority {
         let parent_creation=text(&marker,"process_identity").strip_prefix("windows:").unwrap_or("");
         let creation=crate::input::current_creation();
         if creation.is_empty(){return Err("GUI本进程创建身份未知".into());}
-        gui_registration(&marker,&record,root,chat,&declared,std::process::id() as u64,
+        authority.runtime_provider=gui_registration(&marker,&record,root,chat,&declared,std::process::id() as u64,
                          &creation,&probe_process(parent_pid,parent_creation))?;
         Ok(authority)
     }
@@ -613,7 +616,7 @@ mod tests {
     #[test]
     fn runtime_location_explicit_root_does_not_require_legacy_temp(){
         let location=installed_location();
-        let authority=RuntimeAuthority{location:Some(location.clone()),legacy_temp:None};
+        let authority=RuntimeAuthority{location:Some(location.clone()),legacy_temp:None,runtime_provider:Value::Null};
         let approved=Path::new(r"D:\Codex\Temp\codex-agent-workflow\run");
         assert!(authority.check_root(approved,Some(&location)).is_ok());
         assert!(authority.check_root(approved,None).is_err());
@@ -639,9 +642,10 @@ mod tests {
                          "run_id":"0123456789abcdef0123456789abcdef","children_incomplete":true,
                          "protected_children":[{"pid":32,"process_identity":"windows:42"}]});
         let record=json!({"schema":1,"owner":"currency-wars-gui-runtime","run_id":marker["run_id"],"chat_id":"chat","runtime_location":location,
-                         "launcher_pid":31,"launcher_creation_id":"41","gui_pid":32,"gui_creation_id":"42"});
+                         "launcher_pid":31,"launcher_creation_id":"41","gui_pid":32,"gui_creation_id":"42",
+                         "runtime_provider":{"kind":"installed","path":"explicit local fixture","sha256":"fixture digest"}});
         let probe=json!({"pid":31,"expected_creation_id":"41","creation_id":"41","state":"running"});
-        assert!(gui_registration(&marker,&record,root,"chat",&location,32,"42",&probe).is_ok());
+        assert_eq!(gui_registration(&marker,&record,root,"chat",&location,32,"42",&probe).unwrap(),record["runtime_provider"]);
         for (key,value) in [("gui_pid",json!(33)),("gui_creation_id",json!("43")),("launcher_creation_id",json!("99")),
                             ("chat_id",json!("other")),("run_id",json!("ffffffffffffffffffffffffffffffff")),("runtime_location",Value::Null)]{
             let mut wrong=record.clone();wrong[key]=value;assert!(gui_registration(&marker,&wrong,root,"chat",&location,32,"42",&probe).is_err(),"{key}");
