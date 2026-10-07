@@ -3198,13 +3198,16 @@ class Worker:
                   'classification': 'observed_after_input', 'outcome_confirmed': False})
         return observed
 
-    def read_frame(self, result, *, scope='full', force=False):
+    def read_frame(self, result, *, scope='full', force=False, reuse_primary=False):
         with self.profile_span('frame_validation', operation='capture', request_id=result.get('id')):
             frame = entry.observation_frame(self.run, result)
         try:
             with self.profile_span('perception', operation='ocr', request_id=result.get('id')):
-                observed = (self.perception.read(frame) if scope == 'full' and not force else
-                            self.perception.read(frame, force=force, scope=scope))
+                options = {'force': force, 'scope': scope}
+                if reuse_primary:
+                    options['reuse_primary'] = True
+                observed = (self.perception.read(frame) if scope == 'full' and not force and not reuse_primary else
+                            self.perception.read(frame, **options))
         except (OSError, SyntaxError) as exc:
             raise entry.ObservationUnavailable('本请求图像读取失败；只允许重新观察') from exc
         if observed.get('snapshot_id') != result['observation']['snapshot_sha256']:
@@ -3248,9 +3251,10 @@ class Worker:
                 or observed.get('frame_id') != result.get('observation', {}).get('frame_id')
                 or observed.get('snapshot_id') != result.get('observation', {}).get('snapshot_sha256')):
             raise entry.ObservationUnavailable('完整读取须当前同请求不可变帧，不能升级旧scope或补旧阵容')
-        # Validate and read the original current request again. Do not capture
-        # a different frame while quietly preserving the former request ID.
-        full = self.read_frame(result, scope='full', force=True)
+        # Revalidate the same current request, then rebuild full semantics.
+        # Only its raw primary OCR may be reused; force=True remains a real
+        # reread. No new capture or old semantic/request identity is supplied.
+        full = self.read_frame(result, scope='full', reuse_primary=True)
         if not full_observation(full):
             raise entry.ObservationUnavailable('当前请求完整读取契约未满足')
         return full
