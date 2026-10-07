@@ -1,0 +1,4062 @@
+{
+  "run_id": "79d896b5a7014f03ba3056f1a1e87f77",
+  "basis": "local receipt file completion time; no LLM or host queue attribution",
+  "receipts": [
+    {
+      "id": "794ecdab55de438e8e6a3b827685a7f9",
+      "file_completed_at": "2026-10-07T20:25:07.953209+00:00",
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "02dd9ecc4fa14e978fa77034588adbff",
+      "file_completed_at": "2026-10-07T20:26:04.812446+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "218c873b049f4861b41d03f98563fdcd",
+      "file_completed_at": "2026-10-07T20:26:53.974734+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            960.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "87a4c81e712f4fddbc01ad2fd9f1b2da",
+      "file_completed_at": "2026-10-07T20:27:37.746835+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "9969cb3ab0fe4365b6c3d1b2edb2da8d",
+      "file_completed_at": "2026-10-07T20:28:15.779748+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1376.0,
+            321.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1589.0,
+            301.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4a84ee98548a49b88bc0079e34875819",
+      "file_completed_at": "2026-10-07T20:29:09.806824+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4cf49ad178204895af6a7b421be9c917",
+      "file_completed_at": "2026-10-07T20:30:00.915510+00:00",
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1315.0,
+            910.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            887.0,
+            664.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "351f40a3d7194857b787eccaf6d484e1",
+      "file_completed_at": "2026-10-07T20:31:34.038840+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d8459854dd7843df95c3705de135b0cc",
+      "file_completed_at": "2026-10-07T20:33:26.350345+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3973daf3a0f848df9e27bd1ed37bca92",
+      "file_completed_at": "2026-10-07T20:34:25.397975+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "0a4c22bfafbd474bb44ea790b7722c3c",
+      "file_completed_at": "2026-10-07T20:35:19.421658+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1470.0,
+            480.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            984.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "482d8d80e2d24e5f97e182e5e96a0b90",
+      "file_completed_at": "2026-10-07T20:36:01.721509+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1026.0,
+            191.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "6cd35e2061f24f8f9394488911777f21",
+      "file_completed_at": "2026-10-07T20:37:04.342604+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1296.0,
+            191.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            689.0,
+            910.0,
+            887.0,
+            664.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "935efb35f55542d2bd669b3114482f7f",
+      "file_completed_at": "2026-10-07T20:37:50.609228+00:00",
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            190.0,
+            689.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "8a4287060a07442b9fa11070ff3d1836",
+      "file_completed_at": "2026-10-07T20:38:34.833774+00:00",
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            887.0,
+            664.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            887.0,
+            664.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "ec18a7aaba6c47e99ccdb7c5edc7e9c5",
+      "file_completed_at": "2026-10-07T20:39:48.318318+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "567c3563c5924b11b268e89d6cb70aa6",
+      "file_completed_at": "2026-10-07T20:45:00.785228+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "b4b2e26a67e740249d63562e49fb20b8",
+      "file_completed_at": "2026-10-07T20:45:15.702523+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "42061b5c251342ecb0debce517a30df2",
+      "file_completed_at": "2026-10-07T20:45:31.844393+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "caf68bf69d46439a95f4653a92d3bb9c",
+      "file_completed_at": "2026-10-07T20:45:53.296675+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1662.0,
+            468.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1700.0,
+            985.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "ae1c1b2b4dde44dbb556644cb442c370",
+      "file_completed_at": "2026-10-07T20:46:20.767273+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1315.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1065.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            887.0,
+            664.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "b7a302fe8b7c4f4ba4c465506773cca2",
+      "file_completed_at": "2026-10-07T20:46:36.752939+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "6067d6439a1644c5bc2793bd4c8d613a",
+      "file_completed_at": "2026-10-07T20:46:49.926555+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "e4a3d037a2db49cabe93df1c161d348e",
+      "file_completed_at": "2026-10-07T20:47:07.748155+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "71f71af1ec43495ebc0b37acad8511ee",
+      "file_completed_at": "2026-10-07T20:47:24.386616+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1026.0,
+            191.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "57d61daa224b4e4587a48b0ebddf71c6",
+      "file_completed_at": "2026-10-07T20:48:05.160881+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "73718d629c1f49eab62eae71c7a70c01",
+      "file_completed_at": "2026-10-07T20:48:48.200214+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "49f8cb14192d4712aa05cfb80a586f71",
+      "file_completed_at": "2026-10-07T20:49:44.279880+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d112539901204086a72f10c33f1d0cea",
+      "file_completed_at": "2026-10-07T20:50:18.663344+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "90fa1d5b240f459b9691d1ff9e2d10c7",
+      "file_completed_at": "2026-10-07T20:50:39.994743+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1250.0,
+            493.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3e82ac2e864a41d1b40c82d215ba1853",
+      "file_completed_at": "2026-10-07T20:51:07.305215+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "07a231cd216e4e0a87cd4a86403ab1b0",
+      "file_completed_at": "2026-10-07T20:51:48.704294+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "950198ebbe7e4995b0926a1080bc5cc7",
+      "file_completed_at": "2026-10-07T20:52:57.120702+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a8901354da7043fbbb85ec818ab4a2ad",
+      "file_completed_at": "2026-10-07T20:54:10.802653+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4d7b15222abe406b993883546ad8fea8",
+      "file_completed_at": "2026-10-07T20:54:49.921973+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "23fe5316065a4ca895743f092ad538bf",
+      "file_completed_at": "2026-10-07T20:55:11.623562+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "9d98d9f5f9f749b5b339c7f2e3aaa33f",
+      "file_completed_at": "2026-10-07T20:55:40.213671+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            689.0,
+            910.0,
+            1030.0,
+            664.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "1be6d1c4ef504576b3402d94fa8e79b7",
+      "file_completed_at": "2026-10-07T20:56:03.579269+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            689.0,
+            910.0,
+            1030.0,
+            664.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3a6c503421f0468e9139fc21a5346d03",
+      "file_completed_at": "2026-10-07T20:56:25.145408+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            923.0,
+            399.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "1104091099dd4b598a9787a0cd936227",
+      "file_completed_at": "2026-10-07T20:56:49.435107+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1167.0,
+            399.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a626d5a5ff06499cb0b787584db9c3dd",
+      "file_completed_at": "2026-10-07T20:57:14.917968+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1167.0,
+            242.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1495.0,
+            565.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "b1cc1c80e92b474f807b2ebf9f544c82",
+      "file_completed_at": "2026-10-07T20:58:08.020981+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "383040efdb21408281ee87983bfbe047",
+      "file_completed_at": "2026-10-07T20:59:20.686932+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "b2a48002ec214f87be1e86ee0f2c7769",
+      "file_completed_at": "2026-10-07T21:00:45.523812+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "8a00f61519b54e94811460566586132b",
+      "file_completed_at": "2026-10-07T21:01:13.753349+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            799.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "fc73c790f62342eab705a4c546ce02f4",
+      "file_completed_at": "2026-10-07T21:01:39.702232+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "494f40b3cbef4e85a02589ec73a895d0",
+      "file_completed_at": "2026-10-07T21:02:13.299770+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1558.0,
+            357.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1318.0,
+            293.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1388.0,
+            355.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3908e56943644cb3b95a0cd335a195cd",
+      "file_completed_at": "2026-10-07T21:02:46.191594+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1427.0,
+            300.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1508.0,
+            312.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d7b196b2c52e4877b9135532224e51b3",
+      "file_completed_at": "2026-10-07T21:03:16.603472+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            950.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "258a3d60b9f4499a9aae7c81d0679e88",
+      "file_completed_at": "2026-10-07T21:03:43.805201+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            665.0,
+            223.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1598.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3f8bd886aa634f0eabaf4d7f59bf5843",
+      "file_completed_at": "2026-10-07T21:04:10.628846+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            689.0,
+            910.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "34ff195048b241679cbbe58d277b9f4a",
+      "file_completed_at": "2026-10-07T21:04:44.554082+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1315.0,
+            910.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d74ce20453d44f7db142bead18695ac3",
+      "file_completed_at": "2026-10-07T21:05:17.605851+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1570.0,
+            270.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "230dd40e314d4643beb411d4a4467f6d",
+      "file_completed_at": "2026-10-07T21:05:50.777456+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1518.0,
+            405.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "345ea595d3f04a5b9b0083abcf9b0eb8",
+      "file_completed_at": "2026-10-07T21:06:20.509586+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            689.0,
+            950.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "c32c8e12ae0843adac539237e58dd2b5",
+      "file_completed_at": "2026-10-07T21:07:22.367370+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            220.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "fa0a8a332742460487552b5ec06ceb6a",
+      "file_completed_at": "2026-10-07T21:08:18.700089+00:00",
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            428.0,
+            602.0,
+            664.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            1030.0,
+            664.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "52433999ffd6425e9adc882543bac04a",
+      "file_completed_at": "2026-10-07T21:08:55.353140+00:00",
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            350.0,
+            1030.0,
+            664.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            1030.0,
+            664.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d04dee9fe9d64f09896d72d990bde9c4",
+      "file_completed_at": "2026-10-07T21:09:28.540471+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            759.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "bde510248e364464af883ae8ee5ac370",
+      "file_completed_at": "2026-10-07T21:09:58.556501+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "c00032a7e6904985b99ec9543840f44e",
+      "file_completed_at": "2026-10-07T21:10:28.795678+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "27d6aabddfc64100ab5359183326dc10",
+      "file_completed_at": "2026-10-07T21:11:01.789864+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "04d5b4ff8cfc45e1a90103e139fb9f2b",
+      "file_completed_at": "2026-10-07T21:11:45.580072+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1026.0,
+            191.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1296.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "b1d2ddfffbca4d21969a433f60099bca",
+      "file_completed_at": "2026-10-07T21:12:30.596448+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1563.0,
+            191.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "106d0867bde742f58e97250c63d31b27",
+      "file_completed_at": "2026-10-07T21:13:07.201643+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "165ea4dc1e834e4f914b105bdc60d2c6",
+      "file_completed_at": "2026-10-07T21:14:09.711146+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "c8f956b98ec84e069cdaf7ed0934d8ba",
+      "file_completed_at": "2026-10-07T21:16:05.509194+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "1f90256ba1924e4bbb377d77127f647c",
+      "file_completed_at": "2026-10-07T21:17:45.408741+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d0d0f899e4f44d9d8410ddae83efeaa9",
+      "file_completed_at": "2026-10-07T21:18:31.257121+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            960.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "12e6e08b55244b3eba828a40e64cdd52",
+      "file_completed_at": "2026-10-07T21:19:11.201191+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4adb7d73bcbf4262b0fcbbfc727cc8fc",
+      "file_completed_at": "2026-10-07T21:19:51.795030+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1315.0,
+            301.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1481.0,
+            415.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1592.0,
+            367.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "ef09c033a37643019365814dd3f6e1f4",
+      "file_completed_at": "2026-10-07T21:20:36.122714+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1685.0,
+            190.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d388c88b5f594663b7dffae94f1aa373",
+      "file_completed_at": "2026-10-07T21:21:32.253803+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            500.0,
+            400.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1685.0,
+            190.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1563.0,
+            191.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "dcd468a34426495db3e39afe004bf1d8",
+      "file_completed_at": "2026-10-07T21:22:24.220196+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1296.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "8a3a8252a1614b13b179ee191ae3261d",
+      "file_completed_at": "2026-10-07T21:23:09.107042+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a29d7a8cecf44e39b232eed961352fb6",
+      "file_completed_at": "2026-10-07T21:23:52.776893+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1563.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "0b68fa71691d495a93d7a4ebb94cef13",
+      "file_completed_at": "2026-10-07T21:25:22.206336+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            191.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1026.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            438.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d9118fa7b2a54811bf518249fb4857cb",
+      "file_completed_at": "2026-10-07T21:26:15.262454+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "5c3e84510525425d9b387120baaf1365",
+      "file_completed_at": "2026-10-07T21:27:03.650785+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1734.0,
+            817.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "bc35473f89a841d49227cf8e26b5f467",
+      "file_completed_at": "2026-10-07T21:27:50.160000+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            500.0,
+            400.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "76c5abe8c4194d3e8016cfb97ef2b580",
+      "file_completed_at": "2026-10-07T21:28:56.473860+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "f9e7b2e11d354ae283527185af109b69",
+      "file_completed_at": "2026-10-07T21:33:46.447814+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "c280d3657bf44d1bb4f7872ff4dded4a",
+      "file_completed_at": "2026-10-07T21:34:17.940280+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            960.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "520a78b01d59413fb9e50720dfd4c816",
+      "file_completed_at": "2026-10-07T21:34:49.079487+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            489.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            984.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "2fa1ebfa202b4682bdca05bf6e1c35ab",
+      "file_completed_at": "2026-10-07T21:35:04.883082+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            438.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "571f1adfcd3843a585f160999a674b00",
+      "file_completed_at": "2026-10-07T21:35:23.428996+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            620.0,
+            269.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            688.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a359d052b4d44019a41e568c702b1da8",
+      "file_completed_at": "2026-10-07T21:36:02.148066+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            886.0,
+            269.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            438.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            688.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "34edb52360294fbbbf0d9cbff41972a2",
+      "file_completed_at": "2026-10-07T21:36:22.745490+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "5882591a5e594a928ee0418dddc2d00e",
+      "file_completed_at": "2026-10-07T21:36:39.047685+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "30d1ef437a104739a398462f88209fa2",
+      "file_completed_at": "2026-10-07T21:37:01.878287+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "0c8f059504bd497b884b8f57353b99cf",
+      "file_completed_at": "2026-10-07T21:37:24.555219+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            563.0,
+            910.0,
+            1173.0,
+            664.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "e0d7e879f7184673b1d93b9b8eb4d834",
+      "file_completed_at": "2026-10-07T21:38:41.320535+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "c6178687ed2e418fafcfb6fadd23edfd",
+      "file_completed_at": "2026-10-07T21:39:44.088025+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d1f94a59f7da4fba94e4c3899c8ac835",
+      "file_completed_at": "2026-10-07T21:40:17.662319+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            960.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "1a9d5b186aba4c8fb5f078fe1f05d259",
+      "file_completed_at": "2026-10-07T21:40:42.120655+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            139.0,
+            699.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "fd336a78318a43268c2b4c8e5a4ae056",
+      "file_completed_at": "2026-10-07T21:41:06.350682+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1863.0,
+            66.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            250.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1685.0,
+            984.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d475b4dc0d744247a1c4a6bde739c12f",
+      "file_completed_at": "2026-10-07T21:41:32.736257+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1840.0,
+            193.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            438.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "f79d82e10e544d4090eb554ca53360ba",
+      "file_completed_at": "2026-10-07T21:41:57.739809+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            438.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "51da9e9ddc62435cab8ed753f1322e51",
+      "file_completed_at": "2026-10-07T21:42:22.175328+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "5ef6ce68572a48f2b40202992e6ca295",
+      "file_completed_at": "2026-10-07T21:42:48.828520+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "04ab91c0602042b1894acc77ecdf12ed",
+      "file_completed_at": "2026-10-07T21:43:09.874860+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a6ca428dfc074cb198c2416198bc8578",
+      "file_completed_at": "2026-10-07T21:43:31.774053+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a8e9c510cf464b15bc2079b27d1006f8",
+      "file_completed_at": "2026-10-07T21:43:54.750114+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "009dede37ccf41a99b70f17e906cdd67",
+      "file_completed_at": "2026-10-07T21:44:58.762485+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3b8f3e15a9354602a160073d63f60e00",
+      "file_completed_at": "2026-10-07T21:45:21.928909+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "b81894a3584c455188643a801a6c7581",
+      "file_completed_at": "2026-10-07T21:45:50.198246+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "357d7ae380d5450fbb334b3232df7e5a",
+      "file_completed_at": "2026-10-07T21:46:56.280258+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "59e967e40abf4ac181f97cd82d56b282",
+      "file_completed_at": "2026-10-07T21:48:04.512639+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            15.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4ac9af2b6e34485086eaa2c26620e25c",
+      "file_completed_at": "2026-10-07T21:49:30.622837+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "8c64bcfbc0a0478ea0ad71ad2ee3d357",
+      "file_completed_at": "2026-10-07T21:50:35.340123+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            960.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "42e9cbed7e6d4528be71ec1da4a0ea60",
+      "file_completed_at": "2026-10-07T21:51:11.234307+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1254.0,
+            472.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "8351dcf1cfff4ef080fb883a6953d0ab",
+      "file_completed_at": "2026-10-07T21:52:08.253320+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "0bd876d68ded4f16807a4408391c1e79",
+      "file_completed_at": "2026-10-07T21:52:40.396905+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1296.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "c75bdb4f739d4596b9314a11302fde1b",
+      "file_completed_at": "2026-10-07T21:53:26.418741+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3db54b27e2704aefb85c9fc1cc245ac8",
+      "file_completed_at": "2026-10-07T21:53:54.985699+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4d9f48264ad84276b3fefb37774b11b7",
+      "file_completed_at": "2026-10-07T21:54:27.492640+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "3ae9dae4562142aeb75d40e208229f57",
+      "file_completed_at": "2026-10-07T21:54:58.141326+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            759.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "a60c15528fae41d6bccef319ada9cdb3",
+      "file_completed_at": "2026-10-07T21:55:36.128859+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "4fd5803252f2440ea882bf49bd364f67",
+      "file_completed_at": "2026-10-07T21:56:37.439023+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "5d8dd1189b7a44388b009e621e0abfb3",
+      "file_completed_at": "2026-10-07T21:58:04.718918+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "841df4cc58bf4c8b8fccb3312ad79b86",
+      "file_completed_at": "2026-10-07T21:59:37.852711+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "d230b802a61a4174ab236e4c032701c3",
+      "file_completed_at": "2026-10-07T22:01:24.604056+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "0fc7b0577ae44675a6b84b8c889de5ec",
+      "file_completed_at": "2026-10-07T22:02:33.766692+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            960.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "770607a6a1ab4513a7feff3c2945f64d",
+      "file_completed_at": "2026-10-07T22:04:10.718957+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            440.0,
+            343.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "845d20b516b64bceb52bf3e0ed4a9702",
+      "file_completed_at": "2026-10-07T22:04:49.596056+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1330.0,
+            278.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1464.0,
+            320.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1410.0,
+            380.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "2c2267bececa49fea465479aa7239b2e",
+      "file_completed_at": "2026-10-07T22:05:33.001770+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            688.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1775.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.6
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "5d423f3d89e64f408e09bb5cd0d2fc04",
+      "file_completed_at": "2026-10-07T22:06:12.459218+00:00",
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "2da88d4c8fb9449dbdc05ebe85e18bb4",
+      "file_completed_at": "2026-10-07T22:06:15.974731+00:00",
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "64edeb66bccf4757a5c4f6355e67448f",
+      "file_completed_at": "2026-10-07T22:07:09.680851+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            759.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1602.0,
+            978.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            688.0,
+            910.0,
+            1173.0,
+            664.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "8b821679375c49f4a95c6219505efb7b",
+      "file_completed_at": "2026-10-07T22:07:57.622389+00:00",
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            347.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1845.0,
+            273.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1645.0,
+            817.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "bb12700f31ec42b8895e8e8ef1030927",
+      "file_completed_at": "2026-10-07T22:08:43.052719+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            500.0,
+            500.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            92.0,
+            164.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "744c10a80b844701b1320d3a55b8427f",
+      "file_completed_at": "2026-10-07T22:09:20.977705+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            880.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            92.0,
+            259.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "6fd5d719242f4b36b3f970d1ad51db3b",
+      "file_completed_at": "2026-10-07T22:10:03.925886+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            880.0,
+            550.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "68edb1289d8f415ab5d6b73b372a9c35",
+      "file_completed_at": "2026-10-07T22:11:29.408912+00:00",
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1817.0,
+            752.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "efdbf88863de4f6e976d166a52588011",
+      "file_completed_at": "2026-10-07T22:13:04.608421+00:00",
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            20.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "ok": true,
+      "error": null
+    }
+  ]
+}
