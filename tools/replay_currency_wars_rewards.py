@@ -123,7 +123,7 @@ def protocol_fixture(effect='normal', *, profiling=False, start_shop=False):
             {'type': action['type'], 'args': [float(value) for value in action.get('args', [])]}
             for action in actions]
 
-        def read(path):
+        def read(path, force=False, *, scope='full'):
             digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
             return copy.deepcopy(by_digest[digest])
         reader.read = read

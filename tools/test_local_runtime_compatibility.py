@@ -143,7 +143,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                             'original_sha256': digest, 'snapshot_size': [1920, 1080], 'original_size': [1920, 1080]}})
             control = Control()
             reader = SimpleNamespace(frames={})
-            def read_frame(path):
+            def read_frame(path, force=False, *, scope='full'):
                 digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
                 return json.loads(json.dumps({'snapshot_id': digest, 'page': 'preparation',
                     'fields': {'stage': '2-3', 'deployed': '1/1', 'coins': 52, 'level': 7, 'xp': '38/52'},
@@ -1220,7 +1220,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                             'guide': {'title': '塔夏', 'level_plan': '7级搜牌'}}
         worker.strategy_reads['team'] = {'value': {'checked': True, 'units': [
             {'name': 'known-unit', 'location': 'board', 'row': 'front', 'slot': 1, 'position': '前台'}]},
-            'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now()}
+            'match_id': 'match', 'resume_epoch': 'epoch', 'snapshot_id': 'shop', 'observed_at': runner.now()}
         observed = {'page': 'shop', 'snapshot_id': 'shop', 'fields': {'stage': '2-3', 'level': '7'}, 'rows': [],
                     'semantic': {'team': {'checked': False, 'units': []}}}
         decision = worker.preparation_policy(observed)

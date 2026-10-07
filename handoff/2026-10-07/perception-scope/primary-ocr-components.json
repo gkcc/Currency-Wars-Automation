@@ -1,0 +1,97 @@
+{
+  "schema": "currency-wars-primary-ocr-components/v1",
+  "source_revision": "5e46351372ff26980a92a9806909c732607f50ea",
+  "source_hashes": {
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25"
+  },
+  "source_unchanged": true,
+  "offline_only": true,
+  "game_inputs": 0,
+  "game_captures": 0,
+  "warmup": [
+    {
+      "frame": "q01.png",
+      "seconds": 1.3430327289997877,
+      "snapshot_sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "page": "preparation"
+    },
+    {
+      "frame": "q00.png",
+      "seconds": 1.290149688999918,
+      "snapshot_sha256": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+      "page": "shop"
+    }
+  ],
+  "measurements": [
+    {
+      "frame": "q01.png",
+      "components": [
+        {
+          "component": "text_det",
+          "input_shape": [
+            720,
+            1280,
+            3
+          ],
+          "input_crops": null,
+          "seconds": 0.18407759399997303
+        },
+        {
+          "component": "text_rec",
+          "input_shape": [],
+          "input_crops": 42,
+          "seconds": 0.5322133010004109
+        }
+      ],
+      "input_shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_cls": false,
+      "scope": "primary_full_image_ocr",
+      "returned_rows": 33,
+      "seconds": 0.7197216900003696,
+      "other_primary_seconds": 0.0034307949999856646,
+      "perception_seconds": 0.8834859910002706,
+      "snapshot_sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "page": "preparation"
+    },
+    {
+      "frame": "q00.png",
+      "components": [
+        {
+          "component": "text_det",
+          "input_shape": [
+            720,
+            1280,
+            3
+          ],
+          "input_crops": null,
+          "seconds": 0.19048680200012313
+        },
+        {
+          "component": "text_rec",
+          "input_shape": [],
+          "input_crops": 69,
+          "seconds": 1.163947282000663
+        }
+      ],
+      "input_shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_cls": false,
+      "scope": "primary_full_image_ocr",
+      "returned_rows": 60,
+      "seconds": 1.359228475999771,
+      "other_primary_seconds": 0.004794391998984793,
+      "perception_seconds": 1.5199801819999266,
+      "snapshot_sha256": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+      "page": "shop"
+    }
+  ],
+  "contract": "One real warmup of q01/q00 followed by one force=True measurement of each in the same process. Only the primary 1280x720 OCR call is decomposed; numeric ROI OCR is outside this table. Detector/recognizer/classifier call time includes each stage own preprocessing and postprocessing. text_cls has zero calls because use_cls=False; it is not a measured optimization. The sibling det/rec/cls component intervals plus other_primary_seconds equal primary OCR time; primary OCR is nested inside Perception time and must not be added again."
+}

@@ -22,7 +22,8 @@ import psutil
 import currency_wars_broker_entry as entry
 import currency_wars_input_bridge as input_bridge
 from currency_wars_source_guard import activity
-from currency_wars_perception import Perception, clean, find_text, hash_distance, GOLD_HUD, valid_population_counts
+from currency_wars_perception import (Perception, clean, find_text, hash_distance, GOLD_HUD,
+                                     valid_population_counts, READ_CONTRACT_VERSION)
 from currency_wars_shop_reader import purchase_slot
 from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
@@ -46,6 +47,17 @@ PANELS = [('bonds', '羁绊链路'), ('income', '预期收益'),
 
 def now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def full_observation(observed):
+    contract = observed.get('read_contract')
+    # Old saved observations and default-full protocol fixtures predate scope.
+    # Explicitly unread data never qualifies through that compatibility path.
+    if any((observed.get('semantic', {}).get(key) or {}).get('status') == 'not_read'
+           for key in ('team', 'inventory', 'player_hud')):
+        return False
+    return contract is None or (contract.get('version') == READ_CONTRACT_VERSION
+        and contract.get('effective_scope') == 'full' and not contract.get('unread'))
 
 
 def optional(path):
@@ -2977,7 +2989,7 @@ class Worker:
         else:
             self.publish(control_mode='manual', phase='控制器已连接，等待明确继续', reason='新手动接管优先')
 
-    def command(self, tokens, reason, expected_page=None, postcondition=None, action=None):
+    def command(self, tokens, reason, expected_page=None, postcondition=None, action=None, *, read_scope='full'):
         if getattr(self, 'business_needs_review', False):
             raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
         page = (self.last_observation or {}).get('page')
@@ -3177,21 +3189,22 @@ class Worker:
         if not result.get('ok'):
             raise RuntimeError(result.get('error', 'broker拒绝动作'))
         try:
-            observed = self.read_frame(result)
+            observed = self.read_frame(result, scope=read_scope)
         except entry.ObservationUnavailable:
-            observed = self.observe()
+            observed = self.observe(scope=read_scope)
         self.log({'event': 'actual_result', 'decision_id': rid, 'page': observed['page'],
                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
                   'after_evidence': after, 'expected_change': postcondition,
                   'classification': 'observed_after_input', 'outcome_confirmed': False})
         return observed
 
-    def read_frame(self, result):
+    def read_frame(self, result, *, scope='full', force=False):
         with self.profile_span('frame_validation', operation='capture', request_id=result.get('id')):
             frame = entry.observation_frame(self.run, result)
         try:
             with self.profile_span('perception', operation='ocr', request_id=result.get('id')):
-                observed = self.perception.read(frame)
+                observed = (self.perception.read(frame) if scope == 'full' and not force else
+                            self.perception.read(frame, force=force, scope=scope))
         except (OSError, SyntaxError) as exc:
             raise entry.ObservationUnavailable('本请求图像读取失败；只允许重新观察') from exc
         if observed.get('snapshot_id') != result['observation']['snapshot_sha256']:
@@ -3209,16 +3222,38 @@ class Worker:
         observed['captured_at'] = result['observation']['captured_at']
         self.last_observation = observed
         self.state['statistics']['ocr_ms'] += observed['elapsed_ms']
+        self.log({'event': 'perception_read', 'request_id': result['id'], 'snapshot_id': observed['snapshot_id'],
+                  'read_contract': observed.get('read_contract'), 'read_timing': observed.get('read_timing'),
+                  'elapsed_ms': observed['elapsed_ms']})
         self.state['observation'] = {k: v for k, v in observed.items() if k != 'rows'}
         if observed['page'] in ('preparation', 'shop') and canonical_stage(observed.get('fields', {}).get('stage')):
             self.last_preparation_stage = observed['fields']['stage']
         for key in ('guide', 'guide_tracking', 'team', 'gear', 'bonds', 'xp'):
             fact = observed.get('semantic', {}).get(key)
-            if isinstance(fact, dict):
-                self.strategy_reads[key] = {'value': fact, 'snapshot_id': observed['snapshot_id'],
-                    'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'observed_at': now()}
+            if isinstance(fact, dict) and fact.get('status') != 'not_read':
+                self.strategy_reads[key] = {'value': copy.deepcopy(fact), 'snapshot_id': observed['snapshot_id'],
+                    'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'observed_at': now(),
+                    'read_contract': copy.deepcopy(observed.get('read_contract'))}
         self.profile_context()
         return observed
+
+    def ensure_full_observation(self, observed):
+        if full_observation(observed):
+            return observed
+        current, result = self.last_observation or {}, getattr(self, 'frame_result', None)
+        if (not isinstance(result, dict)
+                or any(observed.get(key) != current.get(key) for key in
+                       ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at'))
+                or observed.get('capture_request_id') != result.get('id')
+                or observed.get('frame_id') != result.get('observation', {}).get('frame_id')
+                or observed.get('snapshot_id') != result.get('observation', {}).get('snapshot_sha256')):
+            raise entry.ObservationUnavailable('完整读取须当前同请求不可变帧，不能升级旧scope或补旧阵容')
+        # Validate and read the original current request again. Do not capture
+        # a different frame while quietly preserving the former request ID.
+        full = self.read_frame(result, scope='full', force=True)
+        if not full_observation(full):
+            raise entry.ObservationUnavailable('当前请求完整读取契约未满足')
+        return full
 
     def preparation_checklist(self, observed):
         # Reuse UFO's explicit re-observe/return-to-supervisor idea inside the
@@ -3766,7 +3801,7 @@ class Worker:
                 return True
             # Re-observe and relocate only this semantic step. An asynchronous
             # popup AFTER this check remains a residual screenshot/input race.
-            fresh = self.observe()
+            fresh = self.observe(scope='rewards')
             if (fresh.get('page') != observed.get('page')
                     or fresh.get('fields', {}).get('stage') != observed.get('fields', {}).get('stage')):
                 self.log({'event': 'reward_relocate', 'reason': 'page_or_stage_changed', 'input_sent': False})
@@ -3805,7 +3840,7 @@ class Worker:
                     after = self.command([f'click:{point[0]}:{point[1]}', 'wait:0.7'],
                         '当前单个收店/蓝球控件；后图验证后再定位下一目标', observed['page'],
                         '单控件效果，不代表全部领空', action={'type': 'click_point', 'purpose': 'local_reward',
-                            'args': point, 'expected_page': observed['page']})
+                            'args': point, 'expected_page': observed['page']}, read_scope='rewards')
                     if target['kind'] == 'blue_orb':
                         self.invalidate_preparation('inventory')
                     self.reconcile_reward_step(pending, after)
@@ -4163,7 +4198,9 @@ class Worker:
         if (not binding or binding['scope'] != (self.active_match_id, stage, self.epoch())
                 or actual.get('page') not in economy.PREPARATION_PAGES):
             raise ValueError('本节点/当前epoch尚无已核经济读数和统一预算')
-        cache_key = (actual['snapshot_id'], binding['snapshot_id'])
+        contract = actual.get('read_contract') or {}
+        cache_key = (actual['snapshot_id'], binding['snapshot_id'], contract.get('version'),
+                     contract.get('requested_scope'), contract.get('effective_scope'))
         cached = getattr(self, 'economy_read_cache', None)
         if cached and cached[0] == cache_key:
             return cached[1]
@@ -4363,8 +4400,10 @@ class Worker:
                     and ledger['purchased'].get(slot['name'], 0) < targets[slot['name']]['copies']]
             strategy_observation, facts = self.preparation_inputs(actual)
             strategy_observation['fields']['level'] = observation['values'].get('level')
-            strategy = preparation_decision(strategy_observation, facts)
-            permission = {'allowed': strategy['reroll_allowed'], 'phase': strategy['strategy_phase']['phase']}
+            guide = strategy_observation.get('semantic', {}).get('guide') or facts.get('guide') or {}
+            phase = coaching.guide_phase(guide, strategy_observation, facts.get('guide_proof'))
+            permission = {'allowed': phase['reroll_allowed'] and phase['phase'] not in
+                          guide.get('operating_rules', {}).get('no_reroll_phases', []), 'phase': phase['phase']}
             status = economy.dependencies(plan, observation, ledger, gaps, shop_complete=observation['shop_complete'],
                                           guide_permission=permission)
             actions = []
@@ -4460,6 +4499,8 @@ class Worker:
             return self._execute_economic_action(action, actual, request)
 
     def _execute_economic_action(self, action, actual, request):
+        if economy.economic_action(action, actual.get('page')) == 'purchase':
+            actual = self.ensure_full_observation(actual)
         info = self.require_economic_action(action, actual)
         kind, ledger = info['kind'], info['ledger']
         if kind == 'purchase':
@@ -4480,7 +4521,8 @@ class Worker:
                        {'type': parts[0], 'args': parts[1:]} for parts in (token.split(':') for token in tokens)])}
         ledger['pending'], self.economy_inflight = pending, pending
         try:
-            after = self.command(tokens, action['reason'], actual['page'], '按同请求后帧核实际资源差额', action=action)
+            after = self.command(tokens, action['reason'], actual['page'], '按同请求后帧核实际资源差额', action=action,
+                                 read_scope='full' if kind == 'purchase' else 'economy')
         except Exception:
             if pending['publication_attempted'] is False:
                 ledger['pending'] = None
@@ -4586,6 +4628,12 @@ class Worker:
             policy = self.economic_policy(observed)
             if not policy['available']:
                 return False
+            if (not full_observation(observed) and (not policy['actions']
+                    or policy['actions'][0].get('type') == 'buy_shop')):
+                observed = self.ensure_full_observation(observed)
+                policy = self.economic_policy(observed)
+                if not policy['available']:
+                    return False
             if not policy['actions']:
                 return self.finish_local_economy(observed, policy)
             action = policy['actions'][0]
@@ -4697,6 +4745,10 @@ class Worker:
     def preparation_inputs(self, observed):
         facts = {}
         for key, record in self.strategy_reads.items():
+            if key not in ('guide', 'guide_tracking') and (not full_observation(observed)
+                    or (observed.get('semantic', {}).get(key) or {}).get('status') == 'not_read'
+                    or key == 'team' and record.get('snapshot_id') != observed.get('snapshot_id')):
+                continue
             age = (datetime.now(timezone.utc) - datetime.fromisoformat(record['observed_at'])).total_seconds()
             if (record['match_id'] == self.active_match_id and record['resume_epoch'] == self.epoch()
                     and 0 <= age <= (3600 if key in ('guide', 'guide_tracking') else 180)):
@@ -4722,6 +4774,7 @@ class Worker:
         return phase_observation, facts
 
     def preparation_policy(self, observed):
+        observed = self.ensure_full_observation(observed)
         phase_observation, facts = self.preparation_inputs(observed)
         decision = preparation_decision(phase_observation, facts)
         task_context, observation_scope = self.reviewed_task_context(observed)
@@ -4762,7 +4815,7 @@ class Worker:
                 'reason': '奖励已领空，进入第二创业指南核对章节任务；执行前仍须双帧图标验证'}]
         return decision
 
-    def observe(self):
+    def observe(self, *, scope='full'):
         for attempt in range(2):
             rid = uuid.uuid4().hex
             self.worker_request_ids = getattr(self, 'worker_request_ids', set())
@@ -4774,7 +4827,7 @@ class Worker:
             try:
                 if not result.get('ok'):
                     raise entry.ObservationUnavailable('只读截图没有同请求的新鲜回帧')
-                return self.read_frame(result)
+                return self.read_frame(result, scope=scope)
             except entry.ObservationUnavailable as exc:
                 self.log({'event': 'observation_unavailable', 'request_id': rid,
                           'attempt': attempt + 1, 'reason': str(exc), 'input_resent': False})
@@ -4801,8 +4854,12 @@ class Worker:
         return (optional(self.run / 'runner-resume-epoch.json') or {}).get('id')
 
     def ask(self, observed, kind, reason, choices=None, *, category='unclassified', business_step=None):
+        observed = self.ensure_full_observation(observed)
         old = self.state.get('decision_request')
-        if old and old['snapshot_id'] == observed['snapshot_id'] and old['resume_epoch'] == self.epoch():
+        if (old and old['snapshot_id'] == observed['snapshot_id'] and old['resume_epoch'] == self.epoch()
+                and full_observation(old.get('observation', {}))
+                and (old.get('observation', {}).get('read_contract') or {}).get('version')
+                    == (observed.get('read_contract') or {}).get('version')):
             return
         rid = uuid.uuid4().hex
         evidence = self.save_frame(rid, 'strategy')
@@ -4815,15 +4872,16 @@ class Worker:
         with original_png.open('xb') as stream:
             stream.write(payload)
         self.history[observed['snapshot_id']] = {'snapshot_id': observed['snapshot_id'], 'evidence_file': evidence,
-            'observed_at': now(), 'page': observed['page'], 'rows': observed['rows'], 'match_id': self.active_match_id,
-            'resume_epoch': self.epoch(), 'semantic': observed.get('semantic', {}), 'fields': observed.get('fields', {}),
+            'observed_at': now(), 'page': observed['page'], 'rows': copy.deepcopy(observed['rows']), 'match_id': self.active_match_id,
+            'resume_epoch': self.epoch(), 'semantic': copy.deepcopy(observed.get('semantic', {})), 'fields': copy.deepcopy(observed.get('fields', {})),
+            'read_contract': copy.deepcopy(observed.get('read_contract')),
             'capture_request_id': observed.get('capture_request_id'), 'frame_id': observed.get('frame_id'),
             'captured_at': observed.get('captured_at'),
             'preparation_stage': canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage}
         if len(self.history) > 256:
             self.history.pop(next(iter(self.history)))
         request = {'request_id': rid, 'snapshot_id': observed['snapshot_id'], 'kind': kind,
-                   'reason': reason, 'observation': observed, 'context': self.context,
+                   'reason': reason, 'observation': copy.deepcopy(observed), 'context': self.context,
                    'static_knowledge': self.knowledge,
                    'knowledge_boundary': 'static_knowledge仅历史参考；动态交易/库存/任务/站位必须当前局鲜帧proof',
                    'inspection_results': self.inspections, 'choices': choices,
@@ -5214,6 +5272,8 @@ class Worker:
                 or source['match_id'] != self.active_match_id
                 or proof.get('resume_epoch') != self.epoch() or source.get('resume_epoch') != self.epoch()):
             raise ValueError('context观察出处、当前局或交接代次未核实')
+        if not full_observation(source):
+            raise ValueError('context观察出处须完整读取，窄scope不能补全场策略事实')
         age = (datetime.now(timezone.utc) - datetime.fromisoformat(source['observed_at'])).total_seconds()
         if not 0 <= age <= lifetime:
             raise ValueError('context出处超过有效期限')
