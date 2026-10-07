@@ -175,3 +175,84 @@ def detect(image, page, rows, snapshot_id):
     else:
         result['reason'] = 'no_blue_orb_match_in_scanned_region'
     return result
+
+
+def stable_layout(original, actual, original_png, current_png):
+    """Two actual observations of the same exposed layout; no clear inference.
+
+    Reuse the existing local text/halo guard rather than a whole-frame score.
+    The caller keeps the Entry lease through this check and one input. A game
+    may still change after capture; this is bounded observed stability, not an
+    atomic desktop transaction or proof that an unobserved overlay is absent.
+    """
+    import cv2
+    from currency_wars_visual_guards import _navigation_row, _navigation_visible_semantics
+    try:
+        stage = original.get('fields', {}).get('stage')
+        if (original.get('page') not in ('preparation', 'shop') or actual.get('page') != original['page']
+                or not isinstance(stage, str) or not re.fullmatch(r'[1-3]-[1-9]', stage)
+                or actual.get('fields', {}).get('stage') != stage
+                or any(not obs.get(key) for obs in (original, actual)
+                       for key in ('capture_request_id', 'frame_id', 'snapshot_id'))
+                or original['frame_id'] == actual['frame_id']
+                or original['capture_request_id'] == actual['capture_request_id']
+                or not _navigation_visible_semantics(original, actual)):
+            return False
+        images = []
+        for payload, obs in ((original_png, original), (current_png, actual)):
+            if hashlib.sha256(payload).hexdigest() != obs['snapshot_id']:
+                return False
+            with Image.open(io.BytesIO(payload)) as image:
+                if image.format != 'PNG' or image.size != (1920, 1080):
+                    return False
+                image.load()
+                images.append(np.array(image.convert('RGB')))
+        shop = original['page'] == 'shop'
+        anchors = [('备战阶段', [220, 40, 365, 92] if shop else [410, 20, 540, 65]),
+                   (stage, [225, 80, 355, 140] if shop else [420, 50, 520, 105]),
+                   ('出战', [1760, 710, 1875, 790]),
+                   ('收起' if original['page'] == 'shop' else '商店', [1554, 943, 1694, 1020])]
+        for label, bounds in anchors:
+            if _navigation_row(original, actual, label, images, bounds, target=label == '收起') is not None:
+                continue
+            # q00's native shop title is gray, below the navigation helper's
+            # light-ink cutoff. Only this non-clicked header may use exact
+            # exposed RGB support plus native text/geometry; other anchors
+            # and the click target keep the existing navigation guard.
+            if not shop or label != '备战阶段':
+                return False
+            rows = [_rows(obs.get('rows', []), label, bounds) for obs in (original, actual)]
+            if (any(len(found) != 1 for found in rows)
+                    or rows[0][0]['box'] != rows[1][0]['box']):
+                return False
+            x, y, right, bottom = map(int, rows[0][0]['box'])
+            crops = [rgb[y-2:bottom+2, x-2:right+2] for rgb in images]
+            gray = cv2.cvtColor(crops[0], cv2.COLOR_RGB2GRAY).astype(np.int16)
+            if (np.ptp(gray) < 64 or np.count_nonzero(np.abs(np.diff(gray, axis=1)) > 16) < 24
+                    or np.mean(np.max(np.abs(crops[0].astype(np.int16)
+                                             - crops[1].astype(np.int16)), axis=2) > 16) > .005):
+                return False
+        if original['page'] == 'shop':
+            return True  # The only permitted operation here is close_shop.
+        scans = [obs.get('semantic', {}).get('rewards', {}) for obs in (original, actual)]
+        for obs, scan, rgb in zip((original, actual), scans, images):
+            if (scan.get('snapshot_id') != obs['snapshot_id'] or scan.get('scanned') is not True
+                    or scan.get('uncertain') or scan.get('interaction_required')
+                    or scan.get('area_fully_visible') is not True
+                    or scan.get('image_rgb_sha256') != hashlib.sha256(rgb.tobytes()).hexdigest()):
+                return False
+        targets = [[(t.get('kind'), t.get('template_id'), t.get('bounds'), t.get('center'))
+                    for t in scan.get('targets', [])] for scan in scans]
+        if targets[0] != targets[1] or not targets[0]:
+            return False
+        for target in scans[0]['targets']:
+            x, y, right, bottom = target['bounds']
+            delta = np.max(np.abs(images[0][y:bottom, x:right].astype(np.int16)
+                                 - images[1][y:bottom, x:right].astype(np.int16)), axis=2)
+            # Full native control plus current click center must be exposed.
+            cx, cy = target['center'][0]-x, target['center'][1]-y
+            if np.mean(delta > 16) > .005 or np.max(delta[cy-4:cy+5, cx-4:cx+5]) > 16:
+                return False
+        return True
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
+        return False

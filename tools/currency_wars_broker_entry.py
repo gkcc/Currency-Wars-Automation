@@ -4,16 +4,20 @@ Only directory provenance and bounded request transport live here. All game
 input, pause, foreground and process guards remain in the pinned broker.
 """
 import argparse
+import contextlib
 from datetime import datetime
 import errno
 import hashlib
 import importlib.util
 import io
 import json
+import math
+import os
 import re
 import secrets
 import stat
 import sys
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -21,7 +25,7 @@ from pathlib import Path
 import currency_wars_artifacts as artifacts
 
 SOURCE = Path(__file__).with_name('currency_wars_control.py')
-PINNED = '187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5'
+PINNED = 'E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F'
 
 
 def read_json(path, limit=2_000_000):
@@ -285,8 +289,135 @@ def install_expected_resume(control):
 class SubmissionDeadlineExpired(TimeoutError):
     """A new request was refused before publication, not a missing reply."""
 
+    request_published = False
 
-def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, submit_deadline=None):
+
+class SubmissionQueueTimeout(TimeoutError):
+    """The original submission mutex stayed busy; no request was published."""
+
+    request_published = False
+
+
+class _SubmissionLease:
+    """Use the already held broker mutex only in this caller's active scope."""
+
+    def __init__(self, control):
+        self.control, self.active = control, True
+        self.caller = (os.getpid(), threading.get_ident())
+        self.queue_wait_diagnostic_failed = False
+
+    def _check(self):
+        if not self.active or self.caller != (os.getpid(), threading.get_ident()):
+            raise RuntimeError('submission lease is not active for this caller; no request published')
+
+    def __getattr__(self, name):
+        self._check()
+        return getattr(self.control, name)
+
+    @property
+    def submission_lease_active(self):
+        self._check()
+        return True
+
+    @contextlib.contextmanager
+    def submission_lock(self):
+        self._check()
+        yield
+
+
+@contextlib.contextmanager
+def submission_lease(control, *, timeout=2.0, submit_deadline=None, queue_wait=None):
+    """Bounded acquisition of the SAME mutex for observe and input requests.
+
+    Only a refused ``__enter__`` may wait. Once held, no body/publisher/reply
+    exception causes a retry. The yielded control can also cover a bounded
+    observe/read/publish transaction; nested Entry requests reuse that mutex.
+    The lease never deletes another caller's lock or republishes a request.
+    """
+    if (type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 <= timeout <= 5
+            or submit_deadline is not None and (type(submit_deadline) not in (int, float)
+                or not math.isfinite(submit_deadline))
+            or queue_wait is not None and not callable(queue_wait)):
+        raise ValueError('submission acquisition requires a finite 0-5 second bound')
+    start_ns, contended = time.monotonic_ns(), False
+    leased, diagnostic_failed = None, False
+    reused = getattr(control, 'submission_lease_active', False) is True
+
+    def report(outcome):
+        nonlocal diagnostic_failed
+        if queue_wait is not None:
+            try:
+                queue_wait({'start_ns': start_ns, 'end_ns': time.monotonic_ns(), 'outcome': outcome,
+                            'contended': contended, 'lease_reused': reused, 'request_published': False})
+            except Exception as error:
+                # Diagnostics cannot replace a refusal, cancel an acquired
+                # request or make any published input look unissued. Retain a
+                # boolean and reuse the optional recorder's type-only failure;
+                # callback text may contain private paths or credentials.
+                diagnostic_failed = True
+                if leased is not None:
+                    leased.queue_wait_diagnostic_failed = True
+                try:
+                    profile = getattr(getattr(queue_wait, '__self__', None), 'profile', None)
+                    if profile is not None:
+                        profile._disable(error)
+                except Exception:
+                    pass
+
+    queue_deadline = time.monotonic() + timeout
+    deadline = min(queue_deadline, submit_deadline) if submit_deadline is not None else queue_deadline
+    try:
+        while True:
+            if submit_deadline is not None and time.monotonic() >= submit_deadline:
+                raise SubmissionDeadlineExpired('submission deadline expired before acquisition; no request published')
+            manager = control.submission_lock()
+            try:
+                manager.__enter__()
+            except RuntimeError as error:
+                if str(error) != 'another request is pending; no concurrent submission':
+                    raise
+                contended = True
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    if submit_deadline is not None and time.monotonic() >= submit_deadline:
+                        raise SubmissionDeadlineExpired('submission deadline expired before acquisition; no request published') from error
+                    raise SubmissionQueueTimeout('submission queue deadline expired; no request published; lock retained') from error
+                time.sleep(min(.025, remaining))
+            else:
+                break
+    except BaseException as error:
+        report('deadline' if isinstance(error, SubmissionDeadlineExpired) else
+               'busy' if isinstance(error, SubmissionQueueTimeout) else 'refused')
+        if diagnostic_failed:
+            error.queue_wait_diagnostic_failed = True
+        raise
+    if submit_deadline is not None and time.monotonic() >= submit_deadline:
+        manager.__exit__(None, None, None)
+        report('deadline')
+        raise SubmissionDeadlineExpired('submission deadline expired during acquisition; no request published')
+    leased = _SubmissionLease(control)
+    try:
+        report('acquired')
+        yield leased
+    except BaseException:
+        if not manager.__exit__(*sys.exc_info()):
+            raise
+    else:
+        manager.__exit__(None, None, None)
+    finally:
+        leased.active = False
+
+
+def _guard_runner_owned_input(control, value):
+    physical = value.get('handoff') is True or any(
+        action['type'] in ('click', 'key', 'drag', 'scroll') for action in value.get('actions', []))
+    if (value.get('kind') != 'resume' and physical
+            and Path(control.ROOT, 'runner-owner.json').exists()
+            and getattr(control, 'business_guarded_submission', False) is not True):
+        raise ValueError('runner-owned input requires current business intent; use runner manual-step/decide; no request published')
+
+
+def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, submit_deadline=None, queue_wait=None):
     if not isinstance(rid, str) or not 1 <= len(rid) <= 100:
         raise ValueError('bounded request ID required')
     state = control.status()
@@ -301,13 +432,17 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, sub
     else:
         value['actions'] = control.validate_actions([
             {'type': p[0], 'args': p[1:]} for p in (t.split(':') for t in tokens)])
-    with control.submission_lock():
-        ledger = Path(control.ROOT, 'request-ledger')
-        receipt = ledger / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    ledger = Path(control.ROOT, 'request-ledger')
+    receipt = ledger / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    # An existing ID may only reconcile its original payload/outcome. Its
+    # expired publication deadline must not prevent reading that old result.
+    acquisition_deadline = None if receipt.exists() else submit_deadline
+    if not receipt.exists():
+        _guard_runner_owned_input(control, value)
+    with submission_lease(control, submit_deadline=acquisition_deadline, queue_wait=queue_wait):
         if (submit_deadline is not None and time.monotonic() >= submit_deadline
                 and not receipt.exists()):
             raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
-        ledger.mkdir(exist_ok=True)
         if receipt.exists():
             previous = read_json(receipt)
             if previous.get('id') != rid or previous.get('request') != value:
@@ -317,8 +452,10 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, sub
             # A previous publication might already have executed. Waiting for
             # that exact ID is allowed; publication is never repeated.
         else:
+            _guard_runner_owned_input(control, value)
             if submit_deadline is not None and time.monotonic() >= submit_deadline:
                 raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
+            ledger.mkdir(exist_ok=True)
             control.write_json(receipt, {'id': rid, 'request': value, 'result': None})
             if submit_deadline is not None and time.monotonic() >= submit_deadline:
                 # Only this new, still-unpublished receipt exists. Do not leave

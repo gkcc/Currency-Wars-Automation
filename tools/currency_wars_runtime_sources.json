@@ -18,6 +18,8 @@
     "tools/currency_wars_control.py",
     "tools/currency_wars_economy.py",
     "tools/currency_wars_input_bridge.py",
+    "tools/currency_wars_manual_stage.py",
+    "tools/currency_wars_manual_steps.py",
     "tools/currency_wars_perception.py",
     "tools/currency_wars_profile.py",
     "tools/currency_wars_progression.py",

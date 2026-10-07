@@ -8,6 +8,7 @@ import json
 import os
 import re
 import time
+import uuid
 from pathlib import Path
 
 import numpy as np
@@ -48,6 +49,60 @@ READ_SCOPES = ('full', 'rewards', 'economy')
 # The same engine object binds its loaded models; runtime defaults and the
 # thresholds RapidOCR can mutate are also part of the per-instance key.
 OCR_CONTRACT_VERSION = 1
+PERCEPTION_TIMING_SCHEMA = 'currency-wars-perception-timing/1'
+
+
+class _ReadTiming:
+    """Invocation timing only; failures never change the actual read result.
+
+    Keep the real engine object in Perception and its cache keys. The local
+    callable below measures only calls made in this read, including ROI calls
+    delegated to semantic readers. No OCR output, image or owner is recorded.
+    """
+    def __init__(self, snapshot_id):
+        self.read_id, self.snapshot_id = None, snapshot_id
+        self.intervals, self.error = [], None
+        try:
+            self.read_id = uuid.uuid4().hex
+        except Exception:
+            self.error = 'read_identity_unavailable'
+        self.start_ns = self.clock()
+
+    def clock(self):
+        try:
+            value = time.monotonic_ns()
+            if type(value) is not int or value < 0:
+                raise ValueError('invalid monotonic clock')
+            return value
+        except Exception:
+            self.error = 'monotonic_clock_unavailable'
+            return None
+
+    def engine(self, original):
+        def measured(*args, **kwargs):
+            start, outcome = self.clock(), 'returned'
+            try:
+                return original(*args, **kwargs)
+            except BaseException:
+                outcome = 'raised'
+                raise
+            finally:
+                try:
+                    end = self.clock()
+                    if start is not None and end is not None and start <= end and len(self.intervals) < 64:
+                        self.intervals.append({'start_ns': start, 'end_ns': end, 'outcome': outcome})
+                    else:
+                        self.error = self.error or 'ocr_interval_unavailable'
+                except Exception:
+                    self.error = 'ocr_timing_unavailable'
+        return measured
+
+    def finish(self):
+        return {'schema': PERCEPTION_TIMING_SCHEMA, 'read_id': self.read_id,
+                'snapshot_id': self.snapshot_id, 'clock': 'same_process_monotonic',
+                'ocr_scope': 'perception_engine_calls',
+                'start_ns': self.start_ns, 'end_ns': self.clock(),
+                'ocr_intervals': self.intervals, 'error': self.error}
 
 
 def clean(text):
@@ -773,6 +828,7 @@ class Perception:
         path = Path(path)
         data = path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
+        timing = _ReadTiming(digest)
         cache_key = (digest, scope, READ_CONTRACT_VERSION, self._ocr_contract())
         if (self.cache and self.cache[0] == cache_key and self.cache[2] is self.engine
                 and not force and not reuse_primary):
@@ -783,7 +839,7 @@ class Perception:
             result['elapsed_ms'] = round((time.perf_counter() - started) * 1000, 2)
             result['read_timing'] = {'cache_hit': True, 'primary_ocr_reused': False,
                 'primary_ocr_executed': False, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
-                'elapsed_ms': result['elapsed_ms']}
+                'elapsed_ms': result['elapsed_ms'], **timing.finish()}
             return result
         with Image.open(io.BytesIO(data)) as opened:
             if opened.size != (1920, 1080):
@@ -798,6 +854,7 @@ class Perception:
             onnxruntime.disable_telemetry_events()
             from rapidocr_onnxruntime import RapidOCR
             self.engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
+        engine = timing.engine(self.engine)
         ocr_contract = self._ocr_contract()
         primary_key = (digest, ocr_contract)
         cached = self._primary_cache
@@ -806,7 +863,7 @@ class Perception:
         if primary_reused:
             raw = cached[1]
         else:
-            raw, unused = self.engine(np.array(image.resize((1280, 720))), use_cls=False)
+            raw, unused = engine(np.array(image.resize((1280, 720))), use_cls=False)
             # Freeze only the original OCR output. Later aliases, ROI rows,
             # page classification and semantic facts belong to each read.
             raw = tuple((tuple(tuple(point) for point in box), text, float(confidence))
@@ -862,7 +919,7 @@ class Perception:
                     and all(clean(row["raw_text"]) == "1" for row in left_digit_rows)):
                 one_bounds = [422, 416, 470, 520]
                 try:
-                    result, unused = self.engine(np.array(image.crop(one_bounds)), use_det=False, use_cls=False)
+                    result, unused = engine(np.array(image.crop(one_bounds)), use_det=False, use_cls=False)
                     if result is not None and len(result) == 1:
                         text, confidence = result[0][-2:]
                         raw, confidence = str(text).strip(), float(confidence)
@@ -876,7 +933,7 @@ class Perception:
             # Fixed complete stage digits only; exclude the crossed-swords icon.
             # Keep all original low-confidence header rows unchanged.
             try:
-                result, unused = self.engine(np.array(image.crop(NODE_RESULT_STAGE_CROP)), use_det=False, use_cls=False)
+                result, unused = engine(np.array(image.crop(NODE_RESULT_STAGE_CROP)), use_det=False, use_cls=False)
                 if result is not None and len(result) == 1:
                     text, confidence = result[0][-2:]
                     raw, confidence = str(text).strip(), float(confidence)
@@ -912,7 +969,7 @@ class Perception:
         matched = re.search(r"(?:备战|战斗中).*?(\d[-－]\d)", joined)
         player = ({**unread('player_hud'), 'actor': 'player', 'level': None, 'xp': None,
                    'evidence': {}} if effective_scope == 'rewards' else
-                  native_player_hud(rows, image, page, self.engine, digest))
+                  native_player_hud(rows, image, page, engine, digest))
         fields = {'stage': matched.group(1) if matched else None,
                   'level': str(player['level']) if player['level'] is not None else None,
                   'deployed': None}
@@ -930,7 +987,7 @@ class Perception:
                     # Keep original rows and reject conflicting central counts.
                     count_bounds = list(DEPLOYED_COUNT_ROI)
                     try:
-                        result, unused = self.engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
+                        result, unused = engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
                         if result is not None and len(result) == 1:
                             text, confidence = result[0][-2:]
                             raw, confidence = str(text).strip(), float(confidence)
@@ -968,7 +1025,7 @@ class Perception:
             if (native_hp_layout and count and valid_population_counts(int(count[1]), int(count[2]))
                     and not any(row["confidence"] >= .90 for row in hp_rows)):
                 try:
-                    result, unused = self.engine(np.array(image.crop(hp_bounds)), use_det=False, use_cls=False)
+                    result, unused = engine(np.array(image.crop(hp_bounds)), use_det=False, use_cls=False)
                     if result is not None and len(result) == 1:
                         text, confidence = result[0][-2:]
                         raw, confidence = str(text).strip(), float(confidence)
@@ -989,11 +1046,11 @@ class Perception:
             fields['deployed'] = None
         elif page == "battle":
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
-        semantic = semantic_facts(rows, image, page, engine=self.engine, snapshot_id=digest)
+        semantic = semantic_facts(rows, image, page, engine=engine, snapshot_id=digest)
         semantic['player_hud'] = player
         from currency_wars_refresh_offer import read_offer, unread_offer
         semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope == 'rewards' else
-                                     read_offer(rows, image, page, self.engine, digest))
+                                     read_offer(rows, image, page, engine, digest))
         option_read = supply_read_details(rows, page, semantic.get('options', []))
         if option_read:
             semantic['option_read'] = {**option_read, 'snapshot_id': digest}
@@ -1042,6 +1099,6 @@ class Perception:
                   "image": str(path), "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
         result['read_timing'] = {'cache_hit': False, 'primary_ocr_reused': primary_reused,
             'primary_ocr_executed': not primary_reused, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
-            'elapsed_ms': result['elapsed_ms']}
+            'elapsed_ms': result['elapsed_ms'], **timing.finish()}
         self.cache = cache_key, copy.deepcopy(result), self.engine
         return result

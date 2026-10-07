@@ -20,13 +20,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = 'currency-wars-profile/1'
+OPERATION_CONTRACT = 2
 PHASES = {'rewards': '奖励', 'startup_guide': '指南', 'inventory_cleanup': '整理',
           'economy': '购买升级', 'lineup_equipment': '布阵装备',
           'battle_acceptance': '出战验收', 'battle': '战斗',
           'settlement': '结算切换', 'recovery': '恢复', 'unknown': '未知阶段'}
-OPERATIONS = {'capture': '采集', 'ocr': 'OCR', 'takeover': '接管',
-              'input_animation': '输入动画', 'decision': '决策', 'rules': '规则',
-              'publication': '发布', 'unknown': '未知空档'}
+OPERATIONS = {'capture': '观察与帧校验', 'ocr': '旧识别总包', 'takeover': '接管',
+              'input_animation': '输入动画', 'decision': '本地决策或旧等待', 'rules': '规则',
+              'publication': '发布', 'tool_roundtrip': '工具往返未细分',
+              'queue_wait': '发布前排队', 'perception': '感知未细分',
+              'ocr_engine': '已测 OCR 引擎', 'supervisor_wait': '主管响应等待未细分',
+              'manual_wait': '手操等待未细分', 'unknown': '未知空档'}
+OPERATION_NOTES = {
+    'ocr': 'Historical Perception.read total; never relabel as pure OCR engine time.',
+    'ocr_engine': 'Only observed Perception.engine calls, including delegated ROI calls; excludes the separate ShopReader engine.',
+    'perception': 'Remaining Perception.read time, including uninstrumented readers; not proven to be non-OCR work.',
+    'tool_roundtrip': 'Request roundtrip residual after measured children; not an inferred IPC or queue duration.',
+    'supervisor_wait': 'Worker wait window excluding linked measured children; does not identify model, human thought, or tool-free idle.',
+    'manual_wait': 'Worker manual-phase wait excluding linked measured children; external uninstrumented work remains unspecified.',
+    'queue_wait': 'Explicit bounded submission-lease acquisition only; not a retry or a published request.',
+}
 _MISSING = object()
 
 
@@ -43,11 +56,13 @@ class ProfileRecorder:
         self.session_id = uuid.uuid4().hex
         self.base = {'schema': SCHEMA, 'session_id': self.session_id,
                      'run_id': run_id, 'source': source, 'source_sha': source_sha,
-                     'clock_id': clock_id or run_id, 'comparison_key': comparison_key}
+                     'clock_id': clock_id or run_id, 'comparison_key': comparison_key,
+                     'operation_contract': OPERATION_CONTRACT}
         self.context = {'match_id': None, 'stage': None, 'resume_epoch': None}
         self.phase, self.node_id, self.phase_id = 'unknown', None, None
         self._node_seen = False
         self._spans = {}
+        self._perception_reads = set()
         self._parents = contextvars.ContextVar('profile_' + self.session_id, default=())
         self._lock = threading.RLock()
         self._stream = None
@@ -137,8 +152,9 @@ class ProfileRecorder:
                   'parent_id': parent_id or (parents[-1] if parents else None),
                   'request_id': request_id, 'receipt_id': receipt_id, 'snapshot_id': snapshot_id,
                   'business_step': business_step}
-        self._spans[item_id] = record
-        self._emit('span_begin', item_id, **record)
+        stamp = time.monotonic_ns()
+        self._spans[item_id] = {**record, '_start_ns': stamp}
+        self._emit('span_begin', item_id, stamp=stamp, **record)
         return item_id
 
     @property
@@ -161,7 +177,8 @@ class ProfileRecorder:
         self._emit('economy_flow', flow_id, context=context, flow_id=flow_id, **values)
 
     def record_interval(self, name, *, start_ns, end_ns, phase=None, operation=None,
-                        parent_id=None, request_id=None, receipt_id=None, snapshot_id=None):
+                        parent_id=None, request_id=None, receipt_id=None, snapshot_id=None,
+                        timing_source='broker_receipt', read_id=None):
         """Import an actual same-clock broker interval, never a guessed duration.
 
         The caller must authenticate the receipt and its existing run/clock
@@ -170,7 +187,8 @@ class ProfileRecorder:
         """
         if not self.enabled:
             return None
-        if (type(start_ns) is not int or type(end_ns) is not int
+        if (timing_source not in ('broker_receipt', 'perception_read', 'entry_submission_lease')
+                or type(start_ns) is not int or type(end_ns) is not int
                 or not 0 <= start_ns <= end_ns <= time.monotonic_ns()):
             self._emit('diagnostic', uuid.uuid4().hex, reason='invalid_imported_interval')
             return None
@@ -182,9 +200,62 @@ class ProfileRecorder:
                    operation=operation if isinstance(operation, str) and operation in OPERATIONS else None,
                    parent_id=parent_id or (parents[-1] if parents else None),
                    request_id=request_id, receipt_id=receipt_id, snapshot_id=snapshot_id,
-                   timing_source='broker_receipt')
+                   timing_source=timing_source, read_id=read_id)
         self._emit('span_end', item_id, stamp=end_ns, context=context, outcome='recorded')
         return item_id
+
+    def record_perception_timing(self, timing, *, parent_id, request_id, snapshot_id):
+        """Import only this read's actual engine calls inside its open parent.
+
+        An old cache record, foreign snapshot/clock, invalid interval or missing
+        binding stays unclassified. This diagnostic cannot approve any action.
+        """
+        if not self.enabled:
+            return []
+        if not isinstance(timing, dict) or timing.get('schema') is None:
+            return []  # Old readers provide no engine interval; keep the parent unclassified.
+        try:
+            parent = self._spans.get(parent_id) or {}
+            if (not isinstance(timing, dict)
+                    or timing.get('schema') != 'currency-wars-perception-timing/1'
+                    or timing.get('clock') != 'same_process_monotonic'
+                    or timing.get('ocr_scope') != 'perception_engine_calls'
+                    or timing.get('snapshot_id') != snapshot_id
+                    or parent.get('operation') != 'perception'
+                    or parent.get('request_id') != request_id
+                    or parent.get('snapshot_id') != snapshot_id
+                    or not isinstance(request_id, str) or not 1 <= len(request_id) <= 100
+                    or not isinstance(snapshot_id, str) or not re.fullmatch(r'[0-9a-f]{64}', snapshot_id)
+                    or timing.get('error') is not None):
+                raise ValueError('binding')
+            read_id, start, end = timing.get('read_id'), timing.get('start_ns'), timing.get('end_ns')
+            parts = timing.get('ocr_intervals')
+            if (not isinstance(read_id, str) or not re.fullmatch(r'[0-9a-f]{32}', read_id)
+                    or read_id in self._perception_reads
+                    or type(start) is not int or type(end) is not int
+                    or not parent['_start_ns'] <= start <= end <= time.monotonic_ns()
+                    or not isinstance(parts, list) or len(parts) > 64
+                    or (timing.get('cache_hit') is True and parts)):
+                raise ValueError('read_interval')
+            previous = start
+            for part in parts:
+                if (not isinstance(part, dict) or type(part.get('start_ns')) is not int
+                        or type(part.get('end_ns')) is not int
+                        or not previous <= part['start_ns'] <= part['end_ns'] <= end
+                        or part.get('outcome') not in ('returned', 'raised')):
+                    raise ValueError('ocr_interval')
+                previous = part['end_ns']
+            self._perception_reads.add(read_id)
+            return [self.record_interval('perception OCR engine',
+                start_ns=part['start_ns'], end_ns=part['end_ns'], operation='ocr_engine',
+                parent_id=parent_id, request_id=request_id, snapshot_id=snapshot_id,
+                timing_source='perception_read', read_id=read_id) for part in parts]
+        except Exception:
+            try:
+                self._emit('diagnostic', uuid.uuid4().hex, reason='unverified_perception_timing')
+            except Exception as exc:
+                self._disable(exc)
+            return []
 
     @contextlib.contextmanager
     def span(self, name=None, **kwargs):
@@ -257,6 +328,9 @@ def summarize_events(events, issues=None):
     for event in events:
         if (event.get('schema') != SCHEMA or type(event.get('monotonic_ns')) is not int
                 or event['monotonic_ns'] < 0
+                or (event.get('operation_contract') is not None
+                    and (type(event['operation_contract']) is not int
+                         or event['operation_contract'] != OPERATION_CONTRACT))
                 or any(not isinstance(event.get(key), str) or not event[key]
                        for key in ('event_id', 'session_id', 'run_id', 'clock_id', 'kind', 'id'))
                 or any(event.get(key) is not None and not isinstance(event[key], str)
@@ -437,7 +511,8 @@ def summarize_events(events, issues=None):
         children = [(max(span['start'], child['start']), min(span['end'], child['end']))
                     for child in spans.values() if key in ancestors.get(child['key'], ())]
         span_rows.append({name: span.get(name) for name in ('id', 'parent_id', 'source', 'run_id', 'clock_id',
-            'match_id', 'stage', 'name', 'phase', 'operation', 'business_step', 'request_id', 'receipt_id', 'snapshot_id', 'outcome')} | {
+            'match_id', 'stage', 'name', 'phase', 'operation', 'business_step', 'request_id', 'receipt_id', 'snapshot_id',
+            'outcome', 'timing_source', 'read_id')} | {
             'inclusive_seconds': _seconds(span['end'] - span['start']),
             'exclusive_seconds': _seconds(span['end'] - span['start'] - union_ns(children))})
     comparison_keys = {event.get('comparison_key') for event in valid}
@@ -461,6 +536,8 @@ def summarize_events(events, issues=None):
                 'operation_seconds': {operation: _seconds(value['operations'][operation]) for operation in OPERATIONS}}
                 for key, value in sorted(step_buckets.items())],
             'operation_totals_seconds': operation_totals,
+            'operation_notes': OPERATION_NOTES,
+            'operation_contracts': sorted({event.get('operation_contract') for event in valid}, key=str),
             'largest_measured_operations': sorted(
                 [{'operation': key, 'seconds': value} for key, value in operation_totals.items() if key != 'unknown' and value > 0],
                 key=lambda row: row['seconds'], reverse=True),
@@ -475,6 +552,8 @@ def compare_reports(before, after):
     if ({source.get('source') for source in before.get('sources', [])}
             != {source.get('source') for source in after.get('sources', [])}):
         return {'comparable': False, 'reason': '计时生产者覆盖不同，不能直接比较只有 worker 与另含主管子段的报告。'}
+    if before.get('operation_contracts') != after.get('operation_contracts'):
+        return {'comparable': False, 'reason': '计时分类来源契约不同；旧日志未测的类别不能补零后与新埋点比较。'}
     if before.get('issues') or after.get('issues'):
         return {'comparable': False, 'reason': '日志存在缺失或冲突，先修正证据覆盖；没有生成提升比例。'}
     if any(set(node.get('operation_seconds', {})) != set(OPERATIONS)
@@ -510,7 +589,10 @@ def render_html(report):
     sections = '<h2>已测耗时较大的操作</h2><p>下表只说明计时占比，不直接断言根因。未知空档应先补证据，不分摊给识别或决策。</p>'
     sections += table(['操作', '记录秒数'], [[OPERATIONS[row['operation']], f"{row['seconds']:.3f}"] for row in report['largest_measured_operations']])
     sections += '<h2>节点与阶段</h2>' + timing_table(report['nodes'], 'phase', PHASES)
-    sections += '<h2>节点与操作</h2>' + timing_table(report['nodes'], 'operation', OPERATIONS)
+    sections += ('<h2>节点与操作</h2><p>主管/手操等待是未细分的等待窗口，不是模型耗时或空闲；'
+                 '工具往返扣除实际子段后仍未细分。已测 OCR 只覆盖 Perception 主引擎及委托 ROI，'
+                 '不含独立 ShopReader 引擎；剩余感知时间不能称为纯非 OCR。</p>'
+                 + timing_table(report['nodes'], 'operation', OPERATIONS))
     sections += '<h2>各位面首节点</h2>' + timing_table(report['plane_first_nodes'], 'phase', PHASES)
     sections += '<h2>业务步骤</h2><p>与节点耗时是同一段时间的另一种分解，不可再次相加。未标注步骤保持未归类。</p>' + table(
         ['节点', '步骤', '秒数'] + list(OPERATIONS.values()),

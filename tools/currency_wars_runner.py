@@ -21,6 +21,8 @@ import psutil
 
 import currency_wars_broker_entry as entry
 import currency_wars_input_bridge as input_bridge
+import currency_wars_manual_steps as manual_steps
+import currency_wars_manual_stage as manual_stage
 from currency_wars_source_guard import activity, verify_runtime_sources
 from currency_wars_perception import (Perception, clean, find_text, hash_distance, GOLD_HUD,
                                      valid_population_counts, READ_CONTRACT_VERSION)
@@ -312,6 +314,7 @@ class GuardedSubmission:
     def __init__(self, control, guard, publication_span=None):
         self.control, self.guard, self.publication_span = control, guard, publication_span
         self.publication_attempted = False
+        self.business_guarded_submission = True
 
     def __getattr__(self, name):
         return getattr(self.control, name)
@@ -827,10 +830,26 @@ def _drain_manual_receipts(run, control):
         for rid in pending:
             await_existing_receipt(run, control, rid, 0)
         time.sleep(.05)
+    if pending:
+        # A timed-out original client may have left its exact late result only
+        # in result.json. Fold that result under the SAME mutex before a new
+        # observation replaces the shared notification. Never rewrite a known
+        # result, request payload, or issue another input.
+        with entry.submission_lease(control, timeout=min(2, max(0, end-time.monotonic()))) as leased:
+            for rid in pending:
+                path = run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+                stored = entry.read_json(path)
+                current = await_existing_receipt(run, leased, rid, 0)
+                if stored.get('request') != current.get('request'):
+                    raise ValueError('原请求在对账期间改变；不覆盖')
+                if stored.get('result') is None:
+                    leased.write_json(path, current)
+                elif stored != current:
+                    raise ValueError('原终态回执冲突；不覆盖')
     return reconciled
 
 
-def _manual_binding(run, owner, control, manual_id):
+def _manual_binding(run, owner, control, manual_id, *, resolve_stage=True):
     manual = manual_state(run)
     records, state = _manual_records(run, owner)
     if (not manual or manual.get('manual_id') != manual_id
@@ -840,19 +859,22 @@ def _manual_binding(run, owner, control, manual_id):
     stage = canonical_stage(state.get('preparation_stage'))
     if not stage or not state.get('match_id'):
         raise ValueError('没有当前局/节点绑定；人工结果保持未知')
-    return {'run_id': owner['run_id'], 'match_id': state['match_id'], 'stage': stage,
-            'manual_id': manual_id, 'old_epoch': (optional(run / 'runner-resume-epoch.json') or {}).get('id')}, records
+    binding = {'run_id': owner['run_id'], 'match_id': state['match_id'], 'stage': stage,
+               'manual_id': manual_id, 'old_epoch': (optional(run / 'runner-resume-epoch.json') or {}).get('id')}
+    if resolve_stage:
+        binding = manual_stage.resolve_binding(run, owner, control, binding)
+    return binding, records
 
 
 def _manual_capture(run, owner, control, binding, records, label, reader):
     rid = uuid.uuid4().hex
     # Existing broker observe is read-only, including while paused. This API
     # never focuses, resumes or performs a desktop input.
-    result = entry.request(control, 'actions', ['observe'], rid, False)
-    if not result.get('ok') or not result.get('observation'):
-        raise entry.ObservationUnavailable('人工结果缺少同请求的新观察；仅补观察，不重发输入')
     target = records / (label + '-' + rid + '.png')
-    with control.submission_lock():
+    with entry.submission_lease(control) as leased:
+        result = entry.request(leased, 'actions', ['observe'], rid, False)
+        if not result.get('ok') or not result.get('observation'):
+            raise entry.ObservationUnavailable('人工结果缺少同请求的新观察；仅补观察，不重发输入')
         # Keep the transaction watermark at this exact observation. The image
         # is immutable, but a newer input must not be hidden in its watermark.
         if (optional(run / 'result.json') or {}).get('id') != rid:
@@ -1156,6 +1178,10 @@ def explicit_resume(run, owner, control, rid, expected_manual_id=None, expected_
                 return {'ok': False, 'resumed': False, 'guard_matched': False,
                         'reason_kind': 'resume_submit_busy_timeout',
                         'error': '恢复提交锁等待5秒已到；未派发恢复，保持手动'}
+            except entry.SubmissionQueueTimeout:
+                # Only acquisition failed; no request/ledger was published.
+                # Retain the original five-second resume deadline and CAS.
+                continue
             except RuntimeError as exc:
                 # Only the O_EXCL submission lock failure precedes ledger and request publication.
                 if str(exc) != 'another request is pending; no concurrent submission':
@@ -2850,8 +2876,8 @@ class Worker:
                             resume_epoch=self.epoch(), phase=phase)
         # Polling/approval wait has an actual open interval. A child capture or
         # OCR span is subtracted rather than added to the same wall time.
-        waiting = 'takeover' if mode in ('manual', 'halted') else (
-            'decision' if mode == 'waiting_decision' else None)
+        waiting = 'manual_wait' if mode in ('manual', 'halted') else (
+            'supervisor_wait' if mode == 'waiting_decision' else None)
         identity = (waiting, self.active_match_id, stage, self.epoch(),
                     (self.state.get('decision_request') or {}).get('request_id')) if waiting else None
         if identity != self.profile_wait_kind:
@@ -2882,6 +2908,13 @@ class Worker:
                 start_ns=interval.get('start_ns'), end_ns=interval.get('end_ns'),
                 operation=interval.get('operation'), parent_id=parent_id,
                 request_id=result.get('id'), receipt_id=result.get('id'))
+
+    def profile_queue_wait(self, value):
+        profile = getattr(self, 'profile', None)
+        if profile is not None and profile.enabled and not value.get('lease_reused'):
+            profile.record_interval('entry_queue_wait', start_ns=value.get('start_ns'),
+                                    end_ns=value.get('end_ns'), operation='queue_wait',
+                                    parent_id=profile.current_span_id, timing_source='entry_submission_lease')
 
     def finish_profile(self):
         profile = getattr(self, 'profile', None)
@@ -3011,6 +3044,136 @@ class Worker:
         else:
             self.publish(control_mode='manual', phase='控制器已连接，等待明确继续', reason='新手动接管优先')
 
+    def manual_input_blocked(self):
+        return bool(manual_state(self.run)) and not manual_steps.active(self)
+
+    def guard_command_intent(self, tokens, action, observed, *, request_id=None):
+        """Classify the actual target, then verify the already authorized intent."""
+        physical = [token for token in tokens if token.split(':', 1)[0] in ('click', 'key', 'drag', 'scroll')]
+        if not physical:
+            return
+        if getattr(self, 'manual_stage_blocked', None):
+            remaining = set(manual_steps.unknown_receipts(self.run, self.c)) & set(self.manual_stage_blocked)
+            if remaining:
+                raise ValueError('新节点仍有原输入pending/unknown；只核原ID，不发送后续输入')
+            self.manual_stage_blocked = []
+        if len(physical) != 1:
+            raise ValueError('每次只发布一个有当前意图的物理目标；批次须逐步回读')
+        page = observed.get('page')
+        retained_effects = getattr(self, 'manual_stage_business_pending', [])
+        if retained_effects:
+            retained_effects = manual_stage.pending_remaining(retained_effects, run=self.run,
+                owner=self.owner, control=self.c, records=self.records)
+            self.manual_stage_business_pending = retained_effects
+        if retained_effects and not (page == 'reward_overlay' and physical == ['key:27']):
+            raise ValueError('原节点业务效果仍pending；完整completed不能清费用/领奖效果，只核原来源')
+        if page not in ('preparation', 'shop', 'unit_gear'):
+            return
+        if not isinstance(action, dict):
+            raise ValueError('备战输入缺语义意图；不用原始坐标或快捷键绕过准备顺序')
+        for (match, unused_stage), ledger in getattr(self, 'economy_ledgers', {}).items():
+            old = ledger.get('pending')
+            if (match == self.active_match_id and old
+                    and not (old is getattr(self, 'economy_inflight', None)
+                             and old.get('request_id') == request_id
+                             and old.get('publication_attempted') is False)):
+                raise ValueError('原经济业务效果仍pending；不因阶段变化开始另一笔输入')
+        reward = getattr(self, 'reward_inflight', None)
+        if action.get('purpose') == 'local_reward':
+            if (not reward or action.get('type') != 'click_point'
+                    or action.get('args') != reward.get('target', {}).get('center')
+                    or physical != ['click:' + ':'.join(map(str, action['args']))]
+                    or reward.get('kind') not in ('close_shop', 'blue_orb')):
+                raise ValueError('本地领奖意图没有当前单控件pending；旧球坐标不发布')
+            return self.guard_reward_step(reward, observed)
+        if action.get('purpose') == 'reward_capacity':
+            pending = self.pending_reward_capacity()
+            value = self.reward_capacity_action(action, observed, pixels=True)
+            if (not pending or pending.get('input_request_id') != request_id
+                    or pending.get('tokens') != tokens or pending.get('status') != 'unverified'
+                    or pending.get('resume_epoch') != self.epoch()
+                    or pending.get('before_snapshot_id') != observed.get('snapshot_id')
+                    or pending.get('before') != value or self.preparation_checklist(observed)['phase'] != 'rewards'):
+                raise ValueError('领奖腾位只允许本次已核且尚未发布的单一出售意图')
+            return
+        kind = economy.economic_action(action, page)
+        resolved = None
+        point = list(map(float, physical[0].split(':')[1:])) if physical[0].startswith('click:') else None
+        if action.get('type') == 'click_text':
+            if action.get('exact', True) is not True:
+                raise ValueError('备战文字目标须完整精确标签；不以购买/D/数字子串绕经济控件')
+            resolved = find_text(observed.get('rows', []), action.get('text'), action.get('bounds'), exact=True)
+            if resolved is None:
+                raise ValueError('当前完整文字目标缺失或不唯一')
+            box = resolved['box']
+            if point is not None and point != [(box[0]+box[2])/2, (box[1]+box[3])/2]:
+                raise ValueError('实际点击与当前文字目标中心不一致')
+            text = clean(resolved['text'])
+            if '刷新' in text:
+                kind = 'refresh'
+            elif '购买经验' in text:
+                kind = 'experience'
+            if point is None and physical != [{'refresh': 'key:68', 'experience': 'key:70'}.get(kind)]:
+                raise ValueError('文字意图只有已核经济快捷键可转换，其他非点击目标拒绝')
+        if point is not None:
+            from currency_wars_refresh_offer import WIDGET_BOUNDS
+            x, y = point
+            def inside(bounds):
+                return bounds[0] <= x <= bounds[2] and bounds[1] <= y <= bounds[3]
+            # Full native widget surfaces, including shortcut/number/background;
+            # these are veto regions, never positive click authorization.
+            if page == 'shop' and inside(WIDGET_BOUNDS):
+                kind = 'refresh'
+            elif inside([210, 800, 390, 1020]):
+                kind = 'experience'
+            # ShopReader._rectangles supports the upper native five-card row
+            # (y 40..105, height 235..300), also visible in retained q00/f00.
+            elif page == 'shop' and (inside([340, 35, 1715, 410]) or any(
+                    slot.get('bounds') and inside([slot['bounds'][0], slot['bounds'][1],
+                        slot['bounds'][0]+slot['bounds'][2], slot['bounds'][1]+slot['bounds'][3]])
+                    for slot in (observed.get('shop') or {}).get('slots', []))):
+                kind = 'purchase'
+        status = self.preparation_checklist(observed)
+        if kind:
+            if not status['economy_allowed']:
+                raise ValueError('奖励/创业指南/清库存未核，经济控件及其背景均不发布')
+            scan = observed.get('semantic', {}).get('rewards', {})
+            if scan.get('snapshot_id') == observed.get('snapshot_id') and (
+                    scan.get('targets') or scan.get('uncertain') or scan.get('interaction_required')):
+                raise ValueError('当前奖励可见、待选或未知；旧完成项不能授权经济')
+            pending = getattr(self, 'economy_inflight', None)
+            stage = canonical_stage(observed.get('fields', {}).get('stage'))
+            ledger = self.economy_ledger(stage)
+            permit = (pending or {}).get('authorization', {})
+            normalized = self.c.validate_actions([{'type': p[0], 'args': p[1:]}
+                                                  for p in (token.split(':') for token in tokens)])
+            if (not pending or pending.get('request_id') != request_id or not request_id
+                    or pending.get('publication_attempted') is not False
+                    or pending.get('kind') != kind or ledger.get('pending') != pending
+                    or pending.get('resume_epoch') != self.epoch()
+                    or pending.get('before', {}).get('stage') != stage
+                    or pending.get('broker_actions') != normalized
+                    or permit.get('action') != action or permit.get('page') != page
+                    or any(permit.get(key) != observed.get(key) for key in
+                           ('snapshot_id', 'capture_request_id', 'frame_id'))
+                    or permit.get('budget_revision') != ledger.get('revision')
+                    or permit.get('policy') != ledger.get('policy') or permit.get('spent') != ledger.get('spent')
+                    or (getattr(self, 'economy_binding', None) or {}).get('scope') != (self.active_match_id, stage, self.epoch())):
+                raise ValueError('经济控件仅接受本次已核且尚未发布的意图/预算/原价/pending；不能用普通点击旁路')
+            # Do not ask economic_policy to select again: this exact first
+            # publication owns its pending, which correctly excludes new work.
+            return
+        if status['phase'] == 'rewards' and action.get('type') == 'click_text' and (
+                page != 'shop' or not resolved or clean(resolved['text']) != '收起'):
+            raise ValueError('奖励未空；只允许当前收店/原生领奖或必要恢复，不点未知备战文字')
+        guide_navigation = action.get('target_evidence', {}).get('control_id') == PREPARATION_GUIDE_CONTROL
+        loot_pickup = action.get('target_evidence', {}).get('control_id') in _NATIVE_LOOT_PICKUP_PROFILES
+        self.guard_preparation_action(action, observed, loot_pickup=loot_pickup,
+                                      verified_navigation=guide_navigation)
+        if action.get('type') == 'click_point' and not (guide_navigation or loot_pickup
+                or action.get('purpose') == 'reward_capacity'):
+            self.check_target_roi(action, self.state.get('decision_request') or {}, observed)
+
     def command(self, tokens, reason, expected_page=None, postcondition=None, action=None, *, read_scope='full'):
         if getattr(self, 'business_needs_review', False):
             raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
@@ -3026,7 +3189,7 @@ class Worker:
                 raise ValueError('D刷新/F经验须由已核统一预算逐笔发布')
         if time.monotonic() >= self.deadline:
             raise RuntimeError('本次worker总期限已到，未发布动作')
-        if manual_state(self.run) or (self.run / 'runner-stop').exists():
+        if self.manual_input_blocked() or (self.run / 'runner-stop').exists():
             raise RuntimeError('持续手动/停止锁，未发布游戏动作')
         state = self.c.status()
         if not state['ready'] or state['paused'] or state['input_halted'] or not state['game_foreground']:
@@ -3085,8 +3248,9 @@ class Worker:
                     raise BattleConfirmationRequired('needs_user_confirmation：发布前战略请求期限已到，未提交')
                 status = self.c.status()
                 if (not status['ready'] or status['paused'] or status['input_halted'] or not status['game_foreground']
-                        or manual_state(self.run) or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
+                        or self.manual_input_blocked() or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
                     raise RuntimeError('发布前健康/前台/接管/停止检查拒绝，未提交')
+                self.guard_command_intent(tokens, action, current, request_id=value['id'])
                 if planned_inputs:
                     pending_reward = self.pending_reward_step(current)
                     first_reward = (reward is not None and pending_reward is not None
@@ -3096,7 +3260,8 @@ class Worker:
                     if pending_reward and not first_reward:
                         original = await_existing_receipt(self.run, self.c, pending_reward['request_id'], 0)
                         delivery = manual_receipt_state(original)
-                        if delivery['unknown_input'] or delivery['state'] != 'completed':
+                        if (delivery['unknown_input'] or delivery['state'] != 'completed'
+                                or pending_reward.get('before', {}).get('stage') != canonical_stage(current.get('fields', {}).get('stage'))):
                             raise ValueError('原领奖输入交付仍未确认；主管回复也不能发布后续物理输入')
                 latest = coaching_policy()
                 if approval and latest['revision'] != approval['policy_revision']:
@@ -3152,8 +3317,9 @@ class Worker:
         guarded = GuardedSubmission(self.c, publication_guard,
             lambda: self.profile_span('publish_request', operation='publication', request_id=rid))
         try:
-            with self.profile_span('broker_roundtrip', operation='unknown', request_id=rid) as timing:
-                result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline)
+            with self.profile_span('broker_roundtrip', operation='tool_roundtrip', request_id=rid) as timing:
+                result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline,
+                                       queue_wait=self.profile_queue_wait)
                 self.profile_broker_result(result, timing)
         except Exception as exc:
             if action and action.get('purpose') == 'reward_capacity' and not guarded.publication_attempted:
@@ -3224,12 +3390,17 @@ class Worker:
         with self.profile_span('frame_validation', operation='capture', request_id=result.get('id')):
             frame = entry.observation_frame(self.run, result)
         try:
-            with self.profile_span('perception', operation='ocr', request_id=result.get('id')):
+            with self.profile_span('perception', operation='perception', request_id=result.get('id'),
+                                   snapshot_id=result['observation']['snapshot_sha256']) as timing:
                 options = {'force': force, 'scope': scope}
                 if reuse_primary:
                     options['reuse_primary'] = True
                 observed = (self.perception.read(frame) if scope == 'full' and not force and not reuse_primary else
                             self.perception.read(frame, **options))
+                profile = getattr(self, 'profile', None)
+                if profile is not None and profile.enabled:
+                    profile.record_perception_timing(observed.get('read_timing'), parent_id=timing,
+                        request_id=result['id'], snapshot_id=observed['snapshot_id'])
         except (OSError, SyntaxError) as exc:
             raise entry.ObservationUnavailable('本请求图像读取失败；只允许重新观察') from exc
         if observed.get('snapshot_id') != result['observation']['snapshot_sha256']:
@@ -3479,7 +3650,11 @@ class Worker:
         if not actual_stage or fresh.get('preparation_stage') != binding['stage']:
             raise ManualReviewDeferred('当前帧尚无实际节点HUD；回到同节点新帧再复核，不伪造节点')
         event, resume = verified_resume_event(self.run, self.owner, self.c, epoch)
-        if event.get('match_id') != binding['match_id'] or event.get('stage') != binding['stage']:
+        bridge = getattr(self, 'manual_stage_verified', None) or {}
+        bridged = (bridge.get('resume_epoch') == self.epoch()
+            and bridge.get('from_stage') == event.get('stage') and bridge.get('stage') == binding['stage']
+            and getattr(self, 'manual_stage_consumed', None) == (self.epoch(), bridge.get('bridge_id')))
+        if event.get('match_id') != binding['match_id'] or event.get('stage') != binding['stage'] and not bridged:
             raise ValueError('恢复CAS事件的对局/节点与人工trace冲突')
         capture_id = fresh.get('capture_request_id')
         if not capture_id:
@@ -3593,6 +3768,32 @@ class Worker:
         return {'tasks': review.get('goals', []), 'source_snapshot_id': source['snapshot_id'],
                 **scope, 'validated': True}, scope
 
+    def consume_manual_stage_bridge(self, observed):
+        bridge = optional(self.run / manual_stage.FILE)
+        identity = (self.epoch(), (bridge or {}).get('bridge_id'))
+        if (not bridge or manual_state(self.run)
+                or getattr(self, 'manual_stage_consumed', None) == identity):
+            return False
+        verified = manual_stage.verify_for_resume(self, observed)
+        if verified is None:
+            return False
+        self.last_preparation_stage = verified['stage']
+        self.preparation_scope = (self.active_match_id, verified['stage'], self.epoch())
+        self.preparation_reviews, self.strategy_reads = {}, {}
+        self.economy_binding, self.economy_read_cache, self.cached_guide_binding = None, None, None
+        for key in ('preparation_review', 'economy_plan', 'team', 'gear', 'bonds', 'tasks', 'coins', 'xp'):
+            self.context[key] = None
+        self.state['decision_request'] = None
+        self.manual_stage_blocked = verified['delivery_blocked_ids']
+        self.manual_stage_business_pending = verified['business_pending']
+        self.manual_stage_verified = verified
+        self.manual_stage_consumed = identity
+        (self.run / 'runner-battle-approval.json').unlink(missing_ok=True)
+        self.log({'event': 'manual_current_stage_adopted', **verified,
+                  'next_phase': 'rewards', 'spending_and_pending_preserved': True})
+        self.publish(reason='已核当前节点桥；保留原花费/待验，重新从领奖开始')
+        return True
+
     def consume_manual_results(self):
         request = self.state.get('decision_request') or {}
         if not request or request.get('resume_epoch') != self.epoch() or manual_state(self.run):
@@ -3705,9 +3906,7 @@ class Worker:
     def pending_reward_step(self, observed):
         pending = optional(self.run / 'reward-step.json')
         if (pending and pending.get('status') not in ('verified', 'refused')
-                and pending.get('match_id') == self.active_match_id
-                and pending.get('before', {}).get('stage') == (canonical_stage(observed.get('fields', {}).get('stage'))
-                                                               or self.last_preparation_stage)):
+                and pending.get('match_id') == self.active_match_id):
             return pending
         return None
 
@@ -3796,104 +3995,131 @@ class Worker:
                                snapshot_id=observed.get('snapshot_id')):
             return self._advance_rewards(observed)
 
+    @contextlib.contextmanager
+    def observation_input_lease(self):
+        original = self.c
+        with entry.submission_lease(original, submit_deadline=self.deadline,
+                                    queue_wait=self.profile_queue_wait) as leased:
+            self.c = leased
+            try:
+                yield
+            finally:
+                self.c = original
+
     def _advance_rewards(self, observed):
         if self.preparation_checklist(observed)['phase'] != 'rewards':
             return False
         for unused in range(8):
-            pending = self.pending_reward_step(observed)
-            if pending:
-                self.ask(observed, 'reward_result', '原单次领奖效果仍待复核；只补原回执/后图或当前全场复核，不重发。',
-                         choices={'pending': pending}, category='exception', business_step=pending['kind'])
+            with self.observation_input_lease():
+                following = self._advance_reward_once(observed)
+            if following is None:
                 return True
-            if self.pending_reward_capacity():
-                self.ask(observed, 'reward_result', '先按已提交腾位的原收据核容量，当前不发新的领奖输入。',
-                         category='exception', business_step='reward_capacity')
-                return True
-            scan = observed.get('semantic', {}).get('rewards', {})
-            if scan.get('interaction_required'):
-                self.ask(observed, 'reward_selection', '当前出现奖励相关选择/推荐提示，先核当前选项与策略联动。',
-                         choices={'rewards': scan}, category='strategy', business_step='reward_selection')
-                return True
-            close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
-            is_close = observed.get('page') == 'shop' and close and close.get('confidence', 0) >= .90
-            if not is_close and (observed.get('page') != 'preparation'
-                    or scan.get('snapshot_id') != observed['snapshot_id'] or not scan.get('input_allowed')):
-                self.ask(observed, 'preparation_strategy', '当前限定奖励区域未有可继续的确定控件；须全场领奖复核，不能按未见球判领空。',
-                         choices={'rewards': scan}, category='capability', business_step='reward_scan')
-                return True
-            if self.reward_coins(observed) is None or not canonical_stage(observed.get('fields', {}).get('stage')):
-                self.ask(observed, 'reward_result', '收店/免费领奖缺当前节点或绑定HUD的金币，无法核异常扣费。',
-                         category='capability', business_step='reward_scan')
-                return True
-            # Re-observe and relocate only this semantic step. An asynchronous
-            # popup AFTER this check remains a residual screenshot/input race.
-            fresh = self.observe(scope='rewards')
-            if (fresh.get('page') != observed.get('page')
-                    or fresh.get('fields', {}).get('stage') != observed.get('fields', {}).get('stage')):
-                self.log({'event': 'reward_relocate', 'reason': 'page_or_stage_changed', 'input_sent': False})
-                return True
-            observed = fresh
-            scan = observed.get('semantic', {}).get('rewards', {})
-            close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
-            if is_close:
-                if not close or close.get('confidence', 0) < .90:
-                    return True
-                box = close['box']
-                target = {'kind': 'close_shop', 'bounds': box,
-                          'center': [(box[0]+box[2])/2, (box[1]+box[3])/2]}
-            elif not scan.get('input_allowed') or scan.get('snapshot_id') != observed['snapshot_id']:
-                continue
-            else:
-                target = scan['targets'][0]
-            coins = self.reward_coins(observed)
-            if coins is None:
-                continue
-            step_id = uuid.uuid4().hex
-            before_png = self.records / ('reward-step-' + step_id + '-before.png')
-            before_png.write_bytes(self.frame_path.read_bytes())
-            pending = {'step_id': step_id, 'kind': target['kind'], 'match_id': self.active_match_id,
-                       'resume_epoch': self.epoch(), 'status': 'pending', 'outcome': 'unknown',
-                       'request_id': None, 'publication_attempted': False, 'target': target,
-                       'before_png': str(before_png), 'prior_receipt_ids': self.economy_receipt_watermark(),
-                       'before': {'stage': canonical_stage(observed['fields']['stage']), 'coins': coins,
-                                  'observation': copy.deepcopy(observed)}, 'all_rewards_cleared': None}
-            self.save_reward_step(pending)
-            self.reward_inflight = pending
-            try:
-                with self.profile_span('reward_control', operation='rules', business_step=target['kind'],
-                                       snapshot_id=observed['snapshot_id']):
-                    point = target['center']
-                    after = self.command([f'click:{point[0]}:{point[1]}', 'wait:0.7'],
-                        '当前单个收店/蓝球控件；后图验证后再定位下一目标', observed['page'],
-                        '单控件效果，不代表全部领空', action={'type': 'click_point', 'purpose': 'local_reward',
-                            'args': point, 'expected_page': observed['page']}, read_scope='rewards')
-                    if target['kind'] == 'blue_orb':
-                        self.invalidate_preparation('inventory')
-                    self.reconcile_reward_step(pending, after)
-            except (ValueError, RuntimeError) as exc:
-                pending['reason'] = str(exc)
-                if pending.get('publication_attempted') is False:
-                    pending.update(status='refused', outcome='not_published')
-                self.save_reward_step(pending)
-                after = self.last_observation or observed
-                selection = (after.get('page') in ('investment', 'environment', 'supply', 'reward_overlay')
-                             or after.get('semantic', {}).get('rewards', {}).get('interaction_required'))
-                if selection:
-                    try:
-                        delivery = manual_receipt_state(await_existing_receipt(self.run, self.c, pending['request_id'], 0))
-                        selection = not delivery['unknown_input'] and delivery['state'] == 'completed'
-                    except (ValueError, RuntimeError, OSError, TypeError):
-                        selection = False
-                self.state['decision_request'] = None
-                self.ask(after, 'reward_selection' if selection else 'reward_result', str(exc),
-                         choices={'pending': pending}, category='strategy' if selection else 'exception',
-                         business_step=target['kind'])
-                return True
-            finally:
-                self.reward_inflight = None
-            observed = self.last_observation
+            observed = following
         return True
 
+    def _advance_reward_once(self, observed):
+        pending = self.pending_reward_step(observed)
+        if pending:
+            self.ask(observed, 'reward_result', '原单次领奖效果仍待复核；只补原回执/后图或当前全场复核，不重发。',
+                     choices={'pending': pending}, category='exception', business_step=pending['kind'])
+            return None
+        if self.pending_reward_capacity():
+            self.ask(observed, 'reward_result', '先按已提交腾位的原收据核容量，当前不发新的领奖输入。',
+                     category='exception', business_step='reward_capacity')
+            return None
+        scan = observed.get('semantic', {}).get('rewards', {})
+        if scan.get('interaction_required'):
+            self.ask(observed, 'reward_selection', '当前出现奖励相关选择/推荐提示，先核当前选项与策略联动。',
+                     choices={'rewards': scan}, category='strategy', business_step='reward_selection')
+            return None
+        close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
+        is_close = observed.get('page') == 'shop' and close and close.get('confidence', 0) >= .90
+        if not is_close and (observed.get('page') != 'preparation'
+                or scan.get('snapshot_id') != observed['snapshot_id'] or not scan.get('input_allowed')):
+            self.ask(observed, 'preparation_strategy', '当前限定奖励区域未有可继续的确定控件；须全场领奖复核，不能按未见球判领空。',
+                     choices={'rewards': scan}, category='capability', business_step='reward_scan')
+            return None
+        if self.reward_coins(observed) is None or not canonical_stage(observed.get('fields', {}).get('stage')):
+            self.ask(observed, 'reward_result', '收店/免费领奖缺当前节点或绑定HUD的金币，无法核异常扣费。',
+                     category='capability', business_step='reward_scan')
+            return None
+        # Keep the SAME Entry lease from this fresh observation to the one
+        # input and original-result check. The handoff's own frame is never
+        # taken as a layout-stability proof.
+        old_png = self.frame_path.read_bytes()
+        previous = copy.deepcopy(observed)
+        fresh = self.observe(scope='rewards')
+        if (fresh.get('page') != observed.get('page')
+                or fresh.get('fields', {}).get('stage') != observed.get('fields', {}).get('stage')):
+            self.log({'event': 'reward_relocate', 'reason': 'page_or_stage_changed', 'input_sent': False})
+            return None
+        from currency_wars_rewards import stable_layout
+        if not stable_layout(previous, fresh, old_png, self.frame_path.read_bytes()):
+            self.log({'event': 'reward_layout_unstable', 'input_sent': False,
+                      'request_id': fresh.get('capture_request_id'),
+                      'reason': 'target_anchor_or_visible_semantics_changed'})
+            self.publish(reason='奖励布局尚未稳定；停止本批，以当前新帧继续核目标')
+            return None
+        observed = fresh
+        scan = observed.get('semantic', {}).get('rewards', {})
+        close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
+        if is_close:
+            if not close or close.get('confidence', 0) < .90:
+                return None
+            box = close['box']
+            target = {'kind': 'close_shop', 'bounds': box,
+                      'center': [(box[0]+box[2])/2, (box[1]+box[3])/2]}
+        elif not scan.get('input_allowed') or scan.get('snapshot_id') != observed['snapshot_id']:
+            return self.last_observation
+        else:
+            target = scan['targets'][0]
+        coins = self.reward_coins(observed)
+        if coins is None:
+            return self.last_observation
+        step_id = uuid.uuid4().hex
+        before_png = self.records / ('reward-step-' + step_id + '-before.png')
+        before_png.write_bytes(self.frame_path.read_bytes())
+        pending = {'step_id': step_id, 'kind': target['kind'], 'match_id': self.active_match_id,
+                   'resume_epoch': self.epoch(), 'status': 'pending', 'outcome': 'unknown',
+                   'request_id': None, 'publication_attempted': False, 'target': target,
+                   'before_png': str(before_png), 'prior_receipt_ids': self.economy_receipt_watermark(),
+                   'before': {'stage': canonical_stage(observed['fields']['stage']), 'coins': coins,
+                              'observation': copy.deepcopy(observed)}, 'all_rewards_cleared': None}
+        self.save_reward_step(pending)
+        self.reward_inflight = pending
+        try:
+            with self.profile_span('reward_control', operation='rules', business_step=target['kind'],
+                                   snapshot_id=observed['snapshot_id']):
+                point = target['center']
+                after = self.command([f'click:{point[0]}:{point[1]}', 'wait:0.7'],
+                    '当前单个收店/蓝球控件；后图验证后再定位下一目标', observed['page'],
+                    '单控件效果，不代表全部领空', action={'type': 'click_point', 'purpose': 'local_reward',
+                        'args': point, 'expected_page': observed['page']}, read_scope='rewards')
+                if target['kind'] == 'blue_orb':
+                    self.invalidate_preparation('inventory')
+                self.reconcile_reward_step(pending, after)
+        except (ValueError, RuntimeError) as exc:
+            pending['reason'] = str(exc)
+            if pending.get('publication_attempted') is False:
+                pending.update(status='refused', outcome='not_published')
+            self.save_reward_step(pending)
+            after = self.last_observation or observed
+            selection = (after.get('page') in ('investment', 'environment', 'supply', 'reward_overlay')
+                         or after.get('semantic', {}).get('rewards', {}).get('interaction_required'))
+            if selection:
+                try:
+                    delivery = manual_receipt_state(await_existing_receipt(self.run, self.c, pending['request_id'], 0))
+                    selection = not delivery['unknown_input'] and delivery['state'] == 'completed'
+                except (ValueError, RuntimeError, OSError, TypeError):
+                    selection = False
+            self.state['decision_request'] = None
+            self.ask(after, 'reward_selection' if selection else 'reward_result', str(exc),
+                     choices={'pending': pending}, category='strategy' if selection else 'exception',
+                     business_step=target['kind'])
+            return None
+        finally:
+            self.reward_inflight = None
+        return self.last_observation
     def pending_reward_capacity(self):
         record = optional(self.run / 'reward-capacity.json') if getattr(self, 'run', None) else None
         if record and record.get('run_id') != self.owner['run_id']:
@@ -4626,6 +4852,10 @@ class Worker:
                    'slot': action.get('slot'), 'request_id': None, 'publication_attempted': False,
                    'reserve_coins': info['plan']['reserve']['coins'], 'resume_epoch': self.epoch(),
                    'prior_receipt_ids': self.economy_receipt_watermark(),
+                   'authorization': {'action': copy.deepcopy(action), 'page': actual['page'],
+                       **{key: actual.get(key) for key in ('snapshot_id', 'capture_request_id', 'frame_id')},
+                       'budget_revision': ledger['revision'], 'policy': copy.deepcopy(ledger.get('policy')),
+                       'spent': copy.deepcopy(ledger['spent'])},
                    'broker_actions': self.c.validate_actions([
                        {'type': parts[0], 'args': parts[1:]} for parts in (token.split(':') for token in tokens)])}
         ledger['pending'], self.economy_inflight = pending, pending
@@ -5044,8 +5274,8 @@ class Worker:
             rid = uuid.uuid4().hex
             self.worker_request_ids = getattr(self, 'worker_request_ids', set())
             self.worker_request_ids.add(rid)
-            with self.profile_span('observe_roundtrip', operation='unknown', request_id=rid) as timing:
-                result = entry.request(self.c, 'actions', ['observe'], rid, False)
+            with self.profile_span('observe_roundtrip', operation='tool_roundtrip', request_id=rid) as timing:
+                result = entry.request(self.c, 'actions', ['observe'], rid, False, queue_wait=self.profile_queue_wait)
                 self.profile_broker_result(result, timing)
             self.state['statistics']['local_observations'] += 1
             try:
@@ -5223,7 +5453,7 @@ class Worker:
                       'snapshot_id': actual['snapshot_id'], 'input_sent': False})
         self.update_context(reply.get('context_update', {}))
         for action in reply['actions']:
-            if manual_state(self.run) or self.epoch() != request['resume_epoch']:
+            if self.manual_input_blocked() or self.epoch() != request['resume_epoch']:
                 raise RuntimeError('手动接管使未执行计划失效')
             actual = self.last_observation
             kind = action['type']
@@ -5805,6 +6035,23 @@ class Worker:
         self.log({'event': 'input_halt', 'reason': reason, 'broker': result})
 
     def tick(self, observed):
+        try:
+            if self.consume_manual_stage_bridge(observed):
+                observed = self.last_observation
+        except manual_stage.StageObservationDeferred as exc:
+            bridge = optional(self.run / manual_stage.FILE) or {}
+            identity = (self.epoch(), bridge.get('bridge_id'))
+            attempts = getattr(self, 'manual_stage_observe_attempts', {})
+            attempts[identity] = attempts.get(identity, 0) + 1
+            self.manual_stage_observe_attempts = attempts
+            self.log({'event': 'manual_stage_observation_deferred', 'attempt': attempts[identity],
+                      'reason': str(exc), 'input_sent': False, 'takeover_required': False})
+            if attempts[identity] <= 2:
+                self.publish(reason='节点桥当前HUD尚未稳定；只补当前观察，不重新接管')
+            else:
+                self.ask(observed, 'manual_stage_review', '两次补观察后仍未核当前节点；保留原桥/待验，核当前HUD。',
+                         category='capability', business_step='manual_stage')
+            return
         if getattr(self, 'business_needs_review', False):
             if observed.get('page') not in BUSINESS_REVIEW_PAGES:
                 self.publish(phase='续接只读等待可核页面', decision_request=None,
@@ -5987,6 +6234,9 @@ class Worker:
             except entry.ObservationUnavailable as exc:
                 self.log({'event': 'passive_observe_unavailable', 'reason': str(exc),
                           'input_sent': False, 'input_resent': False})
+            except (entry.SubmissionQueueTimeout, entry.SubmissionDeadlineExpired) as exc:
+                self.log({'event': 'passive_observe_deferred', 'reason': str(exc),
+                          'request_published': False, 'input_sent': False})
             except RuntimeError as exc:
                 # submission_lock rejected before this request's publication.
                 if str(exc) != 'another request is pending; no concurrent submission':
@@ -6009,10 +6259,12 @@ class Worker:
                 if manual or status['paused'] or status['input_halted']:
                     self.publish(control_mode='manual' if manual or status['paused'] else 'halted',
                                  phase='已暂停，等待继续自动',
-                                 reason=(manual or {}).get('reason') or status.get('reason'),
-                                 decision_request=None)
-                    if time.monotonic() - last_capture > 90:
-                        capture_passive()
+                                 reason=(manual or {}).get('reason') or status.get('reason'))
+                    # ROOT's explicit bounded mailbox uses THIS Worker. No
+                    # periodic passive capture competes with a manual phase.
+                    # Pause/stop still precede input; inspect remains read-only.
+                    if manual:
+                        manual_steps.process(self)
                     time.sleep(.25)
                     self.account_manual_wait(iteration_started)
                     continue
@@ -6173,9 +6425,22 @@ def _worker_cli(args):
 def command_cli(args):
     rid = uuid.uuid4().hex
     emergency = args.command in ('pause', 'takeover', 'stop')
+    if args.command in ('manual-stage', 'manual-step'):
+        reviewed_runtime_sources(args.chat_id)
     run, owner, binding, control = load(args.run_dir, args.chat_id, args.run_token, emergency=emergency)
     if args.command == 'status':
         return envelope(current_state(run, owner, control), command_id=rid)
+    if args.command == 'manual-stage':
+        item = manual_stage.create(run, owner, control, args.manual_id)
+        return {'ok': True, 'bridge_id': item['bridge_id'], 'from_stage': item['from_stage'],
+                'to_stage': item['to_stage'], 'blocked_ids': item['blocked_ids'],
+                'scope_only': True, 'completed_phases': [], 'all_rewards_cleared': None,
+                'input_resent': False, 'input_authorized': False}
+    if args.command == 'manual-step':
+        reply = entry.read_json(Path(args.reply_file).absolute(), limit=100_000) if args.reply_file else None
+        return manual_steps.submit(run, owner, control, manual_id=args.manual_id,
+            step_id=args.request_id, operation=args.operation, checkpoint_id=args.checkpoint_id,
+            reply=reply)
     if args.command == 'manual-checkpoint':
         item = begin_manual_phase(run, owner, control, args.manual_id, args.phase)
         return {'ok': True, 'checkpoint_id': item['checkpoint_id'], 'phase': item['phase'],
@@ -6357,7 +6622,7 @@ def command_cli(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', '_worker'])
+    parser.add_argument('command', choices=['start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', 'manual-stage', 'manual-step', '_worker'])
     parser.add_argument('--chat-id', required=True)
     parser.add_argument('--run-dir')
     parser.add_argument('--run-token')
@@ -6380,6 +6645,7 @@ def main():
     parser.add_argument('--manual-id')
     parser.add_argument('--phase', choices=coaching.PHASES)
     parser.add_argument('--checkpoint-id')
+    parser.add_argument('--operation', choices=manual_steps.OPERATIONS)
     parser.add_argument('--input-receipt-ids-json', default='[]')
     args = parser.parse_args()
     if args.command == '_worker':

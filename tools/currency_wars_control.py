@@ -847,12 +847,23 @@ def pause(reason):
         time.sleep(.025)
 
 def request_reply(request):
+    # In a runner-owned session the public raw client has no business intent.
+    # The existing Worker/Entry is the sole supported guarded input route;
+    # read-only inspection and emergency/control handoff remain available.
+    if (Path(ROOT, 'runner-owner.json').exists() and request.get('kind') == 'actions'
+            and (request.get('handoff') or any(a.get('type') in ('click', 'key', 'drag', 'scroll')
+                                             for a in request.get('actions', [])))):
+        raise ValueError('runner-owned input requires runner manual-step or decide; raw submit is not published')
     state = status()
     if not state['ready']:
         raise RuntimeError('broker not ready; no request written')
     if request.get('kind') == 'resume' and state['protocol_version'] != PROTOCOL_VERSION:
         raise RuntimeError('loaded broker does not support safe resume; no request written')
     with submission_lock():
+        if (Path(ROOT, 'runner-owner.json').exists() and request.get('kind') == 'actions'
+                and (request.get('handoff') or any(a.get('type') in ('click', 'key', 'drag', 'scroll')
+                                                 for a in request.get('actions', [])))):
+            raise ValueError('runner ownership changed before raw submit; no request published')
         rid = uuid.uuid4().hex
         request.update({'id': rid, 'chat_id': OWNER['chat_id'], 'run_token': OWNER['run_token']})
         publish_request(request)
