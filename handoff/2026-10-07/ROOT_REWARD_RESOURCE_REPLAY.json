@@ -112,5 +112,6 @@
     "Independent OCR of three new historical fixtures only; no game input or complete preparation autonomy.",
     "Manual visual orb expectations are separate from current production OCR; missing semantic keys stay missing.",
     "Folder counts describe local assets, not inferred template completeness or automatic detection capability."
-  ]
+  ],
+  "board_units_semantics": "Observed occupied board slots; not verified named characters. Identity/star detail is in ROOT_ROSTER_RESOURCE_AUDIT.json."
 }
