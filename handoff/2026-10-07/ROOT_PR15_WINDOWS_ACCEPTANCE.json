@@ -1,0 +1,810 @@
+{
+  "schema": "currency-wars-pr15-windows-acceptance/v1",
+  "candidate_sha": "060ec1cfea03af1d474e0296f5ec0df73b16fa91",
+  "baseline_sha": "85ba75af2b1d43cf34f3b116b3767783709d82f5",
+  "offline_only": true,
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "candidate_installed": false,
+  "source_hashes_match_delivery": true,
+  "source_sha256": {
+    "tools/currency_wars_runner.py": "dbdb3e94d83fb0f3a91fc3879c3a9822abfaa4a60d572dc0d67c9b55e384ed9a",
+    "tools/currency_wars_profile.py": "e913f23d6d2b86d21ea178130a32f7e0b1daa6d2f8d0e161024be896d24717cc",
+    "tools/replay_currency_wars_economy_boundary.py": "e3fdedc2e41b5be09a03a945785fd06cbaf5d65417aa1572f48afccf5c30781a",
+    "tools/test_currency_wars_economy_boundary.py": "c871ca3e2b0427a18ecfc799928a5a2ecdec0e0f2bfc110ff1c7527009b3b668"
+  },
+  "tests": {
+    "selectors": [
+      "test_currency_wars_economy_boundary",
+      "test_currency_wars_economy.EconomyTests.test_published_zero_effect_stops_without_replay_and_reconcile_is_atomic",
+      "test_currency_wars_profile.ProfileTests.test_business_steps_partition_nested_time_and_keep_actual_return_reasons"
+    ],
+    "tests_run": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 2.822008899995126
+  },
+  "driver_sha256": "e3fdedc2e41b5be09a03a945785fd06cbaf5d65417aa1572f48afccf5c30781a",
+  "comparison": [
+    {
+      "case": "missing_budget",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 2
+    },
+    {
+      "case": "missing_free_refresh",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 4
+    },
+    {
+      "case": "policy_unavailable",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 4
+    },
+    {
+      "case": "pending_result",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 4
+    },
+    {
+      "case": "completion_guard",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 4
+    },
+    {
+      "case": "six_d",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 4
+    },
+    {
+      "case": "three_f",
+      "same_endpoint": true,
+      "different_endpoint_fields": [],
+      "before_flow_points": 0,
+      "after_flow_points": 4
+    }
+  ],
+  "cases": [
+    {
+      "case": "missing_budget",
+      "endpoint": {
+        "phase": "economy",
+        "battle_ready": false,
+        "economy_completed": false,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 0
+        },
+        "pending": false,
+        "pending_kind": null,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          }
+        ],
+        "normal_root_requests": 1,
+        "exception_root_requests": 0,
+        "unclassified_root_requests": 1,
+        "simulated_keys": [],
+        "perception_read_count": 0,
+        "economic_policy_call_count": 2,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "19227c8e4552408187655b851c943dfe",
+            "frame_id": "25df03157fc0421db173ab4491654694",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        }
+      ]
+    },
+    {
+      "case": "missing_free_refresh",
+      "endpoint": {
+        "phase": "economy",
+        "battle_ready": false,
+        "economy_completed": false,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 0
+        },
+        "pending": false,
+        "pending_kind": null,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "unclassified_root_requests": 2,
+        "simulated_keys": [],
+        "perception_read_count": 1,
+        "economic_policy_call_count": 4,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "8d1bcef337ab42798c340b45f3deaa7d",
+            "frame_id": "6d05d0c33b2347c7a416b27cbca7ea90",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        },
+        {
+          "reason": "no_actions",
+          "origin": "tick_shop",
+          "budget_present": true,
+          "policy": {
+            "available": true,
+            "reason": null,
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "capture_request_id": "c1566e4e831a4f3a9f29a27df05d09cc",
+            "frame_id": "58b192958d7f4f48872a41a3e193318f",
+            "dependency_phase": "free_refresh",
+            "dependency_reason": "免费刷新次数未知，不能先买经验",
+            "required_for": "refresh",
+            "required_fields": [
+              "coins",
+              "free_refreshes"
+            ],
+            "missing_required_fields": [
+              "free_refreshes"
+            ],
+            "shop_complete": true,
+            "next_action": null,
+            "experience_resolved": false
+          },
+          "completion_attempted": true,
+          "completion_predicate": false,
+          "completion_accepted": false,
+          "completed_actions": 0
+        }
+      ]
+    },
+    {
+      "case": "policy_unavailable",
+      "endpoint": {
+        "phase": "economy",
+        "battle_ready": false,
+        "economy_completed": false,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 0
+        },
+        "pending": false,
+        "pending_kind": null,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "unclassified_root_requests": 2,
+        "simulated_keys": [],
+        "perception_read_count": 1,
+        "economic_policy_call_count": 4,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "e7a34debbdba4210ab9890a3a35c0cdc",
+            "frame_id": "aaf730ad50474cdcaa37925b7fb91440",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        },
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": true,
+          "policy": {
+            "available": false,
+            "reason": "declared immutable-frame evidence failure",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "f38a86521ae9438b88d71710ca089ff3",
+            "frame_id": "81d9557160fc4428a5a29f70e84e0acf",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        }
+      ]
+    },
+    {
+      "case": "pending_result",
+      "endpoint": {
+        "phase": "economy",
+        "battle_ready": false,
+        "economy_completed": false,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 0
+        },
+        "pending": true,
+        "pending_kind": "experience",
+        "terminal_request_kind": "economy_result",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          },
+          {
+            "kind": "economy_result",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "exception",
+              "business_step": "experience",
+              "reason": "本笔经济效果为zero，原请求{pending_request_id}；补读原后帧或给明确剩余计划，不重发已发布输入。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": true
+          }
+        ],
+        "normal_root_requests": 1,
+        "exception_root_requests": 1,
+        "unclassified_root_requests": 1,
+        "simulated_keys": [
+          [
+            70.0
+          ]
+        ],
+        "perception_read_count": 3,
+        "economic_policy_call_count": 5,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "f9203b56eb95446aa9f1bc7459571dfb",
+            "frame_id": "f9dfecfd8e5b4d4d89a8f89be3d0f040",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        },
+        {
+          "reason": "transaction_return",
+          "origin": "tick_shop",
+          "budget_present": true,
+          "policy": {
+            "available": true,
+            "reason": null,
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "capture_request_id": "fa1239956f5e4b9e890703985c564943",
+            "frame_id": "065967b141514fbcb60dad26e121d67c",
+            "dependency_phase": "experience",
+            "dependency_reason": "当前缺口、免费刷新与付费搜牌条件已解决，再分配人口经验",
+            "required_for": "experience",
+            "required_fields": [
+              "coins",
+              "free_refreshes",
+              "level",
+              "xp",
+              "xp_cost",
+              "xp_gain"
+            ],
+            "missing_required_fields": [],
+            "shop_complete": true,
+            "next_action": "buy_xp",
+            "experience_resolved": false
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        }
+      ]
+    },
+    {
+      "case": "completion_guard",
+      "endpoint": {
+        "phase": "economy",
+        "battle_ready": false,
+        "economy_completed": false,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 0
+        },
+        "pending": false,
+        "pending_kind": null,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "unclassified_root_requests": 2,
+        "simulated_keys": [],
+        "perception_read_count": 1,
+        "economic_policy_call_count": 4,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "239cde165c3045779d3a03e860aa4596",
+            "frame_id": "11109c27a6784a2ead84a0c367a537b1",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        },
+        {
+          "reason": "no_actions",
+          "origin": "tick_shop",
+          "budget_present": true,
+          "policy": {
+            "available": true,
+            "reason": null,
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "capture_request_id": "20b85d6710834c58bb06dbbcce90edd3",
+            "frame_id": "960a46633f1642cf90e4f7338489abb5",
+            "dependency_phase": "experience",
+            "dependency_reason": "当前缺口、免费刷新与付费搜牌条件已解决，再分配人口经验",
+            "required_for": "review",
+            "required_fields": [
+              "coins",
+              "free_refreshes"
+            ],
+            "missing_required_fields": [],
+            "shop_complete": true,
+            "next_action": null,
+            "experience_resolved": true
+          },
+          "completion_attempted": true,
+          "completion_predicate": true,
+          "completion_accepted": false,
+          "completed_actions": 0
+        }
+      ]
+    },
+    {
+      "case": "six_d",
+      "endpoint": {
+        "phase": "lineup_equipment",
+        "battle_ready": false,
+        "economy_completed": true,
+        "spent": {
+          "purchase": 0,
+          "refresh": 12,
+          "experience": 0
+        },
+        "pending": false,
+        "pending_kind": null,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "b57f2971b0d985817b3422aa040a7134f60e76c2dee620ce28586eb9cd5874d6",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "a6bd4aff249548db339930b05272c3b16b8b3dd31672e3fa3339b3e59fd83822",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "lineup_equipment",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "unclassified_root_requests": 2,
+        "simulated_keys": [
+          [
+            68.0
+          ],
+          [
+            68.0
+          ],
+          [
+            68.0
+          ],
+          [
+            68.0
+          ],
+          [
+            68.0
+          ],
+          [
+            68.0
+          ]
+        ],
+        "perception_read_count": 8,
+        "economic_policy_call_count": 23,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "b57f2971b0d985817b3422aa040a7134f60e76c2dee620ce28586eb9cd5874d6",
+            "economic_snapshot_id": null,
+            "capture_request_id": "ed4b02be510c43e9904be28d42d44f6e",
+            "frame_id": "bc55d44763004791be5baa17cddbc14b",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        },
+        {
+          "reason": "economy_completed",
+          "origin": "tick_shop",
+          "budget_present": true,
+          "policy": {
+            "available": true,
+            "reason": null,
+            "snapshot_id": "a6bd4aff249548db339930b05272c3b16b8b3dd31672e3fa3339b3e59fd83822",
+            "economic_snapshot_id": "a6bd4aff249548db339930b05272c3b16b8b3dd31672e3fa3339b3e59fd83822",
+            "capture_request_id": "a20628c9480a4ad899780d92308e0471",
+            "frame_id": "bef731e7bd55471d919359997387ab4a",
+            "dependency_phase": "experience",
+            "dependency_reason": "当前缺口、免费刷新与付费搜牌条件已解决，再分配人口经验",
+            "required_for": "review",
+            "required_fields": [
+              "coins",
+              "free_refreshes"
+            ],
+            "missing_required_fields": [],
+            "shop_complete": true,
+            "next_action": null,
+            "experience_resolved": true
+          },
+          "completion_attempted": true,
+          "completion_predicate": true,
+          "completion_accepted": true,
+          "completed_actions": 6
+        }
+      ]
+    },
+    {
+      "case": "three_f",
+      "endpoint": {
+        "phase": "lineup_equipment",
+        "battle_ready": false,
+        "economy_completed": true,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 12
+        },
+        "pending": false,
+        "pending_kind": null,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "economy",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "43f3c50c5eace8937b3062657c0967ad692232dd667970d94d23f5e635a12f9b",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "lineup_equipment",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            },
+            "pending_reference_verified": null
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "unclassified_root_requests": 2,
+        "simulated_keys": [
+          [
+            70.0
+          ],
+          [
+            70.0
+          ],
+          [
+            70.0
+          ]
+        ],
+        "perception_read_count": 5,
+        "economic_policy_call_count": 14,
+        "team_checked": null,
+        "team_fully_read": null
+      },
+      "exit_points": [
+        {
+          "reason": "policy_unavailable",
+          "origin": "tick_shop",
+          "budget_present": false,
+          "policy": {
+            "available": false,
+            "reason": "本节点/当前epoch尚无已核经济读数和统一预算",
+            "snapshot_id": "e63ef6bfafc82417dd8c562d04a706eabaae0385b55071ba34eb813ae0aa9091",
+            "economic_snapshot_id": null,
+            "capture_request_id": "c5f5cc7f98ef4bfd89e5e11530df5888",
+            "frame_id": "a607364024b54dcc953525e1ed57c9dd",
+            "dependency_phase": null,
+            "dependency_reason": null,
+            "required_for": null,
+            "required_fields": null,
+            "missing_required_fields": null,
+            "shop_complete": null,
+            "next_action": null,
+            "experience_resolved": null
+          },
+          "completion_attempted": false,
+          "completion_predicate": null,
+          "completion_accepted": null,
+          "completed_actions": 0
+        },
+        {
+          "reason": "economy_completed",
+          "origin": "tick_shop",
+          "budget_present": true,
+          "policy": {
+            "available": true,
+            "reason": null,
+            "snapshot_id": "43f3c50c5eace8937b3062657c0967ad692232dd667970d94d23f5e635a12f9b",
+            "economic_snapshot_id": "43f3c50c5eace8937b3062657c0967ad692232dd667970d94d23f5e635a12f9b",
+            "capture_request_id": "c6b81360149e49188a5dd3d2e53da792",
+            "frame_id": "2f1f07487c85492f80e618bf85181685",
+            "dependency_phase": "experience",
+            "dependency_reason": "当前缺口、免费刷新与付费搜牌条件已解决，再分配人口经验",
+            "required_for": "review",
+            "required_fields": [
+              "coins",
+              "free_refreshes"
+            ],
+            "missing_required_fields": [],
+            "shop_complete": true,
+            "next_action": null,
+            "experience_resolved": true
+          },
+          "completion_attempted": true,
+          "completion_predicate": true,
+          "completion_accepted": true,
+          "completed_actions": 3
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Explicit protocol facts, phase premises and inert receipts; no real complete preparation",
+    "No OCR/game/model/animation speed claim; point events are not intervals",
+    "Coordinates/waits rely on earlier validation and unchanged static guards"
+  ],
+  "raw_reports": [
+    "ROOT_PR15_BOUNDARY_BEFORE.json",
+    "ROOT_PR15_BOUNDARY_AFTER.json"
+  ],
+  "temporary_run_deleted": true
+}

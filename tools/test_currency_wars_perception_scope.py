@@ -123,7 +123,7 @@ def missing_first_mutation_frame(enabled):
 class PerceptionScopeTests(unittest.TestCase):
     def assert_contract(self, observed, requested, effective=None):
         self.assertEqual({key: observed['read_contract'][key]
-            for key in ('version', 'requested_scope', 'effective_scope')}, {'version': 1,
+            for key in ('version', 'requested_scope', 'effective_scope')}, {'version': 2,
             'requested_scope': requested, 'effective_scope': effective or requested})
 
     def assert_not_read(self, item, observed, scope):
@@ -198,9 +198,9 @@ class PerceptionScopeTests(unittest.TestCase):
             self.assert_contract(other_scope, 'economy')
             self.assertEqual(other_scope['snapshot_id'], full_again['snapshot_id'])
             self.assertEqual(other_scope['semantic']['team']['status'], 'not_read')
-            with patch.object(perception, 'READ_CONTRACT_VERSION', 2):
+            with patch.object(perception, 'READ_CONTRACT_VERSION', 3):
                 revised = reader.read(path, scope='economy')
-                self.assertEqual(revised['read_contract']['version'], 2)
+                self.assertEqual(revised['read_contract']['version'], 3)
                 self.assertFalse(revised['read_timing']['cache_hit'])
 
     def test_narrow_request_on_other_pages_keeps_full_effective_contract(self):

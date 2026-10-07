@@ -1,0 +1,144 @@
+{
+  "schema": "currency-wars-refresh-widget-production-read/v1",
+  "candidate_sha": "060ec1cfea03af1d474e0296f5ec0df73b16fa91",
+  "perception_sha256": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+  "offline_only": true,
+  "new_game_captures": 0,
+  "game_inputs": 0,
+  "original_resources": {
+    "files": 57,
+    "bytes": 250477,
+    "copies_byte_verified": true,
+    "private_assets_exported": false
+  },
+  "frames": [
+    {
+      "file": "f00.png",
+      "export_image_sha256": "4d04f198664ee5ac4232f4c8eb8fd0766f6c04eb03ab7c2f6977a33ef4ecc01a",
+      "native_player_fields": {
+        "stage": "3-1",
+        "level": null,
+        "deployed": null
+      },
+      "native_page": "shop",
+      "native_refresh_widget_ocr_rows": [
+        {
+          "text": "D",
+          "box": [
+            1608,
+            435,
+            1629,
+            454
+          ],
+          "confidence": 0.9915
+        },
+        {
+          "text": "免费刷新",
+          "box": [
+            1572,
+            472,
+            1665,
+            504
+          ],
+          "confidence": 0.9983
+        },
+        {
+          "text": "2",
+          "box": [
+            1610,
+            522,
+            1626,
+            548
+          ],
+          "confidence": 0.9993
+        }
+      ],
+      "free_zero_injected": false,
+      "refresh_semantic_mode_injected": false
+    },
+    {
+      "file": "f01.png",
+      "export_image_sha256": "288b6a4f4ecc67476cc8a12bd806e37accf2ffe6c4445c058fd24f0116b2ea11",
+      "native_player_fields": {
+        "stage": "3-1",
+        "level": "7",
+        "deployed": null
+      },
+      "native_page": "shop",
+      "native_refresh_widget_ocr_rows": [
+        {
+          "text": "D",
+          "box": [
+            1610,
+            435,
+            1629,
+            454
+          ],
+          "confidence": 0.9938
+        },
+        {
+          "text": "免费刷新",
+          "box": [
+            1572,
+            472,
+            1665,
+            504
+          ],
+          "confidence": 0.9983
+        }
+      ],
+      "free_zero_injected": false,
+      "refresh_semantic_mode_injected": false
+    },
+    {
+      "file": "f02.png",
+      "export_image_sha256": "bb734d0e90b07c2c4724c8e17eb02732ebce0bfd260135e93346ab4371701282",
+      "native_player_fields": {
+        "stage": "3-1",
+        "level": null,
+        "deployed": null
+      },
+      "native_page": "shop",
+      "native_refresh_widget_ocr_rows": [
+        {
+          "text": "D",
+          "box": [
+            1606,
+            432,
+            1630,
+            458
+          ],
+          "confidence": 0.9854
+        },
+        {
+          "text": "刷新",
+          "box": [
+            1592,
+            472,
+            1646,
+            506
+          ],
+          "confidence": 0.9995
+        },
+        {
+          "text": "?2",
+          "box": [
+            1593,
+            516,
+            1647,
+            548
+          ],
+          "confidence": 0.7261
+        }
+      ],
+      "free_zero_injected": false,
+      "refresh_semantic_mode_injected": false
+    }
+  ],
+  "limits": [
+    "Fresh production OCR of three previously retained full PNGs; no economic policy/budget approval or Worker transaction claimed",
+    "Numeric OCR rows are not assigned to free quantity or price by this report",
+    "No comparative latency or complete preparation/game speed claim"
+  ],
+  "temporary_run_deleted": true
+}
