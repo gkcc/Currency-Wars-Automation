@@ -1,0 +1,32 @@
+{
+  "schema": "currency-wars-bounded-question-audit/v1",
+  "window_start_utc": "2026-10-06T17:03:03.217392+00:00",
+  "window_end_utc": "2026-10-06T18:43:31.318613+00:00",
+  "source_kind": "current_chat_retained_session_jsonl",
+  "tool_name_counts": {
+    "exec": 144,
+    "wait": 1
+  },
+  "event_counts": {
+    "item_completed": 410,
+    "custom_tool_call_output": 144,
+    "token_count": 147,
+    "reasoning": 186,
+    "custom_tool_call": 144,
+    "null": 153,
+    "message": 31,
+    "thread_settings_applied": 4,
+    "function_call": 1,
+    "function_call_output": 1
+  },
+  "question_calls_in_window": [],
+  "question_reply_message_timestamps_in_window": [],
+  "user_message_timestamp_count": 6,
+  "private_source_content_exported": false,
+  "causal_wait_seconds": null,
+  "limits": [
+    "Calls/replies outside the fixed window not reconstructed",
+    "Zero logged coaching calls does not classify tool-outside time as model latency",
+    "This is a partial historical window, not whole-match timing"
+  ]
+}

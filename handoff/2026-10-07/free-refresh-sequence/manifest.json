@@ -1,0 +1,169 @@
+{
+  "schema": "currency-wars-historical-refresh-offer-sequence/v1",
+  "historical_run_id": "616b087bce2c4346a544d3802b2f19e0",
+  "historical_code_sha": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+  "offline_only": true,
+  "new_game_captures": 0,
+  "physical_inputs": 0,
+  "original_sources_preserved": true,
+  "review_method": "ROOT visually read all three retained full images once; manual labels remain independent of production OCR. Only UID pixels masked in public copies.",
+  "frames": [
+    {
+      "file": "f00.png",
+      "source_image_sha256": "e26abbb5ecbc84851aa4aae8f64a825a78bc159e2d1a46910008749b2905a93f",
+      "export_image_sha256": "4d04f198664ee5ac4232f4c8eb8fd0766f6c04eb03ab7c2f6977a33ef4ecc01a",
+      "dimensions": [
+        1920,
+        1080
+      ],
+      "uid_redaction_box": [
+        0,
+        1030,
+        300,
+        1080
+      ],
+      "pixels_outside_mask_identical": true,
+      "historical_event_id": "d84fb0636adf44e0a530eccf4d436ced",
+      "historical_label": "shop-open",
+      "visible_widget": {
+        "bounds_approximate": [
+          1535,
+          430,
+          1700,
+          595
+        ],
+        "shortcut": "D",
+        "title_literal": "免费刷新",
+        "free_count_literal": 2,
+        "currency_icon_visible": false,
+        "price_literal": null,
+        "mode_visual_label": "free_offer",
+        "free_zero_literal_visible": false
+      },
+      "visible_player_hud_manual_label": {
+        "stage": "3-1",
+        "level": 7,
+        "xp": "26/52",
+        "coins": 65
+      },
+      "native_reader_field_values_not_replaced": true,
+      "receipt_to_png_association": "Historical helper operation ID/label pairs and observation sidecar; no native immutable frame ID in the legacy receipt.",
+      "native_immutable_receipt_frame_proof_available": false
+    },
+    {
+      "file": "f01.png",
+      "source_image_sha256": "856c2ef84671068dee7ad80b6c3156802453d4a1c39d59fbc786943a378ef4a3",
+      "export_image_sha256": "288b6a4f4ecc67476cc8a12bd806e37accf2ffe6c4445c058fd24f0116b2ea11",
+      "dimensions": [
+        1920,
+        1080
+      ],
+      "uid_redaction_box": [
+        0,
+        1030,
+        300,
+        1080
+      ],
+      "pixels_outside_mask_identical": true,
+      "historical_event_id": "07a0e5205e2d4ae284f2e17970799545",
+      "historical_label": "free-refresh-and-xp",
+      "visible_widget": {
+        "bounds_approximate": [
+          1535,
+          430,
+          1700,
+          595
+        ],
+        "shortcut": "D",
+        "title_literal": "免费刷新",
+        "free_count_literal": 1,
+        "currency_icon_visible": false,
+        "price_literal": null,
+        "mode_visual_label": "free_offer",
+        "free_zero_literal_visible": false
+      },
+      "visible_player_hud_manual_label": {
+        "stage": "3-1",
+        "level": 7,
+        "xp": "38/52",
+        "coins": 53
+      },
+      "native_reader_field_values_not_replaced": true,
+      "receipt_to_png_association": "Historical helper operation ID/label pairs and observation sidecar; no native immutable frame ID in the legacy receipt.",
+      "native_immutable_receipt_frame_proof_available": false
+    },
+    {
+      "file": "f02.png",
+      "source_image_sha256": "58db76acf2966807d401bb7bfd7773515212d97b3a982c1ff6803cc7fd3a9ee4",
+      "export_image_sha256": "bb734d0e90b07c2c4724c8e17eb02732ebce0bfd260135e93346ab4371701282",
+      "dimensions": [
+        1920,
+        1080
+      ],
+      "uid_redaction_box": [
+        0,
+        1030,
+        300,
+        1080
+      ],
+      "pixels_outside_mask_identical": true,
+      "historical_event_id": "a9e979c9b8a9475f9c261195ffec69dc",
+      "historical_label": "buy-feixiao-free-refresh",
+      "visible_widget": {
+        "bounds_approximate": [
+          1535,
+          430,
+          1700,
+          595
+        ],
+        "shortcut": "D",
+        "title_literal": "刷新",
+        "free_count_literal": null,
+        "currency_icon_visible": true,
+        "price_literal": 2,
+        "mode_visual_label": "paid_offer",
+        "free_zero_literal_visible": false
+      },
+      "visible_player_hud_manual_label": {
+        "stage": "3-1",
+        "level": 7,
+        "xp": "38/52",
+        "coins": 52
+      },
+      "native_reader_field_values_not_replaced": true,
+      "receipt_to_png_association": "Historical helper operation ID/label pairs and observation sidecar; no native immutable frame ID in the legacy receipt.",
+      "native_immutable_receipt_frame_proof_available": false
+    }
+  ],
+  "action_groups": [
+    {
+      "file": "f01-group-receipt.json",
+      "original_event_id": "07a0e5205e2d4ae284f2e17970799545",
+      "original_completed_preserved": true,
+      "independent_per_action_frames": false,
+      "mixed_actions": true,
+      "limit": "Group post-frame only; do not split into per-D/F/buy success or infer per-action zero cost from the net balance.",
+      "original_receipt_snapshot_basename": "game-preview.png",
+      "original_receipt_snapshot_exists_now": false,
+      "association_limit": "Original receipt refers to a now-missing shared preview path. Archived observation PNG hashes are preserved, but cannot reconstruct native immutable capture identity."
+    },
+    {
+      "file": "f02-group-receipt.json",
+      "original_event_id": "a9e979c9b8a9475f9c261195ffec69dc",
+      "original_completed_preserved": true,
+      "independent_per_action_frames": false,
+      "mixed_actions": true,
+      "limit": "Group post-frame only; do not split into per-D/F/buy success or infer per-action zero cost from the net balance.",
+      "original_receipt_snapshot_basename": "game-preview.png",
+      "original_receipt_snapshot_exists_now": false,
+      "association_limit": "Original receipt refers to a now-missing shared preview path. Archived observation PNG hashes are preserved, but cannot reconstruct native immutable capture identity."
+    }
+  ],
+  "limits": [
+    "Free offers literally show 2 then 1; paid offer shows currency icon + price 2, no literal free-count zero",
+    "Original groups contain D+three F, then card purchase+D; no intermediate frame or independent D receipt",
+    "Cannot infer all rewards clear, a current budget, a verified game version, full roster, or a complete Worker chain",
+    "Bounds are annotation regions, not authorized click targets; no current owner/token/epoch exported",
+    "Legacy receipt snapshot is a now-missing game-preview.png alias; operation sidecars associate archived pictures, not a recovered native immutable capture contract."
+  ]
+}

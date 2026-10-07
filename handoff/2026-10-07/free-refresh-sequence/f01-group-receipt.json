@@ -1,0 +1,57 @@
+{
+  "id": "07a0e5205e2d4ae284f2e17970799545",
+  "ok": true,
+  "completed": [
+    {
+      "type": "key",
+      "args": [
+        68
+      ]
+    },
+    {
+      "type": "wait",
+      "args": [
+        0.5
+      ]
+    },
+    {
+      "type": "key",
+      "args": [
+        70
+      ]
+    },
+    {
+      "type": "wait",
+      "args": [
+        0.65
+      ]
+    },
+    {
+      "type": "key",
+      "args": [
+        70
+      ]
+    },
+    {
+      "type": "wait",
+      "args": [
+        0.65
+      ]
+    },
+    {
+      "type": "key",
+      "args": [
+        70
+      ]
+    },
+    {
+      "type": "wait",
+      "args": [
+        0.65
+      ]
+    }
+  ],
+  "source_receipt_sha256": "4fd05d9973925b26912705eb89a6356df3d4e7a6d4965d443f9fe9739d18bcb1",
+  "projection_only": true,
+  "private_handles_paths_and_snapshot_removed": true
+}
