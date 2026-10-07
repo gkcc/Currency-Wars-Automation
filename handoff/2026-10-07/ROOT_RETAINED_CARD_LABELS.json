@@ -1,0 +1,323 @@
+{
+  "schema": "currency-wars-retained-visual-labels/v1",
+  "created_at": "2026-10-07T08:33:10.269349+00:00",
+  "annotation_method": "ROOT direct image inspection; not Perception output or game capture",
+  "bounding_box_precision": "Approximate visible card extents; not click targets or backend slot identifiers",
+  "frames": [
+    {
+      "frame": "q01",
+      "file": "reward-sequence/q01.png",
+      "sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "population_hud": "8/8",
+      "manual_visible_board_cards": 8,
+      "occupied_cards": [
+        {
+          "label": "front_1",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            679,
+            329,
+            811,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 3,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "front_2",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            824,
+            329,
+            952,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 3,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "front_3",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            965,
+            329,
+            1095,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "front_4",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            1108,
+            329,
+            1242,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_1",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            535,
+            601,
+            672,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_2",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            678,
+            601,
+            813,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_3",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            822,
+            601,
+            955,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 1,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_4",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            963,
+            601,
+            1096,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 1,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        }
+      ],
+      "known_occupied_bench": [
+        {
+          "bounds": [
+            381,
+            844,
+            499,
+            980
+          ],
+          "visible_gold_star_glyphs": 1,
+          "character_name": null
+        }
+      ],
+      "all_other_slots": "not_annotated"
+    },
+    {
+      "frame": "q02",
+      "file": "reward-sequence/q02.png",
+      "sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+      "image_size": [
+        1920,
+        1080
+      ],
+      "population_hud": "8/8",
+      "manual_visible_board_cards": 8,
+      "occupied_cards": [
+        {
+          "label": "front_1",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            679,
+            329,
+            811,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 3,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "front_2",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            824,
+            329,
+            952,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 3,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "front_3",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            965,
+            329,
+            1095,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "front_4",
+          "location": "board",
+          "row": "front",
+          "card_bounds": [
+            1108,
+            329,
+            1242,
+            464
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_1",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            535,
+            601,
+            672,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_2",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            678,
+            601,
+            813,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 2,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_3",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            822,
+            601,
+            955,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 1,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        },
+        {
+          "label": "back_visible_4",
+          "location": "board",
+          "row": "back",
+          "card_bounds": [
+            963,
+            601,
+            1096,
+            735
+          ],
+          "occupied": true,
+          "visible_gold_star_glyphs": 1,
+          "character_name": null,
+          "identity_status": "not_annotated",
+          "source": "ROOT direct visual review of this exact retained PNG"
+        }
+      ],
+      "known_occupied_bench": [
+        {
+          "bounds": [
+            381,
+            844,
+            499,
+            980
+          ],
+          "visible_gold_star_glyphs": 1,
+          "character_name": null
+        }
+      ],
+      "all_other_slots": "not_annotated"
+    }
+  ],
+  "limits": [
+    "Gold star glyphs counted visually; not numeric cost badge",
+    "No character identities supplied without separate source",
+    "No item identities, effects, phase completion or current input authority inferred",
+    "q01/q02 do not fill missing single-blue-click intermediate frame",
+    "This is a label set for evaluating reader capability, not a changed reader result"
+  ]
+}

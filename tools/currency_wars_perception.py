@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 import os
 import re
@@ -42,6 +43,11 @@ PLAYER_LEVEL_ROI = [240, 880, 358, 936]
 MAX_SUPPORTED_POPULATION = 12
 READ_CONTRACT_VERSION = 1
 READ_SCOPES = ('full', 'rewards', 'economy')
+# Raw full-frame OCR only: 1920x1080 RGB, Pillow RGB default resize to
+# 1280x720, RapidOCR with use_cls=False. Bump when that pipeline changes.
+# The same engine object binds its loaded models; runtime defaults and the
+# thresholds RapidOCR can mutate are also part of the per-instance key.
+OCR_CONTRACT_VERSION = 1
 
 
 def clean(text):
@@ -750,24 +756,36 @@ class Perception:
         self.shop_reader = None
         self.state_reader = None
         self.cache = None
+        self._primary_cache = None
 
-    def read(self, path, force=False, *, scope='full'):
+    def _ocr_contract(self):
+        postprocess = getattr(getattr(self.engine, 'text_det', None), 'postprocess_op', None)
+        return (OCR_CONTRACT_VERSION, getattr(self.engine, 'use_det', None),
+                getattr(self.engine, 'use_rec', None), getattr(self.engine, 'text_score', None),
+                getattr(postprocess, 'box_thresh', None), getattr(postprocess, 'unclip_ratio', None))
+
+    def read(self, path, force=False, *, scope='full', reuse_primary=False):
         if scope not in READ_SCOPES:
             raise ValueError('unsupported perception read scope: ' + str(scope))
+        if reuse_primary and scope != 'full':
+            raise ValueError('primary OCR reuse requires a full semantic read')
         started = time.perf_counter()
         path = Path(path)
         data = path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
-        cache_key = (digest, scope, READ_CONTRACT_VERSION)
-        if self.cache and self.cache[0] == cache_key and not force:
+        cache_key = (digest, scope, READ_CONTRACT_VERSION, self._ocr_contract())
+        if (self.cache and self.cache[0] == cache_key and self.cache[2] is self.engine
+                and not force and not reuse_primary):
             # Worker adds the current request/frame identity. Neither that
             # identity nor a consumer's changes may mutate a cached snapshot.
             result = copy.deepcopy(self.cache[1])
             result['image'] = str(path)
             result['elapsed_ms'] = round((time.perf_counter() - started) * 1000, 2)
-            result['read_timing'] = {'cache_hit': True, 'elapsed_ms': result['elapsed_ms']}
+            result['read_timing'] = {'cache_hit': True, 'primary_ocr_reused': False,
+                'primary_ocr_executed': False, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
+                'elapsed_ms': result['elapsed_ms']}
             return result
-        with Image.open(path) as opened:
+        with Image.open(io.BytesIO(data)) as opened:
             if opened.size != (1920, 1080):
                 raise ValueError("1920x1080 broker preview required")
             image = opened.convert("RGB")
@@ -780,7 +798,21 @@ class Perception:
             onnxruntime.disable_telemetry_events()
             from rapidocr_onnxruntime import RapidOCR
             self.engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
-        raw, unused = self.engine(np.array(image.resize((1280, 720))), use_cls=False)
+        ocr_contract = self._ocr_contract()
+        primary_key = (digest, ocr_contract)
+        cached = self._primary_cache
+        primary_reused = bool(reuse_primary and not force and cached
+                              and cached[0] == primary_key and cached[2] is self.engine)
+        if primary_reused:
+            raw = cached[1]
+        else:
+            raw, unused = self.engine(np.array(image.resize((1280, 720))), use_cls=False)
+            # Freeze only the original OCR output. Later aliases, ROI rows,
+            # page classification and semantic facts belong to each read.
+            raw = tuple((tuple(tuple(point) for point in box), text, float(confidence))
+                        for box, text, confidence in raw or [])
+            self._primary_cache = (primary_key, raw, self.engine)
+        cache_key = (digest, scope, READ_CONTRACT_VERSION, ocr_contract)
         rows = []
         for box, text, confidence in raw or []:
             xs, ys = [p[0] * 1.5 for p in box], [p[1] * 1.5 for p in box]
@@ -1005,6 +1037,8 @@ class Perception:
                   "semantic": semantic, "state_read": state_read,
                   "read_contract": contract,
                   "image": str(path), "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
-        result['read_timing'] = {'cache_hit': False, 'elapsed_ms': result['elapsed_ms']}
-        self.cache = cache_key, copy.deepcopy(result)
+        result['read_timing'] = {'cache_hit': False, 'primary_ocr_reused': primary_reused,
+            'primary_ocr_executed': not primary_reused, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
+            'elapsed_ms': result['elapsed_ms']}
+        self.cache = cache_key, copy.deepcopy(result), self.engine
         return result

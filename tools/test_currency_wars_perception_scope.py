@@ -74,7 +74,7 @@ def record_fixture_reads(worker):
     original_frame = worker.read_frame
     reads, attempts = [], []
 
-    def read(path, force=False, *, scope='full'):
+    def read(path, force=False, *, scope='full', reuse_primary=False):
         observed = copy.deepcopy(original_read(path, force, scope=scope))
         effective = scope if observed['page'] in ('preparation', 'shop') else 'full'
         observed['read_contract'] = {'version': 1, 'requested_scope': scope, 'effective_scope': effective}
@@ -89,13 +89,14 @@ def record_fixture_reads(worker):
             if effective == 'rewards':
                 observed['fields'].update(level=None, deployed=None)
                 observed['semantic']['player_hud'] = copy.deepcopy(omitted)
-        reads.append({'path': str(path), 'force': force, 'scope': scope,
+        reads.append({'path': str(path), 'force': force, 'scope': scope, 'reuse_primary': reuse_primary,
                       'snapshot_id': observed['snapshot_id']})
         return observed
 
-    def frame(result, *, scope='full', force=False):
-        attempts.append({'request_id': result['id'], 'scope': scope, 'force': force})
-        return original_frame(result, scope=scope, force=force)
+    def frame(result, *, scope='full', force=False, reuse_primary=False):
+        attempts.append({'request_id': result['id'], 'scope': scope, 'force': force,
+                         'reuse_primary': reuse_primary})
+        return original_frame(result, scope=scope, force=force, reuse_primary=reuse_primary)
 
     worker.perception.read, worker.read_frame = read, frame
     return reads, attempts
@@ -234,7 +235,8 @@ class WorkerReadScopeTests(unittest.TestCase):
             full = request['observation']
             self.assertEqual(full['read_contract']['effective_scope'], 'full')
             self.assertEqual(reads[-1]['scope'], 'full')
-            self.assertTrue(reads[-1]['force'])
+            self.assertFalse(reads[-1]['force'])
+            self.assertTrue(reads[-1]['reuse_primary'])
             self.assertEqual(len(bundle.control.published), count)
             for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at'):
                 self.assertEqual(full[key], before[key])
@@ -305,7 +307,8 @@ class WorkerReadScopeTests(unittest.TestCase):
             # Full acquisition happened before the existing budget/target
             # guard refused this deliberately unreviewed buy; no buy is claimed.
             self.assertEqual(reads[-1]['scope'], 'full')
-            self.assertTrue(reads[-1]['force'])
+            self.assertFalse(reads[-1]['force'])
+            self.assertTrue(reads[-1]['reuse_primary'])
             self.assertEqual(attempts[-1]['request_id'], observed['capture_request_id'])
             self.assertEqual(worker.last_observation['frame_id'], observed['frame_id'])
             self.assertEqual(worker.last_observation['snapshot_id'], observed['snapshot_id'])
@@ -365,7 +368,8 @@ class WorkerReadScopeTests(unittest.TestCase):
                 self.assertEqual(worker.preparation_reviews, {})
                 self.assertFalse(worker.preparation_checklist(worker.last_observation)['battle_ready'])
                 self.assertEqual(reads[-1]['scope'], 'full')
-                self.assertTrue(reads[-1]['force'])
+                self.assertFalse(reads[-1]['force'])
+                self.assertTrue(reads[-1]['reuse_primary'])
 
 
 if __name__ == '__main__':

@@ -1,0 +1,309 @@
+{
+  "schema": "currency-wars-pr13-windows-acceptance/v1",
+  "candidate_sha": "257f84d8b036e6bcb0ef29ae51c722bcaf315e8d",
+  "offline_only": true,
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "candidate_installed": false,
+  "original_resources": {
+    "files": 57,
+    "bytes": 250477,
+    "copies_byte_verified": true,
+    "private_resources_exported": false
+  },
+  "production_source_sha256": {
+    "tools/currency_wars_perception.py": "ee33649258691ab3fea3f0f25c0e21ff0d7bb8ea1e0f012838264de2e789a735",
+    "tools/currency_wars_runner.py": "06f98b6ba61ee2f77967b53cce6419632de78c02044595aee69a479e3c414998",
+    "tools/currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "tools/currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+    "tools/currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "tools/currency_wars_control.py": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5"
+  },
+  "hashes_match_delivery": true,
+  "test_groups": [
+    {
+      "name": "scope_and_level",
+      "selectors": [
+        "test_currency_wars_perception_scope",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_runner_normalizes_real_perception_level_string_for_live_and_cached_phase"
+      ],
+      "tests_run": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 5.044275299995206,
+      "stdout": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) ... ok\ntest_narrow_request_on_other_pages_keeps_full_effective_contract (test_currency_wars_perception_scope.PerceptionScopeTests.test_narrow_request_on_other_pages_keeps_full_effective_contract) ... ok\ntest_same_png_scope_cache_and_returned_nested_objects_are_isolated (test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated) ... ok\ntest_economy_scope_keeps_live_guide_phase_and_honors_no_reroll_rule (test_currency_wars_perception_scope.WorkerReadScopeTests.test_economy_scope_keeps_live_guide_phase_and_honors_no_reroll_rule) ... ok\ntest_free_d_and_f_keep_economy_scope_for_result_and_read_only_frame_recovery (test_currency_wars_perception_scope.WorkerReadScopeTests.test_free_d_and_f_keep_economy_scope_for_result_and_read_only_frame_recovery) ... ok\ntest_reward_results_keep_narrow_scope_until_root_full_field_review (test_currency_wars_perception_scope.WorkerReadScopeTests.test_reward_results_keep_narrow_scope_until_root_full_field_review) ... ok\ntest_root_request_upgrades_the_same_current_png_and_refuses_missing_or_old_identity (test_currency_wars_perception_scope.WorkerReadScopeTests.test_root_request_upgrades_the_same_current_png_and_refuses_missing_or_old_identity) ... ok\ntest_runner_normalizes_real_perception_level_string_for_live_and_cached_phase (test_local_runtime_compatibility.RuntimeCompatibilityTests.test_runner_normalizes_real_perception_level_string_for_live_and_cached_phase) ... ok\n\n----------------------------------------------------------------------\nRan 8 tests in 4.508s\n\nOK\n"
+    },
+    {
+      "name": "affected_normal",
+      "selectors": [
+        "test_currency_wars_preparation_replay.PreparationReplayTests.test_three_verified_f_finish_economy_without_another_root_review",
+        "test_currency_wars_refresh_replay.RefreshReplayTests.test_six_d_current_worker_has_one_budget_request_and_twelve_actual_fixture_spent",
+        "test_currency_wars_reward_flow.RewardFlowTests.test_real_worker_relocates_two_single_clicks_then_requires_full_field_review"
+      ],
+      "tests_run": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 2.2732948000193574,
+      "stdout": "test_three_verified_f_finish_economy_without_another_root_review (test_currency_wars_preparation_replay.PreparationReplayTests.test_three_verified_f_finish_economy_without_another_root_review) ... ok\ntest_six_d_current_worker_has_one_budget_request_and_twelve_actual_fixture_spent (test_currency_wars_refresh_replay.RefreshReplayTests.test_six_d_current_worker_has_one_budget_request_and_twelve_actual_fixture_spent) ... ok\ntest_real_worker_relocates_two_single_clicks_then_requires_full_field_review (test_currency_wars_reward_flow.RewardFlowTests.test_real_worker_relocates_two_single_clicks_then_requires_full_field_review) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 2.234s\n\nOK\n"
+    }
+  ],
+  "measurements": {
+    "full": {
+      "file": "ROOT_PR13_PERCEPTION_FULL.json",
+      "phases": {
+        "cold_sequence": {
+          "wall_seconds": 16.359219899983145,
+          "components_seconds": {
+            "engine_initialization": 0.5284941,
+            "primary_ocr": 10.7406416,
+            "field_ocr": 0.1334203,
+            "shop_ocr": 2.8555429,
+            "shop_other": 0.7708777000000002,
+            "state_reader": 0.8076402,
+            "reward_rules": 0.0306529,
+            "other_perception": 0.4917165999999992
+          },
+          "calls": {
+            "Perception.read": 10,
+            "RapidOCR.__init__": 2,
+            "RapidOCR.__call__": 68,
+            "TextDetector.__call__": 18,
+            "TextRecognizer.__call__": 68,
+            "classify": 10,
+            "ShopReader.read": 8,
+            "ShopReader._load": 8,
+            "native_player_hud": 10,
+            "semantic_facts": 10,
+            "rewards.detect": 10,
+            "StateReader.read": 10,
+            "StateReader._load": 10
+          }
+        },
+        "warm_sequence": {
+          "wall_seconds": 14.266080699977465,
+          "components_seconds": {
+            "engine_initialization": 0.0,
+            "primary_ocr": 9.7095156,
+            "field_ocr": 0.1244012,
+            "shop_ocr": 2.4157125,
+            "shop_other": 0.7062982999999999,
+            "state_reader": 0.7928819,
+            "reward_rules": 0.030619999999999998,
+            "other_perception": 0.48636819999999986
+          },
+          "calls": {
+            "Perception.read": 10,
+            "RapidOCR.__call__": 68,
+            "TextDetector.__call__": 18,
+            "TextRecognizer.__call__": 68,
+            "classify": 10,
+            "ShopReader.read": 8,
+            "ShopReader._load": 8,
+            "native_player_hud": 10,
+            "semantic_facts": 10,
+            "rewards.detect": 10,
+            "StateReader.read": 10,
+            "StateReader._load": 10
+          }
+        }
+      },
+      "required_semantic_differences": [],
+      "facts": [
+        {
+          "frame": "q00",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "q01",
+          "page": "preparation",
+          "level": "8",
+          "shop_ok": null
+        },
+        {
+          "frame": "q02",
+          "page": "preparation",
+          "level": "8",
+          "shop_ok": null
+        },
+        {
+          "frame": "r00",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r01",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r02",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r03",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r04",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r05",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r06",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        }
+      ],
+      "private_machine_name_removed": true,
+      "private_image_paths_removed": true,
+      "occupied_slots_not_identity_count": true
+    },
+    "scoped": {
+      "file": "ROOT_PR13_PERCEPTION_SCOPED.json",
+      "phases": {
+        "cold_sequence": {
+          "wall_seconds": 15.819257500086678,
+          "components_seconds": {
+            "engine_initialization": 0.5136526,
+            "primary_ocr": 11.2651296,
+            "field_ocr": 0.0925305,
+            "shop_ocr": 2.697747,
+            "shop_other": 0.7064398999999998,
+            "state_reader": 0.0,
+            "reward_rules": 0.0306739,
+            "other_perception": 0.5128191
+          },
+          "calls": {
+            "Perception.read": 10,
+            "RapidOCR.__init__": 2,
+            "RapidOCR.__call__": 59,
+            "TextDetector.__call__": 17,
+            "TextRecognizer.__call__": 59,
+            "classify": 10,
+            "semantic_facts": 10,
+            "rewards.detect": 10,
+            "ShopReader.read": 7,
+            "ShopReader._load": 7,
+            "native_player_hud": 7
+          }
+        },
+        "warm_sequence": {
+          "wall_seconds": 13.22024270001566,
+          "components_seconds": {
+            "engine_initialization": 0.0,
+            "primary_ocr": 9.8272038,
+            "field_ocr": 0.092542,
+            "shop_ocr": 2.1323553000000004,
+            "shop_other": 0.6375983000000001,
+            "state_reader": 0.0,
+            "reward_rules": 0.029755,
+            "other_perception": 0.5005355000000005
+          },
+          "calls": {
+            "Perception.read": 10,
+            "RapidOCR.__call__": 59,
+            "TextDetector.__call__": 17,
+            "TextRecognizer.__call__": 59,
+            "classify": 10,
+            "semantic_facts": 10,
+            "rewards.detect": 10,
+            "ShopReader.read": 7,
+            "ShopReader._load": 7,
+            "native_player_hud": 7
+          }
+        }
+      },
+      "required_semantic_differences": [],
+      "facts": [
+        {
+          "frame": "q00",
+          "page": "shop",
+          "level": null,
+          "shop_ok": false
+        },
+        {
+          "frame": "q01",
+          "page": "preparation",
+          "level": null,
+          "shop_ok": null
+        },
+        {
+          "frame": "q02",
+          "page": "preparation",
+          "level": null,
+          "shop_ok": null
+        },
+        {
+          "frame": "r00",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r01",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r02",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r03",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r04",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r05",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        },
+        {
+          "frame": "r06",
+          "page": "shop",
+          "level": "8",
+          "shop_ok": true
+        }
+      ],
+      "private_machine_name_removed": true,
+      "private_image_paths_removed": true,
+      "occupied_slots_not_identity_count": true
+    }
+  },
+  "limits": [
+    "Perception function only; no Worker full-upgrade or model waits included",
+    "Two ordered passes per mode; not statistical or game speed evidence",
+    "All retained PNGs and original resources; no fresh game data"
+  ],
+  "temporary_run_deleted": true,
+  "created_at": "2026-10-07T08:18:57.751501+00:00"
+}
