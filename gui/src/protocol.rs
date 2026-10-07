@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use std::{fs, path::{Path, PathBuf}};
+use std::{fs, path::{Path, PathBuf}, thread, time::{Duration, Instant}};
 use sha2::{Digest,Sha256};
 
 #[derive(Clone,PartialEq,Eq)]
@@ -15,6 +15,153 @@ pub struct ResumeGuard {
 }
 #[derive(Clone)]
 pub struct ResumeProof {pub before:ResumeGuard,pub epoch:String,pub consumed_ids:Vec<String>}
+
+/// A root selected by the verified parent launch, never by the worker owner.
+#[derive(Clone,PartialEq)]
+pub struct RuntimeAuthority {
+    location: Option<Value>,
+    legacy_temp: Option<PathBuf>,
+    runtime_provider: Value,
+}
+
+fn check_location(value:&Value)->Result<(),String>{
+    let object=value.as_object().ok_or("运行位置不是对象")?;
+    if object.len()!=4 || !["schema","source","runtime_root","installation_id"].iter().all(|key|object.contains_key(*key))
+        || value["schema"].as_u64()!=Some(1) || !Path::new(text(value,"runtime_root")).is_absolute(){
+        return Err("运行位置字段、版本或绝对根目录无效".into());
+    }
+    let root=Path::new(text(value,"runtime_root"));
+    if root.parent().is_none() || root.file_name().is_none(){return Err("运行位置不能是磁盘根".into());}
+    match text(value,"source"){
+        "installed_bridge"=>{
+            let id=text(value,"installation_id");
+            if !same_path(root,Path::new(r"D:\Codex\Temp\codex-agent-workflow"))
+                || id.len()!=32 || !id.bytes().all(|v|v.is_ascii_digit()||(b'a'..=b'f').contains(&v)){
+                return Err("固定输入组件的批准根或安装身份不匹配".into());
+            }
+        },
+        "standalone" if value["installation_id"].is_null()=>{},
+        _=>return Err("运行位置来源或安装身份无效".into()),
+    }
+    Ok(())
+}
+
+fn gui_registration(marker:&Value,record:&Value,root:&Path,chat:&str,location:&Value,
+                    gui_pid:u64,gui_creation:&str,parent_probe:&Value)->Result<Value,String>{
+    let parent_pid=marker["pid"].as_u64().unwrap_or(0);
+    let parent_creation=text(marker,"process_identity").strip_prefix("windows:").unwrap_or("");
+    let children=marker["protected_children"].as_array().ok_or("GUI子进程登记缺失")?;
+    if marker["schema"]!=1 || text(marker,"tool")!="codex-agent-workflow"
+        || !text(marker,"purpose").starts_with("currency-wars-native-gui-")
+        || !same_path(Path::new(text(marker,"path")),root)
+        || !same_path(Path::new(text(marker,"root")),root.parent().ok_or("GUI目录没有父根")?)
+        || parent_pid==0 || parent_creation.is_empty() || !parent_creation.bytes().all(|v|v.is_ascii_digit())
+        || gui_pid==0 || gui_creation.is_empty() || !gui_creation.bytes().all(|v|v.is_ascii_digit())
+        || marker["children_incomplete"]!=true
+        || children.len()>32
+        || !children.iter().any(|child|child["pid"].as_u64()==Some(gui_pid)
+            && text(child,"process_identity")==format!("windows:{gui_creation}"))
+        || record["schema"]!=1 || text(record,"owner")!="currency-wars-gui-runtime"
+        || record["run_id"]!=marker["run_id"] || text(record,"run_id").len()!=32
+        || !text(record,"run_id").bytes().all(|v|v.is_ascii_digit()||(b'a'..=b'f').contains(&v))
+        || text(record,"chat_id")!=chat || record["runtime_location"]!=*location
+        || record["launcher_pid"].as_u64()!=Some(parent_pid)
+        || text(record,"launcher_creation_id")!=parent_creation
+        || record["gui_pid"].as_u64()!=Some(gui_pid) || text(record,"gui_creation_id")!=gui_creation
+        || parent_probe["pid"].as_u64()!=Some(parent_pid)
+        || identity(parent_probe,"expected_creation_id")!=parent_creation
+        || identity(parent_probe,"creation_id")!=parent_creation || text(parent_probe,"state")!="running"{
+        return Err("GUI父启动链、真实进程登记或运行位置未通过核验".into());
+    }
+    Ok(record["runtime_provider"].clone())
+}
+
+impl RuntimeAuthority {
+    pub fn legacy()->Result<Self,String>{
+        Ok(Self{location:None,legacy_temp:Some(std::env::temp_dir().canonicalize().map_err(|e|e.to_string())?),runtime_provider:Value::Null})
+    }
+
+    pub fn location(&self)->Option<&Value>{self.location.as_ref()}
+
+    pub fn runtime_provider(&self)->&Value{&self.runtime_provider}
+
+    pub fn from_gui(root:&Path,chat:&str,declared:Option<&str>)->Result<Self,String>{
+        no_links(root)?;
+        let record_path=root.join("runtime-location.json");
+        let declared=match declared{
+            Some(raw)=>serde_json::from_str::<Value>(raw).map_err(|e|e.to_string())?,
+            None=>{
+                match fs::symlink_metadata(&record_path){
+                    Ok(_)=>return Err("GUI新运行位置缺少父启动参数，拒绝降级旧协议".into()),
+                    Err(error) if error.kind()==std::io::ErrorKind::NotFound=>{},
+                    Err(error)=>return Err(error.to_string()),
+                }
+                let legacy=Self::legacy()?;
+                legacy.check_root(root,None)?;
+                return Ok(legacy);
+            },
+        };
+        check_location(&declared)?;
+        // Failure of an unrelated system TEMP disables legacy compatibility;
+        // it must not block an explicitly verified installed/standalone root.
+        let mut authority=Self{location:Some(declared.clone()),legacy_temp:std::env::temp_dir().canonicalize().ok(),runtime_provider:Value::Null};
+        authority.check_canonical_root(root,Some(&declared))?;
+        // Popen can run Rust before Python registers its child. Only absence
+        // of this atomically published record is transient, once at startup.
+        let deadline=Instant::now()+Duration::from_secs(3);
+        loop{
+            match fs::symlink_metadata(&record_path){
+                Ok(_)=>break,
+                Err(error) if error.kind()==std::io::ErrorKind::NotFound=>{
+                    if Instant::now()>=deadline{return Err("GUI父启动登记超时，未核验运行位置".into());}
+                    thread::sleep(Duration::from_millis(25));
+                },
+                Err(error)=>return Err(error.to_string()),
+            }
+        }
+        let record=read_json(&record_path)?;
+        let marker=read_json(&root.join(".agent-workflow-owner.json"))?;
+        let parent_pid=marker["pid"].as_u64().unwrap_or(0);
+        let parent_creation=text(&marker,"process_identity").strip_prefix("windows:").unwrap_or("");
+        let creation=crate::input::current_creation();
+        if creation.is_empty(){return Err("GUI本进程创建身份未知".into());}
+        authority.runtime_provider=gui_registration(&marker,&record,root,chat,&declared,std::process::id() as u64,
+                         &creation,&probe_process(parent_pid,parent_creation))?;
+        Ok(authority)
+    }
+
+    fn check_root(&self,root:&Path,owner_location:Option<&Value>)->Result<(),String>{
+        if !root.is_absolute(){return Err("运行目录不是绝对路径".into());}
+        if let Some(actual)=owner_location{
+            let expected=self.location.as_ref().ok_or("旧GUI没有授权此显式运行位置；请重新启动GUI")?;
+            check_location(actual)?;
+            if actual!=expected || !same_path(root.parent().ok_or("运行目录没有父根")?,Path::new(text(expected,"runtime_root"))){
+                return Err("运行目录或位置不属于本GUI已验证的父启动选择".into());
+            }
+        }else{
+            // Only complete absence is legacy. Null or malformed fields took
+            // the explicit branch above and cannot widen the system boundary.
+            let temp=self.legacy_temp.as_ref().ok_or("缺少旧临时目录边界")?;
+            let canonical=root.canonicalize().map_err(|e|e.to_string())?;
+            if !path_key(&canonical).starts_with(&(path_key(temp)+"\\")){
+                return Err("旧协议运行目录不在原系统临时目录".into());
+            }
+        }
+        Ok(())
+    }
+
+    fn check_canonical_root(&self,root:&Path,owner_location:Option<&Value>)->Result<(),String>{
+        self.check_root(root,owner_location)?;
+        if let Some(location)=owner_location{
+            let canonical=root.canonicalize().map_err(|e|e.to_string())?;
+            let expected=Path::new(text(location,"runtime_root")).canonicalize().map_err(|e|e.to_string())?;
+            if canonical.parent().map(|parent|same_path(parent,&expected))!=Some(true){
+                return Err("运行目录不是已验证根的直接实际子目录".into());
+            }
+        }
+        Ok(())
+    }
+}
 
 fn nullable_id(value:&Value,field:&str)->Result<Option<String>,String>{
     match value.get(field){Some(Value::Null)=>Ok(None),Some(Value::String(id)) if !id.is_empty()=>Ok(Some(id.clone())),_=>Err("交接守卫缺少明确身份或null".into())}
@@ -46,6 +193,8 @@ pub struct Binding {
     pub marker_id: String,
     pub broker: Option<ProcessIdentity>,
     pub launch_id:String,
+    pub runtime_location:Option<Value>,
+    pub runtime_authority:RuntimeAuthority,
 }
 
 pub fn text<'a>(value: &'a Value, field: &str) -> &'a str {
@@ -92,16 +241,12 @@ fn no_links(path: &Path) -> Result<(), String> {
 }
 
 impl Binding {
-    pub fn load(root: &Path, chat: &str) -> Result<Self, String> {
+    pub fn load_with_runtime(root: &Path, chat: &str, authority:&RuntimeAuthority) -> Result<Self, String> {
         if !root.is_absolute() { return Err("运行目录不是绝对路径".into()); }
         no_links(root)?;
-        let temp = std::env::temp_dir().canonicalize().map_err(|e| e.to_string())?;
-        let canonical = root.canonicalize().map_err(|e| e.to_string())?;
-        if !path_key(&canonical).starts_with(&(path_key(&temp) + "\\")) {
-            return Err("运行目录不在系统临时目录".into());
-        }
         let marker = read_json(&root.join(".agent-workflow-owner.json"))?;
         let owner = read_json(&root.join("runner-owner.json"))?;
+        authority.check_canonical_root(root,owner.get("runtime_location"))?;
         let pid = owner["runner_pid"].as_u64().unwrap_or(0);
         let creation = text(&owner, "runner_creation_id").to_string();
         if marker["schema"] != 1 || text(&marker, "tool") != "codex-agent-workflow"
@@ -125,7 +270,13 @@ impl Binding {
         }else{None};
         Ok(Self { root: root.to_path_buf(), chat: chat.into(), run_id: text(&owner, "run_id").into(),
                   token: text(&owner, "run_token").into(), pid, creation,
-                  marker_id: text(&marker, "run_id").into(),broker,launch_id:text(&owner,"launch_id").into() })
+                  marker_id: text(&marker, "run_id").into(),broker,launch_id:text(&owner,"launch_id").into(),
+                  runtime_location:owner.get("runtime_location").cloned(),runtime_authority:authority.clone() })
+    }
+
+    #[cfg(test)]
+    pub fn load(root:&Path,chat:&str)->Result<Self,String>{
+        Self::load_with_runtime(root,chat,&RuntimeAuthority::legacy()?)
     }
 
     pub fn same_owner(&self,current:&Self)->Result<(),String>{
@@ -133,6 +284,7 @@ impl Binding {
             || current.run_id != self.run_id || current.token != self.token || current.pid != self.pid
             || current.creation != self.creation || current.marker_id != self.marker_id
             || current.launch_id!=self.launch_id
+            || current.runtime_location!=self.runtime_location || current.runtime_authority!=self.runtime_authority
             || self.broker.as_ref().zip(current.broker.as_ref()).map(|(a,b)|a!=b).unwrap_or(false){return Err("运行归属或已绑定broker身份发生变化".into());}
         Ok(())
     }
@@ -148,6 +300,7 @@ impl Binding {
             || !same_path(Path::new(text(state, "run_dir")), &self.root)
             || state["runner_pid"].as_u64() != Some(self.pid) || text(state, "runner_creation_id") != self.creation
             || text(state,"launch_id")!=self.launch_id
+            || state.get("runtime_location")!=self.runtime_location.as_ref()
             || state["state_sequence"].as_u64().is_none()
             || !["starting", "auto", "waiting_decision", "manual", "halted", "stopping", "stopped", "failed", "completed"].contains(&text(state, "control_mode")) {
             return Err("执行器回执版本、代际或PID创建身份未通过核验".into());
@@ -155,7 +308,7 @@ impl Binding {
         Ok(())
     }
     pub fn verify(&self, state: &Value) -> Result<(), String> {
-        let current=Self::load(&self.root,&self.chat)?;self.same_owner(&current)?;self.verify_header(state)?;
+        let current=Self::load_with_runtime(&self.root,&self.chat,&self.runtime_authority)?;self.same_owner(&current)?;self.verify_header(state)?;
         if let Some(broker)=&current.broker{
             let pending=text(state,"control_mode")=="starting" && state["broker"]["broker_pid"].is_null();
             if !pending&&(state["broker"]["protocol_version"]!=2 || state["broker"]["broker_pid"].as_u64()!=Some(broker.pid) || identity(&state["broker"],"broker_creation_time")!=broker.creation){return Err("状态中的broker不是当前已绑定进程".into());}
@@ -423,6 +576,94 @@ pub fn public_failure(message: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn installed_location()->Value{
+        json!({"schema":1,"source":"installed_bridge","runtime_root":r"D:\Codex\Temp\codex-agent-workflow","installation_id":"0123456789abcdef0123456789abcdef"})
+    }
+    fn runtime_fixture()->PathBuf{
+        let nonce=std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let root=std::env::temp_dir().join(format!("currency-wars-gui-runtime-test-{}-{nonce}",std::process::id()));
+        fs::create_dir(&root).unwrap();root
+    }
+    #[test]
+    fn runtime_location_requires_exact_schema_and_approved_installed_root(){
+        let location=installed_location();assert!(check_location(&location).is_ok());
+        for (key,value) in [("schema",json!(2)),("source",json!("owner")),("runtime_root",json!(r"E:\arbitrary")),
+                            ("runtime_root",json!(r"D:\Codex\Temp\codex-agent-workflow-other")),
+                            ("installation_id",Value::Null),("installation_id",json!("0123456789ABCDEF0123456789ABCDEF"))]{
+            let mut wrong=location.clone();wrong[key]=value;assert!(check_location(&wrong).is_err(),"{key}");
+        }
+        let mut wrong=location.clone();wrong["extra"]=json!(true);assert!(check_location(&wrong).is_err());
+        let mut standalone=location.clone();standalone["source"]=json!("standalone");standalone["installation_id"]=Value::Null;
+        assert!(check_location(&standalone).is_ok());
+        standalone["runtime_root"]=json!("relative");assert!(check_location(&standalone).is_err());
+    }
+    #[test]
+    fn runtime_location_keeps_explicit_root_and_legacy_system_temp_separate(){
+        let legacy_root=runtime_fixture();
+        let location=installed_location();let mut authority=RuntimeAuthority::legacy().unwrap();authority.location=Some(location.clone());
+        let approved=Path::new(r"D:\Codex\Temp\codex-agent-workflow\run");
+        assert!(authority.check_root(approved,Some(&location)).is_ok());
+        assert!(authority.check_root(Path::new(r"D:\Codex\Temp\codex-agent-workflow-other\run"),Some(&location)).is_err());
+        assert!(authority.check_root(Path::new(r"D:\Codex\Temp\codex-agent-workflow\nested\run"),Some(&location)).is_err());
+        // No owner field is the sole compatibility case; explicit null is not.
+        assert!(authority.check_root(&legacy_root,None).is_ok());
+        assert!(authority.check_root(&legacy_root,Some(&Value::Null)).is_err());
+        let mut changed=location.clone();changed["installation_id"]=json!("ffffffffffffffffffffffffffffffff");
+        assert!(authority.check_root(approved,Some(&changed)).is_err());
+        assert!(RuntimeAuthority::legacy().unwrap().check_root(approved,Some(&location)).is_err());
+        fs::remove_dir(legacy_root).unwrap();
+    }
+    #[test]
+    fn runtime_location_explicit_root_does_not_require_legacy_temp(){
+        let location=installed_location();
+        let authority=RuntimeAuthority{location:Some(location.clone()),legacy_temp:None,runtime_provider:Value::Null};
+        let approved=Path::new(r"D:\Codex\Temp\codex-agent-workflow\run");
+        assert!(authority.check_root(approved,Some(&location)).is_ok());
+        assert!(authority.check_root(approved,None).is_err());
+    }
+    #[test]
+    fn runtime_location_bound_owner_and_terminal_header_reject_downgrade(){
+        let location=installed_location();let mut authority=RuntimeAuthority::legacy().unwrap();authority.location=Some(location.clone());
+        let binding=Binding{root:PathBuf::from(r"D:\Codex\Temp\codex-agent-workflow\run"),chat:"chat".into(),run_id:"run".into(),token:"token".into(),pid:31,creation:"41".into(),marker_id:"run".into(),broker:None,launch_id:"launch".into(),runtime_location:Some(location.clone()),runtime_authority:authority};
+        let state=json!({"protocol_version":1,"owner":"currency-wars-runner","chat_id":"chat","run_id":"run","run_dir":binding.root,
+                         "runner_pid":31,"runner_creation_id":"41","launch_id":"launch","state_sequence":1,"control_mode":"stopped","runtime_location":location});
+        assert!(binding.verify_header(&state).is_ok());
+        let mut missing=state.clone();missing.as_object_mut().unwrap().remove("runtime_location");assert!(binding.verify_header(&missing).is_err());
+        let mut wrong=state.clone();wrong["runtime_location"]=Value::Null;assert!(binding.verify_header(&wrong).is_err());
+        let mut current=binding.clone();current.runtime_location=None;assert!(binding.same_owner(&current).is_err());
+        current=binding.clone();current.runtime_location.as_mut().unwrap()["installation_id"]=json!("ffffffffffffffffffffffffffffffff");
+        assert!(binding.same_owner(&current).is_err());
+    }
+    #[test]
+    fn runtime_location_registration_requires_exact_live_parent_and_child(){
+        let location=installed_location();let root=Path::new(r"D:\Codex\Temp\codex-agent-workflow\gui");
+        let marker=json!({"schema":1,"tool":"codex-agent-workflow","purpose":"currency-wars-native-gui-local","path":root,
+                         "root":r"D:\Codex\Temp\codex-agent-workflow","pid":31,"process_identity":"windows:41",
+                         "run_id":"0123456789abcdef0123456789abcdef","children_incomplete":true,
+                         "protected_children":[{"pid":32,"process_identity":"windows:42"}]});
+        let record=json!({"schema":1,"owner":"currency-wars-gui-runtime","run_id":marker["run_id"],"chat_id":"chat","runtime_location":location,
+                         "launcher_pid":31,"launcher_creation_id":"41","gui_pid":32,"gui_creation_id":"42",
+                         "runtime_provider":{"kind":"installed","path":"explicit local fixture","sha256":"fixture digest"}});
+        let probe=json!({"pid":31,"expected_creation_id":"41","creation_id":"41","state":"running"});
+        assert_eq!(gui_registration(&marker,&record,root,"chat",&location,32,"42",&probe).unwrap(),record["runtime_provider"]);
+        for (key,value) in [("gui_pid",json!(33)),("gui_creation_id",json!("43")),("launcher_creation_id",json!("99")),
+                            ("chat_id",json!("other")),("run_id",json!("ffffffffffffffffffffffffffffffff")),("runtime_location",Value::Null)]{
+            let mut wrong=record.clone();wrong[key]=value;assert!(gui_registration(&marker,&wrong,root,"chat",&location,32,"42",&probe).is_err(),"{key}");
+        }
+        let mut unpublished=marker.clone();unpublished["protected_children"]=json!([]);
+        assert!(gui_registration(&unpublished,&record,root,"chat",&location,32,"42",&probe).is_err());
+        for state in ["unknown","exited","reused"]{
+            let mut wrong=probe.clone();wrong["state"]=json!(state);assert!(gui_registration(&marker,&record,root,"chat",&location,32,"42",&wrong).is_err());
+        }
+    }
+    #[test]
+    fn runtime_location_published_registration_cannot_lose_launch_argument(){
+        let root=runtime_fixture();
+        assert!(RuntimeAuthority::from_gui(&root,"chat",None).is_ok());
+        fs::write(root.join("runtime-location.json"),b"{}").unwrap();
+        assert!(RuntimeAuthority::from_gui(&root,"chat",None).is_err());
+        fs::remove_file(root.join("runtime-location.json")).unwrap();fs::remove_dir(root).unwrap();
+    }
     #[test]
     fn stop_requires_both_real_exit_records() {
         assert!(!process_exited(&json!({"state":"exited"}),31,"41"));
@@ -435,7 +676,7 @@ mod tests {
     }
     #[test]
     fn unobserved_broker_requires_bound_launch_facts() {
-        let mut binding=Binding{root:PathBuf::from(r"C:\Temp\run"),chat:"chat".into(),run_id:"run".into(),token:"token".into(),pid:31,creation:"41".into(),marker_id:"run".into(),broker:None,launch_id:"launch".into()};
+        let mut binding=Binding{root:PathBuf::from(r"C:\Temp\run"),chat:"chat".into(),run_id:"run".into(),token:"token".into(),pid:31,creation:"41".into(),marker_id:"run".into(),broker:None,launch_id:"launch".into(),runtime_location:None,runtime_authority:RuntimeAuthority::legacy().unwrap()};
         let mut state=json!({"exit_evidence":{"worker":{"pid":31,"state":"absent","error":87,"expected_creation_id":"41"},"broker":{"state":"not_launched","launch_attempted":false,"identity_observed":false,"run_id":"run","worker_pid":31,"worker_creation_id":"41","launch_id":"launch"}}});
         assert!(binding.stop_confirmed(&state));
         state["exit_evidence"]["broker"]["launch_id"]=json!("other");

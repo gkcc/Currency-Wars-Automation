@@ -1,0 +1,377 @@
+{
+  "schema": "currency-wars-refresh-offer-focused-acceptance/v1",
+  "code_base_sha": "060ec1cfea03af1d474e0296f5ec0df73b16fa91",
+  "evidence_main_sha": "b5da98042a07d91a41e11baaacd34cc1f55e7c34",
+  "working_tree_head_at_run": "91780afa3faddab286f624d22bd218d8b36d55ba",
+  "binding_rule": "Exact measured sources are bound by SHA256 before and after. The earlier HEAD is not the final publication SHA.",
+  "started_at_utc": "2026-10-07T10:49:29.210789+00:00",
+  "platform": "Linux",
+  "python": "3.12.14",
+  "tests_run": 20,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "elapsed_seconds": 14.696829,
+  "elapsed_scope": "unittest execution including setUpClass; excludes module loading and publication; no speedup comparison",
+  "selectors": [
+    "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_low_confidence_question_mark_zero_and_failed_crop_remain_unknown",
+    "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_missing_label_conflicts_and_digit_overflow_do_not_trigger_more_ocr",
+    "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+    "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_three_declared_coin_occlusions_are_refused_without_numeric_ocr",
+    "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_three_retained_pngs_keep_native_rows_and_unknown_player_fields",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_current_paid_price_over_budget_publishes_no_action",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_free_counts_and_changed_paid_prices_use_each_original_transaction_cost",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_free_refresh_does_not_require_level_experience_or_team",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache",
+    "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending",
+    "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+    "test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated",
+    "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+    "test_currency_wars_economy.EconomyTests.test_actual_effects_zero_partial_unknown_and_single_level_transition",
+    "test_currency_wars_economy.EconomyTests.test_free_d_is_zero_spend_and_unknown_paid_price_is_not_fabricated",
+    "test_currency_wars_economy.EconomyTests.test_real_b003_resume_cas_repairs_pending_economy_without_replaying_f",
+    "test_currency_wars_primary_reuse.PrimaryEvidenceReuseTests.test_raw_evidence_and_scope_semantics_have_independent_ownership"
+  ],
+  "test_results": [
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_low_confidence_question_mark_zero_and_failed_crop_remain_unknown",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_missing_label_conflicts_and_digit_overflow_do_not_trigger_more_ocr",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_three_declared_coin_occlusions_are_refused_without_numeric_ocr",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_three_retained_pngs_keep_native_rows_and_unknown_player_fields",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_current_paid_price_over_budget_publishes_no_action",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_free_counts_and_changed_paid_prices_use_each_original_transaction_cost",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_free_refresh_does_not_require_level_experience_or_team",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_actual_effects_zero_partial_unknown_and_single_level_transition",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_free_d_is_zero_spend_and_unknown_paid_price_is_not_fabricated",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_real_b003_resume_cas_repairs_pending_economy_without_replaying_f",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_primary_reuse.PrimaryEvidenceReuseTests.test_raw_evidence_and_scope_semantics_have_independent_ownership",
+      "status": "passed"
+    }
+  ],
+  "subtest_results": [
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'snapshot_id': 'older'})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'widget_rgb_sha256': 'older'})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'widget_bounds': [1536, 430, 1700, 595]})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'page': 'preparation'})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'mode': 'free', 'free_remaining': 2, 'paid_cost': None})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'paid_cost': 3})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'free_remaining': 0})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused",
+      "case": "test_source_frame_mode_and_original_number_proof_mismatch_are_refused (test_currency_wars_refresh_offer.RefreshOfferReadTests.test_source_frame_mode_and_original_number_proof_mismatch_are_refused) (update={'version': True})",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication",
+      "case": "test_epoch_page_and_current_png_mismatch_prevent_refresh_publication (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication) (mismatch='epoch')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication",
+      "case": "test_epoch_page_and_current_png_mismatch_prevent_refresh_publication (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication) (mismatch='page')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication",
+      "case": "test_epoch_page_and_current_png_mismatch_prevent_refresh_publication (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_epoch_page_and_current_png_mismatch_prevent_refresh_publication) (mismatch='png')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections",
+      "case": "test_original_group_completed_and_missing_identity_are_separate_rejections (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections) (group='f01-group-receipt.json')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections",
+      "case": "test_original_group_completed_and_missing_identity_are_separate_rejections (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_original_group_completed_and_missing_identity_are_separate_rejections) (group='f02-group-receipt.json')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive",
+      "case": "test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive) (damage=None)",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive",
+      "case": "test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive) (damage='png')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive",
+      "case": "test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_pending_restore_uses_archived_typed_frame_and_rejects_changed_archive) (damage='offer_source')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache",
+      "case": "test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache) (case='new_contract_missing_offer')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache",
+      "case": "test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_typed_unknown_blocks_legacy_and_changed_same_frame_offer_invalidates_cache) (case='changed_png_before_cache_hit')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending",
+      "case": "test_zero_or_unknown_result_keeps_original_pending_without_resending (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending) (outcome='zero')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending",
+      "case": "test_zero_or_unknown_result_keeps_original_pending_without_resending (test_currency_wars_refresh_offer_flow.RefreshOfferFlowTests.test_zero_or_unknown_result_keeps_original_pending_without_resending) (outcome='unknown')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "case": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) (scope='rewards', page='preparation')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "case": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) (scope='economy', page='preparation')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "case": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) (page='preparation')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "case": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) (scope='rewards', page='shop')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "case": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) (scope='economy', page='shop')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown",
+      "case": "test_default_full_and_narrow_scopes_distinguish_unread_from_unknown (test_currency_wars_perception_scope.PerceptionScopeTests.test_default_full_and_narrow_scopes_distinguish_unread_from_unknown) (page='shop')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "case": "test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid (test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid) (stopped_by='budget')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "case": "test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid (test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid) (stopped_by='count')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "case": "test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid (test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid) (stopped_by='target')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "case": "test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid (test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid) (stopped_by='guide')",
+      "status": "passed"
+    },
+    {
+      "test": "test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid",
+      "case": "test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid (test_currency_wars_economy.EconomyTests.test_dependencies_never_put_xp_before_gaps_free_or_unresolved_paid) (stopped_by='purchase_reserve')",
+      "status": "passed"
+    }
+  ],
+  "subtests_not_counted_as_additional_tests": true,
+  "source_sha256": {
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_perception.py": "5f6ea6f6e874aa4719cf4dc15c35bac4ec15ddb050a638e0c505254e1c04293b",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_runner.py": "5ea9659bc43c0fc1af1ce08968a135fdc03acffb9158d0686d4cbba126bf9e53",
+    "tools/replay_currency_wars_refresh_offer.py": "b884937fe0aec629955ee8f264062d2c7d4d5c64c70ca5077388f028a9d555f7",
+    "tools/test_currency_wars_refresh_offer.py": "e4645b9076ee412937c4f744fcd7cd440dffa1a6d703ccc8f9963de01c10c00a",
+    "tools/test_currency_wars_refresh_offer_flow.py": "7f20a47b1bc5547a658a7920a03ad8497634c82a15985f8977b8cdf8526fd415",
+    "tools/test_currency_wars_perception_scope.py": "e68c41c53d993e7890f581cd9d25e106d0e3438bd2d753d9603b135ef7e2a61a",
+    "tools/refresh_offer_resources/currency_coin.png": "188d753bb9d38ee7c85e72c8ef69fe4d4a7ec78a73e7930e214b48cae8f907de",
+    "tools/refresh_offer_resources/SOURCES.json": "374dea48b2c896e2e6674d94c253d3042bc36c2ad3e0850150e9a4fe7cdf89bc"
+  },
+  "source_sha256_after": {
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_perception.py": "5f6ea6f6e874aa4719cf4dc15c35bac4ec15ddb050a638e0c505254e1c04293b",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_runner.py": "5ea9659bc43c0fc1af1ce08968a135fdc03acffb9158d0686d4cbba126bf9e53",
+    "tools/replay_currency_wars_refresh_offer.py": "b884937fe0aec629955ee8f264062d2c7d4d5c64c70ca5077388f028a9d555f7",
+    "tools/test_currency_wars_refresh_offer.py": "e4645b9076ee412937c4f744fcd7cd440dffa1a6d703ccc8f9963de01c10c00a",
+    "tools/test_currency_wars_refresh_offer_flow.py": "7f20a47b1bc5547a658a7920a03ad8497634c82a15985f8977b8cdf8526fd415",
+    "tools/test_currency_wars_perception_scope.py": "e68c41c53d993e7890f581cd9d25e106d0e3438bd2d753d9603b135ef7e2a61a",
+    "tools/refresh_offer_resources/currency_coin.png": "188d753bb9d38ee7c85e72c8ef69fe4d4a7ec78a73e7930e214b48cae8f907de",
+    "tools/refresh_offer_resources/SOURCES.json": "374dea48b2c896e2e6674d94c253d3042bc36c2ad3e0850150e9a4fe7cdf89bc"
+  },
+  "source_unchanged": true,
+  "unchanged_guard_ast_from_pr15": {
+    "tools/currency_wars_runner.py:Worker.command": {
+      "ast_equal": true,
+      "ast_sha256": "26abe26adf5a9b86fcf2b6089d7b0bed4bf6863851b659de58e1bebb0f37520e"
+    },
+    "tools/currency_wars_runner.py:Worker.guard_preparation_action": {
+      "ast_equal": true,
+      "ast_sha256": "93309f283a336390da04c7af88385d1c7b84402b35a04952942f85e922b1b762"
+    },
+    "tools/currency_wars_runner.py:Worker.verify_economy_fence": {
+      "ast_equal": true,
+      "ast_sha256": "e17fda6f620728c3992cc81545f94ca96fcca8547b8f452c68f3a43c338aa5ef"
+    },
+    "tools/currency_wars_runner.py:Worker.advance_economy": {
+      "ast_equal": true,
+      "ast_sha256": "b434b24dd7cb5be87cfc51b75b8f3a1fffc991913c96fee5717decee8abf65de"
+    },
+    "tools/currency_wars_runner.py:Worker.apply_economy_result": {
+      "ast_equal": true,
+      "ast_sha256": "caea303298678cb7d0d9041c5ebe735338a2954687f02b046c4e39c00d2a4d41"
+    },
+    "tools/currency_wars_runner.py:explicit_resume": {
+      "ast_equal": true,
+      "ast_sha256": "f199bd1800de62125f61541313c5ddf927348264f2cae888e5b791a04b91225e"
+    },
+    "tools/currency_wars_runner.py:battle_approval": {
+      "ast_equal": true,
+      "ast_sha256": "7c0f4b0053c4c0ef699b7c885c82f1913c936105872e48dcdadeeb9f0b4d0b05"
+    },
+    "tools/currency_wars_economy.py:bind_fields": {
+      "ast_equal": true,
+      "ast_sha256": "e1234cae9c4fda303c4844caf4abdb2df5d4f2a2f146038a0dbfe21a3526fc94"
+    },
+    "tools/currency_wars_economy.py:observe_fields": {
+      "ast_equal": true,
+      "ast_sha256": "c00f78fddcb25e2756d9f47106e6fdb0aa2ddee3c6dfc385127d3dca77387006"
+    },
+    "tools/currency_wars_economy.py:validate_budget": {
+      "ast_equal": true,
+      "ast_sha256": "2348fa7fa3ecd8a7d174a6d11f02cdd4cb6c742acb907e007804c66bb39e482a"
+    },
+    "tools/currency_wars_economy.py:require_spending": {
+      "ast_equal": true,
+      "ast_sha256": "80f10344edfe80aed4dcc070baf5bd2d055d0fdb46d3a766b1a6c56eab13d516"
+    }
+  },
+  "log_file": "focused-tests.log",
+  "log_sha256": "a088c377717fef3d314e73264e94419ad452700b44350620550ce10f0c21ae91",
+  "passed": true,
+  "coverage": {
+    "real": "Exactly three retained PNGs through production Perception and consume_offer, plus explicit negative evidence/occlusion fixtures.",
+    "protocol": "Eight Worker/Entry test methods with generated frames, declared refresh values, matched inert receipts and explicit budgets. Not a real refresh chain or natural ROOT-window count.",
+    "focused_regressions": "Two scope/cache tests, four directly affected economy tests and one primary-evidence ownership test.",
+    "unchanged_suites_not_rerun": [
+      "PR15 original 9 selection",
+      "PR15 7 natural-entry windows",
+      "PR14 original full selection"
+    ],
+    "not_measured": [
+      "production install",
+      "Windows in this environment",
+      "real refresh transaction costs",
+      "ROOT round-trip reduction",
+      "full preparation or complete game speed"
+    ]
+  },
+  "boundaries": {
+    "offline_only": true,
+    "game_inputs": 0,
+    "new_game_captures": 0,
+    "candidate_installed": false,
+    "online_model_calls": 0,
+    "live_controller_started": false
+  }
+}

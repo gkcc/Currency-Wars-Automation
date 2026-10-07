@@ -1,0 +1,30 @@
+{
+  "schema": "currency-wars-navigation-integration/v1",
+  "baseline_sha": "290b9b9006309c02f2542931d97eb5f8b0a045b1",
+  "python": "3.12.14",
+  "platform": "Linux",
+  "protocol": {
+    "selectors": [
+      "test_currency_wars_navigation.NavigationTests",
+      "test_currency_wars_source_runtime.SourceRuntimeTests",
+      "test_local_runtime_compatibility.RuntimeRootTests.test_public_start_passes_verified_root_and_invalid_config_never_launches",
+      "test_local_runtime_compatibility.RuntimeRootTests.test_worker_marker_child_registration_and_cleanup_keep_selected_root",
+      "test_currency_wars_badge_consumers.BadgeConsumerTests.test_badge_eligibility_preserves_current_worker_policy_guards"
+    ],
+    "tests_run": 16,
+    "failures": [
+      {
+        "test": "test_public_start_passes_verified_root_and_invalid_config_never_launches (test_local_runtime_compatibility.RuntimeRootTests.test_public_start_passes_verified_root_and_invalid_config_never_launches)",
+        "traceback": "currency_wars_input_bridge.BridgeError: 运行根不符合已验证的临时目录协议；不更改子进程环境\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/workspace/scratch/455e3b5c6726/currency-wars-offline-business/tools/test_local_runtime_compatibility.py\", line 1672, in test_public_start_passes_verified_root_and_invalid_config_never_launches\n    with self.assertRaisesRegex(RuntimeError, 'fixture stops'):\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: \"fixture stops\" does not match \"运行根不符合已验证的临时目录协议；不更改子进程环境\"\n"
+      }
+    ],
+    "errors": [],
+    "skipped": [],
+    "passed": false,
+    "seconds": 29.724470727000153
+  },
+  "source_set_sha256_before": "11ffc795cb6c2aceca54ecf62816e05f48057f9bf8094dbbe580d6e9bca07d32",
+  "source_set_sha256_after": "11ffc795cb6c2aceca54ecf62816e05f48057f9bf8094dbbe580d6e9bca07d32",
+  "source_unchanged": true,
+  "resolution": "The pre-existing root-routing fixture used D-fixed-root without the canonical codex-agent-workflow final component. The new child TEMP contract correctly refused before Popen. The affected fixture now declares D-fixed-root/codex-agent-workflow and checks the actual child environment; production root validation was not relaxed."
+}

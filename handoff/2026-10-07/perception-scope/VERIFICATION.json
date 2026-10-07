@@ -1,0 +1,188 @@
+{
+  "schema": "currency-wars-perception-scope-verification/v1",
+  "verification_kind": "derived_checks_of_existing_measurement_json_no_ocr_rerun",
+  "status": "pass",
+  "checks": {
+    "same_ordered_historical_png_sha256": true,
+    "same_machine": true,
+    "same_four_reading_source_hashes": true,
+    "reading_sources_unchanged_each_process": true,
+    "retained_pr12_full_common_semantics_match_candidate_full": true,
+    "no_required_stage_semantic_differences": true,
+    "expected_q_omissions_are_null": true,
+    "cache_semantics_match_actual_and_return_new_object": true,
+    "all_actual_reads_report_cache_hit_false": true,
+    "all_cache_reads_report_current_call_elapsed_and_cache_hit_true": true,
+    "cache_calls_contain_no_ocr_or_readers": true,
+    "exclusive_components_reconcile": true,
+    "no_new_capture_or_physical_input": true,
+    "full/cold_sequence/full_primary_calls": true,
+    "full/cold_sequence/expected_call_counts": true,
+    "full/warm_sequence/full_primary_calls": true,
+    "full/warm_sequence/expected_call_counts": true,
+    "scoped/cold_sequence/full_primary_calls": true,
+    "scoped/cold_sequence/expected_call_counts": true,
+    "scoped/warm_sequence/full_primary_calls": true,
+    "scoped/warm_sequence/expected_call_counts": true
+  },
+  "source_revision_at_measurement": "5e46351372ff26980a92a9806909c732607f50ea",
+  "source_revision_note": "HEAD is the full PR12 parent; candidate modifications were uncommitted. The four source SHA256 values identify actual measured code. Runner was not called or measured.",
+  "reading_source_hashes": {
+    "currency_wars_perception.py": "ee33649258691ab3fea3f0f25c0e21ff0d7bb8ea1e0f012838264de2e789a735",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25"
+  },
+  "benchmark_script_sha256": "03f71b3b04879d62e6cab7b59555ff0c6d98590018dcf7a571a1afeb8f7a4452",
+  "evidence_files_sha256": {
+    "pr12-full.json": "3edc6d83162f4cd65626bf5df57ef9d09a076536d52f077e879e77242048cd0d",
+    "primary-ocr-components.json": "84f0ff7d8d1ca3bb46775c159c321e48cf8e68ad497a4d5cc997ed6eac15f6ca",
+    "candidate-full.json": "2787b6b8c5bebf33f411b7f00905e890b07a214af10919b0286a7d85a8ee4e28",
+    "candidate-scoped.json": "78dfae4f2481b124cb146199fc1644d9e232007da9d852840182afaebf1b57c4"
+  },
+  "environment": {
+    "machine": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "node": "971a7bcb66f9",
+      "python": "3.12.14"
+    },
+    "dependency_directory": "/workspace/scratch/5c64bf8ff52e/test-deps",
+    "dependency_versions": {
+      "onnxruntime": "1.30.0",
+      "rapidocr-onnxruntime": "1.4.4",
+      "numpy": "2.3.5",
+      "Pillow": "11.3.0",
+      "opencv-python": "4.13.0.92"
+    },
+    "dependency_metadata_read_after_measurement": true,
+    "ort_disable_telemetry_env": true,
+    "ort_disable_telemetry_api": true
+  },
+  "summary": {
+    "full": {
+      "cold_sequence": {
+        "actual_count": 10,
+        "cache_count": 10,
+        "actual_wall_seconds": 12.214935675998277,
+        "cache_wall_seconds": 0.01909453600001143,
+        "q_actual_wall_seconds": 3.8777211859996896,
+        "r_actual_wall_seconds": 8.337214489998587,
+        "perception_method_seconds": 12.214606328,
+        "exclusive_components_seconds": {
+          "engine_initialization": 0.145860178,
+          "primary_ocr": 10.324948139,
+          "field_ocr": 0.138907614,
+          "shop_ocr": 0.0,
+          "shop_other": 0.325654139,
+          "state_reader": 0.426165138,
+          "reward_rules": 0.029457569,
+          "other_perception": 0.8236135509999996
+        },
+        "method_call_counts": {
+          "ShopReader.read": 8,
+          "StateReader.read": 10,
+          "native_player_hud": 10,
+          "rewards.detect": 10,
+          "TextClassifier.__call__": 0,
+          "primary_ocr": 10,
+          "field_ocr": 10
+        }
+      },
+      "warm_sequence": {
+        "actual_count": 10,
+        "cache_count": 10,
+        "actual_wall_seconds": 12.342586977998508,
+        "cache_wall_seconds": 0.024068176000582753,
+        "q_actual_wall_seconds": 3.0680737589982527,
+        "r_actual_wall_seconds": 9.274513219000255,
+        "perception_method_seconds": 12.342171603,
+        "exclusive_components_seconds": {
+          "engine_initialization": 0.0,
+          "primary_ocr": 10.539762556,
+          "field_ocr": 0.154640325,
+          "shop_ocr": 0.0,
+          "shop_other": 0.35240612299999996,
+          "state_reader": 0.427295973,
+          "reward_rules": 0.032460631000000004,
+          "other_perception": 0.8356059949999998
+        },
+        "method_call_counts": {
+          "ShopReader.read": 8,
+          "StateReader.read": 10,
+          "native_player_hud": 10,
+          "rewards.detect": 10,
+          "TextClassifier.__call__": 0,
+          "primary_ocr": 10,
+          "field_ocr": 10
+        }
+      }
+    },
+    "scoped": {
+      "cold_sequence": {
+        "actual_count": 10,
+        "cache_count": 10,
+        "actual_wall_seconds": 11.999034928999208,
+        "cache_wall_seconds": 0.016410796999480226,
+        "q_actual_wall_seconds": 3.868519944999207,
+        "r_actual_wall_seconds": 8.130514984000001,
+        "perception_method_seconds": 11.998860466,
+        "exclusive_components_seconds": {
+          "engine_initialization": 0.162238492,
+          "primary_ocr": 10.592881982,
+          "field_ocr": 0.100509236,
+          "shop_ocr": 0.0,
+          "shop_other": 0.324344964,
+          "state_reader": 0.0,
+          "reward_rules": 0.044580313999999996,
+          "other_perception": 0.7743054780000002
+        },
+        "method_call_counts": {
+          "ShopReader.read": 7,
+          "StateReader.read": 0,
+          "native_player_hud": 7,
+          "rewards.detect": 10,
+          "TextClassifier.__call__": 0,
+          "primary_ocr": 10,
+          "field_ocr": 7
+        }
+      },
+      "warm_sequence": {
+        "actual_count": 10,
+        "cache_count": 10,
+        "actual_wall_seconds": 13.10784581399912,
+        "cache_wall_seconds": 0.016689497999323066,
+        "q_actual_wall_seconds": 3.6814179509992755,
+        "r_actual_wall_seconds": 9.426427862999844,
+        "perception_method_seconds": 13.107576759,
+        "exclusive_components_seconds": {
+          "engine_initialization": 0.0,
+          "primary_ocr": 11.860663927,
+          "field_ocr": 0.109191496,
+          "shop_ocr": 0.0,
+          "shop_other": 0.322563405,
+          "state_reader": 0.0,
+          "reward_rules": 0.044825957,
+          "other_perception": 0.7703319740000008
+        },
+        "method_call_counts": {
+          "ShopReader.read": 7,
+          "StateReader.read": 0,
+          "native_player_hud": 7,
+          "rewards.detect": 10,
+          "TextClassifier.__call__": 0,
+          "primary_ocr": 10,
+          "field_ocr": 7
+        }
+      }
+    }
+  },
+  "limitations": [
+    "One fixed ordered cold/warm sequence per independent process; no statistically established speedup.",
+    "Warm actual total increased; removed method calls do not by themselves prove the user speed goal.",
+    "Public shop resources missing; no ShopReader internal OCR. ROOT private resources and outcomes are separate evidence.",
+    "All ten true frames were shop/preparation; this measurement does not cover other-page fallback.",
+    "Original q01/q02 gap has no per-orb intermediate frame; no action or full-reward completion claimed.",
+    "No Worker, Entry, controller, execution, wait, current capture, or full-game timing measured."
+  ]
+}

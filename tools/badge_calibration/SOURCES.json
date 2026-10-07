@@ -1,0 +1,45 @@
+{
+  "schema": "currency-wars-public-badge-calibration/v1",
+  "purpose": "Public retained-image calibration for isolated badge ROI replay; not production private-resource replacement or name coverage.",
+  "resources": [
+    {
+      "file": "recommend_badge.png",
+      "kind": "recommended_badge_calibration",
+      "sha256": "84b5071ffe28e0d57ee682a4b292706ac3f3aba04b4f686182f3272d665ec7aa",
+      "rgb_sha256": "9fab20a2ef3cd4983a09e1c577e7391b54714b285b4f5eb0a6d3e49902c06c11",
+      "size": [
+        47,
+        51
+      ],
+      "color_mode": "RGB",
+      "format": "PNG",
+      "source_file": "handoff/2026-10-07/free-refresh-sequence/f01.png",
+      "source_kind": "public_retained_png_export",
+      "source_sha256": "288b6a4f4ecc67476cc8a12bd806e37accf2ffe6c4445c058fd24f0116b2ea11",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        1455,
+        68,
+        1502,
+        119
+      ],
+      "pixel_scale": 1,
+      "interior_bounds_xywh": [
+        10,
+        12,
+        26,
+        27
+      ]
+    }
+  ],
+  "limits": [
+    "Exact original-resolution RGB crop; no resizing, enhancement, synthetic reconstruction, or new game capture.",
+    "Only one observed appearance is represented. Matching the source frame is calibration, not an independent positive recognition sample.",
+    "This calibration directory does not replace the existing 47x51 local production template or ROOT local resource set.",
+    "names.json intentionally contains an empty names list solely for isolated ShopReader._load compatibility; no shop name coverage or complete shop read is claimed.",
+    "A recognized recommendation badge is not guide authorization, purchase authorization, or transaction evidence."
+  ]
+}
