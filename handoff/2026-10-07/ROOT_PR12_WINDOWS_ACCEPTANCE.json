@@ -1,0 +1,74 @@
+{
+  "schema": "currency-wars-windows-focused-acceptance/v1",
+  "candidate_sha": "5e46351372ff26980a92a9806909c732607f50ea",
+  "platform": "Windows-11-10.0.26100-SP0",
+  "python": "3.12.2 (tags/v3.12.2:6abddd9, Feb  6 2024, 21:26:36) [MSC v.1937 64 bit (AMD64)]",
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "candidate_installed": false,
+  "groups": [
+    {
+      "name": "core",
+      "tests_run": 32,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 3.486032,
+      "evidence": "Original previous tool result; stdout not saved. Not rerun.",
+      "selectors": [
+        "test_currency_wars_economy.EconomyTests",
+        "test_currency_wars_profile.ProfileTests",
+        "test_currency_wars_business.BusinessTests.test_published_f_missing_frame_survives_new_lease_without_replay_or_budget_reset",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_reward_capacity_single_sale_requires_receipt_and_new_capacity_then_returns_to_rewards"
+      ]
+    },
+    {
+      "name": "reward",
+      "selector": "test_currency_wars_rewards",
+      "tests_run": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 8.766383,
+      "stdout": "test_absence_is_limited_and_color_or_prompt_uncertainty_blocks_input (test_currency_wars_rewards.RewardObservationTests.test_absence_is_limited_and_color_or_prompt_uncertainty_blocks_input) ... ok\ntest_controls_are_relocated_from_each_frame_not_memorized_centers (test_currency_wars_rewards.RewardObservationTests.test_controls_are_relocated_from_each_frame_not_memorized_centers) ... ok\ntest_real_full_frames_cover_occlusion_two_controls_and_a_side_prompt (test_currency_wars_rewards.RewardObservationTests.test_real_full_frames_cover_occlusion_two_controls_and_a_side_prompt) ... ok\ntest_resource_replacement_is_rechecked_without_a_stale_template_cache (test_currency_wars_rewards.RewardObservationTests.test_resource_replacement_is_rechecked_without_a_stale_template_cache) ... ok\ntest_template_is_an_exact_source_bound_crop (test_currency_wars_rewards.RewardObservationTests.test_template_is_an_exact_source_bound_crop) ... ok\ntest_wrong_page_missing_or_conflicting_anchors_and_unbound_frames_withhold_targets (test_currency_wars_rewards.RewardObservationTests.test_wrong_page_missing_or_conflicting_anchors_and_unbound_frames_withhold_targets) ... ok\n\n----------------------------------------------------------------------\nRan 6 tests in 8.766s\n\nOK\n"
+    },
+    {
+      "name": "reward-flow",
+      "selector": "test_currency_wars_reward_flow",
+      "tests_run": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 8.950259,
+      "stdout": "test_business_archive_keeps_same_match_unknown_without_importing_old_match_or_refused_steps (test_currency_wars_reward_flow.RewardFlowTests.test_business_archive_keeps_same_match_unknown_without_importing_old_match_or_refused_steps) ... ok\ntest_later_external_input_old_after_frame_and_changed_epoch_preserve_pending (test_currency_wars_reward_flow.RewardFlowTests.test_later_external_input_old_after_frame_and_changed_epoch_preserve_pending) ... ok\ntest_real_worker_relocates_two_single_clicks_then_requires_full_field_review (test_currency_wars_reward_flow.RewardFlowTests.test_real_worker_relocates_two_single_clicks_then_requires_full_field_review) ... ok\ntest_stop_guards_block_publication_and_same_pixels_do_not_restore_an_old_frame (test_currency_wars_reward_flow.RewardFlowTests.test_stop_guards_block_publication_and_same_pixels_do_not_restore_an_old_frame) ... ok\ntest_unknown_delivery_blocks_a_root_escape_reply_even_on_a_selection_page (test_currency_wars_reward_flow.RewardFlowTests.test_unknown_delivery_blocks_a_root_escape_reply_even_on_a_selection_page) ... ok\ntest_zero_effect_two_to_zero_charge_and_group_receipt_stop_without_retry (test_currency_wars_reward_flow.RewardFlowTests.test_zero_effect_two_to_zero_charge_and_group_receipt_stop_without_retry) ... ok\n\n----------------------------------------------------------------------\nRan 6 tests in 8.950s\n\nOK\n"
+    },
+    {
+      "name": "refresh",
+      "selector": "test_currency_wars_refresh_replay",
+      "tests_run": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 1.59335,
+      "stdout": "test_archival_wait_is_never_rewritten_as_a_current_protocol_receipt (test_currency_wars_refresh_replay.RefreshReplayTests.test_archival_wait_is_never_rewritten_as_a_current_protocol_receipt) ... ok\ntest_cached_after_and_receipt_cannot_approve_mismatched_original_completed (test_currency_wars_refresh_replay.RefreshReplayTests.test_cached_after_and_receipt_cannot_approve_mismatched_original_completed) ... ok\ntest_original_wait_mismatch_stops_first_transaction_without_erasing_observed_charge (test_currency_wars_refresh_replay.RefreshReplayTests.test_original_wait_mismatch_stops_first_transaction_without_erasing_observed_charge) ... ok\ntest_six_d_current_worker_has_one_budget_request_and_twelve_actual_fixture_spent (test_currency_wars_refresh_replay.RefreshReplayTests.test_six_d_current_worker_has_one_budget_request_and_twelve_actual_fixture_spent) ... ok\ntest_tampered_png_refuses_before_any_replay_or_source_field_reuse (test_currency_wars_refresh_replay.RefreshReplayTests.test_tampered_png_refuses_before_any_replay_or_source_field_reuse) ... ok\n\n----------------------------------------------------------------------\nRan 5 tests in 1.593s\n\nOK\n"
+    }
+  ],
+  "harness_correction": "First wrapper used mixed tools-prefixed IDs and lacked reward-flow selector fallback. Reader 6 failed loading, not product assertions. Fixed by using explicit original unittest modules; core32 had passed. Prior owned run cleaned by context.",
+  "production_source_sha256": {
+    "tools/currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+    "tools/currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "tools/currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "tools/currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f",
+    "tools/currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "tools/currency_wars_control.py": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5"
+  },
+  "source_hashes_match_pro_delivery": true,
+  "limits": [
+    "Offline inert publishers and retained PNGs only",
+    "No complete preparation or game speed acceptance",
+    "1920x1080 reward fixture scope; live4K not validated",
+    "No new controller or input installation"
+  ],
+  "temporary_run_deleted": true,
+  "created_at": "2026-10-07T07:32:21.385389+00:00"
+}

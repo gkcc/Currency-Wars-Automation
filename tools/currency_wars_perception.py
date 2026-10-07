@@ -1,6 +1,7 @@
 """Local, read-only Currency Wars OCR. Unknown fields stay unknown."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -39,6 +40,8 @@ DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 PLAYER_LEVEL_ROI = [240, 880, 358, 936]
 # Current parsing support, not a claim about the game's permanent maximum.
 MAX_SUPPORTED_POPULATION = 12
+READ_CONTRACT_VERSION = 1
+READ_SCOPES = ('full', 'rewards', 'economy')
 
 
 def clean(text):
@@ -748,13 +751,22 @@ class Perception:
         self.state_reader = None
         self.cache = None
 
-    def read(self, path, force=False):
+    def read(self, path, force=False, *, scope='full'):
+        if scope not in READ_SCOPES:
+            raise ValueError('unsupported perception read scope: ' + str(scope))
         started = time.perf_counter()
         path = Path(path)
         data = path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
-        if self.cache and self.cache[0] == digest and not force:
-            return self.cache[1]
+        cache_key = (digest, scope, READ_CONTRACT_VERSION)
+        if self.cache and self.cache[0] == cache_key and not force:
+            # Worker adds the current request/frame identity. Neither that
+            # identity nor a consumer's changes may mutate a cached snapshot.
+            result = copy.deepcopy(self.cache[1])
+            result['image'] = str(path)
+            result['elapsed_ms'] = round((time.perf_counter() - started) * 1000, 2)
+            result['read_timing'] = {'cache_hit': True, 'elapsed_ms': result['elapsed_ms']}
+            return result
         with Image.open(path) as opened:
             if opened.size != (1920, 1080):
                 raise ValueError("1920x1080 broker preview required")
@@ -843,8 +855,20 @@ class Perception:
                         page = classify(rows)
             except Exception:
                 pass  # Missing/uncertain stage remains unknown; never guess victory.
+        # Page/overlay discovery still reads the complete frame. In particular,
+        # omitted central modal text could otherwise leave preparation anchors
+        # visible and prevent an "unknown" fallback from ever being reached.
+        effective_scope = scope if page in ('preparation', 'shop') else 'full'
+        narrow = effective_scope != 'full'
+        def unread(field):
+            return {'status': 'not_read', 'reason': 'outside_requested_read_scope',
+                    'read_scope': effective_scope, 'snapshot_id': digest,
+                    'field': field, 'checked': False, 'fully_read': False}
+
         shop = None
-        if page == "shop":
+        if page == 'shop' and effective_scope == 'rewards':
+            shop = {**unread('shop'), 'ok': False, 'slots': [], 'input': {'sha256': digest}}
+        elif page == "shop":
             if self.shop_reader is None:
                 from currency_wars_shop_reader import ShopReader
                 self.shop_reader = ShopReader()
@@ -854,11 +878,13 @@ class Perception:
         fields = {}
         joined = "|".join(clean(r["text"]) for r in rows)
         matched = re.search(r"(?:备战|战斗中).*?(\d[-－]\d)", joined)
-        player = native_player_hud(rows, image, page, self.engine, digest)
+        player = ({**unread('player_hud'), 'actor': 'player', 'level': None, 'xp': None,
+                   'evidence': {}} if effective_scope == 'rewards' else
+                  native_player_hud(rows, image, page, self.engine, digest))
         fields = {'stage': matched.group(1) if matched else None,
                   'level': str(player['level']) if player['level'] is not None else None,
                   'deployed': None}
-        if page == "preparation":
+        if page == "preparation" and effective_scope != 'rewards':
             if native_deployed_count(rows) is None:
                 native_layout = all(len([row for row in rows
                     if .90 <= row["confidence"] <= 1. and clean(row["text"]) == label
@@ -921,7 +947,7 @@ class Perception:
                                          "box": hp_bounds})
                 except Exception:
                     pass  # Missing or conflicting HP remains unread; no guessed value.
-        elif page in ('shop', 'investment_summary'):
+        elif page in ('shop', 'investment_summary') and effective_scope != 'rewards':
             fields['deployed'] = native_deployed_count(rows)
         elif page == "node_result":
             fields["stage"] = _native_node_result_stage(rows)
@@ -937,7 +963,12 @@ class Perception:
         if option_read:
             semantic['option_read'] = {**option_read, 'snapshot_id': digest}
         state_read = None
-        if page in ('preparation', 'shop', 'investment_summary'):
+        if narrow:
+            semantic['team'] = {**unread('team'), 'units': []}
+            semantic['inventory'] = {**unread('inventory'), 'items': []}
+            state_read = {**unread('state_read'), 'team': copy.deepcopy(semantic['team']),
+                          'inventory': copy.deepcopy(semantic['inventory'])}
+        elif page in ('preparation', 'shop', 'investment_summary'):
             from currency_wars_state_reader import StateReader, native_slots
             if self.state_reader is None:
                 self.state_reader = StateReader()
@@ -963,9 +994,17 @@ class Perception:
                 'verified': bool(item.get('name') and item.get('confidence', 0) >= .90
                     and item.get('evidence', {}).get('identity_margin', 0) >= .10)}
                 for item in inventory['items']]}
+        contract = {'version': READ_CONTRACT_VERSION, 'requested_scope': scope,
+                    'effective_scope': effective_scope, 'page_ocr': 'full_frame',
+                    'unread': (['team', 'inventory'] +
+                        (['shop', 'player_hud', 'deployed', 'hp'] if effective_scope == 'rewards' else []))
+                        if narrow else [],
+                    'fallback_reason': 'page_requires_full_read' if effective_scope != scope else None}
         result = {"snapshot_id": digest, "page": page, "rows": rows, "fields": fields,
                   "fingerprint": fingerprint(image), "shop": shop,
                   "semantic": semantic, "state_read": state_read,
+                  "read_contract": contract,
                   "image": str(path), "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
-        self.cache = digest, result
+        result['read_timing'] = {'cache_hit': False, 'elapsed_ms': result['elapsed_ms']}
+        self.cache = cache_key, copy.deepcopy(result)
         return result

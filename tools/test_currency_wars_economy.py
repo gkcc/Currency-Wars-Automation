@@ -195,7 +195,7 @@ class EconomyTests(TestCase):
                     raw = '/'.join(map(str, state[name])) if name == 'xp' else str(state[name])
                     crop_text[hashlib.sha256(image.crop(item['bounds']).tobytes()).hexdigest()] = raw
             reader.engine = lambda crop, **unused: ([[crop_text[hashlib.sha256(crop.tobytes()).hexdigest()], .99]], None)
-            def read(path):
+            def read(path, force=False, *, scope='full'):
                 digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
                 state = by_digest[digest]
                 return {'snapshot_id': digest, 'page': 'shop', 'fields': {'stage': '2-3', 'deployed': '7/7', 'level': str(state['level'])},
