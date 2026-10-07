@@ -4625,29 +4625,144 @@ class Worker:
                       'origin': 'local_economy_execution', 'proof': proof})
             return True
 
-    def advance_economy(self, observed):
-        if self.preparation_checklist(observed)['phase'] != 'economy':
-            return False
-        for unused in range(8):
-            policy = self.economic_policy(observed)
-            if not policy['available']:
+    def profile_economy_flow(self, observed, *, flow_id, origin, point, reason, phase,
+                             policy=None, policy_observed=None, completed_actions=0, returned=None,
+                             completion_attempted=False, completion_accepted=None, error_type=None):
+        """Describe an already evaluated path without observing or deciding again."""
+        profile = getattr(self, 'profile', None)
+        if profile is None or not profile.enabled:
+            return None
+        try:
+            flow_id = flow_id or uuid.uuid4().hex
+            stage, epoch = canonical_stage(observed.get('fields', {}).get('stage')), self.epoch()
+            context = {'match_id': self.active_match_id, 'stage': stage, 'resume_epoch': epoch}
+            binding = getattr(self, 'economy_binding', None)
+            ledger_stage = ((policy or {}).get('observation') or {}).get('stage') or stage
+            ledgers = getattr(self, 'economy_ledgers', {})
+            ledger_key = (self.active_match_id, ledger_stage)
+            ledger = ledgers.get(ledger_key, {})
+            pending = ledger.get('pending')
+            details = None
+            if policy is not None:
+                dependency = policy.get('dependencies') or {}
+                reading = policy.get('observation') or {}
+                actions = policy.get('actions') or []
+                action = actions[0] if actions else None
+                kind = (pending or policy.get('pending') or {}).get('kind')
+                if kind is None and action:
+                    kind = economy.economic_action(action, (policy_observed or observed).get('page'))
+                if kind is None:
+                    kind = {'purchase': 'purchase', 'free_refresh': 'refresh', 'paid_search': 'refresh',
+                            'experience': 'review' if policy.get('experience_resolved') else 'experience'}.get(
+                                dependency.get('phase'))
+                required = (economy.required_fields(kind, reading.get('values', {}))
+                            if policy.get('available') is True and kind in
+                                ('purchase', 'refresh', 'experience', 'review') else None)
+                details = {'available': policy.get('available'), 'reason': policy.get('reason'),
+                    'snapshot_id': (policy_observed or {}).get('snapshot_id'),
+                    'economic_snapshot_id': reading.get('snapshot_id'),
+                    'capture_request_id': (policy_observed or {}).get('capture_request_id'),
+                    'frame_id': (policy_observed or {}).get('frame_id'),
+                    'dependency_phase': dependency.get('phase'), 'dependency_reason': dependency.get('reason'),
+                    'required_for': kind if required is not None else None,
+                    'required_fields': sorted(required) if required is not None else None,
+                    'missing_required_fields': sorted(required & set(reading.get('unknown', [])))
+                        if required is not None else None,
+                    'shop_complete': reading.get('shop_complete'),
+                    'next_action': action.get('type') if action else None,
+                    'experience_resolved': policy.get('experience_resolved')}
+            profile.record_economy_flow(flow_id=flow_id, context=context,
+                point=point, origin=origin, reason=reason, phase=phase,
+                page=observed.get('page'), snapshot_id=observed.get('snapshot_id'),
+                capture_request_id=observed.get('capture_request_id'), frame_id=observed.get('frame_id'),
+                captured_at=observed.get('captured_at'), completed_actions=completed_actions, returned=returned,
+                budget={'present': binding is not None, 'scope': binding.get('scope') if binding else None,
+                        'scope_matches': binding.get('scope') == (self.active_match_id, stage, epoch) if binding else None,
+                        'revision': binding.get('plan', {}).get('revision') if binding else None},
+                policy=details, ledger_loaded=ledger_key in ledgers,
+                pending=({'stage': ledger_stage, **{key: pending.get(key) for key in
+                    ('request_id', 'kind', 'outcome', 'publication_attempted')}} if pending else None),
+                completion_attempted=completion_attempted, completion_accepted=completion_accepted,
+                completion_predicate=self.economy_complete(policy) if completion_attempted else None,
+                completion_guard_detail=None, error_type=error_type)
+            return flow_id
+        except Exception as exc:
+            # Diagnostics after an input must never turn a completed action
+            # into a caller-visible failure or authorize its re-entry.
+            profile.enabled = False
+            with contextlib.suppress(Exception):
+                profile._disable(exc)
+            return None
+
+    def advance_economy(self, observed, *, origin='direct_call'):
+        profile = getattr(self, 'profile', None)
+        tracing = profile is not None and profile.enabled
+        flow_id, policy, policy_observed, phase = None, None, None, None
+        completed_actions = 0
+        try:
+            phase = self.preparation_checklist(observed)['phase']
+            if tracing:
+                flow_id = self.profile_economy_flow(observed, flow_id=None, origin=origin,
+                    point='entry', reason='entered', phase=phase)
+            if phase != 'economy':
+                if flow_id:
+                    self.profile_economy_flow(observed, flow_id=flow_id, origin=origin, point='exit',
+                        reason='phase_not_economy', phase=phase, returned=False)
                 return False
-            if (not full_observation(observed) and (not policy['actions']
-                    or policy['actions'][0].get('type') == 'buy_shop')):
-                observed = self.ensure_full_observation(observed)
+            for unused in range(8):
                 policy = self.economic_policy(observed)
+                policy_observed = observed
                 if not policy['available']:
+                    if flow_id:
+                        self.profile_economy_flow(observed, flow_id=flow_id, origin=origin, point='exit',
+                            reason='policy_unavailable', phase=phase, policy=policy, policy_observed=policy_observed,
+                            completed_actions=completed_actions, returned=False)
                     return False
-            if not policy['actions']:
-                return self.finish_local_economy(observed, policy)
-            action = policy['actions'][0]
-            self.guard_preparation_action(action, observed)
-            request = {'match_id': self.active_match_id, 'snapshot_id': observed['snapshot_id'],
-                       'observation': observed, 'original_png': str(self.frame_path)}
-            if not self.execute_economic_action(action, observed, request):
-                return True
-            observed = self.last_observation
-        return True  # A later bounded tick may continue only from its new frame.
+                if (not full_observation(observed) and (not policy['actions']
+                        or policy['actions'][0].get('type') == 'buy_shop')):
+                    observed = self.ensure_full_observation(observed)
+                    policy = self.economic_policy(observed)
+                    policy_observed = observed
+                    if not policy['available']:
+                        if flow_id:
+                            self.profile_economy_flow(observed, flow_id=flow_id, origin=origin, point='exit',
+                                reason='upgraded_policy_unavailable', phase=phase, policy=policy,
+                                policy_observed=policy_observed, completed_actions=completed_actions, returned=False)
+                        return False
+                if not policy['actions']:
+                    completed = self.finish_local_economy(observed, policy)
+                    if flow_id:
+                        self.profile_economy_flow(observed, flow_id=flow_id, origin=origin, point='exit',
+                            reason='economy_completed' if completed else 'no_actions', phase=phase,
+                            policy=policy, policy_observed=policy_observed, completed_actions=completed_actions,
+                            returned=completed, completion_attempted=True, completion_accepted=completed)
+                    return completed
+                action = policy['actions'][0]
+                self.guard_preparation_action(action, observed)
+                request = {'match_id': self.active_match_id, 'snapshot_id': observed['snapshot_id'],
+                           'observation': observed, 'original_png': str(self.frame_path)}
+                if not self.execute_economic_action(action, observed, request):
+                    if flow_id:
+                        self.profile_economy_flow(getattr(self, 'last_observation', None) or observed, flow_id=flow_id,
+                            origin=origin, point='exit', reason='transaction_return', phase=phase,
+                            policy=policy, policy_observed=policy_observed,
+                            completed_actions=completed_actions, returned=True)
+                    return True
+                if flow_id:
+                    completed_actions += 1
+                observed = self.last_observation
+            if flow_id:
+                self.profile_economy_flow(observed, flow_id=flow_id, origin=origin, point='exit',
+                    reason='step_limit', phase=phase, policy=policy, policy_observed=policy_observed,
+                    completed_actions=completed_actions, returned=True)
+            return True  # A later bounded tick may continue only from its new frame.
+        except BaseException as exc:
+            if flow_id:
+                self.profile_economy_flow(getattr(self, 'last_observation', None) or observed, flow_id=flow_id,
+                    origin=origin, point='exit', reason='exception', phase=phase, policy=policy,
+                    policy_observed=policy_observed, completed_actions=completed_actions,
+                    error_type=type(exc).__name__)
+            raise
 
     def guard_preparation_action(self, action, actual, *, loot_pickup=False, verified_navigation=False):
         if self.pending_reward_capacity():
@@ -5660,7 +5775,7 @@ class Worker:
                 return
             if shop_key is not None:
                 self.shop_stages.add(shop_key)
-            if checklist['phase'] == 'economy' and self.advance_economy(observed):
+            if checklist['phase'] == 'economy' and self.advance_economy(observed, origin='tick_shop'):
                 return
             observed = self.last_observation or observed
             self.ask(observed, 'shop_strategy',
@@ -5675,7 +5790,7 @@ class Worker:
                 return
             policy = self.preparation_policy(observed)
             checklist = policy['preparation_checklist']
-            if checklist['phase'] == 'economy' and self.advance_economy(observed):
+            if checklist['phase'] == 'economy' and self.advance_economy(observed, origin='tick_preparation'):
                 return
             observed = self.last_observation or observed
             if not checklist['economy_allowed']:
