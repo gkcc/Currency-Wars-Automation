@@ -1,0 +1,91 @@
+{
+  "schema": "currency-wars-badge-acceptance/v1",
+  "created_utc": "2026-10-07T11:34:39.158005+00:00",
+  "code_baseline": "5938648de4cfd4b5cd3cd723898abb3c2f806a48",
+  "main_evidence": "4cf23830e7832ee68b4ef40ba688b006ee3064fc",
+  "runtime": {
+    "python": "3.12.14",
+    "platform": "Linux",
+    "dependency_context": "Existing offline dependencies; no package installation"
+  },
+  "selectors": [
+    "test_currency_wars_shop_reader",
+    "test_currency_wars_badge_consumers",
+    "test_currency_wars_badge_replay"
+  ],
+  "planned_tests": 11,
+  "tests_run": 11,
+  "failures": [],
+  "errors": [],
+  "skipped": [],
+  "elapsed_seconds": 8.67023583199989,
+  "passed": true,
+  "source_sha256": {
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_visual_guards.py": "5308b62f27078af011d6ee3f3d6992937d3111ce1ebf7181dd9b201c101cd70c",
+    "tools/replay_currency_wars_badges.py": "e2c0c46892730cddc6cad19c1b1d9f81470a9fb49bb6da208d5dbd8dfbc33534",
+    "tools/test_currency_wars_shop_reader.py": "94a2d2004ed828299bb7db7b38164356cfab0c71a6e48d84c3521437261d069f",
+    "tools/test_currency_wars_badge_consumers.py": "bf4f8f344338d63597c2705d60be6d394e367abc5de39f170711f40a47ec8ba6",
+    "tools/test_currency_wars_badge_replay.py": "74674bc1b16bbffc5079d6a694d5c01321bca7f4056c4038e4bfa69a708190db",
+    "tools/badge_calibration/SOURCES.json": "78621090c0625fa1bf400cced0e8d38894c73fe73e7793b23b3f5f7d5862d793",
+    "tools/badge_calibration/names.json": "760f6135d506f9309f62591b63f937fea5f93c49ba28c4d39ef7e3d8a212ff79",
+    "tools/badge_calibration/recommend_badge.png": "84b5071ffe28e0d57ee682a4b292706ac3f3aba04b4f686182f3272d665ec7aa",
+    "tools/badge_calibration/ROI_ANNOTATIONS.json": "2be5df00536727ada38401347f89a77aac96dfa5c9a869e0cc29585b4599dfeb"
+  },
+  "source_changed": false,
+  "unchanged_production_files": {
+    "tools/currency_wars_runner.py": {
+      "byte_equal_pr16": true,
+      "sha256": "5ea9659bc43c0fc1af1ce08968a135fdc03acffb9158d0686d4cbba126bf9e53"
+    },
+    "tools/currency_wars_economy.py": {
+      "byte_equal_pr16": true,
+      "sha256": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7"
+    },
+    "tools/currency_wars_perception.py": {
+      "byte_equal_pr16": true,
+      "sha256": "5f6ea6f6e874aa4719cf4dc15c35bac4ec15ddb050a638e0c505254e1c04293b"
+    },
+    "tools/currency_wars_state_reader.py": {
+      "byte_equal_pr16": true,
+      "sha256": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2"
+    }
+  },
+  "unchanged_production_functions": {
+    "tools/currency_wars_shop_reader.py:purchase_slot": true,
+    "tools/currency_wars_shop_reader.py:ShopReader._rectangles": true,
+    "tools/currency_wars_shop_reader.py:ShopReader._fields": true,
+    "tools/currency_wars_shop_reader.py:ShopReader._cost": true,
+    "tools/currency_wars_shop_reader.py:ShopReader._match": true,
+    "tools/currency_wars_visual_guards.py:_frames": true,
+    "tools/currency_wars_visual_guards.py:_shape_equal": true,
+    "tools/currency_wars_visual_guards.py:stable_semantic_target": true,
+    "tools/currency_wars_visual_guards.py:stable_semantic_plan": true
+  },
+  "test_log_sha256": "0a10e0590c746a212671eda33759cab20ae0cc9d3582bb448a3e13d901c75db1",
+  "earlier_environment_attempts": [
+    {
+      "result": "Import failed before the four consumer methods ran",
+      "error": "ModuleNotFoundError: No module named 'psutil'",
+      "resolution": "Used the already available offline dependency path; installed nothing"
+    }
+  ],
+  "coverage": {
+    "retained_pngs": 3,
+    "retained_badge_rois": 15,
+    "independent_positive_examples": 0,
+    "synthetic_pixel_negative_variants": 6,
+    "worker_generated_protocol_only": true,
+    "physical_inputs": 0,
+    "published_purchase_actions": 0,
+    "full_shop_read": false,
+    "windows_run": false,
+    "old_pr16_twenty_tests_rerun": false
+  },
+  "limits": [
+    "Elapsed time is test execution time, not game speed or supervisor round-trip improvement.",
+    "Only f01 slot5 is the source/appearance calibration positive; fourteen manually bound retained negative slots.",
+    "No original private 57-resource set or full five-slot name/cost/Perception read in this environment.",
+    "Original mixed receipts and missing immutable frame identities are not repaired or replayed as successful actions."
+  ]
+}
