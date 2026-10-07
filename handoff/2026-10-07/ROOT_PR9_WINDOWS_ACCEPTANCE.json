@@ -1,0 +1,51 @@
+{
+  "schema": "currency-wars-offline-acceptance/v1",
+  "code_sha": "23944b1c85522b0d4e64778c3c9d511d89fb08bc",
+  "environment": "Windows Python 3.12; actual installed artifact provider and repository standalone subcases",
+  "actual_selected_provider": "installed",
+  "test_selection": [
+    "test_currency_wars_business.BusinessTests",
+    "test_currency_wars_economy.EconomyTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_preparation_reviews_survive_navigation_but_inventory_invalidates_downstream",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_unclaimed_rewards_block_spending_and_selling",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_selected_investment_requires_both_units_and_board_limits",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_live_guide_level_search_requires_mode_and_live_read_proof",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_runner_normalizes_real_perception_level_string_for_live_and_cached_phase",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_old_completed_reviews_do_not_allow_current_underfilled_battle_input",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_inventory_mutations_cannot_reuse_coordinates_within_a_plan",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_worker_capture_failure_reobserves_without_resending_completed_input",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_wait_does_not_spend_node_budget_or_extend_hard_deadline",
+    "test_local_runtime_compatibility.RuntimeRootTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_publishes_after_both_identity_registrations",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish",
+    "test_currency_wars_bridge_task.ProtocolTests.test_valid_fixed_protocol_and_config",
+    "test_currency_wars_bridge_task.ProtocolTests.test_config_rejects_unapproved_source_and_arbitrary_roots"
+  ],
+  "tests_run": 50,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 7.677,
+  "ok": true,
+  "tested_at_utc": "2026-10-06T20:00:26.112500+00:00",
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "installed_to_game_runtime": false,
+  "production_files_changed_from_pr8": [],
+  "source_sha256": {
+    "tools/test_local_runtime_compatibility.py": "8912d8cd036ec9e206919411735b168f7bb719e6046c5e80bea5111700b4be34",
+    "tools/test_currency_wars_business.py": "9ebd959d08a116ed8f4b084802ee0f1981a26d37259d2092ec501210719c7fa7",
+    "tools/currency_wars_runner.py": "23a64ecc5bfbb988246f778607f1fcbc3b58865928537fc808e717f972e82872"
+  },
+  "temporary_run_removed": true,
+  "harness_cleanup_note": "50 tests completed successfully; initial scratch finally raised WinError32 because harness cwd was inside extracted source. Harness process exited; original marker retained for standard owned recovery. Test suite was not rerun.",
+  "retained_prior_run": {
+    "path": "D:\\Codex\\Temp\\codex-agent-workflow\\currency-wars-pro-b007-windows-offline-txrevbqi",
+    "reason": "Prior cargo hardlink guard and official recovery root mismatch; not retried."
+  },
+  "limits": [
+    "This is the exact PR8 50-method selection run on PR9. No GUI build, installation or game path exercised.",
+    "PR6 94 checks and prior Rust6 are distinct revision/scopes, not added to this count.",
+    "Real-image and normal-flow performance gaps are outside this test-only change."
+  ]
+}

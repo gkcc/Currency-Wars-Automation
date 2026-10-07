@@ -1,0 +1,148 @@
+{
+  "schema": "currency-wars-stage-profile-evidence/v1",
+  "source_sha": "8e5bebd5d598cfde0ba2c452e9e9a8a446293606",
+  "source_files": {
+    "ROOT_PROFILE_FULL.json": "353b8eb0cdd082d92f533d45b8bdf3588402fb6116d22d770aaddd6d14c68f1d",
+    "ROOT_HOST_TIMING.json": "b316150486aacd25d31d6c73f1bc24ba114d7923dfeea5b98f61ea347234cd13"
+  },
+  "offline_only": true,
+  "new_game_captures": 0,
+  "new_game_inputs": 0,
+  "method": "Only explicit operator stage labels. Window is earliest estimated helper start to latest completion with that label; host intervals are clipped and unioned. This is not a complete node or battle duration.",
+  "scope_limitations": [
+    "No full-node entry/exit events; 1-x and 2-x timings unavailable.",
+    "22 unlabelled events are not assigned by guessed stage; final search labels therefore remain unclassified here.",
+    "Helper timing and host timing differ in scope; never add them.",
+    "Outside tools includes model, queue, compaction and other waits; causal split unknown.",
+    "A label is an operator annotation, not an independently confirmed gameplay stage."
+  ],
+  "stages": [
+    {
+      "operator_stage_label": "3-1",
+      "labelled_helper_events": 6,
+      "labelled_helper_seconds": 27.265,
+      "window_start_utc": "2026-10-06T17:10:22.413884+00:00",
+      "window_end_utc": "2026-10-06T17:14:35.576030+00:00",
+      "labelled_activity_window_seconds": 253.162,
+      "host_tool_intervals_overlapping_window": 8,
+      "host_tool_union_seconds_in_window": 46.195,
+      "outside_matched_host_tools_seconds_in_window": 206.967,
+      "whole_node_duration": null,
+      "kinds": {
+        "battle": 3,
+        "observe": 2,
+        "actions": 1
+      }
+    },
+    {
+      "operator_stage_label": "3-2",
+      "labelled_helper_events": 12,
+      "labelled_helper_seconds": 63.92,
+      "window_start_utc": "2026-10-06T17:14:59.340570+00:00",
+      "window_end_utc": "2026-10-06T17:24:53.823878+00:00",
+      "labelled_activity_window_seconds": 594.483,
+      "host_tool_intervals_overlapping_window": 17,
+      "host_tool_union_seconds_in_window": 92.037,
+      "outside_matched_host_tools_seconds_in_window": 502.446,
+      "whole_node_duration": null,
+      "kinds": {
+        "observe": 2,
+        "actions": 7,
+        "battle": 2,
+        "state": 1
+      }
+    },
+    {
+      "operator_stage_label": "3-3",
+      "labelled_helper_events": 5,
+      "labelled_helper_seconds": 19.578,
+      "window_start_utc": "2026-10-06T17:25:39.679672+00:00",
+      "window_end_utc": "2026-10-06T17:30:43.637222+00:00",
+      "labelled_activity_window_seconds": 303.958,
+      "host_tool_intervals_overlapping_window": 7,
+      "host_tool_union_seconds_in_window": 34.64,
+      "outside_matched_host_tools_seconds_in_window": 269.318,
+      "whole_node_duration": null,
+      "kinds": {
+        "observe": 1,
+        "actions": 4
+      }
+    },
+    {
+      "operator_stage_label": "3-4",
+      "labelled_helper_events": 21,
+      "labelled_helper_seconds": 107.105,
+      "window_start_utc": "2026-10-06T17:33:10.797177+00:00",
+      "window_end_utc": "2026-10-06T17:52:40.590854+00:00",
+      "labelled_activity_window_seconds": 1169.794,
+      "host_tool_intervals_overlapping_window": 31,
+      "host_tool_union_seconds_in_window": 159.245,
+      "outside_matched_host_tools_seconds_in_window": 1010.549,
+      "whole_node_duration": null,
+      "kinds": {
+        "actions": 15,
+        "state": 1,
+        "observe": 3,
+        "battle": 1,
+        "resume": 1
+      }
+    },
+    {
+      "operator_stage_label": "3-5",
+      "labelled_helper_events": 12,
+      "labelled_helper_seconds": 64.282,
+      "window_start_utc": "2026-10-06T17:53:08.392342+00:00",
+      "window_end_utc": "2026-10-06T18:04:11.483743+00:00",
+      "labelled_activity_window_seconds": 663.091,
+      "host_tool_intervals_overlapping_window": 21,
+      "host_tool_union_seconds_in_window": 90.951,
+      "outside_matched_host_tools_seconds_in_window": 572.14,
+      "whole_node_duration": null,
+      "kinds": {
+        "observe": 4,
+        "actions": 6,
+        "battle": 1,
+        "resume": 1
+      }
+    },
+    {
+      "operator_stage_label": "3-6",
+      "labelled_helper_events": 9,
+      "labelled_helper_seconds": 47.484,
+      "window_start_utc": "2026-10-06T18:04:45.470937+00:00",
+      "window_end_utc": "2026-10-06T18:12:29.036801+00:00",
+      "labelled_activity_window_seconds": 463.566,
+      "host_tool_intervals_overlapping_window": 14,
+      "host_tool_union_seconds_in_window": 65.029,
+      "outside_matched_host_tools_seconds_in_window": 398.537,
+      "whole_node_duration": null,
+      "kinds": {
+        "observe": 3,
+        "actions": 5,
+        "battle": 1
+      }
+    },
+    {
+      "operator_stage_label": "3-7",
+      "labelled_helper_events": 12,
+      "labelled_helper_seconds": 76.781,
+      "window_start_utc": "2026-10-06T18:13:21.485053+00:00",
+      "window_end_utc": "2026-10-06T18:29:08.729005+00:00",
+      "labelled_activity_window_seconds": 947.244,
+      "host_tool_intervals_overlapping_window": 17,
+      "host_tool_union_seconds_in_window": 99.745,
+      "outside_matched_host_tools_seconds_in_window": 847.499,
+      "whole_node_duration": null,
+      "kinds": {
+        "actions": 12
+      }
+    }
+  ],
+  "unclassified_label_events": 22,
+  "unclassified_helper_seconds": 137.324,
+  "accounting": {
+    "labelled_events": 77,
+    "all_events": 99,
+    "all_helper_seconds": 543.739
+  }
+}

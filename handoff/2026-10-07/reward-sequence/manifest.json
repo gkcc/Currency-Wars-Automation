@@ -1,0 +1,222 @@
+{
+  "schema": "currency-wars-historical-reward-sequence/v1",
+  "captured_at": "2026-10-06T20:51:32.520008+00:00",
+  "offline_only": true,
+  "new_game_captures": 0,
+  "new_game_inputs": 0,
+  "core_source_sha": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+  "coordinate_space": "1920x1080 archived broker preview; original receipt rect 3840x2160",
+  "image_redaction_roi": [
+    0,
+    1034,
+    300,
+    1080
+  ],
+  "original_images_exported": false,
+  "frames": [
+    {
+      "index": 0,
+      "file": "q00.png",
+      "profile_event_index": 67,
+      "profile_id": "ba7dbf79f62e4d869b38f8fdcb7c67f1",
+      "operator_label": "3-6-collect-available-rewards",
+      "historical_completion_utc": "2026-10-06T18:04:49.408937+00:00",
+      "source_image_sha256": "9df5dfb1429e7c3bee5e1bf9e17c4730ddbeb1d710179fb0ce806e81cd59d49b",
+      "export_image_sha256": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+      "size": [
+        1920,
+        1080
+      ],
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-6",
+        "level": null,
+        "deployed": null
+      },
+      "recorded_coins": 65,
+      "expected_page": "shop",
+      "expected_player_level": 8,
+      "expected_coins": 65
+    },
+    {
+      "index": 1,
+      "file": "q01.png",
+      "profile_event_index": 68,
+      "profile_id": "4e33b22f47bd43d4a0a2652afae36a00",
+      "operator_label": "3-6-close-auto-shop-before-rewards",
+      "historical_completion_utc": "2026-10-06T18:05:11.874004+00:00",
+      "source_image_sha256": "db857577b499bc1ae01b0d994a52acc657702d5eb4e250dc58705ad2cf0b1d6d",
+      "export_image_sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "size": [
+        1920,
+        1080
+      ],
+      "recorded_page": "preparation",
+      "recorded_fields": {
+        "stage": "3-6",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": 65,
+      "expected_page": "preparation",
+      "expected_player_level": 8,
+      "expected_coins": 65
+    },
+    {
+      "index": 2,
+      "file": "q02.png",
+      "profile_event_index": 69,
+      "profile_id": "66e37434aa2a4c57be6d04b4d544cec1",
+      "operator_label": "3-6-claim-two-blue-orbs",
+      "historical_completion_utc": "2026-10-06T18:05:52.991446+00:00",
+      "source_image_sha256": "95c22618080e05a5d83e8e5b333f970999a127dac25e90288e066c588b911e42",
+      "export_image_sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+      "size": [
+        1920,
+        1080
+      ],
+      "recorded_page": "preparation",
+      "recorded_fields": {
+        "stage": "3-6",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": 65,
+      "expected_page": "preparation",
+      "expected_player_level": 8,
+      "expected_coins": 65
+    }
+  ],
+  "receipts": [
+    {
+      "before_frame_index": 0,
+      "after_frame_index": 1,
+      "original_receipt_sha256": "f356054b29a6dc03028b78f532f71bb49e8dc63727b2e907cf0ef152d3613971",
+      "projection": {
+        "id": "4e33b22f47bd43d4a0a2652afae36a00",
+        "ok": true,
+        "completed": [
+          {
+            "type": "click",
+            "args": [
+              1622.0,
+              974.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.3
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ],
+          "archived_frame": "q01.png"
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "receipt_scope": "Completed action group; not a per-click business receipt or current input authority."
+    },
+    {
+      "before_frame_index": 1,
+      "after_frame_index": 2,
+      "original_receipt_sha256": "30c69deb249a0ed856a4e0b09cc173f271da1899aff34eff30caf11ee26f4c30",
+      "projection": {
+        "id": "66e37434aa2a4c57be6d04b4d544cec1",
+        "ok": true,
+        "completed": [
+          {
+            "type": "click",
+            "args": [
+              1535.0,
+              355.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          },
+          {
+            "type": "click",
+            "args": [
+              1585.0,
+              300.0
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.5
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ],
+          "archived_frame": "q02.png"
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "receipt_scope": "Completed action group; not a per-click business receipt or current input authority."
+    }
+  ],
+  "visual_review": {
+    "method": "ROOT reviewed the existing original PNGs; expectations are independent visual references, not OCR readings/confidence or phase proofs.",
+    "q00": "Expanded shop partially covers the reward area. At least one blue orb is visible; exact total is unknown from this overlay frame.",
+    "q01": {
+      "shop": "collapsed",
+      "visible_blue_orbs": 2,
+      "approximate_centres": [
+        [
+          1535,
+          355
+        ],
+        [
+          1585,
+          300
+        ]
+      ],
+      "all_rewards_cleared": false
+    },
+    "q02": {
+      "visible_blue_orbs_in_previous_area": 0,
+      "recommended_equipment_composition_visible": true,
+      "all_rewards_cleared": null
+    }
+  },
+  "scope": "Three existing successive helper frames, one shop-collapse receipt and one two-click reward receipt. No intermediate frame or separate receipt between the two reward clicks.",
+  "limitations": [
+    "Visible two-orb disappearance is not proof that every reward, selector or overflow is cleared.",
+    "No complete startup-guide, inventory-cleanup, economy, lineup or battle chain.",
+    "Archived receipts do not carry current owner/token/epoch and cannot authorize physical input or business completion.",
+    "The two reward clicks came from a ROOT action group; no claim that native Worker chose or executed this chain.",
+    "Historical fields remain separate from new OCR and visual expectations."
+  ],
+  "acceptance_suggestion": [
+    "Read the three unchanged full PNGs with the actual production Perception; preserve unknown values.",
+    "Use shop-collapse and visible-orb observations to classify expected occlusion versus missing detection.",
+    "If replaying the existing Worker/Entry path, identify missing prerequisites and per-click successor evidence explicitly; do not synthesize historical frames or phase completion."
+  ]
+}

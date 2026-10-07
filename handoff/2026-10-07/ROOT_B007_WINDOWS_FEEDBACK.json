@@ -1,0 +1,64 @@
+{
+  "schema": "currency-wars-b007-windows-offline-feedback/v1",
+  "candidate_sha": "dc4b26440e0cf95851493937628f9bb7f1691f76",
+  "game_inputs": 0,
+  "fresh_game_captures": 0,
+  "installed_or_deployed": false,
+  "python_combined": {
+    "tests_run": 107,
+    "failures": 1,
+    "errors": 2,
+    "skipped": 0,
+    "seconds": 12.375,
+    "ok": false
+  },
+  "failed_cases": [
+    {
+      "test": "test_local_runtime_compatibility.RuntimeRootTests.test_worker_marker_child_registration_and_cleanup_keep_selected_root",
+      "failure_summary": ""
+    },
+    {
+      "test": "test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels (emergency=False)",
+      "failure_summary": "ValueError: 执行器归属、标准标记或创建身份不匹配"
+    },
+    {
+      "test": "test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels (emergency=True)",
+      "failure_summary": "ValueError: 执行器归属、标准标记或创建身份不匹配"
+    }
+  ],
+  "diagnosis": "Test patches public artifacts.process_identity but installed scratch/protect functions close over installed module globals; fallback patches the actual provider. Fix test dependency seam; do not weaken production marker guards.",
+  "real_installed_marker_authentication": {
+    "backend_installed": true,
+    "native_process_identity_used": true,
+    "control_backend_inert": true,
+    "results": [
+      {
+        "emergency": false,
+        "passed": true
+      },
+      {
+        "emergency": true,
+        "passed": true
+      }
+    ]
+  },
+  "same_two_tests_standalone": {
+    "exit_code": 0,
+    "output": "test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels (test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels) ... ok\ntest_worker_marker_child_registration_and_cleanup_keep_selected_root (test_local_runtime_compatibility.RuntimeRootTests.test_worker_marker_child_registration_and_cleanup_keep_selected_root) ... ok\n\n----------------------------------------------------------------------\nRan 2 tests in 0.066s\n\nOK\n"
+  },
+  "rust_protocol": {
+    "tests_passed": 6,
+    "tests_failed": 0,
+    "tests_ignored": 0,
+    "exit_code": 0,
+    "seconds": 5.485,
+    "scope": "Exact production protocol.rs + extracted unchanged native current_creation; no GUI launch/full GUI build",
+    "full_gui_build": false
+  },
+  "expected_fix": "Patch the actually selected artifact provider in existing test fixtures; cover installed and standalone paths. Preserve real marker identity checks.",
+  "cleanup": {
+    "python_diagnosis_run_removed": true,
+    "compile_run_removed": false,
+    "compile_run_retained_reason": "Cargo hardlinks refused by cleanup guard; original marker retained"
+  }
+}

@@ -1,0 +1,252 @@
+{
+  "schema": "currency-wars-offline-acceptance/v1",
+  "code_sha": "032a906c210ca60c65b6225659fa2246be010bff",
+  "platform": "Windows Python 3.12",
+  "game_inputs": 0,
+  "fresh_game_captures": 0,
+  "installed_to_game_runtime": false,
+  "real_image_cases": [
+    {
+      "id": "shop_character_level_999",
+      "image_sha256": "b4bb0d6cb242aef43c88fbf9c088251ae2a20ef13462ac5f47d2494ace4971ac",
+      "engine_cold": true,
+      "seconds": 2.388016,
+      "page": "shop",
+      "fields": {
+        "stage": "3-7",
+        "level": "9",
+        "deployed": null
+      },
+      "player_hud": {
+        "actor": "player",
+        "origin": "native_player_hud",
+        "snapshot_id": "b4bb0d6cb242aef43c88fbf9c088251ae2a20ef13462ac5f47d2494ace4971ac",
+        "layout": "native_purchase_experience_1920x1080/v1",
+        "level": 9,
+        "xp": [
+          0,
+          84
+        ],
+        "evidence": {
+          "purchase_experience": {
+            "text": "购买经验",
+            "raw_text": "购买经验",
+            "normalization_basis": null,
+            "confidence": 0.9991,
+            "box": [
+              248,
+              848,
+              350,
+              879
+            ]
+          },
+          "experience_progress": {
+            "text": "0/84",
+            "raw_text": "0/84",
+            "normalization_basis": null,
+            "confidence": 0.9964,
+            "box": [
+              267,
+              933,
+              328,
+              964
+            ]
+          },
+          "level": {
+            "source": "complete_player_level_roi",
+            "raw_text": "Lv.9",
+            "confidence": 0.9092764854431152,
+            "bounds": [
+              240,
+              880,
+              358,
+              936
+            ]
+          }
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "shop_actual_player_level_8",
+      "image_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+      "engine_cold": false,
+      "seconds": 1.356641,
+      "page": "shop",
+      "fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "player_hud": {
+        "actor": "player",
+        "origin": "native_player_hud",
+        "snapshot_id": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "layout": "native_purchase_experience_1920x1080/v1",
+        "level": 8,
+        "xp": [
+          2,
+          72
+        ],
+        "evidence": {
+          "purchase_experience": {
+            "text": "购买经验",
+            "raw_text": "购买经验",
+            "normalization_basis": null,
+            "confidence": 0.9997,
+            "box": [
+              246,
+              842,
+              350,
+              880
+            ]
+          },
+          "experience_progress": {
+            "text": "2/72",
+            "raw_text": "2/72",
+            "normalization_basis": null,
+            "confidence": 0.9904,
+            "box": [
+              268,
+              933,
+              330,
+              964
+            ]
+          },
+          "level": {
+            "source": "complete_player_level_roi",
+            "raw_text": "Lv.8",
+            "confidence": 0.9737823605537415,
+            "bounds": [
+              240,
+              880,
+              358,
+              936
+            ]
+          }
+        },
+        "reason": null
+      }
+    },
+    {
+      "id": "boss_level_90_intro",
+      "image_sha256": "26bd80bd377990d76c96899759cb582fbca19dd1c1f300170d8d7ca0337668b7",
+      "engine_cold": false,
+      "seconds": 0.374716,
+      "page": "unknown",
+      "fields": {
+        "stage": null,
+        "level": null,
+        "deployed": null
+      },
+      "player_hud": {
+        "actor": "player",
+        "origin": "native_player_hud",
+        "snapshot_id": "26bd80bd377990d76c96899759cb582fbca19dd1c1f300170d8d7ca0337668b7",
+        "layout": "native_purchase_experience_1920x1080/v1",
+        "level": null,
+        "xp": null,
+        "evidence": {},
+        "reason": "player_hud_not_visible"
+      }
+    },
+    {
+      "id": "final_preparation_player_level_9",
+      "image_sha256": "f1b2e675f99d8c5fb0606aad48c1b8fa21da5c424d556dc303c822ded054adce",
+      "engine_cold": false,
+      "seconds": 0.80806,
+      "page": "preparation",
+      "fields": {
+        "stage": "3-7",
+        "level": "9",
+        "deployed": "8/9"
+      },
+      "player_hud": {
+        "actor": "player",
+        "origin": "native_player_hud",
+        "snapshot_id": "f1b2e675f99d8c5fb0606aad48c1b8fa21da5c424d556dc303c822ded054adce",
+        "layout": "native_purchase_experience_1920x1080/v1",
+        "level": 9,
+        "xp": [
+          0,
+          84
+        ],
+        "evidence": {
+          "purchase_experience": {
+            "text": "购买经验",
+            "raw_text": "购买经验",
+            "normalization_basis": null,
+            "confidence": 0.9991,
+            "box": [
+              248,
+              848,
+              350,
+              879
+            ]
+          },
+          "experience_progress": {
+            "text": "0/84",
+            "raw_text": "0/84",
+            "normalization_basis": null,
+            "confidence": 0.9964,
+            "box": [
+              267,
+              933,
+              328,
+              964
+            ]
+          },
+          "level": {
+            "source": "current_player_hud_row",
+            "row": {
+              "text": "Lv.9",
+              "raw_text": "Lv.9",
+              "normalization_basis": null,
+              "confidence": 0.9945,
+              "box": [
+                261,
+                902,
+                322,
+                933
+              ]
+            }
+          }
+        },
+        "reason": null
+      }
+    }
+  ],
+  "test_selection": [
+    "test_currency_wars_state_reader.NativePlayerHUDTests",
+    "test_currency_wars_state_reader.NativePopulationTests",
+    "test_currency_wars_state_reader.NativeCapacityTests",
+    "test_currency_wars_state_reader.PublicPlayerHUDReplayTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_old_completed_reviews_do_not_allow_current_underfilled_battle_input"
+  ],
+  "tests_run": 15,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 5.594,
+  "ok": true,
+  "tested_at_utc": "2026-10-06T20:15:10.385568+00:00",
+  "failed_cases": [],
+  "source_sha256": {
+    "tools/currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+    "tools/currency_wars_runner.py": "0e115a4a6455f3d8e845ec43e32b8ee27e9c592f320c241d2e26944048750b71",
+    "tools/test_currency_wars_state_reader.py": "3c47a3a9333844ab5220acfea01a7039db30a7c2a5a4d9daf7ca777b41284299",
+    "tools/test_local_runtime_compatibility.py": "87a77851daa617fdfed480cda964ad8000d6deb98eb3b84bc960cb65731ecabe"
+  },
+  "fixture_bytes_unchanged": true,
+  "limits": [
+    "Only exact 15-check selection including production OCR on four retained PNGs. No game, fresh capture, GUI build or install.",
+    "Known image actor fields verified; expanded 12-slot layout and normal full preparation remain unverified.",
+    "Timings are one serial pass with real OCR, not an end-to-end speed comparison.",
+    "The read wrapper records results and elapsed time and delegates unchanged production method; no data or confidence is fabricated."
+  ],
+  "temporary_run_removed": true,
+  "retained_prior_run": {
+    "path": "D:\\Codex\\Temp\\codex-agent-workflow\\currency-wars-pro-b007-windows-offline-txrevbqi",
+    "reason": "Prior cargo hardlink/root guard refusal; not retried."
+  }
+}

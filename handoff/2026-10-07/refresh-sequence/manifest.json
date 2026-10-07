@@ -1,0 +1,515 @@
+{
+  "schema": "currency-wars-historical-refresh-sequence/v1",
+  "offline_only": true,
+  "new_game_captures": 0,
+  "new_game_inputs": 0,
+  "core_source_sha": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+  "coordinate_space": "1920x1080 saved broker preview; original window receipt rect 3840x2160",
+  "image_redaction_roi": [
+    0,
+    1034,
+    300,
+    1080
+  ],
+  "original_images_exported": false,
+  "frames": [
+    {
+      "index": 0,
+      "operator_label": "3-4-sell-surplus-before-budget",
+      "file": "r00.png",
+      "source_image_sha256": "816cc385279d82c7c10f33003a6ab2ea340af32ed27628374f747dac44bda76e",
+      "export_image_sha256": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 70,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    },
+    {
+      "index": 1,
+      "operator_label": "3-4-paid-roll-1",
+      "file": "../fixtures/shop_actual_player_level_8.png",
+      "source_image_sha256": "e687846726df591b72b6b1a4c47c25f694bd939bf86c5cf06edc26ec42c91148",
+      "export_image_sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "99",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 68,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    },
+    {
+      "index": 2,
+      "operator_label": "3-4-paid-roll-2",
+      "file": "r02.png",
+      "source_image_sha256": "b1c68bcb8e04e1924eea4dea2bef6bc91b2838bd6a47cb69f3f134737ce551b1",
+      "export_image_sha256": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 66,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    },
+    {
+      "index": 3,
+      "operator_label": "3-4-paid-roll-3",
+      "file": "r03.png",
+      "source_image_sha256": "e685b53ee05a1eb00e4a7a51dcfeb997e3de2d198d5c7e09a3edd3cb2bf3f8d9",
+      "export_image_sha256": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 64,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    },
+    {
+      "index": 4,
+      "operator_label": "3-4-paid-roll-4",
+      "file": "r04.png",
+      "source_image_sha256": "71ef5a0f64097df059a95185e0b99e871924ffc5c7948ebe25529c048312c9f4",
+      "export_image_sha256": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 62,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    },
+    {
+      "index": 5,
+      "operator_label": "3-4-paid-roll-5",
+      "file": "r05.png",
+      "source_image_sha256": "815894f69c78bf7372943b4bb919be536d5772e7ce2e0e030432ed7a8c7a1b23",
+      "export_image_sha256": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 60,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    },
+    {
+      "index": 6,
+      "operator_label": "3-4-paid-roll-6",
+      "file": "r06.png",
+      "source_image_sha256": "cf6591748b923902abb8bb70305024fbf602b6fb73c25cbc48cb39623251a8f0",
+      "export_image_sha256": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023",
+      "recorded_page": "shop",
+      "recorded_fields": {
+        "stage": "3-4",
+        "level": "8",
+        "deployed": null
+      },
+      "recorded_coins": {
+        "value": 58,
+        "bounds": [
+          1613,
+          892,
+          1687,
+          950
+        ],
+        "currency_icon_gold_fraction": 0.423
+      },
+      "coin_reference_method": "Historical semantic reader; endpoints 70 and 58 also visually reviewed by ROOT. Interior images provided for independent read, never infer confidence.",
+      "expected_player_level": 8,
+      "expected_stage": "3-4",
+      "expected_page": "shop",
+      "review_source": "Historical visible player HUD; level must be read independently, not copied from expected."
+    }
+  ],
+  "receipts": [
+    {
+      "index": 1,
+      "before_frame_index": 0,
+      "after_frame_index": 1,
+      "original_receipt_sha256": "306a12a216bacc698ee8ab57618a47099fc021b1d60731f4a21e07f1bb130048",
+      "receipt": {
+        "id": "dd530acf761345c2b599deb36bf316d1",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "profile_event": {
+        "id": "dd530acf761345c2b599deb36bf316d1",
+        "kind": "actions",
+        "label": "3-4-paid-roll-1",
+        "seconds": 5.562,
+        "time": "2026-10-06T17:45:56.931701+00:00"
+      },
+      "recorded_coin_delta": 2
+    },
+    {
+      "index": 2,
+      "before_frame_index": 1,
+      "after_frame_index": 2,
+      "original_receipt_sha256": "3393f75c04d3dd466c0c4b148c8f334dd0f5943e88b2a5594385c50b2e042cdf",
+      "receipt": {
+        "id": "2a8b83a6654c482394a3da17d4312618",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "profile_event": {
+        "id": "2a8b83a6654c482394a3da17d4312618",
+        "kind": "actions",
+        "label": "3-4-paid-roll-2",
+        "seconds": 5.64,
+        "time": "2026-10-06T17:46:20.878257+00:00"
+      },
+      "recorded_coin_delta": 2
+    },
+    {
+      "index": 3,
+      "before_frame_index": 2,
+      "after_frame_index": 3,
+      "original_receipt_sha256": "d4650e62dc6c85cff8cf0e7a8605d8733255b65a7f76a38d3f4e894a5ebe489d",
+      "receipt": {
+        "id": "ade674258051402bb173ce236d643026",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "profile_event": {
+        "id": "ade674258051402bb173ce236d643026",
+        "kind": "actions",
+        "label": "3-4-paid-roll-3",
+        "seconds": 5.766,
+        "time": "2026-10-06T17:46:37.011501+00:00"
+      },
+      "recorded_coin_delta": 2
+    },
+    {
+      "index": 4,
+      "before_frame_index": 3,
+      "after_frame_index": 4,
+      "original_receipt_sha256": "d5ae4e3189d0ebbd21b7400cce28a5b4cd93670190c7962f9404e0d3826dfc17",
+      "receipt": {
+        "id": "98ef84847fe94ad3a31467dbd3de962a",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "profile_event": {
+        "id": "98ef84847fe94ad3a31467dbd3de962a",
+        "kind": "actions",
+        "label": "3-4-paid-roll-4",
+        "seconds": 5.672,
+        "time": "2026-10-06T17:46:53.918362+00:00"
+      },
+      "recorded_coin_delta": 2
+    },
+    {
+      "index": 5,
+      "before_frame_index": 4,
+      "after_frame_index": 5,
+      "original_receipt_sha256": "3215806d6e8d44d2d48472e3878c401acd9b5771542449f6a2117f21935fb6d1",
+      "receipt": {
+        "id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "profile_event": {
+        "id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+        "kind": "actions",
+        "label": "3-4-paid-roll-5",
+        "seconds": 5.797,
+        "time": "2026-10-06T17:47:11.418612+00:00"
+      },
+      "recorded_coin_delta": 2
+    },
+    {
+      "index": 6,
+      "before_frame_index": 5,
+      "after_frame_index": 6,
+      "original_receipt_sha256": "1c80ef3daec7c51d5a703a71cf3e241810fc11dd83302872c9a028523149a494",
+      "receipt": {
+        "id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+        "ok": true,
+        "completed": [
+          {
+            "type": "key",
+            "args": [
+              68
+            ]
+          },
+          {
+            "type": "wait",
+            "args": [
+              0.4
+            ]
+          }
+        ],
+        "observation": {
+          "rect": [
+            0,
+            0,
+            3840,
+            2160
+          ]
+        }
+      },
+      "redacted_fields": [
+        "observation.hwnd",
+        "observation.pid",
+        "observation.foreground",
+        "observation.snapshot"
+      ],
+      "profile_event": {
+        "id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+        "kind": "actions",
+        "label": "3-4-paid-roll-6",
+        "seconds": 5.766,
+        "time": "2026-10-06T17:47:36.401796+00:00"
+      },
+      "recorded_coin_delta": 2
+    }
+  ],
+  "scope": "One prior shop frame plus six successive paid D refresh outputs from the retained ROOT helper run; not a complete preparation or match replay.",
+  "coverage": {
+    "actual_receipts": 6,
+    "historical_frames": 7,
+    "buy": false,
+    "free_refresh": false,
+    "xp": false,
+    "deploy": false,
+    "gear": false,
+    "battle_acceptance": false
+  },
+  "limitations": [
+    "No current owner/token/epoch exported; these receipts are archival evidence and must not authorize live input or business closure.",
+    "Historical fields include the known erroneous player level=99 on first refresh; do not feed these stored fields as fresh perception.",
+    "Displayed coin references are not permission to fill fully_read/confidence; independently read each image.",
+    "The intervening full strategic reviews and business plan are not present; this only closes the consecutive paid-refresh evidence gap.",
+    "Original click to sell precedes frame0 but is outside this six-refresh scope; no assumption that reward/tasks/sales were already reviewed."
+  ],
+  "acceptance_suggestion": [
+    "Same image/receipt sequence for baseline and candidate, real Perception and existing Worker/Entry path, inert input only.",
+    "Report normal versus exceptional ROOT returns, what was observed versus supplied, and separate real OCR/in-process/simulated timing.",
+    "Retain mismatch and unknown receipt fail-closed behavior; no replay of completed input.",
+    "All other preparation phases remain explicitly uncovered."
+  ]
+}

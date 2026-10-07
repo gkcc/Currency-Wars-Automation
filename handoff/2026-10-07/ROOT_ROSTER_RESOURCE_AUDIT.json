@@ -1,0 +1,350 @@
+{
+  "schema": "currency-wars-roster-resource-audit/v1",
+  "code_sha": "bcec3280677e6a419675cc7448bf0dca8fe36ec3",
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "resource_manifest_sha256": "899468c515b015e50638505528a616e3fc3b34456ab9ca929abeffc298069c74",
+  "resource_kinds": {
+    "anchor": 4,
+    "empty": 19,
+    "unit": 9,
+    "badge": 3,
+    "item": 2,
+    "star": 1,
+    "starbar": 5
+  },
+  "unit_template_names": [
+    "黄泉",
+    "椒丘",
+    "阿格莱雅",
+    "乱破",
+    "赛飞儿",
+    "波提欧",
+    "千冶·刃",
+    "罗刹",
+    "丹恒·腾荒"
+  ],
+  "cases": [
+    {
+      "file": "q01.png",
+      "image_sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "seconds": 2.456851,
+      "page": "preparation",
+      "deployed": "8/8",
+      "team_checked": false,
+      "team_fully_read": false,
+      "occupied_board_slots": 5,
+      "named_board_units": 0,
+      "star_known_board_units": 0,
+      "board_slots": [
+        {
+          "row": "front",
+          "slot": 1,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.0,
+            "badge_score": 0.9313,
+            "identity_score": 0.6472,
+            "identity_margin": 0.0695
+          }
+        },
+        {
+          "row": "front",
+          "slot": 2,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.0,
+            "badge_score": 0.9741,
+            "identity_score": 0.5717,
+            "identity_margin": 0.0257
+          }
+        },
+        {
+          "row": "front",
+          "slot": 3,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1685,
+            "badge_score": 0.9344,
+            "identity_score": 0.5814,
+            "identity_margin": 0.0458
+          }
+        },
+        {
+          "row": "front",
+          "slot": 4,
+          "status": "unknown",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "ambiguous_or_partial_slot"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1397,
+            "badge_score": 0.8275,
+            "identity_score": 0.6086,
+            "identity_margin": 0.0515
+          }
+        },
+        {
+          "row": "back",
+          "slot": 1,
+          "status": "unknown",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "ambiguous_or_partial_slot"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.167,
+            "badge_score": 0.8403,
+            "identity_score": 0.4708,
+            "identity_margin": 0.0404
+          }
+        },
+        {
+          "row": "back",
+          "slot": 2,
+          "status": "unknown",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "ambiguous_or_partial_slot"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.0,
+            "badge_score": 0.8557,
+            "identity_score": 0.5647,
+            "identity_margin": 0.009
+          }
+        },
+        {
+          "row": "back",
+          "slot": 3,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1579,
+            "badge_score": 0.9193,
+            "identity_score": 0.7291,
+            "identity_margin": 0.1848
+          }
+        },
+        {
+          "row": "back",
+          "slot": 4,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1697,
+            "badge_score": 0.9606,
+            "identity_score": 0.5878,
+            "identity_margin": 0.0866
+          }
+        }
+      ]
+    },
+    {
+      "file": "q02.png",
+      "image_sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+      "seconds": 1.065599,
+      "page": "preparation",
+      "deployed": "8/8",
+      "team_checked": false,
+      "team_fully_read": false,
+      "occupied_board_slots": 5,
+      "named_board_units": 0,
+      "star_known_board_units": 0,
+      "board_slots": [
+        {
+          "row": "front",
+          "slot": 1,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.0,
+            "badge_score": 0.9313,
+            "identity_score": 0.6472,
+            "identity_margin": 0.0695
+          }
+        },
+        {
+          "row": "front",
+          "slot": 2,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.0,
+            "badge_score": 0.9741,
+            "identity_score": 0.5716,
+            "identity_margin": 0.0257
+          }
+        },
+        {
+          "row": "front",
+          "slot": 3,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1685,
+            "badge_score": 0.9344,
+            "identity_score": 0.5814,
+            "identity_margin": 0.0459
+          }
+        },
+        {
+          "row": "front",
+          "slot": 4,
+          "status": "unknown",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "ambiguous_or_partial_slot"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1397,
+            "badge_score": 0.8275,
+            "identity_score": 0.6086,
+            "identity_margin": 0.0515
+          }
+        },
+        {
+          "row": "back",
+          "slot": 1,
+          "status": "unknown",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "ambiguous_or_partial_slot"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.167,
+            "badge_score": 0.8403,
+            "identity_score": 0.4708,
+            "identity_margin": 0.0404
+          }
+        },
+        {
+          "row": "back",
+          "slot": 2,
+          "status": "unknown",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "ambiguous_or_partial_slot"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.0,
+            "badge_score": 0.8557,
+            "identity_score": 0.5647,
+            "identity_margin": 0.009
+          }
+        },
+        {
+          "row": "back",
+          "slot": 3,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.158,
+            "badge_score": 0.9193,
+            "identity_score": 0.7291,
+            "identity_margin": 0.1848
+          }
+        },
+        {
+          "row": "back",
+          "slot": 4,
+          "status": "occupied",
+          "name": null,
+          "star": null,
+          "reasons": [
+            "unit_identity_unknown_read_named_tooltip",
+            "star_unobservable"
+          ],
+          "evidence": {
+            "method": "bounded_native_slot_templates",
+            "empty_score": 0.1697,
+            "badge_score": 0.9606,
+            "identity_score": 0.5879,
+            "identity_margin": 0.0867
+          }
+        }
+      ]
+    }
+  ],
+  "source_sha256": {
+    "currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2"
+  },
+  "temporary_run_removed": true,
+  "observed_at_utc": "2026-10-07T06:52:43.314909+00:00",
+  "limitations": [
+    "Five occupied slots is not five named or fully verified characters.",
+    "Nine unit templates are local declared asset coverage, not a verified complete roster or game-version assertion.",
+    "Only existing two PNGs reread to resolve previously missing identity/star detail; no game control or full preparation proof."
+  ]
+}
