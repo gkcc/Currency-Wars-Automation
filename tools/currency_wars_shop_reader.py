@@ -25,6 +25,8 @@ RESOURCE_DIR = Path(__file__).resolve().with_name("shop_reader_resources")
 EXPECTED_SIZE = (1920, 1080)
 CENTERS = (490, 760, 1029, 1298, 1567)
 SCHEMA = "currency-wars-shop-observation/v1"
+BADGE_SCHEMA = "currency-wars-recommendation-evidence/v1"
+BADGE_FILE = "recommend_badge.png"
 
 
 def purchase_slot(observation: dict, slot_id: int, snapshot_id: str) -> dict | None:
@@ -95,8 +97,110 @@ def _unknown_slots(reason: str) -> list[dict]:
                  evidence={}, reasons=[reason]) for i in range(5)]
 
 
+def _badge_source(manifest_sha, data, template):
+    return dict(file=BADGE_FILE, manifest_sha256=manifest_sha,
+                file_sha256=hashlib.sha256(data).hexdigest(),
+                gray_sha256=hashlib.sha256(template.tobytes()).hexdigest(),
+                shape=list(template.shape))
+
+
+def _read_badge_resource(resources):
+    """Read only the current badge and manifest; no OCR or other shop assets."""
+    resources = Path(resources)
+    manifest_path, path = resources / 'SOURCES.json', resources / BADGE_FILE
+    manifest_data, data = manifest_path.read_bytes(), path.read_bytes()
+    manifest = json.loads(manifest_data)
+    if sum(item.get('file') == BADGE_FILE for item in manifest['resources']) != 1:
+        raise ValueError('recommend_badge_source_missing_or_ambiguous')
+    with Image.open(io.BytesIO(data)) as opened:
+        template = cv2.cvtColor(np.array(opened.convert('RGB')), cv2.COLOR_RGB2GRAY)
+    if manifest_path.read_bytes() != manifest_data or path.read_bytes() != data:
+        raise ValueError('recommend_badge_resource_changed_during_read')
+    return template, _badge_source(hashlib.sha256(manifest_data).hexdigest(), data, template)
+
+
+def _badge_decision(evidence):
+    """One three-state appearance rule, consumed by reading and revalidation."""
+    if evidence.get('verified') is not True:
+        return None, None
+    score, other = evidence['match_score'], evidence['other_match_score']
+    colors, local = evidence['color_fractions'], evidence['matched_color_fractions']
+    # Preserve the existing yellow hue/shape limits, and bind color to the
+    # book's own matched pixels. Orange is only the observed H16/H17 variant.
+    if (score >= .90 and other < .90 and colors['yellow'] >= .06 and local['yellow'] >= .06):
+        return True, 'yellow'
+    if (score >= .97 and other < .97 and colors['orange_gold'] >= .06
+            and local['orange_gold'] >= .06 and evidence['whole_template_score'] >= .80
+            and evidence['whole_aligned']):
+        return True, 'orange_gold'
+    if (score < .50 and max(colors.values()) < .04
+            and evidence['whiteout_fraction'] < .65 and evidence['blackout_fraction'] < .90):
+        return False, None
+    return None, None
+
+
+def _read_recommended(rgb, rect, template, source, snapshot_id):
+    """Current native badge pixels and loaded resource source; no OCR."""
+    evidence = dict(schema=BADGE_SCHEMA, method='book_badge_shape_and_color',
+                    snapshot_id=snapshot_id, card_bounds=list(rect), verified=False)
+    if (not isinstance(snapshot_id, str) or re.fullmatch(r'[0-9a-f]{64}', snapshot_id) is None
+            or rgb.shape != (1080, 1920, 3) or rgb.dtype != np.uint8
+            or len(rect) != 4 or any(type(v) is not int for v in rect)):
+        return None, dict(evidence, reason='recommend_badge_frame_or_geometry_unknown')
+    x, y, w, h = rect
+    if not (0 <= x < x + w <= 1920 and 0 <= y < y + h <= 1080 and w >= 82 and h >= 80):
+        return None, dict(evidence, reason='recommend_badge_bounds_unsupported')
+    if template is None:
+        return None, dict(evidence, reason='recommend_badge_template_missing')
+    if template.shape != (51, 47) or float(template[12:39, 10:36].std()) <= 1.:
+        return None, dict(evidence, reason='recommend_badge_template_geometry_or_ink_unsupported')
+    if (not isinstance(source, dict) or source.get('file') != BADGE_FILE
+            or source.get('shape') != [51, 47]
+            or any(not isinstance(source.get(key), str) or re.fullmatch(r'[0-9a-f]{64}', source[key]) is None
+                   for key in ('manifest_sha256', 'file_sha256', 'gray_sha256'))
+            or source['gray_sha256'] != hashlib.sha256(template.tobytes()).hexdigest()):
+        return None, dict(evidence, reason='recommend_badge_template_source_unknown')
+    patch = rgb[y + 3:y + 80, x + 3:x + 82]
+    gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
+    whole_score, whole_point = ShopReader._match(gray, template)
+    scores = cv2.matchTemplate(gray[10:48, 10:47], template[12:39, 10:36], cv2.TM_CCOEFF_NORMED)
+    unused, score, unused_point, (dx, dy) = cv2.minMaxLoc(scores)
+    if not np.isfinite(score) or not np.isfinite(whole_score):
+        return None, dict(evidence, reason='recommend_badge_match_unknown')
+    remaining = scores.copy()
+    remaining[max(0, dy-2):dy+3, max(0, dx-2):dx+3] = -1
+    other = max(0., float(np.max(remaining)))
+    point = [int(dx) + 10, int(dy) + 10]
+    hsv = cv2.cvtColor(patch, cv2.COLOR_RGB2HSV)
+    bright = (hsv[:, :, 1] > 130) & (hsv[:, :, 2] > 130)
+    masks = {'yellow': bright & (hsv[:, :, 0] > 19) & (hsv[:, :, 0] < 40),
+             'orange_gold': bright & np.isin(hsv[:, :, 0], (16, 17))}
+    fractions = {name: float(np.mean(mask)) for name, mask in masks.items()}
+    local = {name: float(np.mean(mask[point[1]:point[1]+27, point[0]:point[0]+26]))
+             for name, mask in masks.items()}
+    evidence.update(verified=True, template_source=dict(source),
+        bounds=[x + 3, y + 3, 79, 77], roi_rgb_sha256=hashlib.sha256(patch.tobytes()).hexdigest(),
+        match_score=max(0., float(score)), other_match_score=other, match_offset=point,
+        match_region='bounded_book_star_interior', search_bounds=[x + 13, y + 13, 37, 38],
+        template_interior_bounds=[10, 12, 26, 27],
+        matched_bounds=[x+3+point[0], y+3+point[1], 26, 27],
+        whole_template_score=max(0., whole_score), whole_template_offset=whole_point,
+        whole_aligned=bool(whole_point is not None and
+            abs(whole_point[0] - (point[0]-10)) <= 2 and abs(whole_point[1] - (point[1]-12)) <= 2),
+        color_ranges={'yellow': [20, 39], 'orange_gold': [16, 17]}, saturation_min_exclusive=130,
+        value_min_exclusive=130, color_fractions=fractions, matched_color_fractions=local,
+        whiteout_fraction=float(np.mean(np.all(patch > 240, axis=2))),
+        blackout_fraction=float(np.mean(np.max(patch, axis=2) < 60)))
+    result, variant = _badge_decision(evidence)
+    evidence['result'] = result
+    evidence['variant'] = variant
+    if result is None:
+        evidence['reason'] = 'recommend_badge_appearance_unknown'
+    return result, evidence
+
+
 def stable_purchase_slot(original: dict, actual: dict, slot_id: int,
-                         original_snapshot: str, actual_snapshot: str) -> dict | None:
+                         original_snapshot: str, actual_snapshot: str, *, images=None) -> dict | None:
     """Same fully read native slot, including an unambiguous real badge.
 
     This is an animation eligibility helper, not purchase authorization.
@@ -111,22 +215,16 @@ def stable_purchase_slot(original: dict, actual: dict, slot_id: int,
             return None
     if type(slots[0].get('recommended')) is not bool:
         return None
-    for slot in slots:
-        badge = slot.get('evidence', {}).get('recommended', {})
-        if (badge.get('method') != 'yellow_gift_badge_template'
-                or type(badge.get('match_score')) not in (int, float)
-                or type(badge.get('yellow_fraction')) not in (int, float)):
-            return None
-        if slot['recommended']:
-            minimum = .90 if badge.get('match_region') == 'bounded_book_star_interior' else .72
-            if not minimum <= badge['match_score'] <= 1. or not .06 <= badge['yellow_fraction'] <= 1.:
+    if not isinstance(images, (list, tuple)) or len(images) != 2:
+        return None
+    try:
+        template, source = _read_badge_resource(RESOURCE_DIR)
+        for slot, rgb, digest in zip(slots, images, (original_snapshot, actual_snapshot)):
+            result, evidence = _read_recommended(rgb, slot['bounds'], template, source, digest)
+            if result is None or result is not slot['recommended'] or evidence != slot.get('evidence', {}).get('recommended'):
                 return None
-        elif not (0 <= badge['match_score'] < .50 and 0 <= badge['yellow_fraction'] < .04
-                  and type(badge.get('whiteout_fraction')) in (int, float)
-                  and 0 <= badge['whiteout_fraction'] < .65
-                  and type(badge.get('blackout_fraction')) in (int, float)
-                  and 0 <= badge['blackout_fraction'] < .90):
-            return None
+    except (OSError, ValueError, KeyError, TypeError, AttributeError, cv2.error):
+        return None
     return slots[1]
 
 
@@ -140,6 +238,7 @@ class ShopReader:
         self.manifest = None
         self.names = set()
         self._resource_version = None
+        self._badge_source = None
 
     def _load(self):
         def snapshot():
@@ -181,6 +280,9 @@ class ShopReader:
             raise ValueError("shop_resources_changed_during_load")
         self.manifest, self.templates, self.names, self.engine = manifest, templates, loaded_names, engine
         self._resource_version = version
+        self._badge_source = (_badge_source(version[0].hex(), images[BADGE_FILE], templates[BADGE_FILE])
+            if BADGE_FILE in images and sum(item.get('file') == BADGE_FILE for item in manifest['resources']) == 1
+            else None)
 
     @staticmethod
     def _rectangles(rgb):
@@ -335,43 +437,8 @@ class ShopReader:
                 return int(text), evidence
         return None, evidence
 
-    def _recommended(self, rgb, rect):
-        x, y, w, h = rect
-        template = self.templates.get("recommend_badge.png")
-        if template is None:
-            return None, dict(method="yellow_gift_badge_template", bounds=[x + 3, y + 3, 79, 77],
-                              verified=False, reason="recommend_badge_template_missing")
-        # This crop is calibrated to the locally observed 47 x 51 badge.
-        # Other resource geometry needs calibration, not an inferred resize.
-        if template.shape != (51, 47):
-            return None, dict(method="yellow_gift_badge_template", verified=False,
-                              reason="recommend_badge_template_geometry_unsupported")
-        patch = rgb[y + 3:y + 80, x + 3:x + 82]
-        gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
-        whole_score, whole_point = self._match(gray, template)
-        # The original crop includes portrait pixels outside the gold circle.
-        # Match the book/star strokes inside the circle instead, in the narrow
-        # observed top-left position band (including card-outline jitter).
-        score, point = self._match(gray[10:48, 10:47], template[12:39, 10:36])
-        score = max(0., score)
-        if point is not None:
-            point = [point[0] + 10, point[1] + 10]
-        whiteout = float(np.mean(np.all(patch > 240, axis=2)))
-        blackout = float(np.mean(np.max(patch, axis=2) < 60))
-        hsv = cv2.cvtColor(patch, cv2.COLOR_RGB2HSV)
-        yellow = float(np.mean((hsv[:, :, 0] > 19) & (hsv[:, :, 0] < 40)
-                               & (hsv[:, :, 1] > 130) & (hsv[:, :, 2] > 130)))
-        evidence = dict(method="yellow_gift_badge_template", bounds=[x + 3, y + 3, 79, 77],
-                        match_score=round(score, 4), yellow_fraction=round(yellow, 4),
-                        whiteout_fraction=round(whiteout, 4), blackout_fraction=round(blackout, 4), match_offset=point,
-                        match_region="bounded_book_star_interior", whole_template_score=round(whole_score, 4),
-                        whole_template_offset=whole_point, search_bounds=[x + 13, y + 13, 37, 38],
-                        template_interior_bounds=[10, 12, 26, 27])
-        if score >= .90 and yellow >= .06:
-            return True, evidence
-        if score < .50 and yellow < .04 and whiteout < .65 and blackout < .90:
-            return False, evidence
-        return None, evidence
+    def _recommended(self, rgb, rect, *, snapshot_id=None):
+        return _read_recommended(rgb, rect, self.templates.get(BADGE_FILE), self._badge_source, snapshot_id)
 
     def read(self, image_path: str | Path) -> dict:
         started = time.perf_counter()
@@ -443,7 +510,8 @@ class ShopReader:
                         name = None
                         name_evidence["validation"] = "not_in_fixed_source_name_list"
                     cost, cost_evidence = self._cost(image, rect)
-                    recommended, recommended_evidence = self._recommended(rgb, rect)
+                    recommended, recommended_evidence = self._recommended(rgb, rect,
+                        snapshot_id=output['input']['sha256'])
                     slot.update(name=name, cost=cost, recommended=recommended)
                     slot["evidence"].update(name=name_evidence, cost=cost_evidence,
                                             recommended=recommended_evidence)

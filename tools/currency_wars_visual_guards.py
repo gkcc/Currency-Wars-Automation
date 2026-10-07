@@ -374,7 +374,7 @@ def _shop(action, request, actual, images):
     if request.get('kind') != 'shop_strategy' or actual.get('page') != 'shop' or action.get('type') != 'buy_shop':
         return False
     slot = stable_purchase_slot(original.get('shop') or {}, actual.get('shop') or {}, action.get('slot'),
-                                request['snapshot_id'], actual.get('snapshot_id'))
+                                request['snapshot_id'], actual.get('snapshot_id'), images=images)
     if slot is None or slot['name'] != action.get('name') or slot['cost'] != action.get('cost'):
         return False
     stage = original.get('fields', {}).get('stage')

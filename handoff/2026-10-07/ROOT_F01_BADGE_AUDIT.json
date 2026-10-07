@@ -1,0 +1,116 @@
+{
+  "schema": "currency-wars-root-badge-gap/v1",
+  "candidate_sha": "5938648de4cfd4b5cd3cd723898abb3c2f806a48",
+  "file": "free-refresh-sequence/f01.png",
+  "png_sha256": "288b6a4f4ecc67476cc8a12bd806e37accf2ffe6c4445c058fd24f0116b2ea11",
+  "reader_sha256": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+  "reader_bytes_equal_candidate": true,
+  "slot": 5,
+  "native_recommended": null,
+  "native_badge_evidence": {
+    "method": "yellow_gift_badge_template",
+    "bounds": [
+      1448,
+      62,
+      79,
+      77
+    ],
+    "match_score": 0.9807,
+    "yellow_fraction": 0.0,
+    "whiteout_fraction": 0.0021,
+    "blackout_fraction": 0.0641,
+    "match_offset": [
+      17,
+      18
+    ],
+    "match_region": "bounded_book_star_interior",
+    "whole_template_score": 0.8232,
+    "whole_template_offset": [
+      7,
+      6
+    ],
+    "search_bounds": [
+      1458,
+      72,
+      37,
+      38
+    ],
+    "template_interior_bounds": [
+      10,
+      12,
+      26,
+      27
+    ]
+  },
+  "actual_roi_read_uses_ocr": false,
+  "manual_annotation": {
+    "name": "飞霄",
+    "cost": 1,
+    "visible_book_badge": true,
+    "source": "ROOT inspected retained PNG; annotation remains separate from native output"
+  },
+  "high_saturation_bright_hues": [
+    {
+      "hue": 16,
+      "pixels": 662
+    },
+    {
+      "hue": 17,
+      "pixels": 53
+    },
+    {
+      "hue": 3,
+      "pixels": 27
+    },
+    {
+      "hue": 15,
+      "pixels": 14
+    },
+    {
+      "hue": 2,
+      "pixels": 10
+    },
+    {
+      "hue": 11,
+      "pixels": 6
+    },
+    {
+      "hue": 5,
+      "pixels": 4
+    },
+    {
+      "hue": 13,
+      "pixels": 4
+    },
+    {
+      "hue": 14,
+      "pixels": 4
+    },
+    {
+      "hue": 4,
+      "pixels": 3
+    },
+    {
+      "hue": 6,
+      "pixels": 3
+    },
+    {
+      "hue": 10,
+      "pixels": 3
+    }
+  ],
+  "strict_hue_rule": {
+    "h_min_exclusive": 19,
+    "h_max_exclusive": 40,
+    "s_min_exclusive": 130,
+    "v_min_exclusive": 130,
+    "required_fraction": 0.06
+  },
+  "diagnosis": "Native shape score 0.9807 passes but orange/gold hue16/17 falls outside strict hue19..40, so recommended remains unknown. stable_purchase_slot repeats this hue constraint.",
+  "limits": [
+    "Single observed positive appearance; no general detector or false-positive coverage established.",
+    "No private template exported; only public PNG region analysis.",
+    "Manual labels do not constitute guide proof or a successful refresh/purchase transaction.",
+    "No new game capture or input."
+  ]
+}
