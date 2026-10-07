@@ -4192,30 +4192,76 @@ class Worker:
             with target.open('xb') as stream:
                 stream.write(data)
         pending.update(after_png=str(target), after_snapshot_id=actual['snapshot_id'])
+        pending['after_page'] = actual.get('page')
+        pending['after_read_contract'] = copy.deepcopy(actual.get('read_contract'))
+        if 'refresh_offer' in (actual.get('semantic') or {}):
+            pending['after_refresh_offer'] = copy.deepcopy(actual['semantic']['refresh_offer'])
+        else:
+            pending.pop('after_refresh_offer', None)
         if persist:
             self.save_economy_ledger(pending['before']['stage'])
 
+    def read_economy_fields(self, bound, image, actual, *, native_required=False,
+                            ignored_legacy_refresh_fields=()):
+        import currency_wars_refresh_offer as refresh_reader
+        semantic = actual.get('semantic') or {}
+        has_native = 'refresh_offer' in semantic
+        native_required = native_required or refresh_reader.expects_offer(actual)
+        ignored = set(ignored_legacy_refresh_fields)
+        if native_required:
+            ignored.update(name for name in economy.LEGACY_REFRESH_FIELDS if bound.get(name))
+            bound = {key: value for key, value in bound.items() if key not in economy.LEGACY_REFRESH_FIELDS}
+        reading = economy.observe_fields(bound, image, getattr(self.perception, 'engine', None))
+        if native_required:
+            offer = (refresh_reader.consume_offer(semantic['refresh_offer'], image,
+                     actual['snapshot_id'], actual.get('page')) if has_native else None)
+            for name in economy.LEGACY_REFRESH_FIELDS:
+                reading['values'].pop(name, None)
+                reading['evidence'].pop(name, None)
+            reading['unknown'] = [name for name in reading['unknown'] if name not in economy.LEGACY_REFRESH_FIELDS]
+            reading['values']['refresh_offer'] = offer
+            if offer is None:
+                reading['unknown'].append('refresh_offer')
+            reading['evidence']['refresh_offer'] = {
+                'source': 'current_native_refresh_offer' if has_native else 'native_refresh_offer_missing',
+                'snapshot_id': actual['snapshot_id'], 'page': actual.get('page')}
+            reading['evidence']['ignored_legacy_refresh_fields'] = sorted(ignored)
+        return reading
+
     def economy_observation(self, actual, binding=None):
         from PIL import Image
+        import currency_wars_refresh_offer as refresh_reader
         binding = binding or getattr(self, 'economy_binding', None)
         stage = canonical_stage(actual.get('fields', {}).get('stage'))
         if (not binding or binding['scope'] != (self.active_match_id, stage, self.epoch())
                 or actual.get('page') not in economy.PREPARATION_PAGES):
             raise ValueError('本节点/当前epoch尚无已核经济读数和统一预算')
         contract = actual.get('read_contract') or {}
+        semantic = actual.get('semantic') or {}
+        has_native = 'refresh_offer' in semantic
+        if refresh_reader.expects_offer(actual):
+            # Upgraded observations close the legacy path for this binding;
+            # a later missing native key is unknown, not an old numeric ROI.
+            binding['native_refresh_offer'] = True
+        # Same PNG bytes can be rederived under a newer field contract. Its
+        # presence and exact source must be validated before a cache can match.
+        native_key = json.dumps(semantic['refresh_offer'], sort_keys=True, ensure_ascii=False,
+                                allow_nan=False) if has_native else None
         cache_key = (actual['snapshot_id'], binding['snapshot_id'], contract.get('version'),
-                     contract.get('requested_scope'), contract.get('effective_scope'))
+                     contract.get('requested_scope'), contract.get('effective_scope'), actual.get('page'),
+                     binding.get('native_refresh_offer', False), has_native, native_key)
+        data = self.frame_path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != actual['snapshot_id']:
+            raise ValueError('经济回读不属于本请求不可变原帧')
         cached = getattr(self, 'economy_read_cache', None)
         if cached and cached[0] == cache_key:
             return cached[1]
-        path = self.frame_path
-        data = path.read_bytes()
-        if hashlib.sha256(data).hexdigest() != actual['snapshot_id']:
-            raise ValueError('经济回读不属于本请求不可变原帧')
         from io import BytesIO
         with Image.open(BytesIO(data)) as image:
             image.load()
-            reading = economy.observe_fields(binding['fields'], image, getattr(self.perception, 'engine', None))
+            reading = self.read_economy_fields(binding['fields'], image, actual,
+                native_required=binding.get('native_refresh_offer', False),
+                ignored_legacy_refresh_fields=binding.get('ignored_legacy_refresh_fields', ()))
         native = actual.get('semantic', {}).get('coins') or {}
         if (native.get('bounds') == GOLD_HUD and type(native.get('value')) is int and native['value'] >= 0
                 and .15 <= native.get('currency_icon_gold_fraction', 0) <= 1.
@@ -4273,6 +4319,7 @@ class Worker:
     def _accept_economy_plan(self, record):
         from io import BytesIO
         from PIL import Image
+        import currency_wars_refresh_offer as refresh_reader
         if getattr(self, 'business_needs_review', False):
             raise ValueError('先以当前帧复核跨租期业务归属，再提交独立当前经济预算')
         if not isinstance(record, dict) or not isinstance(record.get('proof'), dict):
@@ -4292,11 +4339,30 @@ class Worker:
         data = Path(request['original_png']).read_bytes()
         if hashlib.sha256(data).hexdigest() != request['snapshot_id']:
             raise ValueError('经济原始PNG身份变化')
+        source_semantic = source.get('semantic') or {}
+        native_refresh_offer = refresh_reader.expects_offer(source) or refresh_reader.expects_offer(actual)
+        supplied_fields = plan.get('fields')
+        ignored_refresh_fields = []
         with Image.open(BytesIO(data)) as image:
             image.load()
-            fields = economy.bind_fields(plan.get('fields'), image, gold_bounds=GOLD_HUD)
+            if native_refresh_offer and isinstance(supplied_fields, dict):
+                # An explicit read in the same current domain may not disagree
+                # with the native widget. The other domain is simply absent.
+                if 'refresh_offer' in source_semantic:
+                    offer = refresh_reader.consume_offer(source_semantic['refresh_offer'], image,
+                                                          request['snapshot_id'], source.get('page'))
+                    if offer is not None:
+                        name, key = ('free_refreshes', 'free_remaining') if offer['mode'] == 'free' else ('refresh_cost', 'paid_cost')
+                        supplied = supplied_fields.get(name)
+                        if supplied is not None and (not isinstance(supplied, dict)
+                                or not economy.valid_field(name, supplied.get('value')) or supplied['value'] != offer[key]):
+                            raise ValueError('本请求明确刷新读数与当前控件同域事实冲突：' + name)
+                ignored_refresh_fields = [name for name in economy.LEGACY_REFRESH_FIELDS if supplied_fields.get(name) is not None]
+                supplied_fields = {key: value for key, value in supplied_fields.items() if key not in economy.LEGACY_REFRESH_FIELDS}
+            fields = economy.bind_fields(supplied_fields, image, gold_bounds=GOLD_HUD)
         binding = {'scope': (self.active_match_id, stage, self.epoch()), 'snapshot_id': request['snapshot_id'],
-                   'fields': fields, 'plan': plan, 'proof': record['proof']}
+                   'fields': fields, 'plan': plan, 'proof': record['proof'],
+                   'native_refresh_offer': native_refresh_offer, 'ignored_legacy_refresh_fields': ignored_refresh_fields}
         self.economy_read_cache = None
         observed = self.economy_observation(actual, binding)
         ledger = self.economy_ledger(stage)
@@ -4358,7 +4424,24 @@ class Worker:
                 raise ValueError('待验交易后帧身份变化')
             with Image.open(BytesIO(old_data)) as image:
                 image.load()
-                after = economy.observe_fields(fields, image, getattr(self.perception, 'engine', None))
+                archived = {'snapshot_id': pending['after_snapshot_id'], 'page': pending.get('after_page'),
+                            'read_contract': pending.get('after_read_contract'), 'semantic': {}}
+                if 'after_refresh_offer' in pending:
+                    archived['semantic']['refresh_offer'] = pending['after_refresh_offer']
+                after = self.read_economy_fields(fields, image, archived,
+                    native_required='refresh_offer' in pending['before'].get('values', {}),
+                    ignored_legacy_refresh_fields=ignored_refresh_fields)
+            if actual['snapshot_id'] == pending['after_snapshot_id'] and 'refresh_offer' in observed['values']:
+                saved_offer, current_offer = after['values'].get('refresh_offer'), observed['values']['refresh_offer']
+                if saved_offer is not None and current_offer is not None and saved_offer != current_offer:
+                    raise ValueError('原交易后帧刷新事实与同帧当前读取冲突，保持pending')
+                if current_offer is not None and saved_offer is None:
+                    after['values']['refresh_offer'] = copy.deepcopy(current_offer)
+                    after['unknown'] = [name for name in after['unknown'] if name not in (*economy.LEGACY_REFRESH_FIELDS, 'refresh_offer')]
+                    for name in economy.LEGACY_REFRESH_FIELDS:
+                        after['values'].pop(name, None)
+                        after['evidence'].pop(name, None)
+                    after['evidence']['refresh_offer'] = copy.deepcopy(observed['evidence']['refresh_offer'])
             after.update(shop=pending.get('after_shop', []), shop_complete=pending.get('after_shop_complete', False))
             outcome = economy.classify_effect(pending['kind'], pending['before'], after,
                 expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'))
@@ -4419,8 +4502,8 @@ class Worker:
                         'expected_page': 'shop', 'reason': target['reason']})
                     break
             elif not ledger['pending'] and status['phase'] in ('free_refresh', 'paid_search') and actual['page'] == 'shop':
-                cost = 0 if observation['values'].get('free_refreshes', 0) > 0 else observation['values'].get('refresh_cost')
-                if status['phase'] == 'free_refresh' and observation['values'].get('free_refreshes', 0) > 0 or status['paid_search']['allowed']:
+                cost = economy.refresh_cost(observation['values'])
+                if status['phase'] == 'free_refresh' and cost == 0 or status['paid_search']['allowed']:
                     economy.require_spending('refresh', cost, plan, observation, ledger)
                     actions.append({'type': 'key', 'args': [economy.REFRESH_KEY], 'guard_texts': ['刷新'],
                                     'expected_page': 'shop', 'reason': status['reason']})
@@ -4461,7 +4544,7 @@ class Worker:
         if candidate is None:
             raise ValueError('经济依赖或预算拒绝本动作：' + policy['dependencies']['reason'])
         cost = (action['cost'] if kind == 'purchase' else observation['values']['xp_cost'] if kind == 'experience'
-                else 0 if observation['values']['free_refreshes'] > 0 else observation['values']['refresh_cost'])
+                else economy.refresh_cost(observation['values']))
         return {'kind': kind, 'cost': cost, 'observation': observation, 'plan': plan, 'ledger': ledger}
 
     def apply_economy_result(self, ledger, pending, result, *, acknowledged=False, persist=True):

@@ -1,0 +1,34 @@
+{
+  "id": "a9e979c9b8a9475f9c261195ffec69dc",
+  "ok": true,
+  "completed": [
+    {
+      "type": "click",
+      "args": [
+        1564.0,
+        199.0
+      ]
+    },
+    {
+      "type": "wait",
+      "args": [
+        0.4
+      ]
+    },
+    {
+      "type": "key",
+      "args": [
+        68
+      ]
+    },
+    {
+      "type": "wait",
+      "args": [
+        0.5
+      ]
+    }
+  ],
+  "source_receipt_sha256": "78dba7e395611e28330f763e15e7901543939e9b91aa9addca896547d88f1af8",
+  "projection_only": true,
+  "private_handles_paths_and_snapshot_removed": true
+}

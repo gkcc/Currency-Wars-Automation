@@ -41,7 +41,7 @@ DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 PLAYER_LEVEL_ROI = [240, 880, 358, 936]
 # Current parsing support, not a claim about the game's permanent maximum.
 MAX_SUPPORTED_POPULATION = 12
-READ_CONTRACT_VERSION = 1
+READ_CONTRACT_VERSION = 2
 READ_SCOPES = ('full', 'rewards', 'economy')
 # Raw full-frame OCR only: 1920x1080 RGB, Pillow RGB default resize to
 # 1280x720, RapidOCR with use_cls=False. Bump when that pipeline changes.
@@ -991,6 +991,9 @@ class Perception:
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
         semantic = semantic_facts(rows, image, page, engine=self.engine, snapshot_id=digest)
         semantic['player_hud'] = player
+        from currency_wars_refresh_offer import read_offer, unread_offer
+        semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope == 'rewards' else
+                                     read_offer(rows, image, page, self.engine, digest))
         option_read = supply_read_details(rows, page, semantic.get('options', []))
         if option_read:
             semantic['option_read'] = {**option_read, 'snapshot_id': digest}
@@ -1029,7 +1032,7 @@ class Perception:
         contract = {'version': READ_CONTRACT_VERSION, 'requested_scope': scope,
                     'effective_scope': effective_scope, 'page_ocr': 'full_frame',
                     'unread': (['team', 'inventory'] +
-                        (['shop', 'player_hud', 'deployed', 'hp'] if effective_scope == 'rewards' else []))
+                        (['shop', 'player_hud', 'deployed', 'hp', 'refresh_offer'] if effective_scope == 'rewards' else []))
                         if narrow else [],
                     'fallback_reason': 'page_requires_full_read' if effective_scope != scope else None}
         result = {"snapshot_id": digest, "page": page, "rows": rows, "fields": fields,

@@ -13,6 +13,7 @@ FIELDS = ('coins', 'level', 'xp', 'xp_cost', 'xp_gain', 'free_refreshes', 'refre
 XP_KEY, REFRESH_KEY = 70, 68
 PREPARATION_PAGES = ('preparation', 'shop')
 POLICY_FIELDS = ('mode', 'targets', 'budget', 'paid_search', 'experience', 'reserve')
+LEGACY_REFRESH_FIELDS = ('free_refreshes', 'refresh_cost')
 
 
 def economic_action(action, page):
@@ -181,11 +182,39 @@ def validate_budget(plan, observed, ledger):
                 if rounds is not None else None}
 
 
+def refresh_offer(values):
+    """One current mode; a present native contract never falls back to old ROIs."""
+    if 'refresh_offer' in values:
+        offer = values['refresh_offer']
+        if not isinstance(offer, dict) or set(offer) != {'mode', 'free_remaining', 'paid_cost'}:
+            return None
+        if offer['mode'] == 'free' and _integer(offer['free_remaining'], 1) and offer['paid_cost'] is None:
+            return dict(offer)
+        if offer['mode'] == 'paid' and _integer(offer['paid_cost'], 1) and offer['free_remaining'] is None:
+            return dict(offer)
+        return None
+    # Compatibility for explicitly older numeric protocols. Native paid mode
+    # does not create a free-count zero or reuse this legacy discriminator.
+    free = values.get('free_refreshes')
+    if not _integer(free):
+        return None
+    if free > 0:
+        return {'mode': 'free', 'free_remaining': free, 'paid_cost': None}
+    cost = values.get('refresh_cost')
+    return {'mode': 'paid', 'free_remaining': None, 'paid_cost': cost if _integer(cost, 1) else None}
+
+
+def refresh_cost(values):
+    offer = refresh_offer(values)
+    return None if offer is None else 0 if offer['mode'] == 'free' else offer['paid_cost']
+
+
 def required_fields(kind, values):
-    required = {'coins'} if kind == 'purchase' else {'coins', 'free_refreshes'}
+    refresh_field = 'refresh_offer' if 'refresh_offer' in values else 'free_refreshes'
+    required = {'coins'} if kind == 'purchase' else {'coins', refresh_field}
     if kind == 'experience':
         required.update(('level', 'xp', 'xp_cost', 'xp_gain'))
-    if kind == 'refresh' and values.get('free_refreshes') == 0:
+    if kind == 'refresh' and 'refresh_offer' not in values and values.get('free_refreshes') == 0:
         required.add('refresh_cost')
     return required
 
@@ -196,9 +225,11 @@ def paid_search_status(plan, values, ledger, gaps, *, guide_permission=None):
     purchase_remaining = budget['purchase'] - ledger['spent']['purchase']
     if gaps:
         return {'finished': False, 'reason': '当前明确缺口须先购买', 'allowed': False}
-    if values.get('free_refreshes') is None:
-        return {'finished': False, 'reason': '免费次数尚未实读', 'allowed': False}
-    if values['free_refreshes'] > 0:
+    offer = refresh_offer(values)
+    if offer is None:
+        return {'finished': False, 'reason': ('当前刷新控件模式/数量或实价尚未实读' if 'refresh_offer' in values
+                                              else '免费次数尚未实读'), 'allowed': False}
+    if offer['mode'] == 'free':
         return {'finished': False, 'reason': '先用免费刷新并处理新缺口', 'allowed': False}
     if budget['refresh'] == 0:
         return {'finished': True, 'reason': search['reason'], 'allowed': False}
@@ -213,7 +244,7 @@ def paid_search_status(plan, values, ledger, gaps, *, guide_permission=None):
         return {'finished': True, 'reason': '购牌留资上限不足，停止搜牌', 'allowed': False}
     if guide_permission is not None and not guide_permission.get('allowed') and guide_permission.get('phase') is not None:
         return {'finished': True, 'reason': '当前已核攻略阶段禁止付费搜牌', 'allowed': False}
-    cost = values.get('refresh_cost')
+    cost = offer['paid_cost']
     if cost is None:
         return {'finished': False, 'reason': '付费刷新价格未知', 'allowed': False}
     reasons = []
@@ -231,14 +262,16 @@ def paid_search_status(plan, values, ledger, gaps, *, guide_permission=None):
 
 def dependencies(plan, observation, ledger, gaps, *, shop_complete, guide_permission=None):
     values = observation['values']
+    offer = refresh_offer(values)
     search = paid_search_status(plan, values, ledger, gaps, guide_permission=guide_permission)
     if gaps:
         phase, reason = 'purchase', '先购买当前明确缺口，回读槽位与金币'
     elif not shop_complete:
         phase, reason = 'shop_read', '当前商店五槽及明确缺口尚未完整核对'
-    elif values.get('free_refreshes') is None:
-        phase, reason = 'free_refresh', '免费刷新次数未知，不能先买经验'
-    elif values['free_refreshes'] > 0:
+    elif offer is None:
+        phase, reason = 'free_refresh', ('当前刷新控件模式/数量或实价未知，不能先买经验' if 'refresh_offer' in values
+                                          else '免费刷新次数未知，不能先买经验')
+    elif offer['mode'] == 'free':
         phase, reason = 'free_refresh', '先免费刷新一次，再重新核商店缺口'
     elif not search['finished']:
         phase, reason = 'paid_search', search['reason']
@@ -282,11 +315,23 @@ def classify_effect(kind, before, after, *, expected_cost, target_level=None, sl
             gain = None
         changed, expected = not same, gain == a['xp_gain']
     elif kind == 'refresh':
-        if 'free_refreshes' not in a or 'free_refreshes' not in b or not after.get('shop_complete'):
-            return {'outcome': 'unknown', 'reason': '刷新后免费次数/完整五槽未实读', 'observed_spent': spent}
-        changed = a['free_refreshes'] != b['free_refreshes'] or before.get('shop') != after.get('shop')
-        expected = ((a['free_refreshes'] > 0 and b['free_refreshes'] == a['free_refreshes'] - 1 and expected_cost == 0)
-                    or a['free_refreshes'] == b['free_refreshes'] == 0 and expected_cost > 0)
+        previous, current = refresh_offer(a), refresh_offer(b)
+        native = 'refresh_offer' in a or 'refresh_offer' in b
+        if (previous is None or current is None or not after.get('shop_complete')
+                or native and ('refresh_offer' not in a or 'refresh_offer' not in b)):
+            return {'outcome': 'unknown', 'reason': ('刷新前后控件/完整五槽未实读' if native
+                       else '刷新后免费次数/完整五槽未实读'), 'observed_spent': spent}
+        changed = ((previous != current if native else a['free_refreshes'] != b['free_refreshes'])
+                   or before.get('shop') != after.get('shop'))
+        if previous['mode'] == 'free':
+            expected = expected_cost == 0 and (
+                current['mode'] == 'free' and current['free_remaining'] == previous['free_remaining'] - 1
+                or current['mode'] == 'paid' and previous['free_remaining'] == 1)
+        else:
+            # The after-frame price constrains the next transaction; this one
+            # must match its own before-frame offer and published cost.
+            expected = (current['mode'] == 'paid' and expected_cost > 0
+                        and (not native or expected_cost == previous['paid_cost']))
     else:
         previous = next((item for item in before.get('shop', []) if item['slot'] == slot), None)
         current = next((item for item in after.get('shop', []) if item['slot'] == slot), None)
