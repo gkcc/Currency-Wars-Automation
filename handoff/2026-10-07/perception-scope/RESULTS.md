@@ -23,6 +23,8 @@
 
 上述四文件在两组之间相同，且每组运行前后均相同。脚本没有实例化 Worker 或 Entry，没有调用 Runner；同期 Runner 的其他修改不属于这次读图计时，也没有被包含在“读取源稳定”的表述中。
 
+因此本表不包含 Worker 在 ROOT 回传、购牌或转布阵前从窄读升级 full 的额外真实读取。该步骤会再次执行主 OCR；实际业务闭环还应计入这部分成本，不能以两个函数读取模式的差值替代闭环净收益。
+
 环境为同一 Linux x86_64 宿主、Python 3.12.14，已安装 ONNX Runtime 1.30.0、RapidOCR ONNX Runtime 1.4.4、NumPy 2.3.5、Pillow 11.3.0、OpenCV 4.13.0.92。ONNX 遥测在导入前通过环境变量关闭，导入后再调用关闭 API；没有下载依赖或资源。
 
 输入严格为 [reward-sequence/manifest.json](../reward-sequence/manifest.json) 的 q00、q01、q02，随后 [refresh-sequence/manifest.json](../refresh-sequence/manifest.json) 的 r00 至 r06。每张完整 1920×1080 PNG 都先核对导出 SHA256。主 OCR 使用生产原有的 1280×720 缩放，数值补读也来自生产原有区域；没有合成空槽、改 OCR 文本、填入 confidence，或用裁剪图替代真实帧。

@@ -69,6 +69,8 @@
 
 方法包含区间先扣除直接子区间，以上可相加；外层总读取的少量计时包装成本另外保留。ShopReader 总时间、其内部 OCR、主 OCR 的检测/识别成员不能再重复相加。
 
+这两组只比较 Perception 读图函数，未包含 Worker 从窄读进入 ROOT/购牌/布阵前的额外 full 重读。该升级会再次运行真实 OCR，其成本不能从本表中省略后宣称闭环净收益；本批没有测得完整 Worker 业务链墙钟提速。
+
 StateReader 调用每遍 10→0，ShopReader 8→7，玩家 HUD 和数字补读分别 10→7；主 OCR 始终 10 次。独立补测 q01/q00 的主 OCR 中，文字识别约占 81.6%，检测约占 18.0%。这支持继续审查感知架构，但不能据此宣称任意区域可安全跳过。
 
 公开检出缺 `tools/shop_reader_resources/SOURCES.json` 等本机私有素材，八张展开商店的 full 读取均实际 error/unknown，内部商店 OCR 没有发生。ROOT 已有 57 个原资源并证明七商店 `shop_ok=true`；本报告不推断本机也缺资源，不用合成空店代替实图。完整资源下跳 StateReader/ShopReader 的实际成本，需 ROOT 用同脚本补一次对照。
