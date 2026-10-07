@@ -156,6 +156,10 @@ class ProfileRecorder:
                    category=category, business_step=business_step, reason=reason,
                    request_id=request_id, snapshot_id=snapshot_id)
 
+    def record_economy_flow(self, *, flow_id, context, **values):
+        """An execution checkpoint, not a time interval or a ROOT request."""
+        self._emit('economy_flow', flow_id, context=context, flow_id=flow_id, **values)
+
     def record_interval(self, name, *, start_ns, end_ns, phase=None, operation=None,
                         parent_id=None, request_id=None, receipt_id=None, snapshot_id=None):
         """Import an actual same-clock broker interval, never a guessed duration.
@@ -267,12 +271,17 @@ def summarize_events(events, issues=None):
             continue
         seen[key] = event
         valid.append(event)
-    paired, last, returns = defaultdict(dict), defaultdict(int), []
+    paired, last, returns, economy_flows = defaultdict(dict), defaultdict(int), [], []
     for event in valid:
         last[event['session_id']] = max(last[event['session_id']], event['monotonic_ns'])
         if event['kind'] == 'root_return':
             returns.append({key: event.get(key) for key in ('run_id', 'clock_id', 'match_id', 'stage',
                 'phase', 'business_step', 'category', 'reason', 'request_id', 'snapshot_id')})
+            continue
+        if event['kind'] == 'economy_flow':
+            # Keep source identities and the actual point event. Do not pair
+            # these into spans or infer causality from an adjacent ROOT return.
+            economy_flows.append(dict(event))
             continue
         if event['kind'] == 'diagnostic':
             issues.append({'reason': event.get('reason', 'recorder_diagnostic'), 'event_id': event['event_id']})
@@ -446,6 +455,7 @@ def summarize_events(events, issues=None):
             'utc_end': max((event.get('utc', '') for event in valid), default=None),
             'nodes': nodes, 'plane_first_nodes': [node for node in nodes if node['stage'].endswith('-1')],
             'planes': planes, 'spans': span_rows, 'issues': issues, 'root_returns': returns,
+            'economy_flow_events': economy_flows,
             'business_steps': [dict(zip(('run_id', 'clock_id', 'match_id', 'stage', 'business_step'), key)) | {
                 'total_seconds': _seconds(value['total_ns']),
                 'operation_seconds': {operation: _seconds(value['operations'][operation]) for operation in OPERATIONS}}
