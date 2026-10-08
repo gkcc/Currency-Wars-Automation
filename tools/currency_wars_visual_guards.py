@@ -210,7 +210,7 @@ def _unique_row(observation, pattern, bounds):
     return row if type(score) in (int, float) and .90 <= score <= 1. else None
 
 
-def _paired_row(original, actual, pattern, bounds, images):
+def _paired_row(original, actual, pattern, bounds, images, *, ink_guard=None):
     rows = [_unique_row(obs, pattern, bounds) for obs in (original, actual)]
     if any(row is None for row in rows) or clean(rows[0]['text']) != clean(rows[1]['text']):
         return None
@@ -220,7 +220,73 @@ def _paired_row(original, actual, pattern, bounds, images):
            min(rows[0]['box'][1], rows[1]['box'][1])-2,
            max(rows[0]['box'][2], rows[1]['box'][2])+2,
            max(rows[0]['box'][3], rows[1]['box'][3])+2]
-    return rows[1] if _text_equal(images, box) else None
+    return rows[1] if (ink_guard or _text_equal)(images, box) else None
+
+
+def _environment_gray_confirmation_equal(images, bounds):
+    """One calibrated disabled appearance, only for environment card selection.
+
+    Native pair: evidence commit 6ef3793a, ROOT_ENVIRONMENT_CONFIRM_RGB.json;
+    glyph [1052,966,1112,1002] has 368/361 gray pixels, IoU .980978,
+    support RGB delta <=8, two-pixel halo delta <=15. Background animation
+    is not text. White/enabled, blank, shifted or covered ink fails here.
+    This does not authorize clicking the disabled confirmation itself.
+    """
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    masks = []
+    for crop in crops:
+        hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+        s, v = hsv[:, :, 1], hsv[:, :, 2]
+        if np.any(v > 190):
+            return False
+        mask = (s < 40) & (v >= 100) & (v <= 190)
+        if np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60:
+            return False
+        masks.append(mask)
+    union = masks[0] | masks[1]
+    if np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .98:
+        return False
+    delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
+    halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+    return bool(np.max(delta[union]) <= 8 and np.max(delta[halo]) <= 16)
+
+
+def _environment_caption_equal(images, bounds):
+    """Native structure ink is gray; exact local RGB preserves its appearance.
+
+    ROOT_ENVIRONMENT_CAPTIONS_RGB.json: paired 角色/装备 ROIs are identical,
+    with 246/253 Canny pixels. A blank or uniform cover is not a glyph.
+    """
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    return (np.array_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right])
+            and np.count_nonzero(_edges(images[0], bounds)) >= 24)
+
+
+def _environment_book_equal(images, bounds):
+    # Same retained source: all three yellow book ROIs are RGB-exact pairs,
+    # with 106/102/104 edge pixels. Books are not white OCR glyphs. Every
+    # color/state byte must still match; neither blank nor flat color passes.
+    return _environment_caption_equal(images, bounds)
+
+
+def _environment_confirmation_equal(images, bounds):
+    # Keep the established bright-text contract; the two appearances cannot
+    # cross-match because the gray branch rejects every V >190 pixel.
+    return (_text_equal(images, bounds)
+            or _environment_gray_confirmation_equal(images, bounds))
+
+
+def _environment_caption_row(original, actual, label, bounds, images):
+    center = (bounds[0] + bounds[2]) // 2
+    top, bottom = {'角色': (575, 645), '装备': (720, 785)}[clean(label)]
+    return _paired_row(original, actual, re.escape(clean(label)),
+                       [center-60, top, center+60, bottom], images,
+                       ink_guard=_environment_caption_equal)
 
 
 def navigation_target(action, request):
@@ -405,17 +471,15 @@ def _environment_structure_labels(original, actual, labels, bounds, images):
     limit. Only these centered, paired native headings may extend coverage;
     other rows remain unaccounted for and fail the complete-card check.
     """
-    center = (bounds[0] + bounds[2]) // 2
     extra = []
-    for label, top, bottom in (('角色', 575, 645), ('装备', 720, 785)):
+    for label in ('角色', '装备'):
         found = [[row for row in observation.get('rows', [])
                   if clean(row.get('text', '')) == label and _inside(row.get('box'), bounds)]
                  for observation in (original, actual)]
         if not any(found):
             continue
         if (any(len(rows) != 1 for rows in found)
-                or _paired_row(original, actual, re.escape(label),
-                               [center-60, top, center+60, bottom], images) is None):
+                or _environment_caption_row(original, actual, label, bounds, images) is None):
             return None
         if label not in [clean(text) for text in labels]:
             extra.append(label)
@@ -439,8 +503,9 @@ def _cards(action, request, actual, images):
         'environment': ('投资环境', [850, 55, 1070, 145], ENVIRONMENT_CONFIRM_BOUNDS),
         'supply': ('补给阶段', [800, 120, 1120, 190], [1580, 950, 1810, 1025]),
     }[page]
-    if any(_paired_row(original, actual, re.escape(label), bounds, images) is None
-           for label, bounds in ((header, header_roi), ('确认', confirm_roi))):
+    if (_paired_row(original, actual, re.escape(header), header_roi, images) is None
+            or _paired_row(original, actual, '确认', confirm_roi, images,
+                           ink_guard=_environment_confirmation_equal if page == 'environment' else None) is None):
         return False
     proof = action.get('target_evidence', {})
     index = proof.get('card_index')
@@ -474,7 +539,10 @@ def _cards(action, request, actual, images):
             if sorted(clean(row['text']) for row in visible) != sorted(clean(label) for label in labels):
                 return False
         for label in labels:
-            if _paired_row(original, actual, re.escape(clean(label)), bounds, images) is None:
+            row = (_environment_caption_row(original, actual, label, bounds, images)
+                   if page == 'environment' and clean(label) in ('角色', '装备')
+                   else _paired_row(original, actual, re.escape(clean(label)), bounds, images))
+            if row is None:
                 return False
         x, y, right, bottom = bounds
         # Complete outline and the central illustration preserve the selected
@@ -488,7 +556,9 @@ def _cards(action, request, actual, images):
             if not _text_equal(images, [x+125, y+100, right-125, y+205]):
                 return False
         # Native book badges cannot disappear, appear, or be occluded.
-        if page in ('investment', 'environment') and not _text_equal(images, [right-45, y+21, right-21, y+41]):
+        if page == 'environment' and not _environment_book_equal(images, [right-45, y+21, right-21, y+41]):
+            return False
+        if page == 'investment' and not _text_equal(images, [right-45, y+21, right-21, y+41]):
             return False
     point = action.get('args')
     target = _unique_row(actual, re.escape(clean(selected['title'])), layout[index-1])
