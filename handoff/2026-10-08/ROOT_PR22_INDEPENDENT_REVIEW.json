@@ -1,0 +1,90 @@
+{
+  "schema": "currency-wars-pr22-independent-review/v1",
+  "status": "PASS",
+  "reviewed_at": "2026-10-08T04:12:28Z",
+  "candidate": "5d3818034197c40a1c3b13cf940208e0000fce82",
+  "parent": "8bcff97b5a9287a6ffda405ee33a17473d1e32ac",
+  "tree": "24330da732defe683471f6920e1e0f2a16ed0bec",
+  "immutable_patch": {
+    "sha256": "C9071FAC798542D035A6F068263B964BF342285E8EFC121E03B5E7FF089B99EE",
+    "command": "git diff --no-ext-diff --binary --full-index 8bcff97b5a9287a6ffda405ee33a17473d1e32ac 5d3818034197c40a1c3b13cf940208e0000fce82"
+  },
+  "production_changed_files": [
+    "tools/currency_wars_perception.py",
+    "tools/currency_wars_runner.py"
+  ],
+  "candidate_runtime_source_hashes": {
+    "gui/launch.py": "B67E505A6DA4CA3F5EC034A9F9740379EF814DB2D5044EFDB57ED77DBE5F6986",
+    "gui/processes.py": "9DE7D4EF8A6E09E9C193E3DA2325AB6A37C60CE82C2D4F2E43BB0655E0E98296",
+    "requirements.txt": "A82867E765C48504225DCA4A82E0DE6ED7F92ED515BD113D029E8144C3BD661A",
+    "tools/currency_wars_artifacts.py": "133BBCA1A4D854E6EBE904E7D8BF7B61720430E6DCC0D929ACD9BAF3D0B36788",
+    "tools/currency_wars_bridge_task.py": "B83259EE0741A67BD2D396823279B7DDCB2FFC07EDEEB8C3F95882CA59E69911",
+    "tools/currency_wars_broker_entry.py": "6C0FD3C9116794F69B61D16241DB47837227F4025641599C197D08581AFF10E2",
+    "tools/currency_wars_coaching.py": "9EE40DAE3B476504F6BFB61DC29EEEFB97E55FEFAC9EEE5E7000CAC701640895",
+    "tools/currency_wars_control.py": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+    "tools/currency_wars_economy.py": "7A2C704510D9A064F893A4164921DE7A0A7B1BDEEF0594A9E783792E093EC9C7",
+    "tools/currency_wars_input_bridge.py": "00E84C0E838F890C9C084EC241FA9D3B75131190EB62D24CEF70FF1AADC58388",
+    "tools/currency_wars_manual_stage.py": "0B8039225251683BC76ECE97079240408AC2B9A68F4D0984DDED79CC1C0C860E",
+    "tools/currency_wars_manual_steps.py": "9A148F6EC78556CDBB31CB54077465707A2FCA9AA87877F4B7C68DD369D1BBD8",
+    "tools/currency_wars_perception.py": "604B4B6D6912E3D8415F066BBB32307555B9564E2F2D5EBDDC6D94F9FDED4ABA",
+    "tools/currency_wars_profile.py": "25A4402B6B4BCBC1709CD23A938535D0562BBB974CB4E905D8A1F9479342641D",
+    "tools/currency_wars_progression.py": "19C0E8C60D768604D8B6DBF13804533449E6804B5BA23D070A2832E291BEBEC5",
+    "tools/currency_wars_refresh_offer.py": "1CD55C43821BA1F99FB0B07F4AE945F4A5146D83DE5A538645D47A25454FAA59",
+    "tools/currency_wars_rewards.py": "73F857AC9EB65143CC45CBEF4A7B9E96BA59A4D034D7945C1CBB63D1DE735F5C",
+    "tools/currency_wars_runner.py": "706472E3DAAAEE9647DAA9851D2448C51F4E5412A19545DBDE4125E8D0BE866E",
+    "tools/currency_wars_runtime_sources.json": "FA6010108D731FC050432F40DDE6223DAD53A6D9CEAF15E64C0F05A10412E15D",
+    "tools/currency_wars_shop_reader.py": "55760B092DA7B45F73B18633B62B88AB9D74574449B4B511BD38964712BFD8B8",
+    "tools/currency_wars_source_guard.py": "4C31CD78B48A6FAA6F88B5C1D8BD32C1D0CF96F8FB6A29282B2ED4F2459E50BF",
+    "tools/currency_wars_state_reader.py": "69ACCA4D20625FC23F41FA9872B9855FD9F3F526A1F29B949E432DD9422ED8A2",
+    "tools/currency_wars_update.py": "A513962220E013F356B4E4223F44F62D6849F280D2BCC091BF5E48072123EF98",
+    "tools/currency_wars_visual_guards.py": "0E878AC428A5A5132C5CCD4E044248C4F6263303A830F2916265F1E96FD24934"
+  },
+  "runtime_source_count": 24,
+  "runtime_binding": {
+    "canonical_sha256": "8618EFE0218E88E6D17920F1AA3AF7D46C8D6F1DB508F913581BE83C6AF97518",
+    "algorithm": "SHA256(UTF8(json.dumps(runtime_source_binding(PROJECT), sort_keys=True, separators=(',', ':'))))",
+    "existing_resources_and_provider_unchanged": true,
+    "resource_files": 61,
+    "verification": "Replacing only current source hashes with the previous independent PR19 24-source map reproduces the complete previous resource/provider/source binding digest.",
+    "previous_binding_sha256": "A1EDD6774FAC994D2078214BBFCF391CE2C47405C3306A8D4662CBBFB9BC16A9",
+    "provider": {
+      "kind": "installed",
+      "path": "D:\\Codex\\home\\skills\\agent-workflow\\scripts\\artifacts.py",
+      "sha256": "03DCB408C80C13CA70E52AB3B2ADB4519F1AAF6AECEB5120410882CCEC29C142"
+    },
+    "installed_control_and_driver_match": true,
+    "installed_control_sha256": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+    "installed_driver_sha256": "B83259EE0741A67BD2D396823279B7DDCB2FFC07EDEEB8C3F95882CA59E69911",
+    "installer_manifest_requirements_rust_and_gui_unchanged": true
+  },
+  "review_conclusions": [
+    {
+      "area": "native page classification",
+      "sources": [
+        "tools/currency_wars_perception.py:126",
+        "tools/currency_wars_perception.py:244",
+        "tools/currency_wars_perception.py:263"
+      ],
+      "finding": "The existing four unique native advantages headers/tabs with their original geometry/confidence outrank generic page text. Actual update/reward modals and formal results retain higher priority. The skill-body battle keyword alone no longer grants battle classification; battle still requires all four original native HUD anchors. No thresholds/templates/OCR work were added."
+    },
+    {
+      "area": "durable stop projection",
+      "sources": [
+        "tools/currency_wars_runner.py:78",
+        "tools/currency_wars_runner.py:90",
+        "tools/currency_wars_runner.py:304",
+        "tools/currency_wars_runner.py:6610"
+      ],
+      "finding": "Both stop flags and battle-approval invalidation precede optional projection. CURRENT and the latest existing business lease must match chat/run/worker PID/creation; replay directory owner and durable identities must agree. Existing journal/match/business/broker/watermark/cleanup facts survive scratch removal. Missing provenance remains missing, conflicting records are not overwritten, and no new lease or input intent is created."
+    },
+    {
+      "area": "exit truth and controller restriction",
+      "sources": [
+        "tools/currency_wars_runner.py:6632",
+        "tools/currency_wars_runner.py:6666"
+      ],
+      "finding": "A retained original broker PID/creation is freshly probed; running/unknown is refused even when display evidence says not_launched. Fresh accepted worker/broker exit evidence and stopped mode replace prior display values only after validation. A stored projection error is raised before CURRENT write. Source review does not authorize adopting or reconstructing another run."
+    }
+  ],
+  "local_original_record_sha256": "e1ef0a2f5a8a084f28a4b5b36751f9b0842d5eef7a9c1d3c58ba78270fa95fda"
+}

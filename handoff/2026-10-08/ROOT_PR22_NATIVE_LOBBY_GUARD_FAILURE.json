@@ -1,0 +1,167 @@
+{
+  "original_request_id": "f0950a27f7fc48d8920b5bbd435b9b65",
+  "before_page": "lobby",
+  "after_page": "lobby",
+  "capture_request_id": "52b869a294744c1c8b506d1c94b02d8e",
+  "input_attempted": false,
+  "native_start_guard": false,
+  "anchors": {
+    "货币战争": {
+      "before": [
+        {
+          "text": "货币战争",
+          "raw_text": "货币战争",
+          "normalization_basis": null,
+          "confidence": 0.9959,
+          "box": [
+            57,
+            87,
+            156,
+            117
+          ]
+        }
+      ],
+      "after": [
+        {
+          "text": "货币战争",
+          "raw_text": "货币战争",
+          "normalization_basis": null,
+          "confidence": 0.9948,
+          "box": [
+            57,
+            87,
+            156,
+            117
+          ]
+        }
+      ]
+    },
+    "零和博弈": {
+      "before": [
+        {
+          "text": "零和博弈",
+          "raw_text": "零和博弈",
+          "normalization_basis": null,
+          "confidence": 0.9762,
+          "box": [
+            54,
+            111,
+            254,
+            171
+          ]
+        }
+      ],
+      "after": [
+        {
+          "text": "零和博弈",
+          "raw_text": "零和博弈",
+          "normalization_basis": null,
+          "confidence": 0.9937,
+          "box": [
+            56,
+            114,
+            254,
+            168
+          ]
+        }
+      ]
+    },
+    "创业指南": {
+      "before": [
+        {
+          "text": "创业指南",
+          "raw_text": "创业指南",
+          "normalization_basis": null,
+          "confidence": 0.9998,
+          "box": [
+            110,
+            255,
+            213,
+            291
+          ]
+        }
+      ],
+      "after": [
+        {
+          "text": "创业指南",
+          "raw_text": "创业指南",
+          "normalization_basis": null,
+          "confidence": 0.9998,
+          "box": [
+            110,
+            255,
+            213,
+            291
+          ]
+        }
+      ]
+    },
+    "晋升等级": {
+      "before": [
+        {
+          "text": "晋升等级",
+          "raw_text": "晋升等级",
+          "normalization_basis": null,
+          "confidence": 0.9984,
+          "box": [
+            1540,
+            276,
+            1648,
+            316
+          ]
+        }
+      ],
+      "after": [
+        {
+          "text": "晋升等级",
+          "raw_text": "晋升等级",
+          "normalization_basis": null,
+          "confidence": 0.9985,
+          "box": [
+            1542,
+            280,
+            1648,
+            315
+          ]
+        }
+      ]
+    },
+    "开始「货币战争」": {
+      "before": [
+        {
+          "text": "开始「货币战争」",
+          "raw_text": "开始「货币战争」",
+          "normalization_basis": null,
+          "confidence": 0.9406,
+          "box": [
+            1468,
+            956,
+            1706,
+            990
+          ]
+        }
+      ],
+      "after": [
+        {
+          "text": "开始「货币战争」",
+          "raw_text": "开始「货币战争」",
+          "normalization_basis": null,
+          "confidence": 0.9473,
+          "box": [
+            1468,
+            954,
+            1706,
+            988
+          ]
+        }
+      ]
+    }
+  },
+  "exact_start_pixels_equal": false,
+  "pixel_difference_box": [
+    52,
+    89,
+    385,
+    90
+  ]
+}
