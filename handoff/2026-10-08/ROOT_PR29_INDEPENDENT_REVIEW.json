@@ -1,0 +1,114 @@
+{
+  "schema": "currency-wars-independent-review/v1",
+  "status": "FAIL",
+  "candidate": "b7f3965d6e75a8aac094b457b13d5163eb6839a4",
+  "parent": "e9e6ca7f4e4d943612d85ed3d28bd483b8224958",
+  "reviewer_chat_id": "01a11aa0-e2fe-7973-a52b-66f94d511133",
+  "observed_at": "2026-10-08T08:39:27Z",
+  "source": "independent static review, original source_guard APIs, existing ROOT Windows evidence and one owned inert protocol probe",
+  "summary": "One confirmed P2 defect violates the explicit fresh-inspect proof requirement after a recovery fails before continuation persistence. Do not approve this immutable candidate until corrected and reverified.",
+  "findings": [
+    {
+      "id": "PR29-R1",
+      "priority": "P2",
+      "status": "confirmed",
+      "title": "Deduplicate recovery intent even when the first failed attempt wrote no continuation record",
+      "location": {
+        "file": "tools/currency_wars_manual_steps.py",
+        "line_start": 325,
+        "line_end": 330
+      },
+      "related_locations": [
+        {
+          "file": "tools/currency_wars_manual_steps.py",
+          "line_start": 215,
+          "line_end": 217
+        },
+        {
+          "file": "tools/currency_wars_runner.py",
+          "line_start": 4075,
+          "line_end": 4086
+        },
+        {
+          "file": "tools/test_currency_wars_reward_recovery.py",
+          "line_start": 369,
+          "line_end": 426
+        }
+      ],
+      "trigger": "A completed original gray/blue input remains effect-pending after its two automatic reads. Submit recover_reward with current proof Q. The one new native successor has unknown coins (also applicable to other refusal before record creation), so the job is refused with verified complete delivery/watermark and zero input, while no reward-continuation file exists and Q remains the current request. Submit the identical proof using another manual-step job ID after the native field recovers.",
+      "observed_bad_outcome": "The second job performs another observation, returns continuation_allowed=true and releases the historical planning blocker without an intervening inspect or new request/capture/frame proof.",
+      "why_guards_do_not_prevent_it": "submit computes and stores reward_recovery_intent but never searches existing jobs for that intent. _prepare_recovery_record returns immediately when the continuation file is absent; its refused-job/new-source checks therefore cover only failures after that file was written. Same-ID idempotency and the queued/running fence do not stop a new ID after refused.",
+      "impact": "Breaks the documented explicit fresh-current-proof retry contract and permits repeated read attempts under one old supervisor proof. Recovery itself emits zero physical input. The probe preserved the old unknown record and did not repeat the original gray input; a separately requested subsequent native collect_rewards used existing fresh guards and simulated one new blue input. No real game operation was performed.",
+      "required_change": "Under the existing manual-checkpoint lock, inspect prior recovery mailbox jobs for the original reward obligation even when no continuation file exists. Reusing a prior recovery intent/source under another job ID must be refused. A new attempt must retain the previous report and require its known zero-input terminal delivery plus a genuinely new inspect request/capture/frame proof. Preserve same-ID result reads and the original automatic read budget.",
+      "smallest_regression": "Extend the existing recovery tests with a pre-persistence refused successor (unknown native coins): identical proof/new ID must cause no additional capture; a subsequent explicit inspect with new request/capture/frame may retry. Retain the existing post-persistence failure case.",
+      "evidence": "retry_probe below; tools/test_currency_wars_reward_recovery.py:298 covers one adverse attempt only and :369 covers retry only after continuation persistence."
+    }
+  ],
+  "limits": {
+    "production_source_edits": [],
+    "test_files_added": [],
+    "ready_edited": false,
+    "git_index_or_branch_changed": false,
+    "gui_or_browser_control": false,
+    "game_inputs": 0,
+    "new_game_captures": 0,
+    "controllers_started": 0,
+    "private_resources_exported": 0,
+    "candidate_installed": false,
+    "combined_navigation_candidate_reviewed": false,
+    "check_launch_executed": false,
+    "natural_reward_recovery_verified": false,
+    "previously_claimed_rewards_replayed": false,
+    "whole_match_or_speedup_proved": false,
+    "runtime_disposition_threat_model": "Existing local provenance and accidental/missing-state integrity; no claim to resist coordinated adversarial rewriting of every local record."
+  },
+  "required_next_action": "Have the existing Pro code owner fix PR29-R1 in the next immutable candidate, then verify that narrow regression and the combined candidate binding. Keep ROOT as the only production/READY/game input writer.",
+  "retry_probe": {
+    "candidate": "b7f3965d6e75a8aac094b457b13d5163eb6839a4",
+    "reviewer": "01a11aa0-e2fe-7973-a52b-66f94d511133",
+    "observed_at": "2026-10-08T08:34:51.878084+00:00",
+    "source_sha256": {
+      "currency_wars_runner": "7a0b1f9d126205fa54bd3fb5e3db40dbadf429b011574f4a9ca735429d19179a",
+      "currency_wars_manual_steps": "4a6cebb59b9abb157e4e454201964d137d050236a88a512afe6709af0f67a34a",
+      "currency_wars_manual_stage": "1f0ac7cf85896b5e8c92b625de494ca5de5269e8aa8d0574e4b79641c6ede5ef",
+      "test_currency_wars_reward_recovery": "51f58c3738bd650ad758b2f741b8be00b64fc3976923ace8f0410ba0811de6ab"
+    },
+    "game_inputs": 0,
+    "controllers_started": 0,
+    "probe": "unchanged supervisor proof after a refused one-read recovery before continuation persistence",
+    "first": {
+      "status": "refused",
+      "error": "reward recovery current page/target/coins is not stable; zero input, history unknown",
+      "captures": 1,
+      "continuation_record_exists": false,
+      "request_unchanged": true,
+      "input_receipt_ids": [],
+      "receipt_watermark_verified": true,
+      "receipt_delivery_verified": true
+    },
+    "second": {
+      "status": "returned",
+      "same_proof": true,
+      "different_job_id": true,
+      "captures": 1,
+      "continuation_allowed": true,
+      "pending_blocker_released": true,
+      "recovery_simulated_inputs": 0
+    },
+    "original_archive_and_runtime_bytes_unchanged_after_recovery": true,
+    "explicit_subsequent_collect": {
+      "status": "returned",
+      "simulated_new_blue_input_count": 1,
+      "original_gray_simulated_input_count": 1,
+      "historical_gray_archive_unchanged": true,
+      "phase": "rewards"
+    },
+    "elapsed_seconds": 5.114729900029488,
+    "owned_runs": [
+      {
+        "actually_removed": true
+      }
+    ]
+  },
+  "scope": "Public focused defect evidence; full local source/resource/provider and GUI binding retained privately in ROOT report"
+}
