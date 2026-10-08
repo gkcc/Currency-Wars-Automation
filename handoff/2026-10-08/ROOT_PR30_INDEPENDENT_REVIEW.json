@@ -1,0 +1,343 @@
+{
+  "schema": "currency-wars-independent-review/v1",
+  "status": "FAIL",
+  "outcome": "fail",
+  "navigation_outcome": "fail",
+  "overall_deployment_status": "blocked",
+  "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+  "candidate": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+  "parent": "b7f3965d6e75a8aac094b457b13d5163eb6839a4",
+  "installed_ancestor": "e9e6ca7f4e4d943612d85ed3d28bd483b8224958",
+  "owner_id": "01a11abe-2760-7043-a849-e085541f4494",
+  "reviewer_chat_id": "01a11abe-2760-7043-a849-e085541f4494",
+  "task_owner_id": "01a10ddf-304b-7e71-bd41-13696d4f3816",
+  "reviewer_task": "/root/pr30_navigation_review",
+  "observed_at": "2026-10-08T09:09:42Z",
+  "context": "fresh",
+  "context_declaration": "Separate reviewer received a self-contained frozen-target assignment; no implementation role.",
+  "identity_provenance": "ROOT supplied the uniquely newly observed native child UUID under its own UUID; reviewer did not annotate inherited CODEX_THREAD_ID.",
+  "source": "independent reviewer: frozen code, bounded inert probe, and explicitly attributed ROOT Windows evidence",
+  "evidence_reference": "docs/PR30_INDEPENDENT_REVIEW.json",
+  "summary": "One new navigation finding: a zero-input refused successor replaces the current pointer and hides an older pending/unknown navigation from the supervisor-only retry gate. The original archive and read budget survive, but an ordinary native reviewed_plan can then publish another click. PR29-R1 independently remains an inherited deployment blocker.",
+  "ancestry": {
+    "single_parent_verified": true,
+    "parent_single_parent_is_installed_ancestor": true,
+    "installed_head_at_review": "e9e6ca7f4e4d943612d85ed3d28bd483b8224958",
+    "tracked_worktree_changes_at_review": [],
+    "index_changes_at_review": []
+  },
+  "findings": [
+    {
+      "id": "PR30-R1",
+      "priority": "P2",
+      "status": "confirmed",
+      "title": "Keep the unresolved navigation obligation across a zero-input refused successor",
+      "location": {
+        "file": "tools/currency_wars_runner.py",
+        "line_start": 5793,
+        "line_end": 5795
+      },
+      "related_locations": [
+        {
+          "file": "tools/currency_wars_runner.py",
+          "line_start": 5780,
+          "line_end": 5787
+        },
+        {
+          "file": "tools/currency_wars_runner.py",
+          "line_start": 5821,
+          "line_end": 5835
+        },
+        {
+          "file": "tools/currency_wars_runner.py",
+          "line_start": 6153,
+          "line_end": 6157
+        }
+      ],
+      "trigger": "First guide click has completed delivery but remains pending/unknown after two read-only attempts. ROOT performs a new inspect and submits the allowed fresh 17-field supervised intent. That intent reaches begin_startup_navigation, then foreground is lost before publication, so the second attempt is refused with zero input. After another inspect, submit an ordinary native guide reviewed_plan without the source/17-field supervisor annotation.",
+      "observed_bad_outcome": "The third plan returns expected_title_observed and publishes a second simulated click. Its source is native_visual_guard and prior_unknown_navigation_request_id is null, although the original pending archive is unchanged and remains unknown.",
+      "why_guards_do_not_prevent_it": "save_startup_navigation always overwrites startup-navigation.json. The second attempt's refusal changes the pointer to status=refused/publication_attempted=false. check_startup_navigation_attempt only enforces completed delivery plus a fresh supervisor annotation when that one pointer is pending and published, so it never follows the second record's prior_unknown_navigation_request_id. New request/job IDs avoid the same-request and guide-intent dedup checks. Current native source, foreground, epoch and preparation guards still pass; they do not restore the missing pending obligation.",
+      "impact": "Breaks the documented supervisor-only fallback after an unknown navigation. This probe used the original reviewed_plan consumer with an ordinary native action, not a real autonomous game run. No physical input occurred; the original receipt, unknown outcome and two-read budget were preserved.",
+      "required_change": "Preserve an authenticated unresolved-obligation pointer separately from the latest attempt, or follow and validate the prior-unknown chain when a successor was refused before publication. A zero-input successor must not clear the older pending requirement. Retain all original reports and same-ID reads, and continue requiring a fresh explicit supervisor proof before a new click while that obligation remains unresolved.",
+      "smallest_regression": "Extend the existing guide consumer test with pending/unknown -> fresh supervised intent -> foreground refusal before publication -> fresh inspect -> ordinary native plan. Assert zero additional publication for the ordinary plan, then verify a genuinely new supervised proof can proceed while the original archive stays unchanged.",
+      "evidence": "navigation_retry_probe below; original GuideConsumerTests cover direct unknown -> supervised retry and refusal separately, but not this linked sequence."
+    }
+  ],
+  "inherited_blockers": [
+    {
+      "id": "PR29-R1",
+      "priority": "P2",
+      "status": "unresolved_in_frozen_candidate",
+      "evidence_reference": "docs/PR29_INDEPENDENT_REVIEW.json",
+      "title": "Identical reward recovery proof can be retried under a new job ID after a pre-persistence refusal.",
+      "handling": "Read existing confirmed finding; did not re-probe it. PR30 adds no recovery-intent dedup repair. A future immutable repair requires a new assignment and current-target verification."
+    }
+  ],
+  "checks": [
+    {
+      "criterion_id": "frozen-diff-and-contract",
+      "status": "pass",
+      "evidence": "Verified sole-parent ancestry; read the full frozen STARTUP_GUIDE_ACTIONABILITY.md, all three production diffs, eight focused test definitions and affected consumers. Review did not follow mutable HEAD.",
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "local-native-actionability",
+      "status": "pass",
+      "evidence": "Both PNG digests, native preparation/stage classification, unique exact anchors and local exposed target/strip ink are checked. Existing JPEG threshold is retained and a source-bound PNG silhouette is added. Irrelevant front-caption/full-background equality is removed. Six crops plus diagnosis match evidence commit 99809b924393ca4540bfa4ced5c17cb89452ad73 byte for byte; these are calibration, not independent generalization positives.",
+      "files": [
+        "tools/currency_wars_visual_guards.py:53",
+        "tools/currency_wars_visual_guards.py:147",
+        "tools/currency_wars_visual_guards.py:211"
+      ],
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "supervisor-proof-and-publication-binding",
+      "status": "pass",
+      "evidence": "Exact 17-field current proof is validated at submission and Worker execution, limited to the pending startup-guide checkpoint and same reviewed_plan. It binds request/snapshot/capture/frame/match/stage/epoch/checkpoint/deadline, supported bounds/point, uniqueness and exposure. Native facts remain separate. Same-owner immutable frame receipts and local visual eligibility are rechecked under the existing Entry lease/publication lock; foreground/READY/stop/request/deadline checks remain.",
+      "files": [
+        "tools/currency_wars_manual_steps.py:69",
+        "tools/currency_wars_manual_steps.py:419",
+        "tools/currency_wars_runner.py:3296",
+        "tools/currency_wars_runner.py:4357",
+        "tools/currency_wars_runner.py:5751"
+      ],
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "one-click-receipt-and-bounded-successors",
+      "status": "pass",
+      "evidence": "Original actions must authenticate as one completed fixed click before any fallback capture. Missing original frames consume the same persisted two-read budget; budget is spent before waits/capture, with stop/match/epoch/deadline/manual-owner checks. Same request/job replay is refused or read-only. ROOT's selected tests passed; the new probe also retained the original two-read budget and archive.",
+      "files": [
+        "tools/currency_wars_runner.py:5839",
+        "tools/currency_wars_runner.py:5854",
+        "tools/currency_wars_runner.py:5874",
+        "tools/currency_wars_manual_steps.py:388"
+      ],
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "pending-continuity-through-refused-successor",
+      "status": "fail",
+      "evidence": "PR30-R1 reproduced on exact frozen production bytes: the second zero-input refusal replaces the pointer and a later ordinary native reviewed_plan publishes another click without the mandated supervisor annotation.",
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "preparation-order-and-title-semantics",
+      "status": "pass",
+      "evidence": "Navigation requires current rewards-complete/startup-guide phase. Success is only unique exact current-frame title 创业指南 at confidence >=0.90, preserving actual page and requiring current startup review; it does not set a preparation phase complete. Existing find_text rejects duplicate matches, and original startup review retains chapter/goals/rewards evidence.",
+      "files": [
+        "tools/currency_wars_runner.py:5491",
+        "tools/currency_wars_runner.py:5887",
+        "tools/currency_wars_runner.py:3611",
+        "tools/currency_wars_perception.py:340"
+      ],
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "result-persistence-and-history",
+      "status": "pass",
+      "evidence": "Each request has a retained record and PNG evidence; state result and matching manual-step summary survive subsequent asks. The probe verified old archive bytes unchanged across both the refusal and later click. Persistence does not cure PR30-R1: the current pointer no longer enforces the old unresolved obligation.",
+      "files": [
+        "tools/currency_wars_runner.py:5780",
+        "tools/currency_wars_runner.py:5809",
+        "tools/currency_wars_manual_steps.py:586",
+        "tools/currency_wars_manual_steps.py:505"
+      ],
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "root-windows-selection-source-binding",
+      "status": "pass",
+      "evidence": "ROOT reports new 8 plus affected parent 1: 9 passed, 0 failures/errors/skips, 12.546982900006697 seconds. Independently compared all 35 source and 19 artifact hashes to candidate Git blobs and frozen acceptance maps; no mismatches. Loaded closure missing []. No suite rerun.",
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "prospective-production-and-gui-input-binding",
+      "status": "pass",
+      "evidence": "Original unchanged source_guard APIs accepted the frozen 24-source byte overlay over the actual current 64-resource inventory/provider; resources/provider remained equal to installed PR28. Original frozen gui_fingerprint function found 16 compile inputs; candidate/current/BUILD_STATE agree. No private resource export, compile, launch or READY update.",
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    },
+    {
+      "criterion_id": "natural-navigation-and-current-deployment",
+      "status": "unverified",
+      "evidence": "ROOT's private original PNG pair passed read-only visual eligibility, with identities/digests/fingerprints. Its current frame is a later manual inspect and reply is an independent reconstruction, not the original rejected preinput actual. No historical authorization, current ownership/epoch/deadline qualification, native click-to-title success, candidate launch, whole-match or speedup is established.",
+      "target": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+      "source": "independent reviewer; ROOT runtime evidence explicitly attributed",
+      "observed_at": "2026-10-08T09:09:42Z"
+    }
+  ],
+  "navigation_retry_probe": {
+    "candidate": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+    "probe": "pending then new supervised pre-publication refusal then ordinary native navigation",
+    "game_inputs": 0,
+    "controllers_started": 0,
+    "observations": "declared original fixture canvases and inert Entry transport",
+    "production_sha256": {
+      "currency_wars_runner.py": "15e4a38199e79767a29b51dc73653dd941a5141a4c159873c5560b71b95a4b5d",
+      "currency_wars_manual_steps.py": "f30d50f9693f19f002dbfc0f58adfc9aba0f05bb3eacd9ea5e845a7789377752",
+      "currency_wars_visual_guards.py": "9d635615d4a1c5ca86dd40c38790422cf1624f32543496bc943adfbc011f8305"
+    },
+    "first": {
+      "status": "pending",
+      "outcome": "unknown",
+      "verification_reads": 2,
+      "pending": true,
+      "simulated_input_count": 1
+    },
+    "second": {
+      "job_status": "refused",
+      "error": "游戏输入健康检查未通过",
+      "pointer_status": "refused",
+      "pointer_outcome": "zero_input",
+      "publication_attempted": false,
+      "prior_link": "34064df8f47f4527ad4f552910fe5ae5",
+      "simulated_input_count": 1,
+      "original_unchanged": true
+    },
+    "third": {
+      "job_status": "returned",
+      "error": null,
+      "proof_has_source": false,
+      "outcome": "expected_title_observed",
+      "source": "native_visual_guard",
+      "simulated_input_count": 2,
+      "original_unchanged": true,
+      "new_prior_link": null
+    },
+    "elapsed_seconds": 2.8105767999659292,
+    "owned_run": {
+      "path": "C:\\Users\\zy958\\AppData\\Local\\Temp\\codex-agent-workflow\\pr30-review-navigation-01a11abe-su1imeng",
+      "actually_removed": true
+    }
+  },
+  "windows_acceptance": {
+    "report": "docs/PR30_WINDOWS_ACCEPTANCE.json",
+    "sha256": "ad42986028c58a29262901cb470fef36c5cb450154b490acf126f56bda94a83c",
+    "bound_candidate": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+    "root_observed_at": "2026-10-08T08:59:07.963678+00:00",
+    "source_count": 35,
+    "artifact_count": 19,
+    "source_mismatches_to_candidate": [],
+    "artifact_mismatches_to_candidate": [],
+    "source_map_matches_frozen": true,
+    "artifact_map_matches_frozen": true,
+    "source_set_sha256": "495f5810972d758570624ec143a7d73b406a465f870ab4f5e0db69bbe3c4bf48",
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "seconds": 12.546982900006697,
+    "loaded_source_closure_missing": [],
+    "parent_frozen_eight_rerun": false,
+    "root_private_pair_visual_eligibility": true,
+    "observation_origin": "independent_read_only_reconstruction",
+    "natural_navigation_success_verified": false
+  },
+  "runtime_binding": {
+    "candidate": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+    "kind": "frozen production byte overlay through unchanged original source_guard APIs; actual current resources/provider",
+    "production_source_count": 24,
+    "production_sha256": {
+      "gui/launch.py": "B67E505A6DA4CA3F5EC034A9F9740379EF814DB2D5044EFDB57ED77DBE5F6986",
+      "gui/processes.py": "9DE7D4EF8A6E09E9C193E3DA2325AB6A37C60CE82C2D4F2E43BB0655E0E98296",
+      "requirements.txt": "A82867E765C48504225DCA4A82E0DE6ED7F92ED515BD113D029E8144C3BD661A",
+      "tools/currency_wars_artifacts.py": "133BBCA1A4D854E6EBE904E7D8BF7B61720430E6DCC0D929ACD9BAF3D0B36788",
+      "tools/currency_wars_bridge_task.py": "B83259EE0741A67BD2D396823279B7DDCB2FFC07EDEEB8C3F95882CA59E69911",
+      "tools/currency_wars_broker_entry.py": "6C0FD3C9116794F69B61D16241DB47837227F4025641599C197D08581AFF10E2",
+      "tools/currency_wars_coaching.py": "9EE40DAE3B476504F6BFB61DC29EEEFB97E55FEFAC9EEE5E7000CAC701640895",
+      "tools/currency_wars_control.py": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+      "tools/currency_wars_economy.py": "7A2C704510D9A064F893A4164921DE7A0A7B1BDEEF0594A9E783792E093EC9C7",
+      "tools/currency_wars_input_bridge.py": "00E84C0E838F890C9C084EC241FA9D3B75131190EB62D24CEF70FF1AADC58388",
+      "tools/currency_wars_manual_stage.py": "1F0AC7CF85896B5E8C92B625DE494CA5DE5269E8AA8D0574E4B79641C6EDE5EF",
+      "tools/currency_wars_manual_steps.py": "F30D50F9693F19F002DBFC0F58ADFC9ABA0F05BB3EACD9EA5E845A7789377752",
+      "tools/currency_wars_perception.py": "AE5DAA4CA2E0BFDEF4ABFBC0DCEE2DF8C7DA4C2A992657C1256C3CCDE452FFF9",
+      "tools/currency_wars_profile.py": "25A4402B6B4BCBC1709CD23A938535D0562BBB974CB4E905D8A1F9479342641D",
+      "tools/currency_wars_progression.py": "19C0E8C60D768604D8B6DBF13804533449E6804B5BA23D070A2832E291BEBEC5",
+      "tools/currency_wars_refresh_offer.py": "1CD55C43821BA1F99FB0B07F4AE945F4A5146D83DE5A538645D47A25454FAA59",
+      "tools/currency_wars_rewards.py": "3E0D7C5185EE3C40B68B9852299010D1ABD2D9CD32EAF024496EED1FD16E718C",
+      "tools/currency_wars_runner.py": "15E4A38199E79767A29B51DC73653DD941A5141A4C159873C5560B71B95A4B5D",
+      "tools/currency_wars_runtime_sources.json": "1C90624DAED8F1A3FF58656238685B901174A7AD7FC927427F511CEDAE0B0668",
+      "tools/currency_wars_shop_reader.py": "55760B092DA7B45F73B18633B62B88AB9D74574449B4B511BD38964712BFD8B8",
+      "tools/currency_wars_source_guard.py": "4C31CD78B48A6FAA6F88B5C1D8BD32C1D0CF96F8FB6A29282B2ED4F2459E50BF",
+      "tools/currency_wars_state_reader.py": "69ACCA4D20625FC23F41FA9872B9855FD9F3F526A1F29B949E432DD9422ED8A2",
+      "tools/currency_wars_update.py": "A513962220E013F356B4E4223F44F62D6849F280D2BCC091BF5E48072123EF98",
+      "tools/currency_wars_visual_guards.py": "9D635615D4A1C5CA86DD40C38790422CF1624F32543496BC943ADFBC011F8305"
+    },
+    "ast_dependency_closure_passed": true,
+    "runtime_verify_passed": true,
+    "resource_count": 64,
+    "resources_unchanged": true,
+    "resource_inventory_unchanged": true,
+    "resource_hash_map_sha256": "44f28c2dda756886b851132cf47233b5e775edb61607ce4ad81d2ef3fc059f4f",
+    "provider_kind": "installed",
+    "provider_sha256": "03DCB408C80C13CA70E52AB3B2ADB4519F1AAF6AECEB5120410882CCEC29C142",
+    "provider_unchanged": true,
+    "prospective_binding_sha256": "051b422d9296aeec87493270203e5877563660212f9de8afe969ab6202a3805e",
+    "installed_binding_sha256": "dad9ae758b0204adfe490d15a228478def5a1cb615157291610ddfa7a38c55a0",
+    "private_resources_exported": 0,
+    "production_changed_from_installed": [
+      "tools/currency_wars_manual_stage.py",
+      "tools/currency_wars_manual_steps.py",
+      "tools/currency_wars_runner.py",
+      "tools/currency_wars_visual_guards.py"
+    ],
+    "gui_compile_inputs": {
+      "count": 16,
+      "candidate_equals_current": true,
+      "candidate_matches_build_state": true,
+      "current_matches_build_state": true,
+      "build_state_sha256": "cf9a8dfd57a394ac287b4d1c9746bc6de6a20b69040e55eefddf6672ae093d47",
+      "launch_check_executed": false,
+      "runtime_gui_approval": false
+    }
+  },
+  "temporary_artifacts": {
+    "provider": "D:/Codex/home/skills/agent-workflow/scripts/artifacts.py scratch_directory",
+    "created": "One owned frozen archive and inert fixture below it; no persistent test/probe source.",
+    "children_started": 0,
+    "runs": [
+      {
+        "path": "C:\\Users\\zy958\\AppData\\Local\\Temp\\codex-agent-workflow\\pr30-review-navigation-01a11abe-su1imeng",
+        "actually_removed": true
+      }
+    ],
+    "actually_removed": true,
+    "retained": []
+  },
+  "limits": {
+    "production_source_edits": [],
+    "test_files_added": [],
+    "ready_edited": false,
+    "git_index_or_branch_changed": false,
+    "gui_or_browser_control": false,
+    "game_inputs": 0,
+    "new_game_captures": 0,
+    "controllers_started": 0,
+    "private_resources_exported": 0,
+    "candidate_installed": false,
+    "check_launch_executed": false,
+    "natural_navigation_verified": false,
+    "pr29_retry_reprobed": false,
+    "future_mutable_head_reviewed": false
+  },
+  "required_next_action": "Send PR30-R1 to the sole Pro implementation owner alongside the separate PR29-R1 repair. Freeze the combined successor and explicitly reassign bounded review/acceptance; ROOT remains sole production/READY/game-input writer."
+}
