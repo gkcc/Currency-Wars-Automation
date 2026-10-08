@@ -133,5 +133,228 @@
     "required_minimum": 24,
     "gray_confirmation_roi_rgb_equal": false
   },
-  "private_sources_retained_under": "debug/runner-01a10ddf-48e1e0c9281e"
+  "all_card_native_text_diagnostic": [
+    {
+      "label": "夜之半神概念股",
+      "bounds": [
+        343,
+        372,
+        539,
+        414
+      ],
+      "white_ink_counts": [
+        1531,
+        1531
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "开局时获得【夜之半神】角色和初始简易",
+      "bounds": [
+        235,
+        416,
+        632,
+        449
+      ],
+      "white_ink_counts": [
+        2058,
+        2058
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "装备，【夜之半神】角色的刷新概率提",
+      "bounds": [
+        234,
+        442,
+        610,
+        476
+      ],
+      "white_ink_counts": [
+        1867,
+        1867
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "高。",
+      "bounds": [
+        236,
+        472,
+        281,
+        504
+      ],
+      "white_ink_counts": [
+        108,
+        108
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "角色",
+      "bounds": [
+        418,
+        596,
+        464,
+        628
+      ],
+      "white_ink_counts": [
+        0,
+        0
+      ],
+      "native_text_guard_pass": false
+    },
+    {
+      "label": "装备",
+      "bounds": [
+        420,
+        742,
+        461,
+        768
+      ],
+      "white_ink_counts": [
+        0,
+        0
+      ],
+      "native_text_guard_pass": false
+    },
+    {
+      "label": "成功经验",
+      "bounds": [
+        906,
+        376,
+        1018,
+        412
+      ],
+      "white_ink_counts": [
+        919,
+        919
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "在你升到8级后，进入接下来3个节点时，",
+      "bounds": [
+        754,
+        415,
+        1142,
+        448
+      ],
+      "white_ink_counts": [
+        1789,
+        1789
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "获得12经验。",
+      "bounds": [
+        754,
+        444,
+        890,
+        478
+      ],
+      "white_ink_counts": [
+        623,
+        623
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "人才引进",
+      "bounds": [
+        1424,
+        374,
+        1540,
+        414
+      ],
+      "white_ink_counts": [
+        715,
+        716
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "开局拥有1个随机4费角色。",
+      "bounds": [
+        1346,
+        418,
+        1607,
+        450
+      ],
+      "white_ink_counts": [
+        952,
+        952
+      ],
+      "native_text_guard_pass": true
+    }
+  ],
+  "native_book_and_outline_diagnostic": [
+    {
+      "card_index": 1,
+      "bounds": [
+        207,
+        198,
+        671,
+        868
+      ],
+      "outline_guard_pass": true,
+      "book_bounds": [
+        626,
+        219,
+        650,
+        239
+      ],
+      "book_white_ink_counts": [
+        0,
+        0
+      ],
+      "book_white_guard_pass": false,
+      "book_rgb_exact_equal": true
+    },
+    {
+      "card_index": 2,
+      "bounds": [
+        727,
+        198,
+        1193,
+        868
+      ],
+      "outline_guard_pass": true,
+      "book_bounds": [
+        1148,
+        219,
+        1172,
+        239
+      ],
+      "book_white_ink_counts": [
+        0,
+        0
+      ],
+      "book_white_guard_pass": false,
+      "book_rgb_exact_equal": true
+    },
+    {
+      "card_index": 3,
+      "bounds": [
+        1253,
+        198,
+        1717,
+        868
+      ],
+      "outline_guard_pass": true,
+      "book_bounds": [
+        1672,
+        219,
+        1696,
+        239
+      ],
+      "book_white_ink_counts": [
+        0,
+        0
+      ],
+      "book_white_guard_pass": false,
+      "book_rgb_exact_equal": true
+    }
+  ]
 }
