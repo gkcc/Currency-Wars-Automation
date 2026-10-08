@@ -1,0 +1,217 @@
+{
+  "schema": "root-native-reward-diagnosis/v1",
+  "source_candidate": "5cf3d9b3ae693d5df670203352d0d55bae3d19c5",
+  "scope": "retained actual native PNG-derived crops and unchanged original matching diagnostics; no new OCR/capture/input",
+  "scan_bounds": [
+    1320,
+    230,
+    1660,
+    500
+  ],
+  "template_sha": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+  "manual_annotations": {
+    "source": "supervising_agent",
+    "blue_bounds": [
+      1333,
+      393,
+      1405,
+      466
+    ],
+    "blue_center": [
+      1369,
+      429
+    ],
+    "gray_bounds": [
+      1463,
+      303,
+      1510,
+      349
+    ],
+    "gray_center": [
+      1486,
+      326
+    ],
+    "not_automatic_detection": true
+  },
+  "frames": [
+    {
+      "label": "initial",
+      "full_source_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1",
+      "match_diagnostic": {
+        "original_targets": [],
+        "original_uncertain": true,
+        "first_peaks": [
+          {
+            "score": 0.7802968621253967,
+            "bounds": [
+              1333,
+              394,
+              1407,
+              463
+            ],
+            "blue_fraction": 0.6899725812769291,
+            "pale_rim_fraction": 0.22228750489620056
+          }
+        ]
+      },
+      "derived_crops": [
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-scan.png",
+          "bounds": [
+            1320,
+            230,
+            1660,
+            500
+          ],
+          "png_sha256": "8e93e3d3967bf4bd86ccdf2ab9f6f3db5d7b8ca0ec06f9b47f8796d64233d708",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1"
+        },
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-blue.png",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "png_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1"
+        },
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-gray.png",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "png_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1"
+        }
+      ]
+    },
+    {
+      "label": "manual_before",
+      "full_source_png_sha256": "bb9fbd80669e0818aa41135401c12f285df50a3ed2bed94e77e76b32b48b8dbd",
+      "match_diagnostic": {
+        "original_targets": [],
+        "original_uncertain": true,
+        "first_peaks": [
+          {
+            "score": 0.8646557331085205,
+            "bounds": [
+              1333,
+              394,
+              1407,
+              463
+            ],
+            "blue_fraction": 0.627301214257736,
+            "pale_rim_fraction": 0.20661966314140226
+          }
+        ]
+      },
+      "derived_crops": [
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/manual_before-scan.png",
+          "bounds": [
+            1320,
+            230,
+            1660,
+            500
+          ],
+          "png_sha256": "d3e9905b2a37bdcdcf2f4d345222d2180c6808348d90c50cb29d4f413a8f82ac",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "bb9fbd80669e0818aa41135401c12f285df50a3ed2bed94e77e76b32b48b8dbd"
+        },
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/manual_before-blue.png",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "png_sha256": "bb22951e3a0f604bf5cfbba5eb868d4700001c842ee787ee779209c180b0880d",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "bb9fbd80669e0818aa41135401c12f285df50a3ed2bed94e77e76b32b48b8dbd"
+        },
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/manual_before-gray.png",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "png_sha256": "e86107e191f5b38d62f0ed43024e72420f3269880d5814c2cd705824a32ed6c7",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "bb9fbd80669e0818aa41135401c12f285df50a3ed2bed94e77e76b32b48b8dbd"
+        }
+      ]
+    },
+    {
+      "label": "fresh_worker",
+      "full_source_png_sha256": "378fac4756e60846d847d196412b78f1eb886854457117ebaccc65fb79bf6af9",
+      "match_diagnostic": {
+        "original_targets": [],
+        "original_uncertain": true,
+        "first_peaks": [
+          {
+            "score": 0.865824818611145,
+            "bounds": [
+              1333,
+              394,
+              1407,
+              463
+            ],
+            "blue_fraction": 0.6296513905209558,
+            "pale_rim_fraction": 0.20231100665883275
+          }
+        ]
+      },
+      "derived_crops": [
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/fresh_worker-scan.png",
+          "bounds": [
+            1320,
+            230,
+            1660,
+            500
+          ],
+          "png_sha256": "a17366ab16cbe9248f2d2da223a3a6122c7b8676f39cb8a5f0e917b5293381f4",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "378fac4756e60846d847d196412b78f1eb886854457117ebaccc65fb79bf6af9"
+        },
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/fresh_worker-blue.png",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "png_sha256": "806c8ffd81e1c7cb0e62eba43318d207cd8ea7b9f81424b1510a4a09f6a758d9",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "378fac4756e60846d847d196412b78f1eb886854457117ebaccc65fb79bf6af9"
+        },
+        {
+          "file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/fresh_worker-gray.png",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "png_sha256": "544490799cd376ef30f78bdbe975bc32918e8d1acadffeb69a7fe8bc3e05fd35",
+          "origin": "unaltered crop of retained source PNG",
+          "source_png_sha256": "378fac4756e60846d847d196412b78f1eb886854457117ebaccc65fb79bf6af9"
+        }
+      ]
+    }
+  ],
+  "inputs_published": 0,
+  "source_bytes_unchanged": true
+}

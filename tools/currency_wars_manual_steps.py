@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -38,6 +39,78 @@ def _checkpoint(run, binding, checkpoint_id):
     return item
 
 
+def _reward_roi(operation, reply):
+    if operation == 'collect_rewards' and reply is not None:
+        if not isinstance(reply, dict) or set(reply) != {'reward_roi'} or not isinstance(reply['reward_roi'], dict):
+            raise ValueError('collect_rewards accepts only one explicit reward_roi annotation')
+        return reply['reward_roi']
+    return None
+
+
+def validate_reward_roi(evidence, request, binding, checkpoint_id):
+    """Authenticate one supervisor target; never replace native reader facts.
+
+    The caller supplies its STILL outstanding request, including after a fresh
+    observation. Publication repeats this check against that same request.
+    Pixel visibility and the current layout remain the Worker's responsibility.
+    """
+    from currency_wars_rewards import SCAN_BOUNDS
+    keys = {'source', 'request_id', 'snapshot_id', 'capture_request_id', 'frame_id',
+            'page', 'match_id', 'stage', 'resume_epoch', 'checkpoint_id', 'deadline_at',
+            'kind', 'bounds', 'center', 'findings'}
+    if (not isinstance(evidence, dict) or set(evidence) != keys
+            or not isinstance(request, dict) or not isinstance(binding, dict)
+            or evidence.get('source') != 'supervising_agent'
+            or evidence.get('kind') not in ('blue_orb', 'gray_orb')
+            or not isinstance(evidence.get('findings'), str) or not 1 <= len(evidence['findings'].strip()) <= 1000):
+        raise ValueError('single reward ROI needs a separate bounded supervisor annotation')
+    original = request.get('observation')
+    if not isinstance(original, dict):
+        raise ValueError('single reward ROI lacks its original Worker observation')
+    for key in ('request_id', 'snapshot_id', 'match_id', 'resume_epoch', 'deadline_at'):
+        if not isinstance(evidence[key], str) or not evidence[key] or evidence[key] != request.get(key):
+            raise ValueError('single reward ROI differs from the outstanding request: ' + key)
+    if (request.get('kind') != 'preparation_strategy'
+            or evidence['page'] != 'preparation' or original.get('page') != 'preparation'
+            or original.get('snapshot_id') != evidence['snapshot_id']
+            or evidence['match_id'] != binding.get('match_id')
+            or evidence['resume_epoch'] != binding.get('old_epoch')
+            or evidence['stage'] != binding.get('stage')
+            or evidence['stage'] != original.get('fields', {}).get('stage')
+            or evidence['checkpoint_id'] != checkpoint_id
+            or not isinstance(checkpoint_id, str) or not re.fullmatch(r'[0-9a-f]{32}', checkpoint_id)
+            or request.get('preparation_checklist', {}).get('phase') != 'rewards'):
+        raise ValueError('single reward ROI is not this match/stage/epoch rewards checkpoint')
+    for key in ('capture_request_id', 'frame_id'):
+        if (not isinstance(evidence[key], str) or not evidence[key]
+                or evidence[key] != original.get(key)):
+            raise ValueError('single reward ROI lacks its original immutable frame identity')
+    try:
+        deadline = datetime.fromisoformat(evidence['deadline_at'])
+        if deadline.tzinfo is None or datetime.now(timezone.utc) >= deadline:
+            raise ValueError('single reward ROI request expired')
+    except (TypeError, ValueError) as error:
+        raise ValueError('single reward ROI request deadline is invalid or expired') from error
+    bounds, center = evidence['bounds'], evidence['center']
+    if (not isinstance(bounds, list) or len(bounds) != 4 or any(type(v) is not int for v in bounds)
+            or not isinstance(center, list) or len(center) != 2 or any(type(v) is not int for v in center)
+            or not SCAN_BOUNDS[0] <= bounds[0] < bounds[2] <= SCAN_BOUNDS[2]
+            or not SCAN_BOUNDS[1] <= bounds[1] < bounds[3] <= SCAN_BOUNDS[3]
+            or center != [(bounds[0]+bounds[2])//2, (bounds[1]+bounds[3])//2]):
+        raise ValueError('single reward ROI and center must stay inside the supported reward region')
+    try:
+        path = Path(request['original_png'])
+        if (not path.is_file() or path.stat().st_size > 25_000_000
+                or hashlib.sha256(path.read_bytes()).hexdigest() != evidence['snapshot_id']):
+            raise ValueError('single reward ROI original PNG bytes changed or are missing')
+    except (KeyError, OSError, TypeError) as error:
+        raise ValueError('single reward ROI original PNG bytes are unavailable') from error
+    # Narrative edits or an extended deadline never create another intent.
+    identity = {key: evidence[key] for key in sorted(keys - {'findings', 'deadline_at'})}
+    return hashlib.sha256(json.dumps(identity, ensure_ascii=False, sort_keys=True,
+                                    separators=(',', ':')).encode('utf-8')).hexdigest()
+
+
 def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=None,
            reply=None, wait_seconds=25):
     """Queue once, or read the SAME step. A timeout never creates another job."""
@@ -45,8 +118,10 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
     run, path = Path(run), _path(run, step_id)
     if operation not in OPERATIONS or type(wait_seconds) not in (int, float) or not 0 <= wait_seconds <= 25:
         raise ValueError('unsupported or unbounded manual step')
-    if (operation == 'reviewed_plan') != isinstance(reply, dict):
-        raise ValueError('only reviewed_plan accepts the existing structured decision reply')
+    annotation = _reward_roi(operation, reply)
+    if (operation == 'reviewed_plan' and not isinstance(reply, dict)
+            or operation not in ('reviewed_plan', 'collect_rewards') and reply is not None):
+        raise ValueError('only reviewed_plan or annotated collect_rewards accepts a reply')
     payload = dict(operation=operation, checkpoint_id=checkpoint_id, reply=reply, manual_id=manual_id)
     with r.file_lock(run, 'manual-checkpoint.lock', timeout=2):
         if path.exists():
@@ -65,10 +140,22 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
                 raise ValueError('manual-step mailbox reached its bounded capacity')
             if any(r.entry.read_json(p).get('status') in ('queued', 'running') for p in existing):
                 raise ValueError('a manual-step is already pending; inspect that original ID')
+            intent, request = None, None
+            if annotation is not None:
+                unused_records, state = r._manual_records(run, owner)
+                request = state.get('decision_request')
+                intent = validate_reward_roi(annotation, request, binding, checkpoint_id)
+                if any(r.entry.read_json(p).get('reward_roi_intent') == intent for p in existing):
+                    raise ValueError('single reward ROI was already submitted; read its original step, never replay')
+            expires = datetime.now(timezone.utc) + timedelta(seconds=60)
+            if request is not None:
+                expires = min(expires, datetime.fromisoformat(request['deadline_at']))
             item = dict(schema=SCHEMA, step_id=step_id, run_id=owner['run_id'], binding=binding,
                         payload=payload, status='queued', created_at=r.now(),
-                        expires_at=(datetime.now(timezone.utc) + timedelta(seconds=60)).isoformat(),
+                        expires_at=expires.isoformat(),
                         input_resent=False)
+            if intent is not None:
+                item['reward_roi_intent'] = intent
             control.write_json(path, item)
     end = time.monotonic() + wait_seconds
     while True:
@@ -86,6 +173,8 @@ def summary(item):
                 pending=item.get('status') in ('queued', 'running')
                     or result.get('receipt_watermark_verified') is False
                     or result.get('receipt_delivery_verified') is False
+                    or (result.get('reward_step') or {}).get('pending') is True
+                    or bool(result.get('prior_unknown_receipt_ids'))
                     or bool(item.get('finalization_errors'))
                     or any(value.get('unknown_input') for value in result.get('receipt_states', [])),
                 next_step='same step ID only; no replay of a queued/running or published action')
@@ -185,6 +274,18 @@ def _finish_result(worker, item, before_ids, evidence_errors):
             receipt_states.append(dict(request_id=rid,
                 state='pending' if isinstance(error, TimeoutError) else 'unknown', unknown_input=True))
             evidence_errors.append(_evidence_error('receipt', error, request_id=rid))
+    reward_step = None
+    try:
+        pending = r.optional(worker.run / 'reward-step.json')
+        if pending and pending.get('manual_step_id') == item['step_id']:
+            reward_step = {key: pending.get(key) for key in
+                ('step_id', 'status', 'outcome', 'request_id', 'source', 'after_snapshot_id', 'verification_reads')}
+            reward_step.update(pending=pending.get('status') not in ('verified', 'refused'),
+                               all_rewards_cleared=None,
+                               record_file=str(worker.records / ('reward-step-' + str(pending.get('step_id')) + '.json')))
+    except Exception as error:
+        evidence_errors.append(_evidence_error('reward_step', error))
+        reward_step = dict(status='unknown', pending=True, all_rewards_cleared=None)
     observed = worker.last_observation if isinstance(worker.last_observation, dict) else {}
     request = worker.state.get('decision_request') or {}
     request = request if isinstance(request, dict) else {}
@@ -198,7 +299,8 @@ def _finish_result(worker, item, before_ids, evidence_errors):
         snapshot_id=observed.get('snapshot_id'), capture_request_id=observed.get('capture_request_id'),
         frame_id=observed.get('frame_id'), page=observed.get('page'), stage=fields.get('stage'),
         decision_request_id=request.get('request_id'), decision_kind=request.get('kind'),
-        all_rewards_cleared=None, automatic_phase_completion=False, input_resent=False)
+        all_rewards_cleared=None, automatic_phase_completion=False, input_resent=False,
+        reward_step=reward_step, prior_unknown_receipt_ids=item.get('prior_unknown_receipt_ids', []))
     if evidence_errors and item.get('status') == 'returned':
         item.update(status='refused', error='manual-step evidence is incomplete; inspect this original step ID')
 
@@ -292,6 +394,11 @@ def process(worker):
         execution_stage = 'before_watermark'
         before_ids = _watermark(worker)
         execution_stage = 'execution'
+        if operation == 'collect_rewards':
+            blocked = unknown_receipts(worker.run, worker.c)
+            if blocked:
+                item['prior_unknown_receipt_ids'] = blocked
+                raise ValueError('original reward input outcome is unknown; reconcile its ID before any new capture')
         with worker.profile_span('manual_worker_step', operation='rules', business_step='manual_step'):
             if operation == 'reviewed_plan':
                 reply = item['payload']['reply']
@@ -304,6 +411,17 @@ def process(worker):
                     raise ValueError('manual plan has no current Worker request; inspect first')
                 worker.execute_plan(reply)
                 _ask_current(worker)
+            elif operation == 'collect_rewards' and _reward_roi(operation, item['payload']['reply']) is not None:
+                evidence = item['payload']['reply']['reward_roi']
+                request = worker.state.get('decision_request')
+                intent = validate_reward_roi(evidence, request, binding, item['payload']['checkpoint_id'])
+                if intent != item.get('reward_roi_intent'):
+                    raise ValueError('single reward ROI intent changed before execution')
+                # The Worker holds its existing observe/input lease and checks
+                # this original source again immediately before publication.
+                worker.collect_reward_roi(evidence)
+                if worker.state.get('decision_request') == request:
+                    _ask_current(worker)
             else:
                 worker.observe(scope='rewards' if operation == 'collect_rewards' else 'full')
                 if operation != 'inspect':
