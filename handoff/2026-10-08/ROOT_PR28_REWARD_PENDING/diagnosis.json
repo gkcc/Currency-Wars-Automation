@@ -1,0 +1,181 @@
+{
+  "schema": "root-pr28-native-reward-pending/v1",
+  "observed_at": "2026-10-08T08:00:27.609344+00:00",
+  "production_candidate": "e9e6ca7f4e4d943612d85ed3d28bd483b8224958",
+  "mode": "standard",
+  "stage": "1-1",
+  "before_coins": 4,
+  "current_coins": 6,
+  "original_input_count": 1,
+  "original_delivery": "completed",
+  "effect_status": "pending",
+  "effect_outcome": "unknown",
+  "verification_reads": 2,
+  "verification_frames": [
+    {
+      "relation": "original_input",
+      "snapshot_sha256": "eef3e8481b2e17eaf5c9e3177acbf99833f1365daf3273e000da7b2e4a9a8fb1",
+      "effect": {
+        "state": "unknown",
+        "reason": "reward_effect_context_unverified",
+        "scope": [
+          1320,
+          230,
+          1660,
+          500
+        ],
+        "all_rewards_cleared": null
+      }
+    },
+    {
+      "relation": "read_only_successor",
+      "snapshot_sha256": "fbabe1664a6388c4340a869f7ccfcbbdf28b37008989c29de783df195af64eb6",
+      "effect": {
+        "state": "unknown",
+        "reason": "reward_effect_context_unverified",
+        "scope": [
+          1320,
+          230,
+          1660,
+          500
+        ],
+        "all_rewards_cleared": null
+      }
+    },
+    {
+      "relation": "read_only_successor",
+      "snapshot_sha256": "8672c7d31ae2eee1783806f5e496a7427cb681cc0190a32869436364da2b30e7",
+      "effect": {
+        "state": "absent",
+        "reason": "target_absent_in_exposed_reward_region",
+        "scope": [
+          1320,
+          230,
+          1660,
+          500
+        ],
+        "all_rewards_cleared": null,
+        "background": {
+          "plausible": true,
+          "reason": "textured_background_continuity",
+          "core_background_residual_p95": 4.401,
+          "surround_background_residual_p95": 10.8818,
+          "core_gray_std": 1.638,
+          "surround_gray_std": 2.8452,
+          "bounds": [
+            1453,
+            293,
+            1520,
+            359
+          ]
+        },
+        "known_siblings_checked": 1,
+        "largest_changed_component": 0
+      }
+    }
+  ],
+  "independent_root_reading": {
+    "gray_orb_absent": true,
+    "blue_orb_still_visible": true,
+    "all_rewards_cleared": false
+  },
+  "root_current_checkpoint_snapshot": "d54f4d59611c0fd14ec230ffb566b76b67ead99991bd7c2fb3f66014ad9247b7",
+  "root_current_coins_confidence": 0.994462788105011,
+  "normal_controller_stop": true,
+  "runtime_removed": true,
+  "limits": [
+    "Crops are unaltered derived regions of preserved original PNGs, not a full game scene.",
+    "Original effect stays unknown; visual current absence and completed delivery do not rewrite it.",
+    "Current whole-match settlement and reward closure remain unverified."
+  ],
+  "crops": [
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/before-gold.png",
+      "source_png_sha256": "5d6456619100728b669708985893a12db72ba56c37e33233b1d42a6aac5cde3e",
+      "source_roi": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "sha256": "e464720ff0cbfa429dbc58ec9483e87e3d751f39ad14fac43af0686d267f1497"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/before-rewards.png",
+      "source_png_sha256": "5d6456619100728b669708985893a12db72ba56c37e33233b1d42a6aac5cde3e",
+      "source_roi": [
+        1320,
+        230,
+        1660,
+        500
+      ],
+      "sha256": "df5d12926c8d49b7f9ba7e2a9a77c8621f603461a6c25cf0a5d72786f2e4e68c"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/0-gold.png",
+      "source_png_sha256": "eef3e8481b2e17eaf5c9e3177acbf99833f1365daf3273e000da7b2e4a9a8fb1",
+      "source_roi": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "sha256": "a822cc95269249016b62d2c2011baad82ad23d45e67ff695df965cfb62096fb4"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/0-rewards.png",
+      "source_png_sha256": "eef3e8481b2e17eaf5c9e3177acbf99833f1365daf3273e000da7b2e4a9a8fb1",
+      "source_roi": [
+        1320,
+        230,
+        1660,
+        500
+      ],
+      "sha256": "121cf7c6c8968b1bd5ab83e9aefb9ada909f7f2608927422a55d6bed644d86eb"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/1-gold.png",
+      "source_png_sha256": "fbabe1664a6388c4340a869f7ccfcbbdf28b37008989c29de783df195af64eb6",
+      "source_roi": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "sha256": "5dbb1af2ef6820c102e57b1d96b66af73d814a190b19f8d0a46f3ccb52ae481a"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/1-rewards.png",
+      "source_png_sha256": "fbabe1664a6388c4340a869f7ccfcbbdf28b37008989c29de783df195af64eb6",
+      "source_roi": [
+        1320,
+        230,
+        1660,
+        500
+      ],
+      "sha256": "9120594dca48b1f6cbddb7953585163b995969138c4b7cbad1e57a09758a3140"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/2-gold.png",
+      "source_png_sha256": "8672c7d31ae2eee1783806f5e496a7427cb681cc0190a32869436364da2b30e7",
+      "source_roi": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "sha256": "fc93dae10eca946f923647e61355d9eefbb96b273c24e38c650248f4b794a619"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_REWARD_PENDING/2-rewards.png",
+      "source_png_sha256": "8672c7d31ae2eee1783806f5e496a7427cb681cc0190a32869436364da2b30e7",
+      "source_roi": [
+        1320,
+        230,
+        1660,
+        500
+      ],
+      "sha256": "2bd731a3fb62879d43a5b37b846bcd3dde02f22699af59e53445018d7230708f"
+    }
+  ]
+}
