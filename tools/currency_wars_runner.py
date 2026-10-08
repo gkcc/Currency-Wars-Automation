@@ -70,9 +70,45 @@ def optional(path):
 
 
 BUSINESS_SCHEMA = 'currency-wars-business/v1'
+INSPECTION_CONTRACT = 'currency-wars-inspection/v1'
 BUSINESS_REVIEW_PAGES = ('preparation', 'shop', 'settlement', 'settlement_grade', 'lobby', 'opponents',
     'environment', 'investment', 'supply', 'reward_overlay', 'node_result', 'boss_result', 'plane_intro',
     'guide', 'unit_gear', 'investment_summary', 'update_notice') + tuple(name for name, unused in PANELS)
+
+
+def inspection_digest(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                    separators=(',', ':')).encode('utf8')).hexdigest()
+
+
+def empty_inspections(business, revision=0):
+    # This is a local checkpoint watermark, never an inferred settlement count.
+    return {'contract': INSPECTION_CONTRACT, 'revision': revision,
+            'settlement_sha256': inspection_digest(business.get('settlement')), 'panels': {}}
+
+
+def inspection_checkpoint(business):
+    stored = business.get('inspections')
+    valid = (isinstance(stored, dict) and stored.get('contract') == INSPECTION_CONTRACT
+             and type(stored.get('revision')) is int and stored['revision'] >= 0
+             and stored.get('settlement_sha256') == inspection_digest(business.get('settlement'))
+             and isinstance(stored.get('panels'), dict) and not set(stored['panels']) - set(dict(PANELS)))
+    # Unknown formats supply no completion. New current checks may establish
+    # a new round; they never migrate unknown old output into verified facts.
+    return copy.deepcopy(stored) if valid else empty_inspections(business), valid
+
+
+def inspection_coverage(result, panel):
+    coverage = result.get('coverage')
+    if result.get('inspection_contract') != INSPECTION_CONTRACT or not isinstance(coverage, dict):
+        return False
+    tabs = coverage.get('tabs')
+    return (isinstance(tabs, list) and 1 <= len(tabs) <= 32
+            and all(isinstance(tab, str) and 1 <= len(tab.strip()) <= 100 for tab in tabs)
+            and len(set(tabs)) == len(tabs) and coverage.get('all_tabs_reviewed') is True
+            and coverage.get('scroll_complete') is True and coverage.get('claimable_remaining') is False
+            and coverage.get('pending') is False
+            and (panel != 'advantages' or coverage.get('allocation_reviewed') is True))
 
 
 def durable_records(state):
@@ -1436,8 +1472,8 @@ def validate_plan(reply, request, epoch):
                     or box != PREPARATION_GUIDE_BOUNDS or action.get('args') != PREPARATION_GUIDE_POINT
                     or any(type(value) is not int for value in action.get('args', []))):
                 raise ValueError('创业指南图标仅允许固定导航单动作；提交前仍须双帧视觉验证')
-        if action['type'] == 'finish_inspection' and action.get('panel') not in dict(PANELS):
-            raise ValueError('仅可核实当前领奖/优势面板')
+        if action['type'] == 'finish_inspection' and (action.get('panel') not in dict(PANELS) or len(actions) != 1):
+            raise ValueError('当前领奖/优势面板完成须为独立单动作，不能混入先前点击')
         if action['type'] == 'confirm_match_result' and (request['kind'] != 'settlement_verify'
                 or not isinstance(action.get('result'), dict)):
             raise ValueError('仅真实整局结算请求可确认match结果')
@@ -2692,6 +2728,11 @@ class Worker:
         self.publish()
 
     def initialize_business(self, continuation=None):
+        # Loading history does not restore this lease's review or cursor.
+        self.inspections, self.inspection_epoch = {}, None
+        self.state['inspection_results'] = {}
+        self.panel_index, self.panel_state = 0, 'enter'
+        self.claim_count, self.scroll_count = 0, 0
         self.business_needs_review = bool(continuation)
         self.business_unknown = []
         if continuation:
@@ -2719,6 +2760,8 @@ class Worker:
             self.business_previous_run = None
             self.business_previous_chat = None
             self.business_previous_observation = None
+        if 'inspections' not in self.business:
+            self.business['inspections'] = empty_inspections(self.business)
         self.business_revision = self.business['revision']
         self.business_lease_watermark = self.economy_receipt_watermark()
         # Claim is a bounded CAS, not permission to act in the old game state.
@@ -2734,7 +2777,7 @@ class Worker:
             self.c.write_json(self.business_path, self.business)
             self.business_revision = self.business['revision']
 
-    def save_business(self):
+    def save_business(self, proposed=None, *, guard_request=None, inspection_reuse=False):
         if not hasattr(self, 'business'):
             return  # Existing focused fixtures are deliberately input-only.
         state = {**self.state, 'journal_file': str(self.records / 'journal.jsonl'),
@@ -2742,7 +2785,7 @@ class Worker:
         identity = optional(self.run / 'broker-process.json')
         if identity:
             state['broker_identity'] = {key: identity[key] for key in ('pid', 'creation_id')}
-        proposed = copy.deepcopy(self.business)
+        proposed = copy.deepcopy(self.business if proposed is None else proposed)
         proposed['leases'][-1] = business_lease(state)
         observed = self.last_observation or {}
         if observed:
@@ -2754,6 +2797,14 @@ class Worker:
             if (current['revision'] != self.business_revision
                     or any(latest.get(k) != self.owner.get(k) for k in ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id'))):
                 raise RuntimeError('旧租期业务CAS已失效，禁止覆盖新owner')
+            if guard_request is not None:
+                if guard_request.get('kind') in ('post_match_' + panel for panel, unused in PANELS):
+                    if self.inspection_pending(include_history=False):
+                        raise ValueError('检查提交前出现当前未决效果，未标记完成')
+                    self.inspection_readonly_watermark(guard_request, 'inspection_receipt_watermark')
+                if inspection_reuse and self.inspection_pending():
+                    raise ValueError('检查点提交前出现未决效果，未启用复用')
+                self.inspection_commit_guard(guard_request)
             if proposed != current:
                 proposed['revision'] += 1
                 self.c.write_json(self.business_path, proposed)
@@ -2765,6 +2816,219 @@ class Worker:
             'continuation_required': self.business['status'] != 'completed',
             'awaiting_next_lease': self.business['status'] != 'completed' and self.state.get('control_mode') in TERMINAL,
             'all_rewards_completed': False}
+
+    def inspection_commit_guard(self, request):
+        status = self.c.status()
+        if (manual_state(self.run) or self.epoch() != request.get('resume_epoch')
+                or any((self.state.get('decision_request') or {}).get(key) != request.get(key)
+                       for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id'))
+                or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()
+                or time.monotonic() >= self.deadline
+                or datetime.now(timezone.utc) >= datetime.fromisoformat(request['deadline_at'])
+                or status['paused'] or status['input_halted']
+                or not status['ready'] or not status['game_foreground']):
+            raise ValueError('暂停/停止/当前请求或epoch已变，检查点未提交')
+
+    def inspection_pending(self, *, include_history=True):
+        reward = optional(self.run / 'reward-step.json') or {}
+        return bool(include_history and self.business_unknown or manual_steps.unknown_receipts(self.run, self.c)
+            or self.pending_reward_capacity()
+            or reward and reward.get('status') not in ('verified', 'refused')
+            or any(item.get('ledger', {}).get('pending') for item in self.business.get('economy', {}).values()
+                   if include_history or item.get('run_id') == self.owner['run_id']))
+
+    def inspection_source(self, panel, stored):
+        """Verify the original accepted output and source bytes, not old authority."""
+        source = stored['source']
+        lease = next(item for item in self.business['leases'] if item['run_id'] == source['origin_run_id'])
+        records = durable_records(lease)
+        rid, capture_id = source['request_id'], source['capture_request_id']
+        if (not isinstance(rid, str) or not re.fullmatch(r'[0-9a-f]{32}', rid)
+                or source['match_id'] != self.active_match_id or source['request_kind'] != 'post_match_' + panel
+                or source['page'] != panel or not source['resume_epoch'] or not source['frame_id']
+                or stored['contract'] != INSPECTION_CONTRACT or stored['panel'] != panel
+                or not full_observation({'read_contract': source.get('read_contract')})
+                or stored['watermark']['settlement_sha256'] != inspection_digest(self.business.get('settlement'))
+                or capture_id not in stored['watermark']['entry_receipts']):
+            raise ValueError('检查原业务、契约或来源水位不符')
+        expected = {key: value for key, value in stored.items() if key not in ('record_file', 'record_sha256')}
+        record_path = Path(stored['record_file']).resolve()
+        if record_path != records / (rid + '-inspection.json'):
+            raise ValueError('检查输出不在原持久记录内')
+        payload = record_path.read_bytes()
+        if hashlib.sha256(payload).hexdigest() != stored['record_sha256'] or json.loads(payload) != expected:
+            raise ValueError('原检查输出字节或内容已变化')
+        for field, filename, digest in (
+                ('original_png', rid + '-strategy-original.png', source['snapshot_id']),
+                ('evidence_file', rid + '-strategy.jpg', source['evidence_sha256'])):
+            path = Path(source[field]).resolve()
+            if path != records / filename or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise ValueError('原检查图缺失、越界或字节变化')
+        path = Path(source['receipt_file']).resolve()
+        if path != records / 'business-receipts' / (hashlib.sha256(capture_id.encode()).hexdigest() + '.json'):
+            raise ValueError('检查收据不在原归属目录')
+        payload = path.read_bytes()
+        receipt = json.loads(payload)
+        frame = (receipt.get('result') or {}).get('observation') or {}
+        if (hashlib.sha256(payload).hexdigest() != source['receipt_sha256']
+                or any(receipt['origin'].get(key) != lease.get(key)
+                       for key in ('run_id', 'chat_id', 'runner_pid', 'runner_creation_id'))
+                or receipt['request'].get('chat_id') != lease['chat_id'] or receipt['id'] != capture_id
+                or manual_receipt_state(receipt)['unknown_input'] or receipt['result'].get('ok') is not True
+                or frame.get('frame_protocol') != 1 or frame.get('request_id') != capture_id
+                or frame.get('frame_id') != source['frame_id'] or frame.get('snapshot_sha256') != source['snapshot_id']
+                or stored['result'].get('evidence') != source['evidence_file']
+                or stored.get('coverage') != stored['result'].get('coverage')):
+            raise ValueError('检查原收据、归属或输出引用不符')
+
+    def inspection_candidates(self):
+        checkpoint, valid = inspection_checkpoint(self.business)
+        try:
+            pending = self.inspection_pending()
+        except (OSError, ValueError, TypeError, KeyError):
+            pending = True
+        candidates = {}
+        for panel, unused in PANELS:
+            stored = checkpoint.get('panels', {}).get(panel) if valid else None
+            reason = 'missing_record'
+            if stored:
+                try:
+                    self.inspection_source(panel, stored)
+                    reason = ('pending_effect' if pending else 'coverage_or_contract_unknown'
+                              if not inspection_coverage(stored['result'], panel) else None)
+                except (OSError, ValueError, TypeError, KeyError, StopIteration):
+                    reason = 'original_source_unavailable'
+            candidates[panel] = {'eligible': reason is None, 'reason': reason,
+                'record_sha256': stored.get('record_sha256') if isinstance(stored, dict) else None,
+                'result': copy.deepcopy(stored.get('result')) if isinstance(stored, dict) else None,
+                'coverage': copy.deepcopy(stored.get('coverage')) if isinstance(stored, dict) else None,
+                'source': copy.deepcopy(stored.get('source')) if isinstance(stored, dict) else None}
+        return {'contract': INSPECTION_CONTRACT, 'checkpoint_valid': valid,
+                'revision': checkpoint.get('revision'), 'settlement_sha256': checkpoint.get('settlement_sha256'),
+                'panels': candidates}
+
+    def inspection_readonly_watermark(self, request, key):
+        before = request.get(key)
+        current = self.economy_receipt_watermark()
+        if (not isinstance(before, list) or not set(before) <= set(current)
+                or self.last_observation.get('capture_request_id') not in set(current) - set(before)):
+            raise ValueError('检查缺少完整原请求及后续只读水位')
+        for rid in set(current) - set(before):
+            item = await_existing_receipt(self.run, self.c, rid, 0)
+            delivery = manual_receipt_state(item)
+            if (item['request'].get('handoff') is not False or item['request'].get('kind') != 'actions'
+                    or any(action['type'] not in ('observe', 'wait') for action in item['request'].get('actions', []))
+                    or delivery['unknown_input'] or item['result'].get('input_attempted') not in (None, False)
+                    or item['result'].get('attempted_actions') not in (None, [])):
+                raise ValueError('检查请求后存在输入或未知，不能复用旧读数')
+        return sorted(current)
+
+    def complete_inspection(self, action, request):
+        panel, observed = action['panel'], request['observation']
+        if 'inspection_contract' in action['result'] and not inspection_coverage(action['result'], panel):
+            raise ValueError('检查契约或覆盖未完整，未知/待处理项不能标记完成')
+        watermark = self.inspection_readonly_watermark(request, 'inspection_receipt_watermark')
+        if (request['kind'] != 'post_match_' + panel or self.last_observation['page'] != panel
+                or request['match_id'] != self.active_match_id or self.inspection_pending(include_history=False)):
+            raise ValueError('检查页面、业务或未决效果不允许完成')
+        capture_id = observed.get('capture_request_id')
+        receipt = await_existing_receipt(self.run, self.c, capture_id, 0)
+        receipt_path = archive_business_receipt(self.records, self.owner, receipt, self.c)
+        checkpoint, unused = inspection_checkpoint(self.business)
+        result = copy.deepcopy(action['result'])
+        source = {'origin_run_id': self.owner['run_id'], 'request_id': request['request_id'],
+            'request_kind': request['kind'], 'match_id': self.active_match_id, 'resume_epoch': request['resume_epoch'],
+            'page': panel, 'snapshot_id': request['snapshot_id'], 'capture_request_id': capture_id,
+            'frame_id': observed.get('frame_id'), 'original_png': request['original_png'],
+            'evidence_file': request['evidence_file'], 'read_contract': copy.deepcopy(observed.get('read_contract')),
+            'evidence_sha256': hashlib.sha256(Path(request['evidence_file']).read_bytes()).hexdigest(),
+            'producer_source_sha256': hashlib.sha256(SELF.read_bytes()).hexdigest(),
+            'receipt_file': str(receipt_path), 'receipt_sha256': hashlib.sha256(receipt_path.read_bytes()).hexdigest()}
+        record = {'contract': INSPECTION_CONTRACT, 'panel': panel, 'result': result,
+            'coverage': copy.deepcopy(result.get('coverage')), 'source': source,
+            'watermark': {'settlement_sha256': inspection_digest(self.business.get('settlement')),
+                          'entry_receipts': watermark}, 'completed_at': now()}
+        payload = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf8') + b'\n'
+        if len(payload) > 250_000:
+            raise ValueError('检查输出超过有界容量，不截断原来源')
+        path = self.records / (request['request_id'] + '-inspection.json')
+        with path.open('xb') as stream:
+            stream.write(payload)
+        stored = {**record, 'record_file': str(path), 'record_sha256': hashlib.sha256(payload).hexdigest()}
+        self.inspection_source(panel, stored)
+        checkpoint['panels'][panel] = stored
+        checkpoint['revision'] += 1
+        proposed = copy.deepcopy(self.business)
+        proposed['inspections'] = checkpoint
+        self.save_business(proposed, guard_request=request)
+        self.inspection_epoch = self.epoch()
+
+    def prepare_inspection_resume(self, value, request):
+        offered = request.get('inspection_checkpoint')
+        current = self.inspection_candidates()
+        proposed = copy.deepcopy(self.business)
+        checkpoint, unused = inspection_checkpoint(proposed)
+        if value is None:
+            proposed['inspections'] = empty_inspections(proposed, checkpoint['revision'] + 1)
+            return proposed, {}
+        if not isinstance(value, dict):
+            raise ValueError('检查承接必须为明确对象，不能隐式确认')
+        self.inspection_readonly_watermark(request, 'business_receipt_watermark')
+        groups = (value.get('reuse'), value.get('changed'), value.get('unknown'))
+        basis = value.get('basis', {})
+        if (value.get('contract') != INSPECTION_CONTRACT or offered != current
+                or value.get('checkpoint_revision') != current['revision']
+                or value.get('settlement_sha256') != current['settlement_sha256']
+                or not isinstance(groups[0], dict) or not isinstance(groups[1], list) or not isinstance(groups[2], list)
+                or any(not isinstance(panel, str) for group in groups for panel in group)
+                or sum(len(group) for group in groups) != len(PANELS)
+                or set().union(*map(set, groups)) != set(dict(PANELS))
+                or value.get('settlement_change') not in ('unchanged', 'changed', 'unknown')
+                or not isinstance(basis, dict)
+                or basis.get('source') != 'supervising_agent_continuity'
+                or basis.get('through_snapshot_id') != request['snapshot_id']
+                or type(basis.get('unobserved_interval')) is not bool
+                or groups[0] and basis['unobserved_interval'] is not False
+                or not isinstance(basis.get('details'), str) or not 12 <= len(basis['details'].strip()) <= 2000):
+            raise ValueError('检查复用须明确当前水位、互斥完整范围及主管连续观察依据；遗漏不是未变')
+        reuse, changed, unknown = groups
+        if reuse and (value['settlement_change'] != 'unchanged' or self.inspection_pending()):
+            raise ValueError('新结算/未知或未决效果不允许复用旧检查')
+        accepted = {}
+        for panel, digest in reuse.items():
+            candidate = current['panels'][panel]
+            if not candidate['eligible'] or candidate['record_sha256'] != digest:
+                raise ValueError('指定复用项缺少原来源、覆盖或匹配摘要：' + panel)
+            accepted[panel] = copy.deepcopy(candidate['result'])
+        if value['settlement_change'] != 'unchanged':
+            checkpoint = empty_inspections(proposed, checkpoint['revision'])
+        else:
+            for panel in changed + unknown:
+                checkpoint['panels'].pop(panel, None)
+        checkpoint['revision'] += 1
+        proposed['inspections'] = checkpoint
+        return proposed, accepted
+
+    def schedule_inspections(self, observed):
+        if not hasattr(self, 'inspection_epoch'):
+            return  # Existing input-only consumers have no durable business.
+        if self.inspection_epoch is not None and self.inspection_epoch != self.epoch():
+            # A handoff revokes this lease's approval, not the historical
+            # output. A future business_resume must review its changes again.
+            self.inspections, self.inspection_epoch = {}, None
+            self.state['inspection_results'] = {}
+        first = next((index for index, (panel, unused) in enumerate(PANELS) if panel not in self.inspections), len(PANELS))
+        page = observed['page']
+        if page == 'lobby':
+            index, state = first, 'enter'
+        elif page in dict(PANELS):
+            index = next(index for index, (panel, unused) in enumerate(PANELS) if panel == page)
+            state = 'inspect' if index == first else 'return'
+        else:
+            return
+        if (index, state) != (self.panel_index, self.panel_state):
+            self.claim_count, self.scroll_count = 0, 0
+        self.panel_index, self.panel_state = index, state
 
     def review_business_resume(self, record):
         request, actual = self.state.get('decision_request') or {}, self.last_observation or {}
@@ -2851,6 +3115,7 @@ class Worker:
         if (value['disposition'] == 'same_match' and actual['page'] == 'lobby'
                 and self.business['status'] != 'completed'):
             raise ValueError('大厅不能证明原局已结算；可明确另开业务并保留旧局未决')
+        proposed, restored_inspections = self.prepare_inspection_resume(value.get('inspection_resume'), request)
         status = self.c.status()
         if (manual_state(self.run) or self.epoch() != request['resume_epoch']
                 or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()
@@ -2862,15 +3127,19 @@ class Worker:
             'current_capture_request_id': actual['capture_request_id'], 'current_snapshot_id': actual['snapshot_id'],
             'observation_only_receipt_ids': sorted(since_request),
             'input_resent': False, 'recorded_at': now()})
-        self.business['last_resume_review'] = str(review_path)
+        proposed['last_resume_review'] = str(review_path)
+        if value['disposition'] == 'new_match' and proposed['status'] != 'completed':
+            proposed['status'] = 'unresolved'
+        # Persist the review and panel invalidation together before enabling
+        # any in-memory reuse. A stale CAS or a new stop leaves both inactive.
+        self.save_business(proposed, guard_request=request, inspection_reuse=bool(restored_inspections))
         self.business_needs_review = False
+        self.inspections, self.inspection_epoch = restored_inspections, self.epoch()
+        self.state['inspection_results'] = copy.deepcopy(self.inspections)
         self.preparation_reviews, self.preparation_scope, self.economy_binding = {}, None, None
         self.economy_read_cache = None
         self.strategy_reads, self.live_mode, self.cached_guide_binding = {}, None, None
         if value['disposition'] == 'new_match':
-            if self.business['status'] != 'completed':
-                self.business['status'] = 'unresolved'
-            self.save_business()
             if actual['page'] in ('preparation', 'shop', 'opponents', 'environment', 'investment'):
                 self.active_match_id = uuid.uuid4().hex
                 self.match_result_confirmed = False
@@ -5386,7 +5655,7 @@ class Worker:
                    'reason': reason, 'observation': copy.deepcopy(observed), 'context': self.context,
                    'static_knowledge': self.knowledge,
                    'knowledge_boundary': 'static_knowledge仅历史参考；动态交易/库存/任务/站位必须当前局鲜帧proof',
-                   'inspection_results': self.inspections, 'choices': choices,
+                   'inspection_results': copy.deepcopy(self.inspections), 'choices': choices,
                    'resume_epoch': self.epoch(), 'match_id': self.active_match_id,
                    'evidence_file': evidence, 'original_png': str(original_png), 'created_at': now(),
                    'deadline_at': (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
@@ -5394,10 +5663,34 @@ class Worker:
                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
+        if hasattr(self, 'business'):
+            checkpoint, unused = inspection_checkpoint(self.business)
+            request['inspection_completion_sources'] = {
+                panel: {'record_sha256': stored['record_sha256'], 'source': copy.deepcopy(stored['source']),
+                        'historical_completion_only': True}
+                for panel, stored in checkpoint['panels'].items() if panel in self.inspections}
         request['return_reason'] = {'category': category, 'business_step': business_step or request['preparation_checklist']['phase'],
                                     'reason': reason, 'origin': 'native_worker'}
         if kind == 'business_resume':
             request['business_receipt_watermark'] = self.economy_receipt_watermark()
+            if hasattr(self, 'business'):
+                request['inspection_checkpoint'] = self.inspection_candidates()
+                request['inspection_resume_contract'] = {
+                    'contract': INSPECTION_CONTRACT,
+                    'basis_source': 'supervising_agent_continuity',
+                    'required': ['checkpoint_revision', 'settlement_sha256', 'settlement_change', 'basis',
+                                 'reuse', 'changed', 'unknown'],
+                    'scope': 'reuse映射面板到原record_sha256；changed/unknown列表与reuse互斥并覆盖四项。'
+                             'basis须绑定through_snapshot_id、unobserved_interval布尔值及具体details；'
+                             '有复用项才要求unobserved_interval=false；全部未知可如实声明观察空档。'
+                             '无红点不是未变证明。不声明则不复用；旧动作/预算/批准不恢复。'}
+        if kind in ('post_match_' + panel for panel, unused in PANELS):
+            request['inspection_receipt_watermark'] = self.economy_receipt_watermark()
+            request['inspection_contract'] = {'contract': INSPECTION_CONTRACT,
+                'required_coverage': {'tabs': '实际已读页签列表', 'all_tabs_reviewed': True,
+                    'scroll_complete': True, 'claimable_remaining': False, 'pending': False,
+                    **({'allocation_reviewed': True} if observed['page'] == 'advantages' else {})},
+                'scope': 'result.inspection_contract与coverage仅表示当前可处理事项已核；不表示全活动奖励完成。'}
         request['reward_capacity_pending'] = self.pending_reward_capacity()
         task_context, observation_scope = self.reviewed_task_context(observed)
         request['progression_plan'] = progression_plan(self.knowledge, observed,
@@ -5529,7 +5822,10 @@ class Worker:
                         or action['result']['evidence'] != request['evidence_file']
                         or request['observation']['page'] != action['panel']):
                     raise ValueError('核查必须属于当前顺序面板及本次真实请求证据')
-                self.inspections[action['panel']] = action['result']
+                if hasattr(self, 'business'):
+                    self.complete_inspection(action, request)
+                self.inspections[action['panel']] = copy.deepcopy(action['result'])
+                self.state['inspection_results'] = copy.deepcopy(self.inspections)
                 self.log({'event': 'inspection_result', **action})
                 if action['panel'] == PANELS[self.panel_index][0]:
                     self.panel_state = 'return'
@@ -5553,18 +5849,24 @@ class Worker:
                         or not any(result['mode'] in r['text'] for r in actual['rows'])
                         or not any(result['outcome'] in r['text'] for r in actual['rows'])):
                     raise ValueError('缺少当前新鲜整局结算证据或已计数，拒绝虚报通关')
+                if hasattr(self, 'business'):
+                    proposed = copy.deepcopy(self.business)
+                    proposed['status'] = 'completed'
+                    proposed['settlement'] = {'result': copy.deepcopy(result), 'origin_run_id': self.owner['run_id'],
+                        'request_id': request['request_id'], 'snapshot_id': actual['snapshot_id'],
+                        'evidence_file': request['evidence_file'], 'confirmed_at': now()}
+                    previous_inspections, unused = inspection_checkpoint(self.business)
+                    proposed['inspections'] = empty_inspections(proposed, previous_inspections['revision'] + 1)
+                    self.save_business(proposed, guard_request=request)
                 self.consumed_match_results.add(self.active_match_id)
                 self.match_result_confirmed = True
                 self.state['statistics']['matches_confirmed'] += 1
                 self.state['last_match_result'] = result
-                if hasattr(self, 'business'):
-                    self.business['status'] = 'completed'
-                    self.business['settlement'] = {'result': copy.deepcopy(result), 'origin_run_id': self.owner['run_id'],
-                        'request_id': request['request_id'], 'snapshot_id': actual['snapshot_id'],
-                        'evidence_file': request['evidence_file'], 'confirmed_at': now()}
-                    self.save_business()
                 self.panel_index, self.panel_state = 0, 'enter'
                 self.inspections = {}
+                self.state['inspection_results'] = {}
+                if hasattr(self, 'inspection_epoch'):
+                    self.inspection_epoch = None
                 self.log({'event': 'match_result_verified', 'result': result})
                 continue
             if actual['page'] != action['expected_page']:
@@ -6137,6 +6439,7 @@ class Worker:
                 self.ask(observed, 'reward_result', '原领奖输入交付仍未确认，不能先关闭模态或发送选择。',
                          choices={'pending': pending}, category='exception', business_step=pending['kind'])
                 return
+        self.schedule_inspections(observed)
         if not self.node_guard(observed):
             return
         page = observed['page']
@@ -6173,7 +6476,7 @@ class Worker:
             self.panel_state = 'inspect'
         elif self.panel_index < len(PANELS) and page == PANELS[self.panel_index][0]:
             if self.panel_state == 'return':
-                self.command(['key:27', 'wait:0.7'], '当前面板已实读核查，返回主界面执行下一项', page, 'lobby')
+                self.command(['key:27', 'wait:0.7'], '当前面板已核或不在待核顺序，返回大厅按实际缺项继续', page, 'lobby')
                 return
             claim = find_text(observed['rows'], '一键领取') or find_text(observed['rows'], '领取', (300, 200, 1920, 1050))
             if claim and self.claim_count < 30:
