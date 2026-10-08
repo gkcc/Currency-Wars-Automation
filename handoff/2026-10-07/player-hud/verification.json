@@ -1,0 +1,73 @@
+{
+  "schema": "currency-wars-player-hud-verification/v1",
+  "parent_commit": "23944b1c85522b0d4e64778c3c9d511d89fb08bc",
+  "fixture_commit": "9c3329c8eaedf4f2b32a64ad3727b23e14b6c3fa",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+  "python": "3.12.14",
+  "test_selection": [
+    "test_currency_wars_state_reader.NativePlayerHUDTests",
+    "test_currency_wars_state_reader.NativePopulationTests",
+    "test_currency_wars_state_reader.NativeCapacityTests",
+    "test_currency_wars_state_reader.PublicPlayerHUDReplayTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_old_completed_reviews_do_not_allow_current_underfilled_battle_input"
+  ],
+  "test_ids": [
+    "test_currency_wars_state_reader.NativePlayerHUDTests.test_missing_moved_conflicting_or_low_confidence_evidence_stays_unknown",
+    "test_currency_wars_state_reader.NativePlayerHUDTests.test_player_subject_uses_full_native_roi_and_preserves_raw_card_level",
+    "test_currency_wars_state_reader.NativePlayerHUDTests.test_team_capacity_twelve_is_separate_from_player_level_and_slot_geometry",
+    "test_currency_wars_state_reader.NativePlayerHUDTests.test_trusted_player_row_needs_no_crop_and_weak_row_can_be_reread",
+    "test_currency_wars_state_reader.NativePopulationTests.test_capacity_twelve_is_read_without_certifying_an_unseen_expanded_layout",
+    "test_currency_wars_state_reader.NativePopulationTests.test_invalid_icon_prefixed_count_uses_existing_digit_crop_without_rewriting_raw",
+    "test_currency_wars_state_reader.NativePopulationTests.test_invalid_low_confidence_or_missing_digit_read_stays_unknown",
+    "test_currency_wars_state_reader.NativePopulationTests.test_only_fixed_crop_may_resolve_an_impossible_original_count",
+    "test_currency_wars_state_reader.NativePopulationTests.test_only_unique_high_confidence_central_hud_certifies_population",
+    "test_currency_wars_state_reader.NativePopulationTests.test_population_conflicts_duplicates_and_missing_layout_remain_unknown",
+    "test_currency_wars_state_reader.NativePopulationTests.test_valid_count_needs_no_additional_ocr",
+    "test_currency_wars_state_reader.NativeCapacityTests.test_bench_capacity_does_not_certify_unknown_overflow_or_population",
+    "test_currency_wars_state_reader.NativeCapacityTests.test_partial_stale_or_duplicate_bench_stays_unknown",
+    "test_currency_wars_state_reader.PublicPlayerHUDReplayTests.test_four_manifest_bound_pngs_use_production_perception",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_old_completed_reviews_do_not_allow_current_underfilled_battle_input"
+  ],
+  "result": {
+    "tests_run": 15,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 13.45,
+    "passed": true
+  },
+  "source_sha256": {
+    "tools/currency_wars_perception.py": "8e13f440d380836bb6896ac445c265f9da75824edc985d988651a3b7919d1140",
+    "tools/currency_wars_runner.py": "0e115a4a6455f3d8e845ec43e32b8ee27e9c592f320c241d2e26944048750b71",
+    "tools/test_currency_wars_state_reader.py": "3c47a3a9333844ab5220acfea01a7039db30a7c2a5a4d9daf7ca777b41284299",
+    "tools/test_local_runtime_compatibility.py": "87a77851daa617fdfed480cda964ad8000d6deb98eb3b84bc960cb65731ecabe"
+  },
+  "real_png_cases": 4,
+  "real_player_readings_before": [
+    "99",
+    "99",
+    "90",
+    "9"
+  ],
+  "real_player_readings_after": [
+    "9",
+    "8",
+    null,
+    "9"
+  ],
+  "fixture_bytes_unchanged": true,
+  "ast_check": true,
+  "diff_check": true,
+  "game_inputs": 0,
+  "fresh_game_captures": 0,
+  "windows_run": false,
+  "full_gui_build": false,
+  "autonomous_match_verified": false,
+  "limitations": [
+    "The 15-check selection includes the same 14 reader checks; counts are not additive.",
+    "The 12-capacity arithmetic check does not prove 12-slot layout support or battle approval.",
+    "The fourth image already read player level 9 before the change in this cloud environment.",
+    "The public checkout lacks private templates and static GAME_KNOWLEDGE.json.",
+    "Read timings are single runs under shared load; no performance multiplier is established."
+  ]
+}

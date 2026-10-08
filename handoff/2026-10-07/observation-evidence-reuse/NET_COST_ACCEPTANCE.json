@@ -1,0 +1,495 @@
+{
+  "schema": "currency-wars-primary-evidence-reuse-acceptance/v1",
+  "offline_only": true,
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "installed": false,
+  "baseline_commit": "257f84d8b036e6bcb0ef29ae51c722bcaf315e8d",
+  "evidence_main_commit": "d4d36e34b8d2912abbb2af57bc137b2aedc2d1a1",
+  "execution_binding": "Candidate reports were generated from the uncommitted working tree above PR13. source_hashes before/after bind executed code; source_revision is the then-HEAD, not the candidate code identity.",
+  "benchmark_script_sha256": "2eb1517d13e4b0d8c7110c51f2798be44b36303485d3ce34d6e618ec27070d08",
+  "candidate_source_sha256": {
+    "currency_wars_runner.py": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54",
+    "currency_wars_perception.py": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+    "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f"
+  },
+  "focused_tests": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "focused_test_log_sha256": "70d63e4e0ed037b328b54c5b7d3e510cb7d05f376ef8d887f56d64dd8c46a3da",
+  "raw_artifacts": {
+    "pr13-real-worker.json": {
+      "sha256": "ffc5b9a1b9973fa7d7e605470d976074f8d768eb09175e07aed6d85840c6d185",
+      "bytes": 138838
+    },
+    "candidate-real-worker.json": {
+      "sha256": "e85553357bbf2b91013d002e2ee0a62aeeda99d28ab8e24317005b61805b3bf6",
+      "bytes": 146657
+    },
+    "pr13-protocol-worker.json": {
+      "sha256": "eafde7a562d7a8b11945991204056c6723dfaf36d6d85e2249f3041a451b1344",
+      "bytes": 488245
+    },
+    "candidate-protocol-worker.json": {
+      "sha256": "151bb12039edaacac796ed5670b2c519c000fe05205470a6f80366862daafac0",
+      "bytes": 496141
+    },
+    "FOCUSED_ACCEPTANCE.json": {
+      "sha256": "f9305230cd42d812ec57043de3f3896365aad82083c6ee15defbbedd7f038330",
+      "bytes": 3235
+    }
+  },
+  "real_consumer_comparisons": [
+    {
+      "case": "q02_selection_request",
+      "temperature": "cold",
+      "same_endpoint": true,
+      "before_worker_wall_seconds": 2.8255370179995225,
+      "after_worker_wall_seconds": 1.4210234860001947,
+      "net_saved_seconds": 1.4045135319993278,
+      "before_actual_primary_ocr_calls": 2,
+      "after_actual_primary_ocr_calls": 1,
+      "before_semantic_cache_hits": 0,
+      "after_semantic_cache_hits": 0,
+      "primary_reuse_calls": 1,
+      "normal_root_requests": 1,
+      "exception_root_requests": 0,
+      "phase": "rewards",
+      "pending": false,
+      "all_rewards_cleared": null
+    },
+    {
+      "case": "q02_selection_request",
+      "temperature": "warm",
+      "same_endpoint": true,
+      "before_worker_wall_seconds": 1.9328860490004445,
+      "after_worker_wall_seconds": 1.101573276999261,
+      "net_saved_seconds": 0.8313127720011835,
+      "before_actual_primary_ocr_calls": 2,
+      "after_actual_primary_ocr_calls": 1,
+      "before_semantic_cache_hits": 0,
+      "after_semantic_cache_hits": 0,
+      "primary_reuse_calls": 1,
+      "normal_root_requests": 1,
+      "exception_root_requests": 0,
+      "phase": "rewards",
+      "pending": false,
+      "all_rewards_cleared": null
+    },
+    {
+      "case": "q00_q01_original_completed",
+      "temperature": "cold",
+      "same_endpoint": true,
+      "before_worker_wall_seconds": 4.8587077259999205,
+      "after_worker_wall_seconds": 4.766588587001024,
+      "net_saved_seconds": 0.09211913899889623,
+      "before_actual_primary_ocr_calls": 4,
+      "after_actual_primary_ocr_calls": 3,
+      "before_semantic_cache_hits": 0,
+      "after_semantic_cache_hits": 0,
+      "primary_reuse_calls": 1,
+      "normal_root_requests": 0,
+      "exception_root_requests": 1,
+      "phase": "rewards",
+      "pending": true,
+      "all_rewards_cleared": null
+    },
+    {
+      "case": "q00_q01_original_completed",
+      "temperature": "warm",
+      "same_endpoint": true,
+      "before_worker_wall_seconds": 5.271543670000028,
+      "after_worker_wall_seconds": 4.901689476999309,
+      "net_saved_seconds": 0.36985419300071953,
+      "before_actual_primary_ocr_calls": 4,
+      "after_actual_primary_ocr_calls": 3,
+      "before_semantic_cache_hits": 0,
+      "after_semantic_cache_hits": 0,
+      "primary_reuse_calls": 1,
+      "normal_root_requests": 0,
+      "exception_root_requests": 1,
+      "phase": "rewards",
+      "pending": true,
+      "all_rewards_cleared": null
+    }
+  ],
+  "protocol_endpoints": [
+    {
+      "case": "six_d_protocol",
+      "pass_label": "cold",
+      "inference_temperature": null,
+      "reads": 9,
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "574cb6ea724f3533b71a53aebdc68bbc4cb4e000249872a1bfb3b78c52760108",
+          "page": "shop",
+          "fields": {
+            "stage": "2-3",
+            "deployed": "7/7",
+            "level": "8"
+          },
+          "coins": {
+            "value": 58,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.8
+          },
+          "rewards": {
+            "scanned": null,
+            "reason": null,
+            "input_allowed": null,
+            "interaction_required": null,
+            "all_rewards_cleared": null,
+            "targets": null
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "declared_fixture",
+            "unread": []
+          },
+          "team_checked": null,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "lineup_equipment",
+        "battle_ready": false,
+        "pending": false,
+        "reward_pending": null,
+        "spent": {
+          "purchase": 0,
+          "refresh": 12,
+          "experience": 0
+        },
+        "economy_completed": true,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "d6e8955adc87ae1065295a304fd479b27cbdd13ab2a139279feb303d18279d65",
+            "return_reason": {
+              "category": "strategy",
+              "business_step": "economy_budget",
+              "reason": "Declared offline initial budget request; include its cost.",
+              "origin": "native_worker"
+            }
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "574cb6ea724f3533b71a53aebdc68bbc4cb4e000249872a1bfb3b78c52760108",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "lineup_equipment",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "simulated_mutation_publications": 6,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "actual_ocr": false,
+      "fixture_full_upgrade_requested": true
+    },
+    {
+      "case": "six_d_protocol",
+      "pass_label": "warm",
+      "inference_temperature": null,
+      "reads": 9,
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "574cb6ea724f3533b71a53aebdc68bbc4cb4e000249872a1bfb3b78c52760108",
+          "page": "shop",
+          "fields": {
+            "stage": "2-3",
+            "deployed": "7/7",
+            "level": "8"
+          },
+          "coins": {
+            "value": 58,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.8
+          },
+          "rewards": {
+            "scanned": null,
+            "reason": null,
+            "input_allowed": null,
+            "interaction_required": null,
+            "all_rewards_cleared": null,
+            "targets": null
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "declared_fixture",
+            "unread": []
+          },
+          "team_checked": null,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "lineup_equipment",
+        "battle_ready": false,
+        "pending": false,
+        "reward_pending": null,
+        "spent": {
+          "purchase": 0,
+          "refresh": 12,
+          "experience": 0
+        },
+        "economy_completed": true,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "d6e8955adc87ae1065295a304fd479b27cbdd13ab2a139279feb303d18279d65",
+            "return_reason": {
+              "category": "strategy",
+              "business_step": "economy_budget",
+              "reason": "Declared offline initial budget request; include its cost.",
+              "origin": "native_worker"
+            }
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "574cb6ea724f3533b71a53aebdc68bbc4cb4e000249872a1bfb3b78c52760108",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "lineup_equipment",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "simulated_mutation_publications": 6,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "actual_ocr": false,
+      "fixture_full_upgrade_requested": true
+    },
+    {
+      "case": "three_f_protocol",
+      "pass_label": "cold",
+      "inference_temperature": null,
+      "reads": 6,
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "cf8eb99840db810ef414ced3a625658b70ae3aa1ad81c029013d6f905a1b5004",
+          "page": "shop",
+          "fields": {
+            "stage": "2-3",
+            "deployed": "7/7",
+            "level": "8"
+          },
+          "coins": {
+            "value": 54,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.8
+          },
+          "rewards": {
+            "scanned": null,
+            "reason": null,
+            "input_allowed": null,
+            "interaction_required": null,
+            "all_rewards_cleared": null,
+            "targets": null
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "declared_fixture",
+            "unread": []
+          },
+          "team_checked": null,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "lineup_equipment",
+        "battle_ready": false,
+        "pending": false,
+        "reward_pending": null,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 12
+        },
+        "economy_completed": true,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "c43070e32745e015e86bf15117f33a9881f449cf6b43af35f374f6578c9c4312",
+            "return_reason": {
+              "category": "strategy",
+              "business_step": "economy_budget",
+              "reason": "Declared offline initial budget request; include its cost.",
+              "origin": "native_worker"
+            }
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "cf8eb99840db810ef414ced3a625658b70ae3aa1ad81c029013d6f905a1b5004",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "lineup_equipment",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "simulated_mutation_publications": 3,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "actual_ocr": false,
+      "fixture_full_upgrade_requested": true
+    },
+    {
+      "case": "three_f_protocol",
+      "pass_label": "warm",
+      "inference_temperature": null,
+      "reads": 6,
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "cf8eb99840db810ef414ced3a625658b70ae3aa1ad81c029013d6f905a1b5004",
+          "page": "shop",
+          "fields": {
+            "stage": "2-3",
+            "deployed": "7/7",
+            "level": "8"
+          },
+          "coins": {
+            "value": 54,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.8
+          },
+          "rewards": {
+            "scanned": null,
+            "reason": null,
+            "input_allowed": null,
+            "interaction_required": null,
+            "all_rewards_cleared": null,
+            "targets": null
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "declared_fixture",
+            "unread": []
+          },
+          "team_checked": null,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "lineup_equipment",
+        "battle_ready": false,
+        "pending": false,
+        "reward_pending": null,
+        "spent": {
+          "purchase": 0,
+          "refresh": 0,
+          "experience": 12
+        },
+        "economy_completed": true,
+        "terminal_request_kind": "shop_strategy",
+        "requests": [
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "c43070e32745e015e86bf15117f33a9881f449cf6b43af35f374f6578c9c4312",
+            "return_reason": {
+              "category": "strategy",
+              "business_step": "economy_budget",
+              "reason": "Declared offline initial budget request; include its cost.",
+              "origin": "native_worker"
+            }
+          },
+          {
+            "kind": "shop_strategy",
+            "snapshot_id": "cf8eb99840db810ef414ced3a625658b70ae3aa1ad81c029013d6f905a1b5004",
+            "return_reason": {
+              "category": "unclassified",
+              "business_step": "lineup_equipment",
+              "reason": "先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 2,
+        "exception_root_requests": 0,
+        "simulated_mutation_publications": 3,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "actual_ocr": false,
+      "fixture_full_upgrade_requested": true
+    }
+  ],
+  "measurement_boundary": "Actual retained-PNG primary OCR, Perception, Worker business methods, Entry validation, evidence/request writes and inert transport. ready_fixture worker.publish/log are in-memory substitutes; production status/journal publication and supervisor/game waits are unmeasured.",
+  "real_semantic_differences": 0,
+  "protocol_semantic_differences": 0,
+  "force_and_invalidation_evidence": "Three new declared-OCR tests plus four directly affected existing cache/Worker methods; fake engine used for force invalidation, not a force latency benchmark.",
+  "not_claimed": [
+    "stable latency or P95",
+    "Windows same-endpoint result",
+    "full seven-real-D Worker cost",
+    "completed reward phase or whole preparation",
+    "whole-game speedup",
+    "model inference or game animation cost",
+    "closed observe-to-input asynchronous modal race"
+  ],
+  "additional_evidence_main_commit": "19e997da409e4484bb93d3135b7f3927715a7517",
+  "additional_evidence": {
+    "file": "../ROOT_RETAINED_CARD_LABELS.json",
+    "sha256": "71b992e70da83784a3c79d08e4c4687d7cfc093fc3ffe9159e5aee4ec4d60c20",
+    "frame_sha256_verified": true,
+    "used_in_ocr_or_test_inputs": false,
+    "status": "Imported after measurement as manual labels, not recognition results"
+  }
+}

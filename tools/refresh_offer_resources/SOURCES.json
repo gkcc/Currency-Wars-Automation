@@ -1,0 +1,49 @@
+{
+  "schema": "currency-wars-refresh-offer-resources/v1",
+  "resources": [
+    {
+      "kind": "currency_icon",
+      "name": "currency_coin",
+      "file": "currency_coin.png",
+      "sha256": "188d753bb9d38ee7c85e72c8ef69fe4d4a7ec78a73e7930e214b48cae8f907de",
+      "size": [
+        33,
+        32
+      ],
+      "format": "PNG",
+      "color_mode": "RGB",
+      "rgb_sha256": "c4beaf913b8fa991467f15154b6b07928aec1394d53f0a59ab0cf23258d87278",
+      "source_file": "handoff/2026-10-07/free-refresh-sequence/f02.png",
+      "source_kind": "public_retained_png_export",
+      "source_sha256": "bb734d0e90b07c2c4724c8e17eb02732ebce0bfd260135e93346ab4371701282",
+      "source_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        1592,
+        517,
+        1625,
+        549
+      ],
+      "pixel_scale": 1,
+      "search_bounds": [
+        1588,
+        514,
+        1628,
+        552
+      ],
+      "matching": "grayscale_TM_CCOEFF_NORMED",
+      "min_score": 0.97,
+      "min_template_std": 1
+    }
+  ],
+  "limits": [
+    "Supports only this single observed native-scale paid-refresh currency icon appearance.",
+    "Template is an exact RGB crop; no resizing, enhancement, synthetic reconstruction, or current game capture.",
+    "The r00 crop at the same bounds is byte-identical RGB and is not an independent positive appearance sample.",
+    "The source frame is template provenance, not an independent recognition success.",
+    "A coin match alone does not prove a refresh offer, a price, free-count zero, or an authorized economic action.",
+    "Synthetic missing-icon and occlusion experiments are retained separately outside the production resources; they do not establish rejection of every occlusion."
+  ]
+}

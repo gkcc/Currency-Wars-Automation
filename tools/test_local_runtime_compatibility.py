@@ -1,7 +1,9 @@
 """Regression checks for local startup compatibility; no game or GUI input."""
 import ast
 import contextlib
+import copy
 import hashlib
+import importlib.util
 import io
 import json
 import os
@@ -10,9 +12,11 @@ from pathlib import Path
 import subprocess
 import threading
 import sys
+import tempfile
+import uuid
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from concurrent.futures import ThreadPoolExecutor
 
 import currency_wars_artifacts as artifacts
@@ -23,24 +27,94 @@ import currency_wars_source_guard as guard
 
 
 class RuntimeCompatibilityTests(unittest.TestCase):
+    def gui_launcher(self):
+        path=Path(__file__).resolve().parent.parent/'gui'/'launch.py'
+        spec=importlib.util.spec_from_file_location('currency_wars_gui_launch_test',path)
+        module=importlib.util.module_from_spec(spec)
+        with patch.object(sys,'path',[str(path.parent),*sys.path]):
+            spec.loader.exec_module(module)
+        return module
+
+    def test_gui_runtime_registration_publishes_after_both_identity_registrations(self):
+        launch=self.gui_launcher()
+        with tempfile.TemporaryDirectory(prefix='currency-wars-gui-launch-') as temporary:
+            root=Path(temporary)/'selected-runtime-root';root.mkdir()
+            runtime=root/'owned-gui';runtime.mkdir()
+            location={'schema':1,'source':'standalone','runtime_root':str(root),'installation_id':None}
+            marker={'pid':os.getpid(),'process_identity':'windows:41','run_id':'a'*32}
+            events=[]
+            lease=SimpleNamespace(children=lambda children,complete:events.append(('lease',children,complete)))
+            real_write=launch.input_bridge.write_object
+            def identity(pid):return ('active','windows:41' if pid==os.getpid() else 'windows:42')
+            def protect(path,children,*,root,complete):
+                self.assertEqual(path,runtime);self.assertEqual(root,runtime.parent)
+                events.append(('marker',children,complete))
+            def read(path,*,root):
+                self.assertEqual(path,runtime);self.assertEqual(root,runtime.parent)
+                self.assertEqual([event[0] for event in events],['lease','marker'])
+                self.assertFalse((runtime/'runtime-location.json').exists())
+                return marker
+            def write(path,value):
+                self.assertEqual([event[0] for event in events],['lease','marker'])
+                real_write(path,value)
+            records={}
+            with patch.object(launch.artifacts,'process_identity',side_effect=identity), \
+                 patch.object(launch.artifacts,'protect_children',side_effect=protect), \
+                 patch.object(launch.artifacts,'read_marker',side_effect=read), \
+                 patch.object(launch.input_bridge,'write_object',side_effect=write):
+                result=launch.register_runtime_location(runtime,location,'chat',123456,lease,records)
+            self.assertEqual(result,'windows:42')
+            record=json.loads((runtime/'runtime-location.json').read_text())
+            self.assertEqual(record,{'schema':1,'owner':'currency-wars-gui-runtime','run_id':'a'*32,'chat_id':'chat',
+                                    'runtime_location':location,'launcher_pid':os.getpid(),'launcher_creation_id':'41',
+                                    'gui_pid':123456,'gui_creation_id':'42'})
+            self.assertEqual(events[0][1],events[1][1])
+            self.assertFalse(events[0][2]);self.assertFalse(events[1][2])
+
+    def test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish(self):
+        launch=self.gui_launcher()
+        with tempfile.TemporaryDirectory(prefix='currency-wars-gui-launch-') as temporary:
+            runtime=Path(temporary)
+            marker={'pid':os.getpid(),'process_identity':'windows:41','run_id':'a'*32}
+            location={'schema':1,'source':'standalone','runtime_root':str(runtime.parent),'installation_id':None}
+            cases=[ [('unknown',None)],
+                    [('active','windows:42'),('active','windows:41'),('active','windows:43')],
+                    [('active','windows:42'),('active','windows:99')] ]
+            for identities in cases:
+                with self.subTest(identities=identities), \
+                     patch.object(launch.artifacts,'process_identity',side_effect=identities), \
+                     patch.object(launch.artifacts,'protect_children') as protect, \
+                     patch.object(launch.artifacts,'read_marker',return_value=marker), \
+                     patch.object(launch.input_bridge,'write_object') as publish:
+                    with self.assertRaises(RuntimeError):
+                        launch.register_runtime_location(runtime,location,'chat',123456,SimpleNamespace(children=lambda *a,**k:None),{})
+                    publish.assert_not_called()
+                    if len(identities)==1:protect.assert_not_called()
+
     @contextlib.contextmanager
     def manual_bridge_fixture(self):
-        with artifacts.scratch_directory('currency-wars-manual-bridge-test') as outer:
+        with tempfile.TemporaryDirectory(prefix='currency-wars-manual-bridge-test-') as temporary:
+            outer = Path(temporary)
             runtime, records = outer / 'runtime', outer / 'debug' / 'records'
             runtime.mkdir()
             records.mkdir(parents=True)
             owner = {'run_id': 'owned-run', 'chat_id': 'owned-chat'}
             from PIL import Image
             before_png, after_png = io.BytesIO(), io.BytesIO()
-            Image.new('RGB', (8, 8), 'black').save(before_png, format='PNG')
-            Image.new('RGB', (8, 8), 'white').save(after_png, format='PNG')
+            Image.new('RGB', (1920, 1080), 'black').save(before_png, format='PNG')
+            Image.new('RGB', (1920, 1080), 'white').save(after_png, format='PNG')
             class Control:
                 ROOT = str(runtime)
                 OWNER = {'chat_id': 'owned-chat', 'run_token': 'owned-token'}
                 frame = before_png.getvalue()
                 published = []
+                pauses = []
                 def status(self):
-                    return {'ready': True, 'paused': False, 'input_halted': False}
+                    return {'ready': True, 'paused': False, 'input_halted': False, 'game_foreground': True,
+                            'broker_pid': 123, 'broker_creation_time': '456', 'pause_id': None}
+                def pause(self, reason):
+                    self.pauses.append(reason)
+                    return {'ok': True, 'paused': True, 'reason': reason}
                 def submission_lock(self):
                     return contextlib.nullcontext()
                 def validate_actions(self, value):
@@ -51,12 +125,30 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                     self.published.append(value)
                     if value.get('actions') and value['actions'][0]['type'] == 'click':
                         self.frame = after_png.getvalue()
-                    (runtime / 'game-preview.png').write_bytes(self.frame)
+                    frame_id = uuid.uuid4().hex
+                    directory = runtime / 'frames' / (hashlib.sha256(value['id'].encode()).hexdigest() + '-' + frame_id)
+                    directory.mkdir(parents=True)
+                    for filename in ('original.png', 'preview.png'):
+                        (directory / filename).write_bytes(self.frame)
+                    digest = hashlib.sha256(self.frame).hexdigest()
                     self.write_json(runtime / 'result.json', {'id': value['id'], 'ok': True,
-                        'completed': value.get('actions', []), 'observation': {'snapshot': str(runtime / 'game-preview.png')}})
+                        'completed': value.get('actions', []),
+                        'input_attempted': bool(value.get('handoff') or any(action['type'] not in ('observe', 'wait')
+                                                for action in value.get('actions', []))),
+                        'attempted_actions': [action for action in value.get('actions', []) if action['type'] not in ('observe', 'wait')],
+                        'observation': {
+                            'frame_protocol': 1, 'request_id': value['id'], 'frame_id': frame_id,
+                            'captured_at': runner.now(), 'snapshot': str(directory / 'preview.png'),
+                            'original': str(directory / 'original.png'), 'snapshot_sha256': digest,
+                            'original_sha256': digest, 'snapshot_size': [1920, 1080], 'original_size': [1920, 1080]}})
             control = Control()
-            reader = SimpleNamespace(read=lambda path: {'snapshot_id': hashlib.sha256(Path(path).read_bytes()).hexdigest(),
-                'page': 'preparation', 'fields': {'stage': '2-3', 'deployed': '1/1'}, 'rows': [], 'semantic': {}})
+            reader = SimpleNamespace(frames={})
+            def read_frame(path, force=False, *, scope='full'):
+                digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                return json.loads(json.dumps({'snapshot_id': digest, 'page': 'preparation',
+                    'fields': {'stage': '2-3', 'deployed': '1/1', 'coins': 52, 'level': 7, 'xp': '38/52'},
+                    'rows': [], 'semantic': {}, 'elapsed_ms': 0., **reader.frames.get(digest, {})}))
+            reader.read = read_frame
             control.write_json(records / 'owner.json', owner)
             control.write_json(runtime / 'runner-state.json', {**owner, 'match_id': 'match', 'preparation_stage': '2-3',
                 'journal_file': str(records / 'journal.jsonl')})
@@ -72,25 +164,130 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                   'findings': 'Actual before/after reward review', 'all_claimed': True, 'rescanned_after_claim': True}
         return runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ['manual-click'], review, reader=reader)
 
+    def frame_worker(self, runtime, records, owner, control, reader):
+        worker = object.__new__(runner.Worker)
+        worker.run, worker.records, worker.owner, worker.c, worker.perception = runtime, records, owner, control, reader
+        worker.active_match_id, worker.last_preparation_stage = 'match', '2-3'
+        worker.deadline = runner.time.monotonic() + 60
+        worker.frame_path, worker.frame_result, worker.last_observation = None, None, None
+        worker.evidence_count, worker.strategy_reads = 0, {}
+        worker.worker_request_ids = set()
+        worker.state = {'statistics': {'local_inputs': 0, 'local_observations': 0, 'ocr_ms': 0., 'broker_ms': 0.},
+                        'decision_request': None}
+        worker.log = lambda event: None
+        return worker
+
+    def test_worker_reads_its_receipt_and_releases_only_consumed_previous_frame(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            first = entry.request(control, 'actions', ['observe'], 'first', False)
+            first_path = entry.observation_frame(runtime, first)
+            second = entry.request(control, 'actions', ['click:1:2'], 'second', False)
+            (runtime / 'game-preview.png').write_bytes(b'broken obsolete shared alias')
+            observed = worker.read_frame(first)
+            self.assertEqual(observed['snapshot_id'], first['observation']['snapshot_sha256'])
+            self.assertEqual(observed['capture_request_id'], 'first')
+            self.assertNotEqual(observed['snapshot_id'], second['observation']['snapshot_sha256'])
+            worker.read_frame(second)
+            self.assertFalse(first_path.exists())
+            self.assertTrue(worker.frame_path.exists())
+            count = len(control.published)
+            self.assertEqual(entry.request(control, 'actions', ['observe'], 'first', False), first)
+            self.assertEqual(len(control.published), count)
+            with self.assertRaises(entry.ObservationUnavailable):
+                entry.observation_frame(runtime, first)
+
+    def test_worker_capture_failure_reobserves_without_resending_completed_input(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            (runtime / 'runner-manual.json').unlink()
+            initial = entry.request(control, 'actions', ['observe'], 'initial', False)
+            worker.read_frame(initial)
+            worker.last_observation['rows'] = [
+                {'text': '备战阶段', 'confidence': .99, 'box': [420, 25, 530, 60]},
+                {'text': '出战', 'confidence': .99, 'box': [1760, 720, 1860, 770]},
+            ]
+            actual_request = entry.request
+            calls = []
+
+            def request(controller, kind, tokens, rid, handoff, **kwargs):
+                calls.append(tokens)
+                result = actual_request(controller, kind, tokens, rid, handoff, **kwargs)
+                if tokens[0].startswith('click:'):
+                    # The input really returned once; only its PNG became unusable.
+                    Path(result['observation']['snapshot']).write_bytes(b'truncated')
+                return result
+
+            with patch.object(entry, 'request', side_effect=request):
+                after = worker.command(['click:1:2'], 'fixture input', 'preparation', 'unknown effect')
+            self.assertEqual(calls, [['click:1:2'], ['observe']])
+            self.assertEqual(worker.state['statistics']['local_inputs'], 1)
+            self.assertEqual(after['snapshot_id'], hashlib.sha256(control.frame).hexdigest())
+            self.assertEqual(after['page'], 'preparation')
+
+    def test_worker_bad_observations_are_bounded_and_do_not_adopt_old_frame(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            result = entry.request(control, 'actions', ['observe'], 'initial', False)
+            old = worker.read_frame(result)
+            actual_request = entry.request
+            calls = []
+
+            def request(controller, kind, tokens, rid, handoff, **kwargs):
+                calls.append(tokens)
+                fresh = actual_request(controller, kind, tokens, rid, handoff, **kwargs)
+                Path(fresh['observation']['snapshot']).write_bytes(b'truncated')
+                return fresh
+
+            with patch.object(entry, 'request', side_effect=request), self.assertRaises(entry.ObservationUnavailable):
+                worker.observe()
+            self.assertEqual(calls, [['observe'], ['observe']])
+            self.assertIs(worker.last_observation, old)
+
     def resumed_manual_worker(self, runtime, records, owner, control, reader, item):
-        entry.request(control, 'resume', [], 'new-epoch', True)
-        control.write_json(runtime / 'runner-resume-epoch.json', {'id': 'new-epoch', 'previous_epoch': 'old-epoch',
-            'consumed_manual_id': 'manual-one', 'consumed_manual_ids': ['manual-one'], 'time': runner.now()})
-        (runtime / 'runner-manual.json').unlink()
+        result = runner.explicit_resume(runtime, owner, control, 'new-epoch',
+                                        expected_guard=runner.resume_guard_snapshot(runtime, owner, control))
+        self.assertTrue(result['ok'])
         worker = object.__new__(runner.Worker)
         worker.run, worker.records, worker.owner, worker.c, worker.perception = runtime, records, owner, control, reader
         worker.active_match_id, worker.last_preparation_stage = 'match', '2-3'
         worker.preparation_scope, worker.preparation_reviews, worker.context = None, {}, {}
         worker.node_progress, worker.live_mode = 0, None
-        worker.log = lambda event: None
+        worker.events = []
+        worker.log = worker.events.append
         worker.publish = lambda **updates: worker.state.update(updates)
-        fresh = {**reader.read(Path(item['after']['evidence_file'])), 'evidence_file': item['after']['evidence_file'],
-            'observed_at': runner.now(), 'preparation_stage': '2-3', 'match_id': 'match', 'resume_epoch': 'new-epoch'}
-        worker.last_observation = fresh
-        worker.history = {fresh['snapshot_id']: fresh}
-        worker.state = {'decision_request': {'snapshot_id': fresh['snapshot_id'], 'evidence_file': fresh['evidence_file'],
-            'resume_epoch': 'new-epoch'}}
+        worker.history, worker.state = {}, {}
+        self.current_manual_frame(worker, control, reader)
         return worker
+
+    def current_manual_frame(self, worker, control, reader):
+        rid = uuid.uuid4().hex
+        receipt = entry.request(control, 'actions', ['observe'], rid, False)
+        frame = entry.observation_frame(worker.run, receipt)
+        path = worker.records / ('current-' + rid + '.png')
+        path.write_bytes(frame.read_bytes())
+        fresh = {**reader.read(path), 'evidence_file': str(path), 'observed_at': runner.now(),
+            'capture_request_id': rid, 'frame_id': receipt['observation']['frame_id'],
+            'captured_at': receipt['observation']['captured_at'], 'preparation_stage': '2-3',
+            'match_id': 'match', 'resume_epoch': worker.epoch()}
+        worker.last_observation = fresh
+        worker.history[fresh['snapshot_id']] = fresh
+        worker.state['decision_request'] = {'request_id': uuid.uuid4().hex, 'snapshot_id': fresh['snapshot_id'],
+            'evidence_file': fresh['evidence_file'], 'original_png': str(path), 'observation': fresh,
+            'resume_epoch': worker.epoch()}
+        return fresh
+
+    def current_manual_review(self, worker, value):
+        fresh = worker.last_observation
+        worker.review_preparation({'value': value, 'proof': {'source': 'observed_screen',
+            'snapshot_id': fresh['snapshot_id'], 'evidence_file': fresh['evidence_file'], 'resume_epoch': worker.epoch()}})
+
+    def manual_image(self, control, reader, color, **observation):
+        from PIL import Image
+        payload = io.BytesIO()
+        Image.new('RGB', (1920, 1080), color).save(payload, format='PNG')
+        control.frame = payload.getvalue()
+        reader.frames[hashlib.sha256(control.frame).hexdigest()] = observation
 
     def test_manual_bridge_partial_completion_survives_resume_without_blanket_completion_or_resend(self):
         with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
@@ -100,16 +297,19 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             self.assertTrue(Path(item['after']['evidence_file']).exists())
             worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
             published = len(control.published)
-            self.assertTrue(worker.consume_manual_results())
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_review(worker, item['review'])
             self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
             self.assertEqual(set(worker.preparation_reviews), {'rewards'})
             self.assertEqual(worker.preparation_reviews['rewards']['proof']['resume_epoch'], 'new-epoch')
             self.assertEqual(item['binding']['old_epoch'], 'old-epoch')
             self.assertEqual(len(control.published), published)
-            durable = entry.read_json(records / ('manual-' + item['checkpoint_id'] + '.json'))
-            self.assertEqual(durable['reconciliation']['new_epoch'], 'new-epoch')
-            self.assertEqual(durable['reconciliation']['resume_receipt']['result']['id'], 'new-epoch')
-            self.assertTrue(Path(durable['reconciliation']['fresh_original_png']).exists())
+            event, receipt = runner.verified_resume_event(runtime, owner, control,
+                entry.read_json(runtime / 'runner-resume-epoch.json'))
+            self.assertEqual(event['old_epoch'], 'old-epoch')
+            self.assertEqual(receipt['result']['id'], 'new-epoch')
+            self.assertFalse((runtime / 'runner-battle-approval.json').exists())
             self.assertFalse(worker.consume_manual_results())
 
     def test_progression_knowledge_loads_conditions_but_never_cached_progress(self):
@@ -169,8 +369,9 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             incomplete['review'].update(phase='startup_guide', entry_index=2, rewards_claimed=True, goals=[])
             control.write_json(runtime / 'manual-results' / 'unknown-guide.json', incomplete)
             worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            self.current_manual_review(worker, item['review'])
             count = len(control.published)
-            self.assertTrue(worker.consume_manual_results())
+            self.assertFalse(worker.consume_manual_results())
             status = worker.preparation_checklist(worker.last_observation)
             self.assertEqual(status['phase'], 'startup_guide')
             self.assertEqual(set(worker.preparation_reviews), {'rewards'})
@@ -217,6 +418,16 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             {'text': '出战', 'box': [1750, 725, 1850, 770], 'confidence': .99}]}
         with self.assertRaises(ValueError):
             worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        # This isolates the population arithmetic gate, not full lineup proof
+        # or a supported 12-slot layout. Player level remains a different field.
+        actual['fields']['level'] = '9'
+        for count in ('7/12', '13/12', '12/13', '18/8', None):
+            actual['fields']['deployed'] = count
+            with self.subTest(count=count), self.assertRaises(ValueError):
+                worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        actual['fields']['deployed'] = '12/12'
+        worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        self.assertEqual(actual['fields']['level'], '9')
 
     def test_two_manual_checkpoint_writers_publish_only_one_pending_phase(self):
         with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
@@ -275,13 +486,16 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             control.write_json(path, receipt)
             review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent', 'findings': 'review'}
             count = len(control.published)
-            for ids in (['partial-click'], []):
-                with self.subTest(ids=ids), self.assertRaises(ValueError):
-                    runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ids, review, reader=reader)
+            with self.assertRaises(ValueError):
+                runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], [], review, reader=reader)
+            runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ['partial-click'], review, reader=reader)
             saved = entry.read_json(runtime / 'manual-results' / (checkpoint['checkpoint_id'] + '.json'))
             self.assertEqual(saved['status'], 'pending')
-            self.assertNotIn('after', saved)
-            self.assertEqual(len(control.published), count)
+            self.assertEqual(saved['outcome'], 'unknown')
+            self.assertTrue(saved['receipt_states'][0]['unknown_input'])
+            self.assertEqual(saved['input_receipts'][0], runner.redact(receipt))
+            self.assertIn('after', saved)
+            self.assertEqual(len(control.published), count + 1)  # Only the new observe.
 
     def test_takeover_receipt_reconciliation_waits_exact_id_and_never_republishes(self):
         with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
@@ -301,6 +515,265 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                 reconciled = runner.await_existing_receipt(runtime, control, 'ongoing', .2)
             self.assertEqual(reconciled['result']['id'], 'ongoing')
             self.assertEqual(len(control.published), count)
+
+    def replace_manual_receipt(self, runtime, control, rid, *, remove=(), **updates):
+        path = runtime / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+        receipt = entry.read_json(path)
+        receipt['result'].update(updates)
+        for key in remove:
+            receipt['result'].pop(key, None)
+        control.write_json(path, receipt)
+        control.write_json(runtime / 'result.json', receipt['result'])
+        return receipt
+
+    def test_manual_receipt_evidence_distinguishes_no_input_completed_partial_and_unknown(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            entry.request(control, 'actions', ['click:1:2', 'click:3:4'], 'delivery', False)
+            raw = runner.await_existing_receipt(runtime, control, 'delivery', 0)
+            actions = raw['request']['actions']
+            cases = [
+                ({'ok': False, 'completed': [], 'input_attempted': False, 'attempted_actions': []}, 'zero_input', False),
+                ({'ok': True, 'completed': actions, 'input_attempted': True, 'attempted_actions': actions}, 'completed', False),
+                ({'ok': False, 'completed': actions[:1], 'input_attempted': True, 'attempted_actions': actions[:1]}, 'partial', False),
+                ({'ok': False, 'completed': [], 'input_attempted': True, 'attempted_actions': actions[:1]}, 'unknown', True),
+                ({'ok': False, 'completed': actions[:1], 'input_attempted': True, 'attempted_actions': actions}, 'unknown', True),
+                ({'ok': False, 'completed': [], 'input_attempted': None, 'attempted_actions': None}, 'unknown', True),
+            ]
+            for result, expected, unknown in cases:
+                with self.subTest(expected=expected, result=result):
+                    state = runner.manual_receipt_state({**raw, 'result': {'id': 'delivery', **result}})
+                    self.assertEqual((state['state'], state['unknown_input']), (expected, unknown))
+            wait = {**raw, 'request': {**raw['request'], 'actions': [{'type': 'wait', 'args': [1]}], 'handoff': True},
+                    'result': {'id': 'delivery', 'ok': False, 'completed': [], 'input_attempted': True, 'attempted_actions': []}}
+            self.assertTrue(runner.manual_receipt_state(wait)['unknown_input'])
+
+    def test_manual_completed_input_without_frame_and_control_resume_keep_original_receipts(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'resume', [], 'phase-handoff', True, expected_pause_id=None)
+            entry.request(control, 'actions', ['click:1:2'], 'complete-no-frame', False)
+            completed = self.replace_manual_receipt(runtime, control, 'complete-no-frame', remove=('observation',),
+                                                    observation_error='capture failed')
+            entry.request(control, 'actions', ['click:3:4'], 'zero-input-refusal', False)
+            zero = self.replace_manual_receipt(runtime, control, 'zero-input-refusal', remove=('observation',),
+                ok=False, completed=[], input_attempted=False, attempted_actions=[], error='guard refused before dispatch')
+            # Failed passive observations are reconciled without requiring the
+            # supervisor to list them as business input or publish them again.
+            entry.request(control, 'actions', ['observe'], 'passive-failure', False)
+            self.replace_manual_receipt(runtime, control, 'passive-failure', remove=('observation',), ok=False)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': 'Current reward area reviewed', 'all_claimed': True, 'rescanned_after_claim': True}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                ['phase-handoff', 'complete-no-frame', 'zero-input-refusal'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('completed', 'success'))
+            saved = {receipt['id']: receipt for receipt in item['input_receipts']}
+            self.assertEqual(saved['complete-no-frame'], runner.redact(completed))
+            self.assertEqual(saved['zero-input-refusal'], runner.redact(zero))
+            self.assertTrue(item['image_changed'])
+            self.assertNotIn('verified_change', json.dumps(item))
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            count = len(control.published)
+            self.assertFalse(worker.consume_manual_results())
+            self.current_manual_review(worker, review)
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(len(control.published), count)
+
+    def test_manual_unknown_input_does_not_poison_a_new_current_review(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'actions', ['click:1:2'], 'sent-before-focus-loss', False)
+            actual = self.replace_manual_receipt(runtime, control, 'sent-before-focus-loss', ok=False,
+                completed=[], input_attempted=True, error='focus failed after dispatch')
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': 'Claimed success must not erase unknown input', 'all_claimed': True,
+                      'rescanned_after_claim': True}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                             ['sent-before-focus-loss'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('pending', 'unknown'))
+            self.assertEqual(item['input_receipts'], [runner.redact(actual)])
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            count = len(control.published)
+            self.assertFalse(worker.consume_manual_results())
+            self.current_manual_review(worker, {**review, 'findings': 'Independent current request: reward area now clear'})
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertFalse(worker.consume_manual_results())
+            self.assertEqual(len(control.published), count)
+            self.assertEqual(entry.read_json(runtime / 'manual-results' / (item['checkpoint_id'] + '.json'))['outcome'], 'unknown')
+            self.assertEqual(sum(request['id'] == 'sent-before-focus-loss' for request in control.published), 1)
+
+    def test_manual_after_frame_failure_saves_receipts_and_retry_only_observes(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'actions', ['click:1:2'], 'one-completed-input', False)
+            raw = runner.await_existing_receipt(runtime, control, 'one-completed-input', 0)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': 'After observation is still required', 'all_claimed': True, 'rescanned_after_claim': True}
+            original_request = entry.request
+            def bad_after(*args, **kwargs):
+                result = original_request(*args, **kwargs)
+                Path(result['observation']['snapshot']).write_bytes(b'truncated')
+                return result
+            with patch.object(entry, 'request', side_effect=bad_after):
+                pending = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                                    ['one-completed-input'], review, reader=reader)
+            self.assertEqual((pending['status'], pending['outcome']), ('pending', 'unknown'))
+            self.assertEqual(pending['input_receipts'], [runner.redact(raw)])
+            self.assertNotIn('after', pending)
+            self.assertTrue(pending['observation_error'])
+            count = len(control.published)
+            finished = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                                 ['one-completed-input'], review, reader=reader)
+            self.assertEqual((finished['status'], finished['outcome']), ('completed', 'success'))
+            self.assertEqual(len(control.published), count + 1)
+            self.assertEqual(control.published[-1]['actions'], [{'type': 'observe', 'args': []}])
+            self.assertEqual(sum(request['id'] == 'one-completed-input' for request in control.published), 1)
+
+    def test_manual_known_partial_preserves_prefix_and_only_current_review_continues(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
+            entry.request(control, 'actions', ['click:1:2', 'click:3:4'], 'known-prefix', False)
+            original = runner.await_existing_receipt(runtime, control, 'known-prefix', 0)
+            prefix = original['request']['actions'][:1]
+            self.replace_manual_receipt(runtime, control, 'known-prefix', ok=False, completed=prefix,
+                                        attempted_actions=prefix, failing_action_index=1)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': False, 'outcome': 'partial',
+                      'reviewer': 'supervising_agent', 'findings': 'Only the first reward input completed'}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], ['known-prefix'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('pending', 'partial'))
+            self.assertFalse(item['receipt_states'][0]['unknown_input'])
+            self.assertEqual(item['input_receipts'][0]['result']['completed'], prefix)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            count = len(control.published)
+            self.current_manual_review(worker, {**review, 'completed': True, 'outcome': 'success',
+                'all_claimed': True, 'rescanned_after_claim': True, 'findings': 'Current remaining rewards independently reviewed'})
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(len(control.published), count)
+
+    def test_manual_no_effect_coin_check_does_not_exempt_a_later_drag_from_fence(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            reward = self.complete_manual_reward(runtime, owner, control, reader)
+            checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'startup_guide', reader=reader)
+            entry.request(control, 'actions', ['drag:1:2:3:4'], 'drag-with-same-coins', False)
+            review = {'phase': 'startup_guide', 'stage': '2-3', 'completed': False, 'outcome': 'no_effect',
+                'reviewer': 'supervising_agent', 'findings': 'Only the coin field was compared', 'effect_fields': ['coins']}
+            item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'],
+                                             ['drag-with-same-coins'], review, reader=reader)
+            self.assertEqual((item['status'], item['outcome']), ('pending', 'no_effect'))
+            self.assertEqual(item['effect_scope'], 'listed_dynamic_fields_only')
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            worker.preparation_checklist(worker.last_observation)
+            with self.assertRaisesRegex(ValueError, '未覆盖的输入变化'):
+                worker.verify_manual_mutation_fence(reward)
+
+    def test_manual_missing_hud_defers_once_per_request_and_new_frame_can_revalidate(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            item = self.complete_manual_reward(runtime, owner, control, reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            worker.last_observation['fields']['stage'] = None
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            events = len(worker.events)
+            self.assertFalse(worker.consume_manual_results())
+            self.assertEqual(len(worker.events), events)
+            fresh = self.current_manual_frame(worker, control, reader)
+            worker.preparation_checklist(fresh)
+            source = worker.verified_manual_source(item, fresh)
+            self.assertEqual(source['preparation_stage'], '2-3')
+            self.current_manual_review(worker, item['review'])
+            self.assertEqual(worker.preparation_checklist(fresh)['phase'], 'startup_guide')
+
+    def test_manual_inventory_reconciliation_requires_all_nineteen_unique_native_slots(self):
+        from currency_wars_state_reader import native_slots
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            slots = [{**slot, 'status': 'empty', 'name': None, 'star': None} for slot in native_slots()]
+            self.manual_image(control, reader, 'gray', semantic={'team': {'slots': slots}})
+            digest = hashlib.sha256(control.frame).hexdigest()
+            reader.frames[digest]['semantic']['team']['snapshot_id'] = digest
+            reader.frames[digest]['semantic']['team']['capacity'] = {
+                'snapshot_id': digest, 'overflow_checked': True, 'overflow_count': 0}
+            for phase in runner.coaching.PHASES[:3]:
+                checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', phase, reader=reader)
+                review = {'phase': phase, 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                          'findings': 'Fixture phase; current proof still required'}
+                item = runner.finish_manual_phase(runtime, owner, control, checkpoint['checkpoint_id'], [], review, reader=reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            worker.preparation_checklist(worker.last_observation)
+            # Prior two phases model already accepted current supervising
+            # reviews; this check isolates the real inventory reconciliation.
+            proof = {'source': 'observed_screen', 'resume_epoch': worker.epoch(),
+                     'snapshot_id': worker.last_observation['snapshot_id'], 'evidence_file': worker.last_observation['evidence_file']}
+            worker.preparation_reviews = {phase: {'completed': True, 'proof': proof} for phase in runner.coaching.PHASES[:2]}
+            worker.last_observation['semantic']['team']['slots'] = slots[:1]
+            count = len(control.published)
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_frame(worker, control, reader)
+            worker.last_observation['semantic']['team']['capacity']['overflow_checked'] = False
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_frame(worker, control, reader)
+            worker.last_observation['semantic']['team']['capacity']['overflow_count'] = 1
+            self.assertFalse(worker.consume_manual_results())
+            self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
+            self.current_manual_frame(worker, control, reader)
+            self.assertTrue(worker.consume_manual_results())
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'economy')
+            self.assertEqual(len(control.published), count + 3)
+            durable = entry.read_json(records / ('manual-' + item['checkpoint_id'] + '.json'))
+            self.assertEqual(durable['reconciliation']['fresh_receipt']['id'], worker.last_observation['capture_request_id'])
+            self.assertTrue(Path(durable['reconciliation']['fresh_original_png']).exists())
+            self.assertEqual(durable['reconciliation']['resume_event']['new_epoch'], 'new-epoch')
+
+    def test_manual_resume_event_rejects_changed_receipt_guard_and_new_pause_wins(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            item = self.complete_manual_reward(runtime, owner, control, reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            epoch = entry.read_json(runtime / 'runner-resume-epoch.json')
+            target = runtime / 'resume-events' / (hashlib.sha256(b'new-epoch').hexdigest() + '.json')
+            original = entry.read_json(target)
+            for field, value in [('broker_pause_id', 'wrong-pause'), ('broker_creation_id', '999')]:
+                changed = json.loads(json.dumps(original))
+                changed['guard'][field] = value
+                control.write_json(target, changed)
+                with self.subTest(field=field), self.assertRaises(ValueError):
+                    runner.verified_resume_event(runtime, owner, control, epoch)
+            control.write_json(target, original)
+            self.replace_manual_receipt(runtime, control, 'new-epoch', observation_error='receipt changed later')
+            with self.assertRaises(ValueError):
+                runner.verified_resume_event(runtime, owner, control, epoch)
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            expected = runner.resume_guard_snapshot(runtime, owner, control)
+            request = entry.request
+            def new_pause(*args, **kwargs):
+                result = request(*args, **kwargs)
+                control.write_json(runtime / 'runner-manual.json', {'manual_id': 'new-takeover', 'reason': 'new pause'})
+                return result
+            with patch.object(entry, 'request', side_effect=new_pause), self.assertRaisesRegex(RuntimeError, '新的手动接管优先'):
+                runner.explicit_resume(runtime, owner, control, 'late-resume', expected_guard=expected)
+            self.assertEqual(entry.read_json(runtime / 'runner-resume-epoch.json')['id'], 'old-epoch')
+            self.assertEqual(runner.manual_state(runtime)['manual_id'], 'new-takeover')
+            self.assertEqual(len(control.published), 1)
+            self.assertEqual(len(control.pauses), 1)
+
+    def test_manual_current_guide_review_requires_reward_rescan_and_preserves_guide(self):
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            item = self.complete_manual_reward(runtime, owner, control, reader)
+            worker = self.resumed_manual_worker(runtime, records, owner, control, reader, item)
+            self.current_manual_review(worker, item['review'])
+            self.manual_image(control, reader, 'blue', page='unknown',
+                rows=[{'text': '创业指南', 'confidence': .99, 'box': [1, 1, 100, 40]}])
+            self.current_manual_frame(worker, control, reader)
+            self.current_manual_review(worker, {'phase': 'startup_guide', 'stage': '2-3', 'completed': True,
+                'reviewer': 'supervising_agent', 'findings': 'Current chapter and claimed rewards read',
+                'entry_index': 2, 'rewards_claimed': True, 'goals': []})
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertIn('startup_guide', worker.preparation_reviews)
+            self.manual_image(control, reader, 'green', page='preparation')
+            self.current_manual_frame(worker, control, reader)
+            with self.assertRaises(ValueError):
+                self.current_manual_review(worker, {**item['review'], 'all_claimed': False})
+            self.current_manual_review(worker, item['review'])
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'inventory_cleanup')
 
     def test_boss_result_only_advances_once_and_does_not_confirm_a_match(self):
         worker = object.__new__(runner.Worker)
@@ -365,6 +838,265 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             with self.subTest(action=action), self.assertRaises(ValueError):
                 worker.guard_preparation_action(action, actual)
 
+    @contextlib.contextmanager
+    def reward_capacity_fixture(self):
+        # Reuse the existing real Entry/Worker receipt fixture. Images and
+        # semantic values below are contract fixtures, not live vision evidence.
+        with self.manual_bridge_fixture() as (runtime, records, owner, control, reader):
+            (runtime / 'runner-manual.json').unlink()
+            worker = self.frame_worker(runtime, records, owner, control, reader)
+            worker.preparation_scope, worker.preparation_reviews = None, {}
+            worker.context, worker.history = {'reward_capacity': None}, {}
+            worker.state['statistics']['decisions'] = 0
+            worker.publish = lambda **updates: worker.state.update(updates)
+            status = control.status
+            control.status = lambda: {**status(), 'broker_pid': 123, 'broker_creation_time': '456', 'pause_id': None}
+            control.pause = lambda reason: {'ok': True, 'paused': True, 'reason': reason}
+            events = []
+            worker.log = events.append
+            control.sold = False
+            publish = control.publish_request
+            def publish_sale(value):
+                if value.get('actions') and value['actions'][0]['type'] == 'drag':
+                    from PIL import Image
+                    image = io.BytesIO()
+                    Image.new('RGB', (1920, 1080), 'white').save(image, format='PNG')
+                    control.frame, control.sold = image.getvalue(), True
+                publish(value)
+            control.publish_request = publish_sale
+            def read(path):
+                digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                slots = [{**slot, 'snapshot_id': digest,
+                    'status': 'empty' if control.sold and slot['slot'] == 1 else 'occupied',
+                    'name': '可售角色', 'star': 1} for slot in runner.native_slots() if slot['location'] == 'bench']
+                return {'snapshot_id': digest, 'page': 'preparation', 'fingerprint': '00',
+                    'fields': {'stage': '2-3', 'deployed': '8/8'}, 'elapsed_ms': 0.,
+                    'rows': [{'text': '备战阶段', 'confidence': .99, 'box': [420, 25, 530, 60]},
+                             {'text': '出战', 'confidence': .99, 'box': [1760, 720, 1860, 770]}],
+                    'semantic': {'team': {'slots': slots, 'checked': False, 'fully_read': False},
+                        'coins': {'value': 51 if control.sold else 50, 'bounds': runner.GOLD_HUD,
+                                  'currency_icon_gold_fraction': .5, 'confidence': .99}}}
+            reader.read = read
+            def ask(observed, kind, reason, choices=None):
+                rid = uuid.uuid4().hex
+                path = records / (rid + '-original.png')
+                path.write_bytes(worker.frame_path.read_bytes())
+                request = {'request_id': rid, 'snapshot_id': observed['snapshot_id'], 'kind': kind,
+                    'observation': copy.deepcopy(observed), 'match_id': 'match', 'resume_epoch': worker.epoch(),
+                    'original_png': str(path), 'evidence_file': str(path), 'created_at': runner.now(),
+                    'deadline_at': (runner.datetime.now(runner.timezone.utc) + runner.timedelta(minutes=5)).isoformat()}
+                worker.history[observed['snapshot_id']] = {**copy.deepcopy(observed),
+                    'evidence_file': str(path), 'observed_at': runner.now(), 'match_id': 'match',
+                    'resume_epoch': worker.epoch(), 'preparation_stage': '2-3'}
+                worker.state['decision_request'] = request
+                return request
+            worker.ask = ask
+            observed = worker.observe()
+            request = ask(observed, 'preparation_strategy', 'fixture')
+            inventory = {'bench_capacity': 9, 'slots': [
+                {'slot': i, 'status': 'occupied', 'name': '可售角色', 'star': 1} for i in range(1, 10)],
+                'overflow_checked': True, 'overflow_count': 0, 'overflow_bounds': [200, 800, 375, 1030]}
+            value = {'reviewer': 'supervising_agent', 'stage': '2-3', 'findings': '逐席及溢出检查',
+                'inventory': inventory, 'coins': 50,
+                'blocked_reward': {'pending': True, 'blocked_by_capacity': True, 'kind': 'unit_reward',
+                                   'findings': '角色奖励显示容量阻塞', 'bounds': [1550, 300, 1700, 450]},
+                'sale': {'slot': 1, 'name': '可售角色', 'star': 1, 'sale_value': 1,
+                         'not_required': True, 'reason': '已核攻略、升星与强制同场需求均不用该张',
+                         'control_verified': True, 'control_text': '出售', 'control_bounds': [20, 800, 190, 950]}}
+            proof = {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
+                     'resume_epoch': worker.epoch(), 'evidence_file': request['evidence_file']}
+            action = {'type': 'drag', 'purpose': 'reward_capacity', 'args': [439, 912, 100, 875],
+                'expected_page': 'preparation', 'reason': '只为当前被阻塞的角色奖励腾一席', 'guard_texts': ['备战阶段'],
+                'target_evidence': {'snapshot_id': request['snapshot_id'], 'control_id': 'reward_capacity_sale',
+                                    'bounds': [20, 800, 497, 981]},
+                'capacity_review': {'proof': proof, 'value': value}}
+            reply = {'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'],
+                     'resume_epoch': worker.epoch(), 'actions': [action]}
+            yield worker, control, reply, events
+
+    def capacity_post_review(self, worker, reply):
+        value = copy.deepcopy(reply['actions'][0]['capacity_review']['value'])
+        value['inventory']['slots'][0]['status'] = 'empty'
+        value['coins'] = 51
+        value['input_request_id'] = worker.pending_reward_capacity()['input_request_id']
+        request = worker.state['decision_request']
+        return {'proof': {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
+                         'resume_epoch': worker.epoch(), 'evidence_file': request['evidence_file']}, 'value': value}
+
+    def test_reward_capacity_single_sale_requires_receipt_and_new_capacity_then_returns_to_rewards(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            pending = worker.pending_reward_capacity()
+            self.assertIsNotNone(pending['input_request_id'])
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            for action in ({'type': 'buy_shop'}, {'type': 'key', 'args': [68]}, reply['actions'][0]):
+                with self.assertRaises(ValueError):
+                    worker.guard_preparation_action(action, worker.last_observation)
+            record = self.capacity_post_review(worker, reply)
+            request = worker.state['decision_request']
+            worker.execute_plan({'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'],
+                'resume_epoch': worker.epoch(), 'context_update': {'reward_capacity': record},
+                'actions': [{'type': 'finish_preparation_review', 'reason': '新帧核钱、腾出的单席和独立溢出'}]})
+            self.assertIsNone(worker.pending_reward_capacity())
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertFalse(worker.last_observation['semantic']['team']['fully_read'])
+            self.assertFalse(worker.preparation_checklist(worker.last_observation)['economy_allowed'])
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    def test_reward_capacity_rejects_unknown_overflow_nonfull_bench_or_unverified_sale(self):
+        mutations = [lambda v: v['inventory'].update(overflow_checked=False),
+                     lambda v: v['inventory'].update(overflow_count=1),
+                     lambda v: v['inventory']['slots'][0].update(status='empty'),
+                     lambda v: v['blocked_reward'].update(blocked_by_capacity=False),
+                     lambda v: v['sale'].update(control_verified=False),
+                     lambda v: v['sale'].update(name='另一个角色')]
+        for mutate in mutations:
+            with self.subTest(mutate=mutate), self.reward_capacity_fixture() as (worker, control, reply, events):
+                mutate(reply['actions'][0]['capacity_review']['value'])
+                with self.assertRaises(ValueError):
+                    worker.execute_plan(reply)
+                self.assertFalse(any(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published))
+
+    def test_reward_capacity_rejects_stale_identity_roi_change_and_economy_disguise(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            action = reply['actions'][0]
+            for changed in ({'type': 'buy_shop'}, {'type': 'key', 'args': [68]},
+                            {'purpose': 'ordinary_cleanup'}):
+                with self.assertRaises(ValueError):
+                    worker.guard_preparation_action({**action, **changed}, worker.last_observation)
+            action['capacity_review']['proof']['resume_epoch'] = 'old'
+            with self.assertRaises(ValueError):
+                worker.execute_plan(reply)
+            action['capacity_review']['proof']['resume_epoch'] = worker.epoch()
+            from PIL import Image
+            image = Image.open(io.BytesIO(control.frame)).convert('RGB')
+            image.putpixel((440, 913), (255, 0, 0))
+            changed = io.BytesIO()
+            image.save(changed, format='PNG')
+            control.frame = changed.getvalue()
+            with self.assertRaisesRegex(ValueError, '相关库存'):
+                worker.execute_plan(reply)
+            self.assertFalse(any(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published))
+
+    def test_reward_capacity_after_input_bad_frame_only_reobserves_never_repeats_sale(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            actual_request = entry.request
+            def request(controller, kind, tokens, rid, handoff, **kwargs):
+                result = actual_request(controller, kind, tokens, rid, handoff, **kwargs)
+                if tokens[0].startswith('drag:'):
+                    Path(result['observation']['snapshot']).write_bytes(b'truncated')
+                return result
+            with patch.object(entry, 'request', side_effect=request):
+                worker.execute_plan(reply)
+            worker.review_reward_capacity(self.capacity_post_review(worker, reply))
+            self.assertIsNone(worker.pending_reward_capacity())
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    def test_reward_capacity_missing_receipt_or_wrong_difference_stays_pending_without_input(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            record = self.capacity_post_review(worker, reply)
+            count = len(control.published)
+            record['value']['coins'] = 50
+            with self.assertRaises(ValueError):
+                worker.review_reward_capacity(record)
+            record['value']['coins'] = 51
+            pending = worker.pending_reward_capacity()
+            path = worker.run / 'request-ledger' / (hashlib.sha256(pending['input_request_id'].encode()).hexdigest() + '.json')
+            receipt = entry.read_json(path)
+            receipt['result']['input_attempted'] = False
+            control.write_json(path, receipt)
+            with self.assertRaisesRegex(ValueError, '未知'):
+                worker.review_reward_capacity(record)
+            receipt['result']['completed'] = []
+            receipt['result']['input_attempted'] = True
+            control.write_json(path, receipt)
+            with self.assertRaisesRegex(ValueError, '未知'):
+                worker.review_reward_capacity(record)
+            self.assertIsNotNone(worker.pending_reward_capacity())
+            self.assertEqual(len(control.published), count)
+
+    def test_reward_capacity_new_epoch_or_later_mutation_does_not_copy_completion(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            record = self.capacity_post_review(worker, reply)
+            entry.request(control, 'actions', ['key:27'], 'later-unrecorded-input', False)
+            with self.assertRaisesRegex(ValueError, '另有输入'):
+                worker.review_reward_capacity(record)
+            worker.epoch = lambda: 'new-epoch'
+            with self.assertRaises(ValueError):
+                worker.review_reward_capacity(record)
+            self.assertIsNotNone(worker.pending_reward_capacity())
+
+    @unittest.skipUnless(hasattr(runner, 'verified_resume_event'), 'B003 exact resume-event dependency not installed')
+    def test_reward_capacity_exact_b003_resume_reconciles_original_sale_in_new_epoch(self):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            control.write_json(worker.run / 'runner-manual.json', {'manual_id': 'manual-one', 'reason': 'handoff'})
+            resumed = runner.explicit_resume(worker.run, worker.owner, control, 'new-epoch',
+                expected_guard=runner.resume_guard_snapshot(worker.run, worker.owner, control))
+            self.assertTrue(resumed['ok'])
+            worker.ask(worker.observe(), 'preparation_strategy', '当前epoch补验容量')
+            record = self.capacity_post_review(worker, reply)
+            record['value']['resume_event_id'] = 'new-epoch'
+            worker.review_reward_capacity(record)
+            self.assertIsNone(worker.pending_reward_capacity())
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    @unittest.skipUnless(hasattr(runner, 'verified_resume_event'), 'B003 exact manual-result dependency not installed')
+    def test_reward_capacity_b003_manual_result_supersedes_unknown_sale_without_claiming_success(self):
+        self.check_capacity_manual_resolution(extra_handoff=False)
+
+    @unittest.skipUnless(hasattr(runner, 'verified_resume_event'), 'B003 exact manual-result dependency not installed')
+    def test_reward_capacity_b003_manual_result_after_multiple_handoffs_closes_unknown_pending(self):
+        self.check_capacity_manual_resolution(extra_handoff=True)
+
+    def check_capacity_manual_resolution(self, *, extra_handoff):
+        with self.reward_capacity_fixture() as (worker, control, reply, events):
+            worker.execute_plan(reply)
+            pending = worker.pending_reward_capacity()
+            path = worker.run / 'request-ledger' / (hashlib.sha256(pending['input_request_id'].encode()).hexdigest() + '.json')
+            receipt = entry.read_json(path)
+            receipt['result'].update(ok=False, completed=[], input_attempted=True)
+            control.write_json(path, receipt)
+            if extra_handoff:
+                control.write_json(worker.run / 'runner-manual.json', {'manual_id': 'intermediate-manual', 'reason': 'first handoff'})
+                first = runner.explicit_resume(worker.run, worker.owner, control, 'intermediate-epoch',
+                    expected_guard=runner.resume_guard_snapshot(worker.run, worker.owner, control))
+                self.assertTrue(first['ok'])
+            control.write_json(worker.run / 'runner-manual.json', {'manual_id': 'manual-one', 'reason': 'manual repair'})
+            checkpoint = runner.begin_manual_phase(worker.run, worker.owner, control, 'manual-one', 'rewards', reader=worker.perception)
+            entry.request(control, 'actions', ['click:1:2'], 'manual-repair', False)
+            review = {'phase': 'rewards', 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
+                      'findings': '实际整理库存并复核当前奖励', 'all_claimed': True, 'rescanned_after_claim': True}
+            runner.finish_manual_phase(worker.run, worker.owner, control, checkpoint['checkpoint_id'],
+                                       ['manual-repair'], review, reader=worker.perception)
+            resumed = runner.explicit_resume(worker.run, worker.owner, control, 'new-epoch',
+                expected_guard=runner.resume_guard_snapshot(worker.run, worker.owner, control))
+            self.assertTrue(resumed['ok'])
+            worker.ask(worker.observe(), 'preparation_strategy', '以当前实读替代旧未知腾位')
+            record = self.capacity_post_review(worker, reply)
+            record['value'].update(resume_event_id='new-epoch', resolution='manual_reconciled',
+                                   manual_checkpoint_id=checkpoint['checkpoint_id'])
+            worker.review_reward_capacity(record)
+            self.assertIsNone(worker.pending_reward_capacity())
+            final = entry.read_json(worker.run / 'reward-capacity.json')
+            self.assertEqual(final['status'], 'superseded')
+            self.assertEqual(final['sale_outcome'], 'unknown')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+            self.assertEqual(sum(req.get('actions', [{}])[0].get('type') == 'drag' for req in control.published), 1)
+
+    def test_reward_clear_requires_current_full_sweep_not_absent_templates_or_old_review(self):
+        observed = {'page': 'preparation', 'snapshot_id': 'fresh', 'semantic': {}}
+        record = {'proof': {'source': 'observed_screen', 'snapshot_id': 'fresh'},
+                  'value': {'reviewer': 'supervising_agent', 'all_claimed': True, 'rescanned_after_claim': True}}
+        self.assertEqual(runner.coaching.reward_status(observed), 'unknown')
+        self.assertEqual(runner.coaching.reward_status(observed, record), 'clear')
+        self.assertEqual(runner.coaching.reward_status({**observed, 'snapshot_id': 'new'}, record), 'unknown')
+        self.assertEqual(runner.coaching.reward_status({**observed, 'page': 'supply'}, record), 'pending')
+
     def test_selected_investment_requires_both_units_and_board_limits(self):
         investment = [{'name': '飞光·传剑', 'effect': '两人同时在场，每进入新节点比例+4%'}]
         team = {'checked': True, 'units': [{'name': '景元', 'location': 'board', 'row': 'front', 'slot': 1},
@@ -417,7 +1149,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
         worker.node_progress, worker.live_mode = 0, None
         worker.log = lambda event: None
         worker.state = {'decision_request': {'snapshot_id': 'reward-frame'}}
-        worker.history = {'reward-frame': {'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
+        worker.history = {'reward-frame': {'snapshot_id': 'reward-frame', 'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
             'evidence_file': 'reward-evidence', 'page': 'preparation', 'preparation_stage': '2-3', 'rows': []}}
         def record(snapshot, evidence, **value):
             return {'value': {'reviewer': 'supervising_agent', 'completed': True, 'stage': '2-3',
@@ -426,7 +1158,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                               'evidence_file': evidence, 'resume_epoch': 'epoch'}}
         reward = record('reward-frame', 'reward-evidence', phase='rewards', all_claimed=True, rescanned_after_claim=True)
         worker.review_preparation(reward)
-        worker.history['guide-frame'] = {'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
+        worker.history['guide-frame'] = {'snapshot_id': 'guide-frame', 'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now(),
             'evidence_file': 'guide-evidence', 'page': 'unknown', 'preparation_stage': '2-3',
             'rows': [{'text': '创业指南', 'confidence': .99, 'box': [0, 0, 100, 40]}]}
         worker.state['decision_request']['snapshot_id'] = 'guide-frame'
@@ -446,8 +1178,8 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             worker.review_preparation(guide)
         worker.history['guide-frame']['rows'].pop()
         worker.review_preparation(guide)
-        self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'inventory_cleanup')
-        self.assertEqual(worker.preparation_reviews['rewards']['proof']['snapshot_id'], 'reward-frame')
+        self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
+        self.assertNotIn('rewards', worker.preparation_reviews)
         context, scope = worker.reviewed_task_context({'snapshot_id': 'shop-frame', 'fields': {'stage': '2-3'}})
         self.assertEqual(context['source_snapshot_id'], 'guide-frame')
         proposal = runner.progression_plan({}, {'snapshot_id': 'shop-frame'},
@@ -488,7 +1220,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                             'guide': {'title': '塔夏', 'level_plan': '7级搜牌'}}
         worker.strategy_reads['team'] = {'value': {'checked': True, 'units': [
             {'name': 'known-unit', 'location': 'board', 'row': 'front', 'slot': 1, 'position': '前台'}]},
-            'match_id': 'match', 'resume_epoch': 'epoch', 'observed_at': runner.now()}
+            'match_id': 'match', 'resume_epoch': 'epoch', 'snapshot_id': 'shop', 'observed_at': runner.now()}
         observed = {'page': 'shop', 'snapshot_id': 'shop', 'fields': {'stage': '2-3', 'level': '7'}, 'rows': [],
                     'semantic': {'team': {'checked': False, 'units': []}}}
         decision = worker.preparation_policy(observed)
@@ -763,6 +1495,280 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             self.assertFalse(result['game_foreground'])
             self.assertIsNone(result['broker_pid'])
             self.assertEqual(result['foreground'], 0)
+
+
+class RuntimeRootTests(unittest.TestCase):
+    """No-input root routing; native SID/ACL/TaskScheduler remain Windows gates."""
+    def artifact_providers(self):
+        """Use the actual installed provider if selected, plus real fallback code."""
+        selected = artifacts
+        if hasattr(selected, 'installed'):
+            yield 'installed', selected
+            spec = importlib.util.spec_from_file_location(
+                '_currency_wars_standalone_root_test', Path(selected.__file__))
+            standalone = importlib.util.module_from_spec(spec)
+            with patch.dict(os.environ, {'CW_ARTIFACTS_STANDALONE': '1'}):
+                spec.loader.exec_module(standalone)
+            self.assertFalse(hasattr(standalone, 'installed'))
+            yield 'standalone', standalone
+        else:
+            yield 'standalone', selected
+
+    @contextlib.contextmanager
+    def artifact_provider(self, provider):
+        # Installed create/protect/close functions use their module globals,
+        # not the public aliases exported by currency_wars_artifacts.
+        identity = Mock(return_value=('unknown', None))
+        with contextlib.ExitStack() as stack:
+            for consumer in (sys.modules[__name__], runner, entry, runner.input_bridge):
+                stack.enter_context(patch.object(consumer, 'artifacts', provider))
+            native = getattr(provider, 'installed', provider)
+            stack.enter_context(patch.object(provider, 'process_identity', identity))
+            if native is not provider:
+                stack.enter_context(patch.object(native, 'process_identity', identity))
+            creator = native.create_owned_directory if native is not provider else provider.scratch_directory
+            creator = getattr(creator, '__wrapped__', creator)
+            self.assertIs(creator.__globals__['process_identity'], identity)
+            self.assertIs(native.protect_children.__globals__['process_identity'], identity)
+            yield identity
+
+    def test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels(self):
+        for name, provider in self.artifact_providers():
+            with self.subTest(provider=name), self.artifact_provider(provider) as identity:
+                with tempfile.TemporaryDirectory(prefix='currency-wars-load-root-') as temporary:
+                    selected_root = Path(temporary) / 'selected-root'
+                    other_root = Path(temporary) / 'unrelated-default'
+                    identity.return_value = ('active', 'windows:41')
+                    with artifacts.scratch_directory('runner-load-test', root=selected_root) as runtime:
+                        marker = artifacts.read_marker(runtime, root=selected_root)
+                        self.assertEqual(marker['process_identity'], 'windows:41')
+                        common = {'chat_id': 'load-root-fixture', 'run_token': 'fixture-token',
+                                  'artifact_chat_id': marker.get('session_hint', {}).get('id')}
+                        broker_owner = {**common, 'owner': 'currency-wars-control',
+                                        'artifact_run_id': marker['run_id']}
+                        runner_owner = {**common, 'owner': 'currency-wars-runner',
+                                        'run_id': marker['run_id'], 'runner_pid': marker['pid'],
+                                        'runner_creation_id': '41'}
+                        for name, value in [('owner.json', broker_owner), ('runner-owner.json', runner_owner),
+                                            ('binding.json', {'fixture': True})]:
+                            (runtime / name).write_text(json.dumps(value), encoding='utf8')
+                        with patch.object(artifacts, 'default_root', return_value=other_root) as default, \
+                                patch.object(entry, 'backend', side_effect=lambda: SimpleNamespace()):
+                            for emergency in (False, True):
+                                with self.subTest(emergency=emergency):
+                                    loaded, owner, binding, control = runner.load(
+                                        runtime, common['chat_id'], common['run_token'], emergency=emergency)
+                                    self.assertEqual(loaded, runtime)
+                                    self.assertEqual(owner, runner_owner)
+                                    self.assertEqual(control.ROOT, str(runtime))
+                                    self.assertEqual(binding, None if emergency else {'fixture': True})
+                                    with self.assertRaises(ValueError):
+                                        runner.load(runtime, common['chat_id'], 'wrong-token', emergency=emergency)
+                            default.assert_not_called()
+
+                identity.assert_any_call(os.getpid())
+
+    @contextlib.contextmanager
+    def roots(self, installed=True):
+        with tempfile.TemporaryDirectory(prefix='currency-wars-root-test-') as temporary:
+            outer = Path(temporary)
+            c_root, d_root, installation = (outer / name for name in ('C-temp-root', 'D-fixed-root', 'installed'))
+            if installed:
+                installation.mkdir()
+            with patch.object(runner.input_bridge, 'INSTALL_ROOT', installation), \
+                    patch.object(artifacts, 'default_root', return_value=c_root) as default:
+                yield outer, c_root, d_root, default
+
+    def test_installed_root_overrides_default_and_revalidates_in_child(self):
+        with self.roots() as (_, c_root, d_root, default):
+            config = {'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            with patch.object(runner.input_bridge, 'configuration', return_value=config) as verify:
+                before_env, before_cache = dict(os.environ), tempfile.tempdir
+                selected = runner.input_bridge.runtime_location(entry.PINNED)
+                self.assertEqual(selected, {'schema': 1, 'source': 'installed_bridge',
+                    'runtime_root': str(d_root), 'installation_id': 'a' * 32})
+                self.assertNotEqual(Path(selected['runtime_root']), c_root)
+                self.assertEqual(runner.input_bridge.runtime_location(entry.PINNED, inherited=selected), selected)
+                self.assertEqual(verify.call_count, 2)
+                verify.assert_called_with(entry.PINNED)
+                default.assert_not_called()
+                self.assertEqual(dict(os.environ), before_env)
+                self.assertEqual(tempfile.tempdir, before_cache)
+
+    def test_absent_installation_preserves_parent_standalone_root(self):
+        with self.roots(installed=False) as (_, c_root, d_root, default):
+            with patch.object(runner.input_bridge, 'configuration') as verify:
+                selected = runner.input_bridge.runtime_location(entry.PINNED)
+                self.assertEqual(selected, {'schema': 1, 'source': 'standalone',
+                    'runtime_root': str(c_root), 'installation_id': None})
+                default.return_value = d_root  # Another process may inherit different TEMP.
+                self.assertEqual(runner.input_bridge.runtime_location(entry.PINNED, inherited=selected), selected)
+                self.assertEqual(default.call_count, 1)
+                verify.assert_not_called()
+
+    def test_invalid_or_unreadable_installation_never_falls_back_or_creates_worker_run(self):
+        with self.roots() as (_, _, _, default):
+            with patch.object(runner.input_bridge, 'configuration', side_effect=runner.input_bridge.BridgeError('invalid installed config')), \
+                    patch.object(artifacts, 'scratch_directory') as create, \
+                    patch.object(entry, 'backend') as backend:
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner._worker_cli(SimpleNamespace())
+                create.assert_not_called()
+                backend.assert_not_called()
+                default.assert_not_called()
+            with patch.object(Path, 'lstat', side_effect=PermissionError('inaccessible installation')), \
+                    patch.object(runner.input_bridge, 'configuration') as verify:
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner.input_bridge.runtime_location(entry.PINNED)
+                default.assert_not_called()
+                verify.assert_not_called()
+
+    def test_configuration_uses_unchanged_fixed_task_root_contract(self):
+        import currency_wars_bridge_task as task
+        config = {'schema': 1, 'installation_id': 'a' * 32, 'user_sid': 'S-1-5-21-1-2-3-1001',
+            'runtime_root': task.RUNTIME_ROOT, 'inbox': task.INBOX, 'game_path': r'D:\Game\StarRail.exe',
+            'game_sha256': 'A' * 64, 'broker_sha256': entry.PINNED, 'driver_sha256': 'B' * 64,
+            'task_name': runner.input_bridge.task_name('S-1-5-21-1-2-3-1001')}
+        self.assertIs(task.validate_config(config), config)
+        with self.roots() as (_, _, _, default):
+            for key, invalid in [('runtime_root', r'C:\Temp\codex-agent-workflow'),
+                                 ('inbox', r'D:\Other\inbox'), ('broker_sha256', 'F' * 64)]:
+                with self.subTest(field=key), \
+                        patch.object(runner.input_bridge, 'InstallationAccess') as access, \
+                        patch.object(runner.input_bridge, 'verify_installation') as verify, \
+                        patch.object(runner.input_bridge, 'read_object', return_value={**config, key: invalid}):
+                    with self.assertRaises(runner.input_bridge.BridgeError):
+                        runner.input_bridge.runtime_location(entry.PINNED)
+                    verify.assert_called_once_with(access.return_value)
+                    access.return_value.close.assert_called_once()
+            default.assert_not_called()
+
+    def test_changed_disappeared_and_malformed_launch_binding_are_rejected(self):
+        with self.roots() as (_, _, d_root, default):
+            location = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            with patch.object(runner.input_bridge, 'configuration', return_value={
+                    'runtime_root': str(d_root), 'installation_id': 'b' * 32}):
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner.input_bridge.runtime_location(entry.PINNED, inherited=location)
+            runner.input_bridge.INSTALL_ROOT.rmdir()
+            with self.assertRaises(runner.input_bridge.BridgeError):
+                runner.input_bridge.runtime_location(entry.PINNED, inherited=location)
+            for invalid in ({**location, 'schema': True}, {**location, 'source': 'standalone'},
+                            {**location, 'installation_id': 123}, {'runtime_root': str(d_root)}):
+                with self.subTest(binding=invalid), self.assertRaises(runner.input_bridge.BridgeError):
+                    runner.input_bridge.runtime_location(entry.PINNED, inherited=invalid)
+            default.assert_not_called()
+
+    def test_public_start_passes_verified_root_and_invalid_config_never_launches(self):
+        with self.roots() as (outer, _, d_root, _):
+            # The child TEMP protocol retains the real provider's final root
+            # component; these are still declared paths, not a Windows task.
+            d_root = d_root / artifacts.TOOL
+            control = SimpleNamespace(C=SimpleNamespace(set_last_error=lambda _: None, get_last_error=lambda: 0),
+                                      k=Mock(CreateMutexW=Mock(return_value=1)))
+            args = SimpleNamespace(chat_id='root-fixture', max_seconds=60, max_matches=1, continue_matches=False)
+            config = {'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+            with patch.object(entry, 'backend', return_value=control), patch.object(runner, 'CURRENT', outer / 'absent.json'), \
+                    patch.object(runner.input_bridge, 'configuration', return_value=config) as verify, \
+                    patch.object(subprocess, 'CREATE_NO_WINDOW', 0, create=True), \
+                    patch.object(subprocess, 'Popen', side_effect=RuntimeError('fixture stops before process launch')) as launch:
+                with self.assertRaisesRegex(RuntimeError, 'fixture stops'):
+                    runner._start_cli(args, Mock())
+                command = launch.call_args.args[0]
+                location = json.loads(command[command.index('--runtime-location-json') + 1])
+                self.assertEqual(location['runtime_root'], str(d_root))
+                self.assertEqual(location['installation_id'], config['installation_id'])
+                self.assertEqual(location['source'], 'installed_bridge')
+                child_environment = launch.call_args.kwargs['env']
+                for variable in ('TEMP', 'TMP', 'TMPDIR'):
+                    self.assertEqual(child_environment[variable], str(d_root.parent))
+                launch.reset_mock()
+                # The GUI's verified launch selection is a parent contract too.
+                args.runtime_location_json = json.dumps(location)
+                verify.return_value = {**config, 'installation_id': 'b' * 32}
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner._start_cli(args, Mock())
+                launch.assert_not_called()
+                verify.side_effect = runner.input_bridge.BridgeError('invalid installed config')
+                with self.assertRaises(runner.input_bridge.BridgeError):
+                    runner._start_cli(args, Mock())
+                launch.assert_not_called()
+                self.assertEqual(control.k.ReleaseMutex.call_count, 3)
+
+    def test_unknown_existing_worker_prevents_root_selection_and_second_launch(self):
+        with self.roots() as (outer, _, _, _):
+            current = outer / 'current.json'
+            current.write_text(json.dumps({'chat_id': 'root-fixture', 'runner_pid': 42, 'runner_creation_id': '2'}))
+            control = SimpleNamespace(C=SimpleNamespace(set_last_error=lambda _: None, get_last_error=lambda: 0),
+                k=Mock(CreateMutexW=Mock(return_value=1)), process_probe=lambda *args: {'state': 'unknown'})
+            args = SimpleNamespace(chat_id='root-fixture', max_seconds=60, max_matches=1, continue_matches=False)
+            with patch.object(entry, 'backend', return_value=control), patch.object(runner, 'CURRENT', current), \
+                    patch.object(runner.input_bridge, 'runtime_location') as select, patch.object(subprocess, 'Popen') as launch:
+                with self.assertRaisesRegex(RuntimeError, '退出未知'):
+                    runner._start_cli(args, Mock())
+                select.assert_not_called()
+                launch.assert_not_called()
+
+    def test_worker_marker_child_registration_and_cleanup_keep_selected_root(self):
+        for name, provider in self.artifact_providers():
+            with self.subTest(provider=name), self.artifact_provider(provider) as identity:
+                with self.roots() as (outer, c_root, d_root, default):
+                    selected = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(d_root), 'installation_id': 'a' * 32}
+                    args = SimpleNamespace(chat_id='root-fixture', runtime_location_json=json.dumps(selected),
+                                           max_seconds=60, max_matches=1, continue_matches=False)
+                    seen, child_state, case = [], ['active'], self
+                    register, shutdown = runner.Worker.register, runner.Worker.shutdown
+                    def process_identity(pid):
+                        return ('active', 'windows:1') if pid == os.getpid() else (child_state[0], 'windows:2')
+                    control = SimpleNamespace(process_probe=lambda *args: {'state': 'absent'},
+                        write_json=lambda path, value: Path(path).write_text(json.dumps(value), encoding='utf8'))
+                    class InertWorker:
+                        def __init__(self, args, run, control, marker):
+                            self.args, self.run, self.c, self.children, self.token = args, run, control, [], 'fixture-token'
+                            self.owner = {'run_id': marker['run_id'], 'runner_pid': os.getpid(),
+                                          'runner_creation_id': '1', 'launch_id': 'fixture-launch'}
+                            self.state = {'state_sequence': 0, 'control_mode': 'completed'}
+                            self.broker_launcher, self.bridge_launch = None, None
+                            seen.append(run)
+                            case.assertEqual(marker['process_identity'], 'windows:1')
+                            self.assert_root = marker['root'] == str(d_root) and args.runtime_location == selected
+                        def run_loop(self):
+                            if not self.assert_root:
+                                raise AssertionError('selected root did not reach marker and worker')
+                            register(self, 424242, '2')
+                            marker = artifacts.read_marker(self.run, root=d_root)
+                            if marker['root'] != str(d_root) or not marker['children_incomplete']:
+                                raise AssertionError('child registration did not use selected root')
+                            child_state[0] = 'unknown'
+                            with case.assertRaises(artifacts.ArtifactError):
+                                artifacts.protect_children(self.run, [], root=d_root, complete=True)
+                            case.assertTrue(self.run.exists())
+                        def shutdown(self):
+                            child_state[0] = 'dead'
+                            shutdown(self)
+                        def publish(self, **changes):
+                            self.state.update(changes)
+                        def log(self, _):
+                            pass
+                        def finish_profile(self):
+                            pass
+                    identity.side_effect = process_identity
+                    with patch.object(runner.input_bridge, 'configuration', return_value={
+                            'runtime_root': str(d_root), 'installation_id': 'a' * 32}), \
+                            patch.object(entry, 'backend', return_value=control), patch.object(runner, 'Worker', InertWorker), \
+                            patch.object(runner, 'CURRENT', outer / 'current.json'):
+                        runner._worker_cli(args)
+                    self.assertEqual(len(seen), 1)
+                    self.assertEqual(seen[0].parent, d_root)
+                    self.assertFalse(seen[0].exists())
+                    self.assertFalse(c_root.exists())
+                    final = json.loads((outer / 'current.json').read_text())
+                    self.assertEqual(final['control_mode'], 'completed')
+                    self.assertTrue(final['cleanup']['removed'])
+                    default.assert_not_called()
+
+                identity.assert_any_call(os.getpid())
+                identity.assert_any_call(424242)
 
 
 if __name__ == '__main__':

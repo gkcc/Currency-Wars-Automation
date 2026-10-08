@@ -1,15 +1,21 @@
 """Badge recognition regressions; synthetic art, no capture or game input."""
 import unittest
+import hashlib
+import io
+import json
+from pathlib import Path
+import tempfile
 
 import cv2
 import numpy as np
+from PIL import Image
+from unittest.mock import Mock
 
 from currency_wars_shop_reader import ShopReader
 
 
 class BadgeRecognitionTests(unittest.TestCase):
     def setUp(self):
-        self.reader = ShopReader()
         # A gold book with a star, inside a dark circle. No private game art.
         self.badge = np.full((51, 47, 3), 210, dtype=np.uint8)
         cv2.circle(self.badge, (23, 25), 21, (65, 65, 65), -1)
@@ -21,13 +27,26 @@ class BadgeRecognitionTests(unittest.TestCase):
         cv2.fillPoly(self.badge, [np.array([(23, 9), (25, 13), (30, 14), (26, 17),
                                            (27, 21), (23, 19), (19, 21), (20, 17),
                                            (16, 14), (21, 13)])], gold)
-        self.reader.templates['recommend_badge.png'] = cv2.cvtColor(self.badge, cv2.COLOR_RGB2GRAY)
+        self.scratch = tempfile.TemporaryDirectory()
+        self.addCleanup(self.scratch.cleanup)
+        self.resources = Path(self.scratch.name)
+        Image.fromarray(self.badge).save(self.resources / 'recommend_badge.png')
+        (self.resources / 'SOURCES.json').write_text(json.dumps({
+            'schema': 'declared-synthetic-badge-resource/v1',
+            'resources': [{'file': 'recommend_badge.png'}]}), encoding='utf8')
+        (self.resources / 'names.json').write_text('{"names":["飞霄"]}', encoding='utf8')
+        self.reader = ShopReader(self.resources)
+        self.reader.engine = Mock(side_effect=AssertionError('Badge ROI must not call OCR'))
+        self.reader._load()
 
     def frame(self, background=110):
-        return np.full((320, 260, 3), background, dtype=np.uint8)
+        return np.full((1080, 1920, 3), background, dtype=np.uint8)
 
     def read_badge(self, frame):
-        return self.reader._recommended(frame, (0, 0, 244, 273))[0]
+        payload = io.BytesIO()
+        Image.fromarray(frame).save(payload, format='PNG')
+        return self.reader._recommended(frame, (0, 0, 244, 273),
+            snapshot_id=hashlib.sha256(payload.getvalue()).hexdigest())[0]
 
     def test_book_survives_different_portrait_pixels_outside_circle(self):
         for background in (30, 110, 220):

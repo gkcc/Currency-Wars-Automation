@@ -1,0 +1,49 @@
+{
+  "task": "B-006 population subtask only",
+  "parent_sha": "e05ed2cf45d4c1ba5bc7dd8c34b8aa26119e7414",
+  "development_base_sha": "beaea343ee7edf29bcba70ba8351a7dc462a83da",
+  "recorded_at": "2026-10-06T18:23:55.652459+00:00",
+  "environment": "Linux; actual B003+B004+B005+B006 combined tree; real Perception.read with synthetic PNG and mocked OCR output",
+  "root_verification": {
+    "test_selection": [
+      "test_currency_wars_state_reader.NativePopulationTests",
+      "test_currency_wars_state_reader.NativeCapacityTests"
+    ],
+    "tests_run": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 1.276,
+    "source_sha256": {
+      "tools/currency_wars_perception.py": "922d186bdd859bee49239cd4b0e3f883343ddea34f273bca5a1ce8c7e93d5a5f",
+      "tools/test_currency_wars_state_reader.py": "4fb5c62221720dfaef47c3c35bc6c3091e31f729e37759312d84a24598a5cfb2"
+    },
+    "ast_files": [
+      "tools/currency_wars_perception.py",
+      "tools/test_currency_wars_state_reader.py"
+    ],
+    "staged_diff_check": "passed",
+    "native_capacity_test_class_preserved": true,
+    "perception_matches_independently_reviewed_patch": true,
+    "tests_reported_elapsed_seconds": 1.246
+  },
+  "integration_change": "Resolved only test import overlap by keeping native_capacity and new population imports; native capacity test class unchanged",
+  "production_changed": [
+    "tools/currency_wars_perception.py"
+  ],
+  "behavior": [
+    "Invalid numeric population now triggers the existing bounded digits-only ROI read",
+    "Only a unique valid high-confidence reading from the exact existing crop may resolve impossible old values",
+    "Preserves original OCR rows, raw text, confidence and unknown conflicts",
+    "No extra OCR for an already reliable count; at most one population crop read",
+    "Population does not certify names/stars/positions/overflow or approve a battle"
+  ],
+  "limitations": [
+    "Original local 18/8 image is unavailable here; no actual model/image acceptance",
+    "Only existing preparation layout is covered",
+    "No new Windows build or installation",
+    "No native fully_read/confidence override, game input or whole-match success claim",
+    "Other B006 name/star/control/layout issues remain pending"
+  ],
+  "game_inputs": 0
+}

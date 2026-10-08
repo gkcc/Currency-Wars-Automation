@@ -1,10 +1,14 @@
 """Local, read-only Currency Wars OCR. Unknown fields stay unknown."""
 from __future__ import annotations
 
+import copy
 import hashlib
+import io
 import json
+import os
 import re
 import time
+import uuid
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +36,73 @@ SUPPLY_FIVE_CARD_LAYOUT = ((84, 292, 419, 783), (439, 292, 774, 783),
                            (793, 292, 1129, 783), (1147, 292, 1482, 783),
                            (1501, 292, 1836, 783))
 GOLD_HUD = [1613, 892, 1687, 950]
+DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
+# Complete native player Lv label and number, including the taller numeral.
+# This is the lower-left purchase-experience panel, never a card/boss title.
+PLAYER_LEVEL_ROI = [240, 880, 358, 936]
+# Current parsing support, not a claim about the game's permanent maximum.
+MAX_SUPPORTED_POPULATION = 12
+READ_CONTRACT_VERSION = 2
+READ_SCOPES = ('full', 'rewards', 'economy')
+# Raw full-frame OCR only: 1920x1080 RGB, Pillow RGB default resize to
+# 1280x720, RapidOCR with use_cls=False. Bump when that pipeline changes.
+# The same engine object binds its loaded models; runtime defaults and the
+# thresholds RapidOCR can mutate are also part of the per-instance key.
+OCR_CONTRACT_VERSION = 1
+PERCEPTION_TIMING_SCHEMA = 'currency-wars-perception-timing/1'
+
+
+class _ReadTiming:
+    """Invocation timing only; failures never change the actual read result.
+
+    Keep the real engine object in Perception and its cache keys. The local
+    callable below measures only calls made in this read, including ROI calls
+    delegated to semantic readers. No OCR output, image or owner is recorded.
+    """
+    def __init__(self, snapshot_id):
+        self.read_id, self.snapshot_id = None, snapshot_id
+        self.intervals, self.error = [], None
+        try:
+            self.read_id = uuid.uuid4().hex
+        except Exception:
+            self.error = 'read_identity_unavailable'
+        self.start_ns = self.clock()
+
+    def clock(self):
+        try:
+            value = time.monotonic_ns()
+            if type(value) is not int or value < 0:
+                raise ValueError('invalid monotonic clock')
+            return value
+        except Exception:
+            self.error = 'monotonic_clock_unavailable'
+            return None
+
+    def engine(self, original):
+        def measured(*args, **kwargs):
+            start, outcome = self.clock(), 'returned'
+            try:
+                return original(*args, **kwargs)
+            except BaseException:
+                outcome = 'raised'
+                raise
+            finally:
+                try:
+                    end = self.clock()
+                    if start is not None and end is not None and start <= end and len(self.intervals) < 64:
+                        self.intervals.append({'start_ns': start, 'end_ns': end, 'outcome': outcome})
+                    else:
+                        self.error = self.error or 'ocr_interval_unavailable'
+                except Exception:
+                    self.error = 'ocr_timing_unavailable'
+        return measured
+
+    def finish(self):
+        return {'schema': PERCEPTION_TIMING_SCHEMA, 'read_id': self.read_id,
+                'snapshot_id': self.snapshot_id, 'clock': 'same_process_monotonic',
+                'ocr_scope': 'perception_engine_calls',
+                'start_ns': self.start_ns, 'end_ns': self.clock(),
+                'ocr_intervals': self.intervals, 'error': self.error}
 
 
 def clean(text):
@@ -469,6 +540,9 @@ def guide_targets(body_lines):
 def semantic_facts(rows, image, page, engine=None, snapshot_id=None):
     """Factual fields are produced locally, never from a strategy assertion."""
     facts = {'options': option_facts(rows, page)}
+    if page in ('preparation', 'shop'):
+        from currency_wars_rewards import detect
+        facts['rewards'] = detect(image, page, rows, snapshot_id)
     if page == 'settlement':
         settlement = settlement_facts(rows, image, engine, snapshot_id)
         if settlement is not None:
@@ -640,18 +714,95 @@ def hash_distance(a, b):
     return sum((x ^ y).bit_count() for x, y in zip(left, right)) / (len(left) * 8)
 
 
+def valid_population_counts(occupied, capacity):
+    """Team capacity is independent of player level and visible slot geometry."""
+    return (type(occupied) is int and type(capacity) is int
+            and 0 <= occupied <= capacity <= MAX_SUPPORTED_POPULATION and capacity >= 1)
+
+
+def _valid_population_match(text):
+    match = re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(text))
+    if match is None:
+        return None
+    occupied, capacity = map(int, match[1].split('/'))
+    return match if valid_population_counts(occupied, capacity) else None
+
+
+def native_player_hud(rows, image, page, engine, snapshot_id):
+    """A player-owned panel and full Lv read; no global level fallback."""
+    result = {'actor': 'player', 'origin': 'native_player_hud', 'snapshot_id': snapshot_id,
+              'layout': 'native_purchase_experience_1920x1080/v1',
+              'level': None, 'xp': None, 'evidence': {}, 'reason': 'player_hud_not_visible'}
+    if page not in ('preparation', 'shop'):
+        return result
+
+    def inside(row, bounds):
+        box = row.get('box')
+        return (isinstance(box, list) and len(box) == 4
+                and bounds[0] <= box[0] < box[2] <= bounds[2]
+                and bounds[1] <= box[1] < box[3] <= bounds[3])
+
+    labels = [row for row in rows if clean(row.get('raw_text', row.get('text'))) == '购买经验'
+              and .90 <= row.get('confidence', 0) <= 1. and inside(row, [235, 835, 360, 883])]
+    progress = [(row, re.fullmatch(r'([0-9]{1,4})/([0-9]{1,4})', clean(row.get('raw_text', row.get('text')))))
+                for row in rows if .90 <= row.get('confidence', 0) <= 1.
+                and inside(row, [250, 933, 346, 969])]
+    progress = [(row, match) for row, match in progress if match and 0 <= int(match[1]) < int(match[2])]
+    if len(labels) != 1 or len(progress) != 1:
+        return result
+    result['xp'] = [int(progress[0][1][1]), int(progress[0][1][2])]
+    result['evidence'] = {'purchase_experience': labels[0], 'experience_progress': progress[0][0]}
+    # Preserve the original OCR rows, including low-confidence or partial Lv.
+    # A differing plausible number cannot be voted away by another crop.
+    candidates = [(row, re.fullmatch(r'Lv\.?([0-9]+)', clean(row.get('raw_text', row.get('text'))), re.I))
+                  for row in rows if inside(row, [235, 875, 363, 943])]
+    candidates = [(row, int(match[1])) for row, match in candidates if match]
+    if len(candidates) > 1 or any(not re.fullmatch(r'Lv\.?([1-9]|10)',
+            clean(row.get('raw_text', row.get('text'))), re.I) for row, unused in candidates):
+        result['reason'] = 'conflicting_or_invalid_player_level'
+        return result
+    if candidates and .90 <= candidates[0][0].get('confidence', 0) <= 1.:
+        row, value = candidates[0]
+        result.update(level=value, reason=None)
+        result['evidence']['level'] = {'source': 'current_player_hud_row', 'row': row}
+        return result
+    result['reason'] = 'player_level_unreadable'
+    try:
+        recognized, unused = engine(np.array(image.crop(PLAYER_LEVEL_ROI)), use_det=False, use_cls=False)
+        if recognized is not None and len(recognized) == 1:
+            raw, confidence = recognized[0][-2:]
+            raw, confidence = str(raw), float(confidence)
+            match = re.fullmatch(r'Lv\.?([1-9]|10)', clean(raw), re.I)
+            result['evidence']['level'] = {'source': 'complete_player_level_roi', 'raw_text': raw,
+                'confidence': confidence, 'bounds': list(PLAYER_LEVEL_ROI)}
+            if match and .90 <= confidence <= 1. and all(value == int(match[1]) for unused, value in candidates):
+                result.update(level=int(match[1]), reason=None)
+    except Exception:
+        pass  # A failed focused read is unknown; no fabricated OCR row.
+    return result
+
+
 def native_deployed_count(rows):
     """Unique, confident count from the native central roster HUD only."""
-    counts = [re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(row.get('raw_text', row.get('text', ''))))
+    candidates = [(row, re.fullmatch(r'i?([0-9]{1,2}/[0-9]{1,2})', clean(row.get('raw_text', row.get('text', '')))))
         for row in rows if .90 <= row.get('confidence', 0) <= 1.
         and isinstance(row.get('box'), list) and len(row['box']) == 4
         and 820 <= row['box'][0] < row['box'][2] <= 1050
         and 190 <= row['box'][1] < row['box'][3] <= 300]
-    counts = [match.group(1) for match in counts if match]
-    if len(counts) != 1:
+    candidates = [(row, match[1]) for row, match in candidates if match]
+    valid = [(row, value) for row, value in candidates if _valid_population_match(value)]
+    if len(valid) != 1:
         return None
-    occupied, capacity = map(int, counts[0].split('/'))
-    return counts[0] if 0 <= occupied <= capacity <= 10 and capacity >= 1 else None
+    row, value = valid[0]
+    if len(candidates) == 1:
+        return value
+    # Only an actual recognition of the established digits-only crop may
+    # resolve impossible full-row readings such as an icon joined to "18/8".
+    # Original OCR rows remain unchanged. Two plausible readings still fail.
+    if (row.get('normalization_basis') == 'fixed_native_deployed_count_roi'
+            and row['box'] == DEPLOYED_COUNT_ROI):
+        return value
+    return None
 
 
 class Perception:
@@ -660,22 +811,65 @@ class Perception:
         self.shop_reader = None
         self.state_reader = None
         self.cache = None
+        self._primary_cache = None
 
-    def read(self, path, force=False):
+    def _ocr_contract(self):
+        postprocess = getattr(getattr(self.engine, 'text_det', None), 'postprocess_op', None)
+        return (OCR_CONTRACT_VERSION, getattr(self.engine, 'use_det', None),
+                getattr(self.engine, 'use_rec', None), getattr(self.engine, 'text_score', None),
+                getattr(postprocess, 'box_thresh', None), getattr(postprocess, 'unclip_ratio', None))
+
+    def read(self, path, force=False, *, scope='full', reuse_primary=False):
+        if scope not in READ_SCOPES:
+            raise ValueError('unsupported perception read scope: ' + str(scope))
+        if reuse_primary and scope != 'full':
+            raise ValueError('primary OCR reuse requires a full semantic read')
         started = time.perf_counter()
         path = Path(path)
         data = path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
-        if self.cache and self.cache[0] == digest and not force:
-            return self.cache[1]
-        with Image.open(path) as opened:
+        timing = _ReadTiming(digest)
+        cache_key = (digest, scope, READ_CONTRACT_VERSION, self._ocr_contract())
+        if (self.cache and self.cache[0] == cache_key and self.cache[2] is self.engine
+                and not force and not reuse_primary):
+            # Worker adds the current request/frame identity. Neither that
+            # identity nor a consumer's changes may mutate a cached snapshot.
+            result = copy.deepcopy(self.cache[1])
+            result['image'] = str(path)
+            result['elapsed_ms'] = round((time.perf_counter() - started) * 1000, 2)
+            result['read_timing'] = {'cache_hit': True, 'primary_ocr_reused': False,
+                'primary_ocr_executed': False, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
+                'elapsed_ms': result['elapsed_ms'], **timing.finish()}
+            return result
+        with Image.open(io.BytesIO(data)) as opened:
             if opened.size != (1920, 1080):
                 raise ValueError("1920x1080 broker preview required")
             image = opened.convert("RGB")
         if self.engine is None:
+            # Offline image reading does not authorize ORT telemetry. Set the
+            # documented initialization switch before importing the runtime;
+            # its API alone can be later than the initial telemetry event.
+            os.environ['ORT_DISABLE_TELEMETRY'] = '1'
+            import onnxruntime
+            onnxruntime.disable_telemetry_events()
             from rapidocr_onnxruntime import RapidOCR
             self.engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
-        raw, unused = self.engine(np.array(image.resize((1280, 720))), use_cls=False)
+        engine = timing.engine(self.engine)
+        ocr_contract = self._ocr_contract()
+        primary_key = (digest, ocr_contract)
+        cached = self._primary_cache
+        primary_reused = bool(reuse_primary and not force and cached
+                              and cached[0] == primary_key and cached[2] is self.engine)
+        if primary_reused:
+            raw = cached[1]
+        else:
+            raw, unused = engine(np.array(image.resize((1280, 720))), use_cls=False)
+            # Freeze only the original OCR output. Later aliases, ROI rows,
+            # page classification and semantic facts belong to each read.
+            raw = tuple((tuple(tuple(point) for point in box), text, float(confidence))
+                        for box, text, confidence in raw or [])
+            self._primary_cache = (primary_key, raw, self.engine)
+        cache_key = (digest, scope, READ_CONTRACT_VERSION, ocr_contract)
         rows = []
         for box, text, confidence in raw or []:
             xs, ys = [p[0] * 1.5 for p in box], [p[1] * 1.5 for p in box]
@@ -725,7 +919,7 @@ class Perception:
                     and all(clean(row["raw_text"]) == "1" for row in left_digit_rows)):
                 one_bounds = [422, 416, 470, 520]
                 try:
-                    result, unused = self.engine(np.array(image.crop(one_bounds)), use_det=False, use_cls=False)
+                    result, unused = engine(np.array(image.crop(one_bounds)), use_det=False, use_cls=False)
                     if result is not None and len(result) == 1:
                         text, confidence = result[0][-2:]
                         raw, confidence = str(text).strip(), float(confidence)
@@ -739,7 +933,7 @@ class Perception:
             # Fixed complete stage digits only; exclude the crossed-swords icon.
             # Keep all original low-confidence header rows unchanged.
             try:
-                result, unused = self.engine(np.array(image.crop(NODE_RESULT_STAGE_CROP)), use_det=False, use_cls=False)
+                result, unused = engine(np.array(image.crop(NODE_RESULT_STAGE_CROP)), use_det=False, use_cls=False)
                 if result is not None and len(result) == 1:
                     text, confidence = result[0][-2:]
                     raw, confidence = str(text).strip(), float(confidence)
@@ -750,8 +944,20 @@ class Perception:
                         page = classify(rows)
             except Exception:
                 pass  # Missing/uncertain stage remains unknown; never guess victory.
+        # Page/overlay discovery still reads the complete frame. In particular,
+        # omitted central modal text could otherwise leave preparation anchors
+        # visible and prevent an "unknown" fallback from ever being reached.
+        effective_scope = scope if page in ('preparation', 'shop') else 'full'
+        narrow = effective_scope != 'full'
+        def unread(field):
+            return {'status': 'not_read', 'reason': 'outside_requested_read_scope',
+                    'read_scope': effective_scope, 'snapshot_id': digest,
+                    'field': field, 'checked': False, 'fully_read': False}
+
         shop = None
-        if page == "shop":
+        if page == 'shop' and effective_scope == 'rewards':
+            shop = {**unread('shop'), 'ok': False, 'slots': [], 'input': {'sha256': digest}}
+        elif page == "shop":
             if self.shop_reader is None:
                 from currency_wars_shop_reader import ShopReader
                 self.shop_reader = ShopReader()
@@ -760,19 +966,15 @@ class Perception:
         # guessed into HP/gold/promotion fields.
         fields = {}
         joined = "|".join(clean(r["text"]) for r in rows)
-        for name, pattern in (("stage", r"(?:备战|战斗中).*?(\d[-－]\d)"),
-                              ("level", r"(?:Lv\.?|等级)(\d{1,2})"),
-                              ("deployed", r"(\d{1,2}/\d{1,2})")):
-            matched = re.search(pattern, joined, re.I)
-            fields[name] = matched.group(1) if matched else None
-        if page == "preparation":
-            deployed_pattern = r"i?([0-9]{1,2}/[0-9]{1,2})"
-            deployed_rows = [row for row in rows
-                             if row["confidence"] >= .90
-                             and re.fullmatch(deployed_pattern, clean(row["raw_text"]))
-                             and 820 <= row["box"][0] < row["box"][2] <= 1050
-                             and 190 <= row["box"][1] < row["box"][3] <= 300]
-            if not deployed_rows:
+        matched = re.search(r"(?:备战|战斗中).*?(\d[-－]\d)", joined)
+        player = ({**unread('player_hud'), 'actor': 'player', 'level': None, 'xp': None,
+                   'evidence': {}} if effective_scope == 'rewards' else
+                  native_player_hud(rows, image, page, engine, digest))
+        fields = {'stage': matched.group(1) if matched else None,
+                  'level': str(player['level']) if player['level'] is not None else None,
+                  'deployed': None}
+        if page == "preparation" and effective_scope != 'rewards':
+            if native_deployed_count(rows) is None:
                 native_layout = all(len([row for row in rows
                     if .90 <= row["confidence"] <= 1. and clean(row["text"]) == label
                     and bounds[0] <= row["box"][0] < row["box"][2] <= bounds[2]
@@ -783,29 +985,26 @@ class Perception:
                 if native_layout:
                     # One complete native count crop, excluding the blue icon.
                     # Keep original rows and reject conflicting central counts.
-                    count_bounds = [890, 210, 1029, 280]
+                    count_bounds = list(DEPLOYED_COUNT_ROI)
                     try:
-                        result, unused = self.engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
+                        result, unused = engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
                         if result is not None and len(result) == 1:
                             text, confidence = result[0][-2:]
                             raw, confidence = str(text).strip(), float(confidence)
-                            count = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})", raw)
-                            previous = [re.fullmatch(deployed_pattern, clean(row["raw_text"]))
+                            count = _valid_population_match(raw)
+                            previous = [_valid_population_match(row["raw_text"])
                                         for row in rows
                                         if 820 <= row["box"][0] < row["box"][2] <= 1050
                                         and 190 <= row["box"][1] < row["box"][3] <= 300]
-                            if (count and .90 <= confidence <= 1.
-                                    and 0 <= int(count[1]) <= int(count[2]) <= 12 and int(count[2]) >= 1
-                                    and all(match is None or match.group(1) == raw for match in previous)):
+                            if (count and raw == count[1] and .90 <= confidence <= 1.
+                                    and all(match is None or match[1] == raw for match in previous)):
                                 derived = {"text": raw, "raw_text": str(text),
                                            "normalization_basis": "fixed_native_deployed_count_roi",
                                            "confidence": confidence, "box": count_bounds}
                                 rows.append(derived)
-                                deployed_rows = [derived]
                     except Exception:
                         pass  # Read failure leaves the count unknown; no inferred value.
-            fields["deployed"] = (re.fullmatch(deployed_pattern, clean(deployed_rows[0]["raw_text"])).group(1)
-                                  if len(deployed_rows) == 1 else None)
+            fields["deployed"] = native_deployed_count(rows)
             # One unscaled, complete native HP crop, only when trusted HP is absent.
             hp_pattern = r"(?:100|[1-9]?[0-9])"
             hp_bounds = [1420, 60, 1490, 100]
@@ -823,10 +1022,10 @@ class Perception:
                                          ("出战", (1760, 710, 1875, 790)),
                                          ("商店", (1575, 950, 1675, 1020))))
             count = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})", fields["deployed"] or "")
-            if (native_hp_layout and count and 0 <= int(count[1]) <= int(count[2]) <= 12
-                    and int(count[2]) >= 1 and not any(row["confidence"] >= .90 for row in hp_rows)):
+            if (native_hp_layout and count and valid_population_counts(int(count[1]), int(count[2]))
+                    and not any(row["confidence"] >= .90 for row in hp_rows)):
                 try:
-                    result, unused = self.engine(np.array(image.crop(hp_bounds)), use_det=False, use_cls=False)
+                    result, unused = engine(np.array(image.crop(hp_bounds)), use_det=False, use_cls=False)
                     if result is not None and len(result) == 1:
                         text, confidence = result[0][-2:]
                         raw, confidence = str(text).strip(), float(confidence)
@@ -837,7 +1036,7 @@ class Perception:
                                          "box": hp_bounds})
                 except Exception:
                     pass  # Missing or conflicting HP remains unread; no guessed value.
-        elif page in ('shop', 'investment_summary'):
+        elif page in ('shop', 'investment_summary') and effective_scope != 'rewards':
             fields['deployed'] = native_deployed_count(rows)
         elif page == "node_result":
             fields["stage"] = _native_node_result_stage(rows)
@@ -847,34 +1046,59 @@ class Perception:
             fields['deployed'] = None
         elif page == "battle":
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
-        semantic = semantic_facts(rows, image, page, engine=self.engine, snapshot_id=digest)
+        semantic = semantic_facts(rows, image, page, engine=engine, snapshot_id=digest)
+        semantic['player_hud'] = player
+        from currency_wars_refresh_offer import read_offer, unread_offer
+        semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope == 'rewards' else
+                                     read_offer(rows, image, page, engine, digest))
         option_read = supply_read_details(rows, page, semantic.get('options', []))
         if option_read:
             semantic['option_read'] = {**option_read, 'snapshot_id': digest}
         state_read = None
-        if page in ('preparation', 'shop', 'investment_summary'):
-            from currency_wars_state_reader import StateReader
+        if narrow:
+            semantic['team'] = {**unread('team'), 'units': []}
+            semantic['inventory'] = {**unread('inventory'), 'items': []}
+            state_read = {**unread('state_read'), 'team': copy.deepcopy(semantic['team']),
+                          'inventory': copy.deepcopy(semantic['inventory'])}
+        elif page in ('preparation', 'shop', 'investment_summary'):
+            from currency_wars_state_reader import StateReader, native_slots
             if self.state_reader is None:
                 self.state_reader = StateReader()
             state_read = self.state_reader.read(path, rows=rows, page=page)
             team = state_read['team']
             population = re.fullmatch(r'([0-9]{1,2})/([0-9]{1,2})', native_deployed_count(rows) or '')
             board = [unit for unit in team['units'] if unit['location'] == 'board']
+            supported_board_slots = len([slot for slot in native_slots() if slot['location'] == 'board'])
             # Complete card identity and star evidence plus the independent
             # central HUD are required; partial geometry stays unchecked.
             checked = bool(team['fully_read'] and population
-                and 0 <= int(population[1]) == len(board) <= int(population[2]) <= 10
+                and valid_population_counts(int(population[1]), int(population[2]))
+                # Numeric capacity up to 12 does not prove an expanded layout:
+                # this reader only has the observed front4/back6 board slots.
+                and int(population[2]) <= supported_board_slots
+                and int(population[1]) == len(board)
                 and all(unit.get('position') in ('前台', '后台', '前后台') for unit in board))
             semantic['team'] = {**team, 'checked': checked,
-                'count_reconciliation': {'hud': fields.get('deployed'), 'observed_board': len(board)}}
+                'count_reconciliation': {'hud': fields.get('deployed'), 'observed_board': len(board),
+                    'supported_board_slots': supported_board_slots}}
             inventory = state_read['inventory']
             semantic['inventory'] = {**inventory, 'items': [{**item,
                 'verified': bool(item.get('name') and item.get('confidence', 0) >= .90
                     and item.get('evidence', {}).get('identity_margin', 0) >= .10)}
                 for item in inventory['items']]}
+        contract = {'version': READ_CONTRACT_VERSION, 'requested_scope': scope,
+                    'effective_scope': effective_scope, 'page_ocr': 'full_frame',
+                    'unread': (['team', 'inventory'] +
+                        (['shop', 'player_hud', 'deployed', 'hp', 'refresh_offer'] if effective_scope == 'rewards' else []))
+                        if narrow else [],
+                    'fallback_reason': 'page_requires_full_read' if effective_scope != scope else None}
         result = {"snapshot_id": digest, "page": page, "rows": rows, "fields": fields,
                   "fingerprint": fingerprint(image), "shop": shop,
                   "semantic": semantic, "state_read": state_read,
+                  "read_contract": contract,
                   "image": str(path), "elapsed_ms": round((time.perf_counter() - started) * 1000, 2)}
-        self.cache = digest, result
+        result['read_timing'] = {'cache_hit': False, 'primary_ocr_reused': primary_reused,
+            'primary_ocr_executed': not primary_reused, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
+            'elapsed_ms': result['elapsed_ms'], **timing.finish()}
+        self.cache = cache_key, copy.deepcopy(result), self.engine
         return result

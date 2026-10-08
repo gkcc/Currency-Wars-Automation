@@ -1,0 +1,9 @@
+{
+  "status": "automatic_approval_rejected_not_counted_as_pass",
+  "tool": "write_stdin session 93716",
+  "initial_command": "PYTHONPATH=/workspace/scratch/5c64bf8ff52e/test-deps python -B -X utf8 tools/replay_currency_wars_preparation.py --code-root /workspace/scratch/5c64bf8ff52e/preparation-replay-baseline --fixtures /workspace/scratch/5c64bf8ff52e/currency-wars-player-hud/handoff/2026-10-07/fixtures --output handoff/2026-10-07/preparation-replay/before --root-profile /workspace/scratch/5c64bf8ff52e/preparation-replay-sources/ROOT_PROFILE_FULL.json --host-timing /workspace/scratch/5c64bf8ff52e/preparation-replay-sources/ROOT_HOST_TIMING.json",
+  "rejection": "The requested offline replay is authorized, but its execution triggers an HTTPS connection to the untrusted Microsoft telemetry endpoint; the transcript does not authorize exporting project, timing, fixture, or runtime metadata to that destination, and the transmitted payload is not established as non-sensitive.",
+  "execution_limit": "Initial command yielded a running session; completion polling was rejected. Files were observed, but this attempt is not used as validated evidence or PASS.",
+  "safer_alternative": "Disable all telemetry using official ORT_DISABLE_TELEMETRY=1 before import, then disable_telemetry_events(); no global environment, proxy, permission or approval changes.",
+  "official_source": "https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md"
+}
