@@ -1,0 +1,35 @@
+test_declared_ocr_keeps_raw_confidence_and_bounded_rejection (test_currency_wars_reward_hud.RewardHudPixelTests.test_declared_ocr_keeps_raw_confidence_and_bounded_rejection) ... ok
+test_declared_page_labels_icon_conflict_and_full_row_path (test_currency_wars_reward_hud.RewardHudPixelTests.test_declared_page_labels_icon_conflict_and_full_row_path) ... ok
+test_generated_blank_clipped_and_extra_mark_do_not_trigger_ocr (test_currency_wars_reward_hud.RewardHudPixelTests.test_generated_blank_clipped_and_extra_mark_do_not_trigger_ocr) ... ok
+test_native_digit_is_complete_and_identical_at_two_times (test_currency_wars_reward_hud.RewardHudPixelTests.test_native_digit_is_complete_and_identical_at_two_times) ... ok
+test_two_unchanged_native_digit_crops_use_existing_rapidocr (test_currency_wars_reward_hud.RewardHudNativeOcrTests.test_two_unchanged_native_digit_crops_use_existing_rapidocr) ... ERROR
+test_after_coin_unknown_uses_same_two_read_budget_and_never_replays (test_currency_wars_reward_hud_flow.RewardHudFlowTests.test_after_coin_unknown_uses_same_two_read_budget_and_never_replays) ... ok
+test_inspect_preserves_unknown_and_native_collect_is_not_a_read_only_api (test_currency_wars_reward_hud_flow.RewardHudFlowTests.test_inspect_preserves_unknown_and_native_collect_is_not_a_read_only_api) ... ok
+test_reward_result_inspect_one_orb_then_current_full_review_keeps_phase_order (test_currency_wars_reward_hud_flow.RewardHudFlowTests.test_reward_result_inspect_one_orb_then_current_full_review_keeps_phase_order) ... ok
+
+======================================================================
+ERROR: test_two_unchanged_native_digit_crops_use_existing_rapidocr (test_currency_wars_reward_hud.RewardHudNativeOcrTests.test_two_unchanged_native_digit_crops_use_existing_rapidocr)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/metadata/__init__.py", line 397, in from_name
+    return next(cls.discover(name=name))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+StopIteration
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/scratch/455e3b5c6726/currency-wars-pr28-hud/tools/test_currency_wars_reward_hud.py", line 214, in test_two_unchanged_native_digit_crops_use_existing_rapidocr
+    distribution = importlib.metadata.distribution('rapidocr-onnxruntime')
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/metadata/__init__.py", line 862, in distribution
+    return Distribution.from_name(distribution_name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/metadata/__init__.py", line 399, in from_name
+    raise PackageNotFoundError(name)
+importlib.metadata.PackageNotFoundError: No package metadata was found for rapidocr-onnxruntime
+
+----------------------------------------------------------------------
+Ran 8 tests in 17.441s
+
+FAILED (errors=1)

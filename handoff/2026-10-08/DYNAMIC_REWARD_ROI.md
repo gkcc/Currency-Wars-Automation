@@ -48,7 +48,7 @@ driver仅运行本批3个新类共14项。Linux Python3.12.14 的统一冻结运
 
 完整源码与素材测前后摘要写入 JSON，逐项日志写同名 `.tests.txt`；任何失败保留 traceback，exit非0。归档没有.git时 `tested_checkout_head=null` 合法，字节由来源map绑定；不能伪填测试head。这不是 Windows 或部署验收。
 
-先核独立结果，再沿原正常 stop、退出身份和 owned runtime 清理流程切换。不要直接覆盖运行中代码。候选为 PR26 单父，已在 PR26 的本机可用 `git merge --ff-only <候选完整SHA>`；不要把本地未保存修改 reset 掉。原安装／GUI源码未改，可在原独立审查确认适用后复用；24源码＋**实际**资源/provider完整绑定必须重新计算，READY 不继承旧hash。原61资源若未增减，本批新增3份公开奖励文件后应为64，最终以本机枚举为准。公开环境缺私有商店根不能推到本机。
+先核独立结果，再沿原正常 stop、退出身份和 owned runtime 清理流程切换。不要直接覆盖运行中代码。候选为 PR26 单父，已在 PR26 的本机可用 `git merge --ff-only <候选完整SHA>`；不要把本地未保存修改 reset 掉。**后续实机纠正：PR27修改的资源清单由GUI的`include_str!`嵌入，须运行原Build-GUI增量重建并记录新的BUILD_STATE，不能复用PR26旧构建。** 24源码＋**实际**资源/provider完整绑定必须重新计算，READY 不继承旧hash。原61资源若未增减，本批新增3份公开奖励文件后应为64，最终以本机枚举为准。公开环境缺私有商店根不能推到本机。后续候选若GUI来源、清单与依赖字节均未变，则不因已有清单中的Python源码变化重复编译GUI，仍须独立审查新运行字节。
 
 沿原 `python -B -X utf8 tools/check_install.py --check-launch` 和已授权的正常 start／business_resume 使用新租期与新epoch。本批不恢复旧请求，不改变连续整局授权，也不要求 ROOT 等 PR24。
 
