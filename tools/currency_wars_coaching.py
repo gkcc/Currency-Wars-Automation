@@ -104,6 +104,20 @@ def guide_phase(guide, observed, source=None):
             'proof': source, 'mode': mode, 'level': level, 'basis': candidates[0]['text']}
 
 
+def deployment_position(knowledge, name):
+    """Return one cached deployment type; live facts never fill this contract."""
+    roles = knowledge.get('roles') if isinstance(knowledge, dict) else None
+    role = roles.get(name) if isinstance(roles, dict) and isinstance(name, str) and name.strip() else None
+    if not isinstance(role, dict):
+        raise ValueError('角色部署类型缓存缺失')
+    values = [role[key] for key in ('position', 'deployment') if key in role]
+    if not values or any(value not in ('前台', '后台', '前后台') for value in values):
+        raise ValueError('角色部署类型缓存缺失或非法')
+    if len(set(values)) != 1:
+        raise ValueError('角色部署类型缓存字段冲突')
+    return values[0]
+
+
 def lineup_requirements(investments, team, knowledge):
     """Historical chosen_this_match flags are deliberately never consulted."""
     board = [unit for unit in team.get('units', []) if unit.get('location') == 'board']
@@ -131,7 +145,17 @@ def lineup_requirements(investments, team, knowledge):
             violations.append({'name': unit.get('name'), 'reason': '重复占用同一槽位'})
         occupied.add((row, slot))
         counts[row] += 1
-        position = unit.get('position') or roles.get(unit.get('name'), {}).get('position') or roles.get(unit.get('name'), {}).get('deployment')
+        position = unit.get('position')
+        try:
+            cached_position = deployment_position(knowledge, unit.get('name'))
+        except ValueError:
+            role = roles.get(unit.get('name')) if isinstance(roles, dict) else None
+            if isinstance(role, dict) and any(role.get(key) is not None for key in ('position', 'deployment')):
+                violations.append({'name': unit.get('name'), 'reason': '角色部署类型缓存非法或冲突，不能以当前声明覆盖'})
+        else:
+            if position not in (None, '') and position != cached_position:
+                violations.append({'name': unit.get('name'), 'reason': '当前角色类型声明与已核缓存冲突；策略改写需鲜读'})
+            position = cached_position
         if position not in ('前台', '后台', '前后台'):
             unknown.append(unit.get('name'))
         if position in ('前台', '后台') and row != ('front' if position == '前台' else 'back'):
@@ -158,6 +182,46 @@ def preparation_status(reviews):
             'battle_ready': pending is None}
 
 
+def reward_status(observed, review=None):
+    """No absent-template inference: only a current reviewed full sweep is clear.
+
+    The worker still authenticates the review's run, epoch and request through
+    verified_source. This pure predicate never upgrades native confidence.
+    """
+    if observed.get('page') in ('investment', 'environment', 'supply', 'reward_overlay'):
+        return 'pending'
+    review = review if isinstance(review, dict) else {}
+    proof, value = review.get('proof'), review.get('value')
+    if (observed.get('page') != 'preparation' or not observed.get('snapshot_id')
+            or not isinstance(proof, dict) or not isinstance(value, dict)
+            or proof.get('source') != 'observed_screen'
+            or proof.get('snapshot_id') != observed['snapshot_id']
+            or value.get('reviewer') != 'supervising_agent'):
+        return 'unknown'
+    if value.get('all_claimed') is False:
+        return 'pending'
+    return ('clear' if value.get('all_claimed') is True
+            and value.get('rescanned_after_claim') is True else 'unknown')
+
+
+def reviewed_capacity(value):
+    """A separate, explicit supervisor reading; never writes native team facts."""
+    if not isinstance(value, dict) or type(value.get('bench_capacity')) is not int or value['bench_capacity'] != 9:
+        raise ValueError('容量须独立实读9个备战席，不能由人口推定')
+    slots = value.get('slots')
+    if (not isinstance(slots, list) or len(slots) != 9 or any(not isinstance(slot, dict) for slot in slots)
+            or any(type(slot.get('slot')) is not int for slot in slots)
+            or {slot['slot'] for slot in slots} != set(range(1, 10))
+            or any(slot.get('status') not in ('empty', 'occupied') for slot in slots)
+            or value.get('overflow_checked') is not True
+            or type(value.get('overflow_count')) is not int or not 0 <= value['overflow_count'] <= 64):
+        raise ValueError('备战席或临时溢出未逐项回读；满人口不能代替库存检查')
+    occupied = sum(slot['status'] == 'occupied' for slot in slots)
+    return {'bench_capacity': 9, 'occupied': occupied, 'free_slots': 9 - occupied,
+            'overflow_count': value['overflow_count'], 'slots': slots,
+            'origin': 'supervising_agent'}
+
+
 def inventory_mutation(action):
     kind, text = action.get('type'), action.get('text', '')
     if kind == 'click_text' and text in ('装备推荐', '装备追踪', '装备追踪中', '角色详情', '攻略', '阵容'):
@@ -166,12 +230,14 @@ def inventory_mutation(action):
             or kind == 'click_text' and any(word in text for word in ('出售', '合成', '装备', '拆卸', '赋予', '复制')))
 
 
-def action_effect(action):
+def action_effect(action, page=None):
     """Effect classes for invalidation, never an exemption from target guards."""
     text = action.get('text', '')
     if inventory_mutation(action):
         return 'inventory'
-    if (action.get('type') == 'buy_xp' or action.get('type') == 'key' and action.get('args') in ([68], [69])
+    location = page or action.get('expected_page')
+    if (action.get('type') == 'buy_xp' or action.get('type') == 'key' and
+            (action.get('args') == [68] or action.get('args') == [70] and location in ('preparation', 'shop'))
             or action.get('type') == 'click_text' and any(word in text for word in ('刷新', '购买经验'))):
         return 'economy'
     return 'navigation'

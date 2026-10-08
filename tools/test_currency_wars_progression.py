@@ -61,6 +61,23 @@ class GoalPlanningChecks(unittest.TestCase):
         self.assertEqual(result['tasks'][0]['progress_proof']['snapshot_id'], 'fresh')
         self.assertFalse(result['action_opportunities'][0]['execute_ready'])
 
+    def test_privilege_resource_reward_is_current_limited_candidate_not_automatic_upgrade(self):
+        option = {'card_index': 2, 'title': '装备资源', 'effect_lines': ['获得1张特权赋予卡'],
+                  'bounds': [616, 292, 950, 784]}
+        observed = {'snapshot_id': 'fresh', 'page': 'supply', 'semantic': {'options': [option]}}
+        result = progression_plan({}, observed, live_tasks=[self.task()])
+        opportunity = result['action_opportunities'][0]
+        self.assertEqual(opportunity['resource_reward_candidates'][0]['card_index'], 2)
+        self.assertEqual(opportunity['resource_reward_candidates'][0]['snapshot_id'], 'fresh')
+        self.assertFalse(opportunity['resource_reward_candidates'][0]['execute_ready'])
+        self.assertFalse(opportunity['execute_ready'])
+        self.assertIn('符合任务的进阶装备实名和当前升级资格', opportunity['preconditions_remaining'])
+        self.assertEqual(progression_plan({}, {**observed, 'snapshot_id': 'new'},
+            live_tasks=[self.task()])['action_opportunities'], [])
+        option['effect_lines'] = []
+        self.assertEqual(progression_plan({}, observed, live_tasks=[self.task()])
+            ['action_opportunities'][0]['resource_reward_candidates'], [])
+
     def test_review_from_another_node_match_or_epoch_cannot_drive_current_plan(self):
         scope = {'match_id': 'match', 'stage': '1-1', 'resume_epoch': 'epoch'}
         for field in scope:

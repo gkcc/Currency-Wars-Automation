@@ -1,0 +1,36 @@
+{
+  "baseline_sha": "85ba75af2b1d43cf34f3b116b3767783709d82f5",
+  "unchanged_worker_methods_ast": {
+    "_advance_rewards": true,
+    "finish_local_economy": true,
+    "guard_preparation_action": true,
+    "ask": true,
+    "execute_plan": true,
+    "_execute_economic_action": true,
+    "read_frame": true,
+    "ensure_full_observation": true
+  },
+  "unchanged_source_files": {
+    "tools/currency_wars_economy.py": {
+      "same_bytes": true,
+      "sha256": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba"
+    },
+    "tools/currency_wars_perception.py": {
+      "same_bytes": true,
+      "sha256": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8"
+    },
+    "tools/currency_wars_state_reader.py": {
+      "same_bytes": true,
+      "sha256": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2"
+    },
+    "tools/currency_wars_broker_entry.py": {
+      "same_bytes": true,
+      "sha256": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81"
+    },
+    "tools/currency_wars_rewards.py": {
+      "same_bytes": true,
+      "sha256": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25"
+    }
+  },
+  "limit": "Static preservation only. Does not rerun real PNG windows or add wait/coordinate coverage to the D/F driver."
+}

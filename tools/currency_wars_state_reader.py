@@ -58,6 +58,36 @@ def native_slots():
     return result
 
 
+def native_capacity(slots, snapshot_id):
+    """Known bench occupancy is independent of board population and overflow."""
+    bench = [slot for slot in slots if slot.get('location') == 'bench']
+    complete = (bool(snapshot_id) and len(bench) == 9
+        and {slot.get('slot') for slot in bench} == set(range(1, 10))
+        and all(slot.get('snapshot_id') == snapshot_id and slot.get('row') == 'bench'
+            and slot.get('status') in ('empty', 'occupied') for slot in bench))
+    occupied = sum(slot['status'] == 'occupied' for slot in bench) if complete else None
+    return {'snapshot_id': snapshot_id, 'bench_capacity': 9, 'bench_checked': complete,
+            'occupied': occupied, 'free_slots': 9 - occupied if complete else None,
+            'overflow_checked': False, 'overflow_count': None,
+            'reason': 'temporary_overflow_layout_not_yet_observed',
+            'origin': 'native_visual_state_reader'}
+
+
+def deployment_selection(selection):
+    """Exactly one native bench slot and one board slot; never caller geometry."""
+    if (not isinstance(selection, list) or len(selection) != 2
+            or any(not isinstance(item, dict) or set(item) != {'row', 'slot'}
+                   or item.get('row') not in ('bench', 'front', 'back')
+                   or type(item.get('slot')) is not int for item in selection)):
+        raise ValueError('deployment selection requires two native row/slot identities')
+    chosen = tuple(sorted((item['row'], item['slot']) for item in selection))
+    supported = {(slot['row'], slot['slot']) for slot in native_slots()}
+    if (len(set(chosen)) != 2 or not set(chosen) <= supported
+            or sum(row == 'bench' for row, unused in chosen) != 1):
+        raise ValueError('deployment selection requires one bench and one front/back slot')
+    return chosen
+
+
 class StateReader:
     def __init__(self, resources=RESOURCE_DIR):
         self.resources = Path(resources)
@@ -103,7 +133,7 @@ class StateReader:
         return (float(np.mean(hsv[:, :, 2] < 125)) > .63
                 or float(np.mean(hsv[:, :, 2] > 247)) > .85)
 
-    def _slot(self, rgb, definition, usable, overlays=()):
+    def _slot(self, rgb, definition, usable, overlays=(), *, read_stars=True):
         result = {**definition, 'status': 'unknown', 'name': None, 'star': None,
                   'position': None, 'confidence': None, 'evidence': {}, 'reasons': []}
         if not usable:
@@ -144,6 +174,8 @@ class StateReader:
             result['evidence']['identity'] = {**first[1], 'score': round(first[0], 4)}
         if badge_score >= .90:
             result['position'] = badge[0][1]['name']
+        if not read_stars:
+            return result
         # Gold hair/stat icons are not stars. Only the retained star glyph
         # may provide rarity, within the native lower portrait strip.
         star_matches = self._match(patch[-48:-7, 21:-21], 'star', 'one')
@@ -246,7 +278,8 @@ class StateReader:
                         'evidence': {'title': title, 'type_anchor': row}})
         return found
 
-    def read(self, path, *, rows=None, page=None):
+    def read(self, path, *, rows=None, page=None, selection=None):
+        selected = deployment_selection(selection) if selection is not None else None
         data = Path(path).read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         with Image.open(io.BytesIO(data)) as image:
@@ -256,32 +289,42 @@ class StateReader:
         anchors = {}
         if native:
             for name, box in (('front', [900, 285, 1050, 325]), ('back', [900, 555, 1050, 598])):
-                anchors[name] = self._match(rgb[box[1]:box[3], box[0]:box[2]], 'anchor', name)[0][0]
+                matches = self._match(rgb[box[1]:box[3], box[0]:box[2]], 'anchor', name)
+                anchors[name] = matches[0][0] if matches else 0.
         usable = native and all(anchors.get(key, 0.) >= .90 for key in ('front', 'back'))
         # A supplied classified page can only narrow the pixel evidence.
         if page is not None and page not in ('preparation', 'shop', 'investment_summary'):
             usable = False
         overlays = self._overlays(rgb) if native else []
-        slots = [self._slot(rgb, slot, usable, overlays) for slot in native_slots()] if native else [
-            {**slot, 'status': 'unknown', 'name': None, 'star': None, 'position': None,
-             'confidence': None, 'evidence': {}, 'reasons': ['unsupported_or_missing_resources']}
-            for slot in native_slots()]
+        slots = []
+        for slot in native_slots():
+            requested = selected is None or (slot['row'], slot['slot']) in selected
+            if native and requested:
+                slots.append(self._slot(rgb, slot, usable, overlays,
+                                       **({'read_stars': False} if selected is not None else {})))
+            else:
+                slots.append({**slot, 'status': 'unknown' if requested else 'not_read',
+                    'name': None, 'star': None, 'position': None, 'confidence': None, 'evidence': {},
+                    'reasons': ['unsupported_or_missing_resources' if requested else 'outside_deployment_selection']})
         for slot in slots:
             slot.update(snapshot_id=digest, origin='native_visual_state_reader')
         units = [slot for slot in slots if slot['status'] == 'occupied']
-        unknown = [slot for slot in slots if slot['status'] == 'unknown']
+        unknown = [slot for slot in slots if slot['status'] in ('unknown', 'not_read')]
         board = [slot for slot in slots if slot['location'] == 'board']
         # Root reconciles the independent central deployed HUD as an additional
         # condition; this reader never promotes geometry alone to team.checked.
-        fully_read = (usable and all(slot['status'] != 'unknown' for slot in board)
+        fully_read = (selected is None and usable and all(slot['status'] != 'unknown' for slot in board)
             and all(slot['name'] is not None and slot['star'] is not None
                     for slot in board if slot['status'] == 'occupied'))
-        inventory = self._inventory(rgb, usable) if native else {'checked': False, 'items': [], 'unknown_slots': []}
+        inventory = (self._inventory(rgb, usable) if native and selected is None else
+                     {'checked': False, 'items': [], 'unknown_slots': []})
+        if selected is not None:
+            inventory.update(status='not_read', reason='outside_deployment_selection')
         for item in inventory['items']:
             item.update(snapshot_id=digest, origin='native_visual_state_reader')
         requests = [{'kind': 'unit_name_or_star', 'row': slot['row'], 'slot': slot['slot'],
                      'point': slot['point'], 'snapshot_id': digest}
-                    for slot in units if slot['name'] is None or slot['star'] is None]
+                    for slot in units if slot['name'] is None or selected is None and slot['star'] is None]
         requests.extend({'kind': 'item_tooltip', 'point': item['point'], 'snapshot_id': digest}
                         for item in inventory['unknown_slots'])
         return {'schema': SCHEMA, 'snapshot_id': digest,
@@ -289,6 +332,7 @@ class StateReader:
             'origin': 'native_visual_state_reader', 'resource_version': self._version,
             'anchors': {k: round(v, 4) for k, v in anchors.items()}, 'overlays': overlays,
             'team': {'checked': False, 'fully_read': bool(fully_read), 'slots': slots,
-                     'units': units, 'unknown_slots': unknown, 'snapshot_id': digest},
+                     'units': units, 'unknown_slots': unknown, 'snapshot_id': digest,
+                     'capacity': native_capacity(slots, digest)},
             'inventory': {**inventory, 'snapshot_id': digest},
-            'tooltips': self._tooltips(rows, digest) if native else [], 'requests': requests}
+            'tooltips': self._tooltips(rows, digest) if native and selected is None else [], 'requests': requests}

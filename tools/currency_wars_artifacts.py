@@ -6,6 +6,7 @@ sweeps old runs or adopts another chat's files.
 """
 from __future__ import annotations
 
+import hashlib
 import contextlib
 import ctypes
 import importlib.util
@@ -294,6 +295,11 @@ def scratch_directory(purpose='run', *, root=None):
         _cleanup_current(path, root, value['run_id'])
 
 
+# Local-only selection provenance, included by the unified readiness verifier.
+PROVIDER_SOURCE = dict(kind='standalone', path=str(Path(__file__).resolve()),
+                       sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest().upper())
+
+
 # Existing installations keep their established lifecycle implementation.
 # Standalone mode is also used by the packaging checks in an isolated temp run.
 if os.environ.get('CW_ARTIFACTS_STANDALONE') != '1':
@@ -304,7 +310,14 @@ if os.environ.get('CW_ARTIFACTS_STANDALONE') != '1':
         if helper.is_file():
             spec = importlib.util.spec_from_file_location('_currency_wars_installed_artifacts', helper)
             installed = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(installed)
+            payload = helper.read_bytes()
+            if not 0 < len(payload) <= 4_000_000:
+                raise ArtifactError('Installed artifact provider size is invalid')
+            if helper.read_bytes() != payload:
+                raise ArtifactError('Installed artifact provider changed during loading')
+            exec(compile(payload, str(helper), 'exec'), installed.__dict__)
+            PROVIDER_SOURCE = dict(kind='installed', path=str(helper.resolve()),
+                                   sha256=hashlib.sha256(payload).hexdigest().upper())
             for name in ('ArtifactError', 'default_root', 'process_identity', 'read_marker'):
                 globals()[name] = getattr(installed, name)
 

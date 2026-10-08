@@ -1,0 +1,7 @@
+﻿section,case,normal_root_requests,exception_root_requests,total_seconds
+real_starts,shop_character_level_999,0,0,2.5613884909980698
+real_starts,shop_actual_player_level_8,0,0,2.1416555600007996
+real_starts,boss_level_90_intro,0,1,0.8013322119950317
+real_starts,final_preparation_player_level_9,1,0,2.159875191995525
+synthetic_contracts,three_f_success,2,0,0.2829676359979203
+synthetic_contracts,zero_effect,1,1,0.19429200600279728

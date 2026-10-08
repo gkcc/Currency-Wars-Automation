@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from currency_wars_perception import OPTION_LAYOUTS, SUPPLY_FIVE_CARD_LAYOUT, clean
+from currency_wars_perception import OPTION_LAYOUTS, SUPPLY_FIVE_CARD_LAYOUT, classify, clean
 from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
 
 
@@ -222,6 +222,147 @@ def _paired_row(original, actual, pattern, bounds, images):
     return rows[1] if _text_equal(images, box) else None
 
 
+def navigation_target(action, request):
+    """Identify the two guarded text controls, without granting permission.
+
+    Identification deliberately precedes exact/kind/bounds validation: a bad
+    variant of these controls must not fall back to the small global-delta path.
+    Other targets retain their existing policy and receive no new exemption.
+    """
+    if not isinstance(action, dict) or not isinstance(request, dict):
+        return None
+    if action.get('type') != 'click_text':
+        return None
+    page = request.get('observation', {}).get('page')
+    label = clean(action.get('text', ''))
+    matches = lambda target: label == target or (bool(label) and not action.get('exact', True) and label in target)
+    if page == 'opponents' and matches('下一步'):
+        return 'opponents_next'
+    if page == 'unknown' and matches('货币战争'):
+        return 'activity_currency_wars'
+    return None
+
+
+def _navigation_ink_equal(images, bounds):
+    """Fixed-position light OR dark glyphs, with their exposed local halo.
+
+    A normalized grayscale score alone would accept a dimmed/covered button.
+    Compare foreground support and original RGB as well. No translated search,
+    arbitrary color tolerance, full-card comparison, or extra OCR is used.
+    Animation is allowed outside this small observed text/halo region.
+    """
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    hsv = [cv2.cvtColor(crop, cv2.COLOR_RGB2HSV) for crop in crops]
+    delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
+    for polarity in ('light', 'dark'):
+        masks = [((item[:, :, 1] < 90) & (item[:, :, 2] > 190))
+                 if polarity == 'light' else item[:, :, 2] < 80 for item in hsv]
+        if any(np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60 for mask in masks):
+            continue
+        union = masks[0] | masks[1]
+        if np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .985:
+            continue
+        # A two-pixel halo ties the text to its currently exposed control,
+        # including dark text on a light button. Overlay/dimming changes in
+        # this local support veto even when OCR still returns the old string.
+        exposed = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+        if np.mean(delta[exposed] > 16) <= .005:
+            return True
+    return False
+
+
+def _navigation_row(original, actual, label, images, bounds=None, *, target=False):
+    rows = [_unique_row(obs, re.escape(label), [0, 0, 1920, 1020])
+            for obs in (original, actual)]
+    if any(row is None for row in rows):
+        return None
+    if bounds is not None and any(not _inside(row['box'], bounds) for row in rows):
+        return None
+    if any(abs(a-b) > 2 for a, b in zip(rows[0]['box'], rows[1]['box'])):
+        return None
+    box = [max(0, min(rows[0]['box'][0], rows[1]['box'][0])-2),
+           max(0, min(rows[0]['box'][1], rows[1]['box'][1])-2),
+           min(1920, max(rows[0]['box'][2], rows[1]['box'][2])+2),
+           min(1020, max(rows[0]['box'][3], rows[1]['box'][3])+2)]
+    if not _navigation_ink_equal(images, box):
+        return None
+    if target:
+        # Text can surround a blank click center. A colored cover in that gap
+        # is observable even when every glyph and its halo remain unchanged.
+        x, y, right, bottom = box
+        delta = np.max(np.abs(images[0][y:bottom, x:right].astype(np.int16)
+                              - images[1][y:bottom, x:right].astype(np.int16)), axis=2)
+        cx, cy = (rows[1]['box'][0]+rows[1]['box'][2])//2-x, (rows[1]['box'][1]+rows[1]['box'][3])//2-y
+        center = delta[max(0, cy-4):cy+5, max(0, cx-4):cx+5]
+        if np.mean(delta > 16) > .005 or center.size == 0 or np.max(center) > 16:
+            return None
+    return rows[1]
+
+
+def _navigation_visible_semantics(original, actual):
+    # This uses the native rows already read from each immutable frame. The
+    # lower threshold is veto-only, never an authorization for a weak target.
+    # Ignore the existing bottom UID/latency footer, not a dynamic game field.
+    rows = []
+    for observation in (original, actual):
+        visible = []
+        for row in observation.get('rows', []):
+            if not _box(row.get('box')):
+                return False
+            if row['box'][1] >= 1020:
+                continue
+            score = row.get('confidence')
+            if type(score) not in (int, float) or not 0 <= score <= 1:
+                return False
+            if score >= .72:
+                visible.append((clean(row.get('text', '')), row['box']))
+        rows.append(sorted(visible))
+    return (bool(rows[0]) and len(rows[0]) == len(rows[1])
+            and all(old[0] == fresh[0] and all(abs(a-b) <= 2 for a, b in zip(old[1], fresh[1]))
+                    for old, fresh in zip(*rows)))
+
+
+def _navigation(action, request, actual, images):
+    original = request['observation']
+    control = navigation_target(action, request)
+    if (control is None or action.get('exact', True) is not True
+            or action.get('expected_page') != original.get('page')
+            or action.get('bounds') is not None and not _box(action['bounds'])
+            or any(classify(obs.get('rows', [])) != original.get('page') for obs in (original, actual))
+            or not _navigation_visible_semantics(original, actual)):
+        return False
+    if control == 'opponents_next':
+        kind, target = 'opponents_strategy', '下一步'
+        target_region = [1200, 740, 1920, 1020]
+        anchor_sets = ((('竞争对手', [0, 0, 1400, 240]),),)
+    else:
+        kind, target = 'unknown_page', '货币战争'
+        # Explicit menu semantics, not a generic unknown-page escape hatch.
+        # Native dual-frame coverage for these layouts must be recorded
+        # separately; synthetic protocol fixtures are not calibration frames.
+        # These are semantic-role bounds (header, menu, content), not a claim
+        # of retained native calibration. Reject body-only text lookalikes;
+        # these bounds do not prove all unknown layouts are real menu cards.
+        target_region = [300, 160, 1920, 1000]
+        header = [0, 0, 1000, 180]
+        menu = [0, 70, 1900, 1000]
+        anchor_sets = ((('星际和平指南', header), ('宇宙纷争', menu)),
+                       (('星际和平指南', header), ('逐光捡金', menu)),
+                       (('旅情事记', header), ('常驻活动', menu)))
+    if action.get('bounds') is not None:
+        bounds = action['bounds']
+        target_region = [max(target_region[0], bounds[0]), max(target_region[1], bounds[1]),
+                         min(target_region[2], bounds[2]), min(target_region[3], bounds[3])]
+    if (request.get('kind') != kind or not _box(target_region)
+            or _navigation_row(original, actual, target, images, target_region, target=True) is None):
+        return False
+    return any(all(_navigation_row(original, actual, label, images, bounds) is not None
+                   for label, bounds in anchors) for anchors in anchor_sets)
+
+
 def _quality(image, bounds):
     x, y, unused_right, unused_bottom = bounds
     hsv = cv2.cvtColor(image[y+15:y+45, x+80:x+180], cv2.COLOR_RGB2HSV)
@@ -374,7 +515,7 @@ def _shop(action, request, actual, images):
     if request.get('kind') != 'shop_strategy' or actual.get('page') != 'shop' or action.get('type') != 'buy_shop':
         return False
     slot = stable_purchase_slot(original.get('shop') or {}, actual.get('shop') or {}, action.get('slot'),
-                                request['snapshot_id'], actual.get('snapshot_id'))
+                                request['snapshot_id'], actual.get('snapshot_id'), images=images)
     if slot is None or slot['name'] != action.get('name') or slot['cost'] != action.get('cost'):
         return False
     stage = original.get('fields', {}).get('stage')
@@ -408,6 +549,8 @@ def stable_semantic_target(action, request, actual, current_png, diagnostic=None
         page = original.get('page')
         if images is None or actual.get('page') != page:
             allowed = False
+        elif navigation_target(action, request) is not None:
+            allowed = _navigation(action, request, actual, images)
         elif page in ('investment', 'environment', 'supply'):
             allowed = _cards(action, request, actual, images)
         elif page == 'settlement':

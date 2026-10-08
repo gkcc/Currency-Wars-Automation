@@ -13,6 +13,7 @@ import PIL
 import currency_wars_artifacts as artifacts
 from currency_wars_broker_entry import PINNED, SOURCE
 from currency_wars_input_bridge import INSTALL_ROOT, task_name
+from currency_wars_bridge_task import RUNTIME_ROOT, INBOX, validate_config
 
 PROJECT = Path(__file__).resolve().parent.parent
 
@@ -27,9 +28,8 @@ def build(game_path):
     game = Path(game_path).resolve(strict=True)
     if not game.is_file() or game.name.lower() != 'starrail.exe':
         raise RuntimeError('--game-path must name the installed StarRail.exe')
-    fixed_runtime_root = Path('D:/Codex/Temp/codex-agent-workflow')
-    if os.path.normcase(os.path.abspath(artifacts.default_root())) != os.path.normcase(str(fixed_runtime_root.resolve())):
-        raise RuntimeError('The fixed input component requires TEMP and TMP set to D:\\Codex\\Temp in the installation and launch PowerShell session')
+    # Package the unchanged task's approved paths. Building the package does
+    # not require the caller's independent TEMP cache to point at that root.
     if digest(SOURCE) != PINNED:
         raise RuntimeError('Safety broker is not the independently reviewed source')
     sid = artifacts._windows_user_sid()
@@ -79,11 +79,11 @@ def build(game_path):
     if signature['status']!='Valid' or 'miHoYo' not in signature['subject']:
         raise RuntimeError('The approved game executable does not have a valid miHoYo signature')
     config = dict(schema=1, installation_id=installation, user_sid=sid,
-                  runtime_root=str(artifacts.default_root()),
-                  inbox=str(Path('D:/Codex/Workspaces/CurrencyWars-InputBridge/inbox')),
+                  runtime_root=RUNTIME_ROOT, inbox=INBOX,
                   game_path=str(game), game_sha256=digest(game), broker_sha256=PINNED,
                   driver_sha256=digest(PROJECT/'tools/currency_wars_bridge_task.py'),
                   task_name=task_name(sid))
+    validate_config(config)
     (payload / 'install.json').write_text(json.dumps(config, ensure_ascii=False, indent=2), encoding='utf8')
     files = {str(p.relative_to(payload)).replace('\\','/'):digest(p)
              for p in sorted(payload.rglob('*')) if p.is_file()}
