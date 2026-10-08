@@ -1,0 +1,17 @@
+{
+  "schema": "root-pr26-live-card-acceptance/v1",
+  "candidate": "5cf3d9b3ae693d5df670203352d0d55bae3d19c5",
+  "binding": "DED9B242D8FFDAAD4236E8042F65FC20118E236123AD71425680FDD0CB503315",
+  "review": "docs/PR26_INDEPENDENT_REVIEW.json",
+  "installed_at": "2026-10-08T06:05:18.411988+00:00",
+  "fresh_native_selection_verified": true,
+  "pr24_included": false,
+  "selection_request": "ebb66db00554415bad7f5da1dd2eafa0",
+  "selection_result_png": "debug/runner-01a10ddf-9cf774408102/e484f3aaf22f4ce1a8fee6b800290fdb-strategy-original.png",
+  "confirmation_request": "e484f3aaf22f4ce1a8fee6b800290fdb",
+  "confirmation_result": "preparation 1-1 0/3",
+  "confirmation_snapshot": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1",
+  "scope": "new current Worker request and separate confirmation; actual preparation 1-1 verified; whole-match speed unproven",
+  "source_candidate": "5cf3d9b3ae693d5df670203352d0d55bae3d19c5",
+  "game_inputs": "one card selection, one separate confirm; no reward/economy input yet"
+}
