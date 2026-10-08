@@ -1,0 +1,169 @@
+{
+  "schema": "currency-wars-page-stop-acceptance/v1",
+  "basis_commit": "8bcff97b5a9287a6ffda405ee33a17473d1e32ac",
+  "tested_checkout_head": "8bcff97b5a9287a6ffda405ee33a17473d1e32ac",
+  "source_binding_authority": "exact before/after bytes; a checkout HEAD does not identify uncommitted files",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "12.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "selection": [
+    "test_currency_wars_page_structure.PageStructureTests",
+    "test_currency_wars_page_structure.PageRoutingTests",
+    "test_currency_wars_stop_projection.StopProjectionTests"
+  ],
+  "tests": 14,
+  "failures": 0,
+  "errors": 0,
+  "skips": 0,
+  "elapsed_seconds": 0.04956028000015067,
+  "test_results": [
+    {
+      "test": "test_currency_wars_page_structure.PageStructureTests.test_battle_requires_existing_four_fixed_native_hud_anchors",
+      "status": "passed",
+      "seconds": 0.003181433999998262
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageStructureTests.test_each_advantages_anchor_still_needs_unique_current_geometry_and_confidence",
+      "status": "passed",
+      "seconds": 0.004350102000898914
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageStructureTests.test_modals_and_formal_result_keep_priority_over_background_advantages",
+      "status": "passed",
+      "seconds": 0.00034616099947015755
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageStructureTests.test_retained_ocr_record_uses_native_page_before_skill_paragraph",
+      "status": "passed",
+      "seconds": 0.0004152139990765136
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageStructureTests.test_skill_battle_word_alone_is_not_a_battle_surface",
+      "status": "passed",
+      "seconds": 0.0001349930007563671
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageRoutingTests.test_cross_lease_worker_requests_business_resume_from_current_advantages",
+      "status": "passed",
+      "seconds": 0.0005713089994969778
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageRoutingTests.test_current_panel_requests_inspection_without_claiming_complete_or_clicking",
+      "status": "passed",
+      "seconds": 0.0002990299999510171
+    },
+    {
+      "test": "test_currency_wars_page_structure.PageRoutingTests.test_out_of_sequence_advantages_returns_review_instead_of_inventing_panel_completion",
+      "status": "passed",
+      "seconds": 0.0003045070006919559
+    },
+    {
+      "test": "test_currency_wars_stop_projection.StopProjectionTests.test_business_and_broker_identity_conflicts_are_rejected",
+      "status": "passed",
+      "seconds": 0.005966172000626102
+    },
+    {
+      "test": "test_currency_wars_stop_projection.StopProjectionTests.test_foreign_or_stale_current_is_not_overwritten_after_actual_stop",
+      "status": "passed",
+      "seconds": 0.006814839000071515
+    },
+    {
+      "test": "test_currency_wars_stop_projection.StopProjectionTests.test_latest_business_lease_and_original_record_owner_must_match",
+      "status": "passed",
+      "seconds": 0.010752038999271463
+    },
+    {
+      "test": "test_currency_wars_stop_projection.StopProjectionTests.test_missing_projection_fields_can_only_come_from_matching_existing_business",
+      "status": "passed",
+      "seconds": 0.007006436000665417
+    },
+    {
+      "test": "test_currency_wars_stop_projection.StopProjectionTests.test_real_stop_projection_reaches_start_continuation_after_runtime_disposal",
+      "status": "passed",
+      "seconds": 0.003404420000151731
+    },
+    {
+      "test": "test_currency_wars_stop_projection.StopProjectionTests.test_retained_original_broker_cannot_be_erased_by_a_display_terminal",
+      "status": "passed",
+      "seconds": 0.005764348999946378
+    }
+  ],
+  "failure_details": [],
+  "source_file_count": 28,
+  "runtime_source_count": 24,
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "handoff/2026-10-08/ROOT_PR19_ADVANTAGES_MISCLASSIFICATION.json": "0b707690bdf3e0e84243135615b514366b46e9645bca9885a145f2aeb5dcc1fb",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+    "tools/currency_wars_manual_steps.py": "9a148f6ec78556cdbb31cb54077465707a2fca9aa87877f4b7c68dd369d1bbd8",
+    "tools/currency_wars_perception.py": "604b4b6d6912e3d8415f066bbb32307555b9564e2f2d5ebddc6d94f9fded4aba",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "73f857ac9eb65143cc45cbef4a7b9e96ba59a4d034d7945c1cbb63d1de735f5c",
+    "tools/currency_wars_runner.py": "706472e3daaaee9647daa9851d2448c51f4e5412a19545dbde4125e8d0be866e",
+    "tools/currency_wars_runtime_sources.json": "fa6010108d731fc050432f40dde6223dad53a6d9ceaf15e64c0f05a10412e15d",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "0e878ac428a5a5132c5ccd4e044248c4f6263303a830f2916265f1e96fd24934",
+    "tools/replay_currency_wars_page_stop.py": "edb94a4cb9f77d0b24adabe9ed36685aafb94b8d56b0ede47732e5152e8d0728",
+    "tools/test_currency_wars_page_structure.py": "0085c6609dec114b263f200cc82e45cf28ae32e45e1d26e1fadcecac0146102b",
+    "tools/test_currency_wars_stop_projection.py": "de553e8b63d5936da764ce441a327c4431190d76314a38ca641087b191e90a38"
+  },
+  "source_sha256_after_differences": {},
+  "source_set_sha256_before": "e6d85664369c2f222677f693dbf38ae9c825707790dd73aab876de58b0ce48df",
+  "source_set_sha256_after": "e6d85664369c2f222677f693dbf38ae9c825707790dd73aab876de58b0ce48df",
+  "broker_pin": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+  "retained_native_ocr": {
+    "evidence_commit": "16b8b96b06ab2e6e8073ca32fa4a8268e2287069",
+    "path": "handoff/2026-10-08/ROOT_PR19_ADVANTAGES_MISCLASSIFICATION.json",
+    "git_blob": "0a1f2d85ff581f618602c721420c9d3e75d9b647",
+    "receipt_id": "b71a7bf33f6840ebb7e5fea80f2519e3",
+    "original_png_sha256_reference": "25632a83eebdee01c30cfe1b5ee3b75fd8e3f69e213c8b1de0895e7181910575",
+    "row_count": 15,
+    "historical_recorded_page": "battle",
+    "candidate_page": "advantages",
+    "native_advantages": true,
+    "native_battle_stage": null,
+    "raw_png_replayed": false,
+    "new_ocr_calls": 0,
+    "uid_row_present": false
+  },
+  "protocol_coverage": {
+    "worker": "real tick dispatch with inert ask/input/observation boundaries; no live decision receipt",
+    "stop_start": "real stop CLI and _start_cli with inert process probes; Popen intercepted before launch",
+    "synthetic_variants": "anchor mutations, native HUD coordinates and modal overlays are protocol cases"
+  },
+  "live_automation_verified": false,
+  "windows_acceptance_performed": false,
+  "original_resources_read_or_exported": false,
+  "candidate_installed": false,
+  "whole_game_speedup": null,
+  "same_endpoint_speedup": null,
+  "limits": [
+    "The private original screenshot was not read; only the published UID-redacted OCR rows were replayed.",
+    "No game, GUI, broker, input, online model service, READY change or installation was performed.",
+    "A reviewed page request is not new-match entry or a completed business_resume proof.",
+    "Stop/start uses filesystem and identity protocols; ROOT must verify real Windows process lifetimes.",
+    "No PR19 frozen 39-test selection or unrelated GUI/Rust/PR20/PR21 tests were rerun."
+  ],
+  "ok": true
+}

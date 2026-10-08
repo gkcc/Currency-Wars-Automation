@@ -301,6 +301,47 @@ def business_lease(state):
         'entry_receipt_watermark') if key in state}
 
 
+def retain_stop_business(state, owner):
+    """Keep authenticated durable facts when runtime cleanup leaves a display shell."""
+    retained = optional(CURRENT)
+    if retained is None:
+        return state  # Missing facts stay missing; never reconstruct a replay path.
+    identity = ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id')
+    if any(retained.get(key) != owner.get(key) for key in identity):
+        raise ValueError('停止记录已属于另一owner/run/创建身份；不覆盖CURRENT')
+    merged = {**retained, **state}
+    # The state channel can be older than the final CURRENT written after the
+    # scratch context exits. Neither may silently replace durable identities.
+    for key in ('launch_id', 'run_dir', 'journal_file', 'match_id', 'broker_identity'):
+        if key in retained and key in state and retained[key] != state[key]:
+            raise ValueError('停止状态与原业务字段冲突：' + key)
+    if retained.get('journal_file'):
+        durable_records(retained)
+    pointer = retained.get('business', {}).get('checkpoint')
+    if pointer:
+        state_pointer = state.get('business', {}).get('checkpoint')
+        if state_pointer and state_pointer != pointer:
+            raise ValueError('停止状态与原业务检查点冲突')
+        unused, business = load_business(pointer, owner['chat_id'])
+        lease = business['leases'][-1]
+        if any(lease.get(key) != owner.get(key) for key in identity):
+            raise ValueError('停止时业务当前租期已变化；不采用旧或外来lease')
+        durable_records(lease)
+        for key in ('launch_id', 'run_dir', 'journal_file', 'broker_identity', 'entry_receipt_watermark'):
+            if key in lease:
+                if key in merged and merged[key] != lease[key]:
+                    raise ValueError('停止状态与业务lease字段冲突：' + key)
+                merged[key] = copy.deepcopy(lease[key])
+        if merged.get('match_id', business['match_id']) != business['match_id']:
+            raise ValueError('停止状态与业务match身份冲突')
+        merged['match_id'] = business['match_id']
+        merged['business'] = copy.deepcopy(retained['business'])
+    if 'cleanup' in retained:
+        merged['cleanup'] = copy.deepcopy(retained['cleanup'])
+    # Current process probes/control mode win over old lease display values.
+    return merged
+
+
 class BattleConfirmationRequired(ValueError):
     pass
 
@@ -6581,9 +6622,32 @@ def command_cli(args):
             worker = entry.exit_probe(control, owner['runner_pid'], owner['runner_creation_id'])
             if worker['state'] in ('absent', 'exited', 'reused'):
                 state = current_state(run, owner, control, emergency=True)
+                projection_error = None
+                try:
+                    state = retain_stop_business(state, owner)
+                except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
+                    # Optional persistence must not interrupt the authenticated
+                    # stop/exit probes. Do not overwrite the rejected source.
+                    projection_error = exc
                 broker = state['broker']['broker_state']
+                retained_identity = state.get('broker_identity')
+                if retained_identity:
+                    if (type(retained_identity.get('pid')) is not int or retained_identity['pid'] <= 0
+                            or not str(retained_identity.get('creation_id')).isdecimal()
+                            or int(retained_identity['creation_id']) <= 0):
+                        raise ValueError('停止时原broker缺少有效PID及创建身份')
+                    observed_pid = state['broker'].get('broker_pid')
+                    observed_creation = state['broker'].get('broker_creation_time')
+                    if observed_pid is not None and (observed_pid != retained_identity.get('pid')
+                            or str(observed_creation) != str(retained_identity.get('creation_id'))):
+                        raise ValueError('停止时原broker创建身份冲突；不采用展示终态')
+                    broker = entry.exit_probe(control, retained_identity['pid'], retained_identity['creation_id'])
+                    state['broker'] = {**state['broker'], 'broker_state': broker,
+                        'broker_pid': retained_identity['pid'],
+                        'broker_creation_time': retained_identity['creation_id']}
                 if broker['state'] == 'unknown':
                     if (state['broker'].get('broker_pid') is not None
+                            or retained_identity is not None
                             or getattr(control, 'EMERGENCY_BROKER_IDENTITY', None) is not None):
                         raise RuntimeError('已知所属broker退出证据未知；保留停止/手动锁，不采用展示终态替代原身份')
                     # A never-launched broker can only be certified by the
@@ -6611,6 +6675,8 @@ def command_cli(args):
                         raise RuntimeError('没有broker身份的启动终态须关联同worker/run且有实际启动事实')
                 state['control_mode'] = 'stopped'
                 state['exit_evidence'] = {'worker': worker, 'broker': broker}
+                if projection_error is not None:
+                    raise projection_error
                 control.write_json(CURRENT, state)
                 return envelope(state, command_id=rid)
             if worker['state'] == 'unknown':

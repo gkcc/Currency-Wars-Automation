@@ -285,6 +285,11 @@ def classify(rows):
         return "node_result"
     if _native_boss_result_stage(rows):
         return 'boss_result'
+    # A selected advantage can describe "战斗中". Its four native page
+    # anchors identify the current surface; body copy does not identify play.
+    # Keep actual modals/results above this page-level recognition.
+    if _native_advantages_page(rows):
+        return "advantages"
     if "朝露公馆" in joined and "货币战争" in joined:
         return "world_entry"
     if sum(name in joined for name in ("创业指南", "优势布局", "羁绊链路", "预期收益")) >= 3:
@@ -299,8 +304,7 @@ def classify(rows):
         return "shop"
     if "备战" in joined and "出战" in joined:
         return "preparation"
-    if "战斗中" in joined and "出战" not in joined:
-        return "battle"
+    # Battle needs the existing native HUD, never a keyword in skill text.
     if _native_battle_stage(rows):
         return "battle"
     if "竞争对手" in joined and ("下一步" in joined or "生成" in joined):
@@ -322,8 +326,6 @@ def classify(rows):
     if _native_promotion_page(rows):
         return "promotion"
     if "优势布局" in joined and any(w in joined for w in ("等价钻钞", "强化", "升级", "重置")):
-        return "advantages"
-    if _native_advantages_page(rows):
         return "advantages"
     if "攻略" in joined and any(w in joined for w in ("应用", "运营", "推荐")):
         return "guide"
