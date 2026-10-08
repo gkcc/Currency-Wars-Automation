@@ -1444,6 +1444,10 @@ def validate_plan(reply, request, epoch):
         if action['type'] == 'buy_xp' and (type(action.get('count')) is not int or not 1 <= action['count'] <= 5):
             raise ValueError('单计划经验次数须1–5')
         page = request.get('observation', {}).get('page')
+        if (page == 'environment' and action['type'] in ('click_text', 'click_point')
+                and not (action['type'] == 'click_text' and clean(action.get('text', '')) == '确认')
+                and len(actions) != 1):
+            raise ValueError('环境选卡须独立单动作；确认必须使用选择后的新请求和当前帧')
         if page in economy.PREPARATION_PAGES and action.get('type') == 'key' and action.get('args') == [69]:
             raise ValueError('备战/商店经验键已实机核为F70，E69不再作为经验或导航输入')
         if economy.economic_action(action, page) and len(actions) != 1:
@@ -2326,8 +2330,9 @@ def stable_environment_card_animation(action, request, actual, current_png):
     original = request.get('observation', {})
     page = original.get('page')
     if page == 'environment' and request.get('kind') == 'environment_strategy':
-        layout = ((207, 198, 671, 868), (727, 198, 1193, 868), (1253, 198, 1717, 868))
-        header = ('投资环境', (860, 55, 1070, 145))
+        # Use the same full-card/section/confirmation contract as the real
+        # consumer; the old RGB-percentage fallback must not bypass it.
+        return stable_semantic_target(action, request, actual, current_png)
     elif page == 'investment' and request.get('kind') == 'investment_strategy':
         layout = ((257, 196, 665, 816), (757, 196, 1165, 816), (1257, 196, 1665, 816))
         header = ('请选择投资策略', (850, 55, 1070, 145))
@@ -5747,6 +5752,12 @@ class Worker:
             raise ValueError('输入点不在指定目标ROI内')
         if action['type'] == 'drag' and not (box[0] <= values[2] < box[2] and box[1] <= values[3] < box[3]):
             raise ValueError('拖动终点也须在同一已核目标区域')
+        if actual['page'] == 'environment':
+            # The confirmation/page/other cards are preconditions even when
+            # the selected card alone happens to be pixel-identical.
+            if not stable_semantic_target(action, request, actual, self.frame_path):
+                raise ValueError('环境卡完整语义、结构、确认外观或来源未核实；不发布输入')
+            return
         current_png = self.frame_path
         if tracking_portrait:
             from io import BytesIO

@@ -32,6 +32,9 @@ OPTION_LAYOUTS = {
     'supply': ((262, 292, 596, 784), (616, 292, 950, 784),
                (970, 292, 1304, 784), (1324, 292, 1658, 784)),
 }
+# Original environment reader layout; its confirm label is right of center.
+# Investment and supply retain their own independent confirmation layouts.
+ENVIRONMENT_CONFIRM_BOUNDS = (770, 950, 1160, 1025)
 SUPPLY_FIVE_CARD_LAYOUT = ((84, 292, 419, 783), (439, 292, 774, 783),
                            (793, 292, 1129, 783), (1147, 292, 1482, 783),
                            (1501, 292, 1836, 783))
@@ -388,7 +391,7 @@ def option_facts(rows, page):
             return cards
     if page == 'environment':
         for label, bounds in (('投资环境', (850, 55, 1070, 135)),
-                              ('确认', (770, 950, 1160, 1025))):
+                              ('确认', ENVIRONMENT_CONFIRM_BOUNDS)):
             matches = [row for row in rows if row['confidence'] >= .90
                        and clean(row['text']) == label
                        and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
