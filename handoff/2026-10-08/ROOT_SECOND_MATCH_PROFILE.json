@@ -1,0 +1,7444 @@
+{
+  "schema": 1,
+  "generated_at": "2026-10-08T03:33:47.257629+00:00",
+  "candidate": "8bcff97b5a9287a6ffda405ee33a17473d1e32ac",
+  "candidate_installed_at_match": false,
+  "basis": "Original operation receipt completion timestamps, not per-action CPU times. Prep includes ROOT model/host/Pro/context gaps; no fabricated attribution. Missing 1-1..1-8 timings remain unknown. Battle-to-formal includes supervisor polling latency.",
+  "receipts_count": 241,
+  "retained_interval_seconds": 11401.279,
+  "stages": [
+    {
+      "stage": "1-9",
+      "prepare_seconds": null,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 350.684,
+      "departure_to_formal_seconds": 350.684,
+      "events": [
+        {
+          "stage": "1-9",
+          "kind": "departure",
+          "receipt": "d195fba568e04e798352bf2c744192f4",
+          "receipt_mtime": 1791419279.864394,
+          "event": "departure",
+          "time": 1791419279.864394
+        },
+        {
+          "stage": "1-9",
+          "kind": "formal_win",
+          "receipt": "83cc3d864e9c4391b82d4f9b16f6cd08",
+          "receipt_mtime": 1791419630.5482738,
+          "event": "formal_win",
+          "time": 1791419630.5482738
+        }
+      ]
+    },
+    {
+      "stage": "2-1",
+      "prepare_seconds": 137.36,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 108.122,
+      "departure_to_formal_seconds": 108.122,
+      "events": [
+        {
+          "stage": "2-1",
+          "kind": "start",
+          "receipt": "226380a1e1064a25b51cee9bee99b20f",
+          "receipt_mtime": 1791419670.7143068,
+          "event": "start",
+          "time": 1791419670.7143068
+        },
+        {
+          "stage": "2-1",
+          "kind": "departure",
+          "receipt": "6f88ee1a707645cbbd85735c5f59fcbf",
+          "receipt_mtime": 1791419808.0746343,
+          "event": "departure",
+          "time": 1791419808.0746343
+        },
+        {
+          "stage": "2-1",
+          "kind": "formal_win",
+          "receipt": "fff7cf127e7b4f7b8a1ef17159fe7fca",
+          "receipt_mtime": 1791419916.1965127,
+          "event": "formal_win",
+          "time": 1791419916.1965127
+        }
+      ]
+    },
+    {
+      "stage": "2-2",
+      "prepare_seconds": 85.288,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 164.237,
+      "departure_to_formal_seconds": 164.237,
+      "events": [
+        {
+          "stage": "2-2",
+          "kind": "start",
+          "receipt": "fb352114de4549088f5e368ffcfdb51c",
+          "receipt_mtime": 1791419995.3293529,
+          "event": "start",
+          "time": 1791419995.3293529
+        },
+        {
+          "stage": "2-2",
+          "kind": "departure",
+          "receipt": "24c83556c3be44e2bdc2b3cf8a0c0acb",
+          "receipt_mtime": 1791420080.6174462,
+          "event": "departure",
+          "time": 1791420080.6174462
+        },
+        {
+          "stage": "2-2",
+          "kind": "formal_win",
+          "receipt": "005991282042418caa01f3149fea5e30",
+          "receipt_mtime": 1791420244.854089,
+          "event": "formal_win",
+          "time": 1791420244.854089
+        }
+      ]
+    },
+    {
+      "stage": "2-3",
+      "prepare_seconds": null,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": null,
+      "departure_to_formal_seconds": null,
+      "events": [
+        {
+          "stage": "2-3",
+          "kind": "start",
+          "receipt": "e8cc85c224f44c84bb2c60006d411d38",
+          "receipt_mtime": 1791420301.9798436,
+          "event": "start",
+          "time": 1791420301.9798436
+        },
+        {
+          "stage": "2-3",
+          "kind": "supply",
+          "receipt": "41fd477c4cc346ae8f21591e8673cb3e",
+          "receipt_mtime": 1791420325.2346127,
+          "event": "supply",
+          "time": 1791420325.2346127
+        }
+      ]
+    },
+    {
+      "stage": "2-4",
+      "prepare_seconds": 247.611,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 178.73,
+      "departure_to_formal_seconds": 178.73,
+      "events": [
+        {
+          "stage": "2-4",
+          "kind": "start",
+          "receipt": "8b1e5f860ac84aa7a679954aa734f184",
+          "receipt_mtime": 1791420351.3681786,
+          "event": "start",
+          "time": 1791420351.3681786
+        },
+        {
+          "stage": "2-4",
+          "kind": "departure",
+          "receipt": "2d9cd2bba0f94beea0127ad7ee8c2eb0",
+          "receipt_mtime": 1791420598.9788072,
+          "event": "departure",
+          "time": 1791420598.9788072
+        },
+        {
+          "stage": "2-4",
+          "kind": "formal_win",
+          "receipt": "219321fd916547ac9799ef818060c45d",
+          "receipt_mtime": 1791420777.7091942,
+          "event": "formal_win",
+          "time": 1791420777.7091942
+        }
+      ]
+    },
+    {
+      "stage": "2-5",
+      "prepare_seconds": 238.964,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 205.024,
+      "departure_to_formal_seconds": 205.024,
+      "events": [
+        {
+          "stage": "2-5",
+          "kind": "start",
+          "receipt": "58300252e9f84b7eb45b55fe70805f71",
+          "receipt_mtime": 1791420838.8550508,
+          "event": "start",
+          "time": 1791420838.8550508
+        },
+        {
+          "stage": "2-5",
+          "kind": "departure",
+          "receipt": "7a7e34e48d414ee3917a925e76b0f682",
+          "receipt_mtime": 1791421077.8193498,
+          "event": "departure",
+          "time": 1791421077.8193498
+        },
+        {
+          "stage": "2-5",
+          "kind": "formal_win",
+          "receipt": "3562114b4d864f60b72469048ace35d8",
+          "receipt_mtime": 1791421282.8437948,
+          "event": "formal_win",
+          "time": 1791421282.8437948
+        }
+      ]
+    },
+    {
+      "stage": "2-6",
+      "prepare_seconds": 200.655,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 57.547,
+      "departure_to_formal_seconds": 57.547,
+      "events": [
+        {
+          "stage": "2-6",
+          "kind": "start",
+          "receipt": "59bab1d65c0148c6885df3d10c98f8df",
+          "receipt_mtime": 1791421336.9735138,
+          "event": "start",
+          "time": 1791421336.9735138
+        },
+        {
+          "stage": "2-6",
+          "kind": "departure",
+          "receipt": "630292bd60fa4daea80b62313e4583de",
+          "receipt_mtime": 1791421537.6286092,
+          "event": "departure",
+          "time": 1791421537.6286092
+        },
+        {
+          "id": "754a6c1efde94af6989589984e1e2a80",
+          "stage": "2-6",
+          "event": "formal_win",
+          "time": 1791421595.175786,
+          "receipt": "754a6c1efde94af6989589984e1e2a80"
+        }
+      ]
+    },
+    {
+      "stage": "2-7",
+      "prepare_seconds": 661.059,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": 187.055,
+      "departure_to_formal_seconds": 187.055,
+      "events": [
+        {
+          "id": "5a1f5a7d7eb041cfa7a9a3e5e11e7f57",
+          "stage": "2-7",
+          "event": "prepare_start",
+          "time": 1791421904.1337783,
+          "receipt": "5a1f5a7d7eb041cfa7a9a3e5e11e7f57"
+        },
+        {
+          "id": "bd3d223f80a64ca3a61e1fef48148993",
+          "stage": "2-7",
+          "event": "departure_approved",
+          "time": 1791422565.192504,
+          "receipt": "bd3d223f80a64ca3a61e1fef48148993"
+        },
+        {
+          "id": "7aec89f3ab5241ddac152d9d4e4f55da",
+          "stage": "2-7",
+          "event": "formal_win",
+          "time": 1791422752.2472565,
+          "receipt": "7aec89f3ab5241ddac152d9d4e4f55da"
+        }
+      ]
+    },
+    {
+      "stage": "3-1",
+      "prepare_seconds": 158.88,
+      "reward_clear_seconds": 109.907,
+      "reward_clear_to_depart_seconds": 48.973,
+      "battle_to_formal_seconds": 162.71,
+      "departure_to_formal_seconds": 162.71,
+      "events": [
+        {
+          "id": "4ed7b09520d44df48d4a69c1867c5aaf",
+          "stage": "3-1",
+          "event": "prepare_start",
+          "time": 1791422814.6035647,
+          "receipt": "4ed7b09520d44df48d4a69c1867c5aaf"
+        },
+        {
+          "id": "b357b989fec14bdd97d0f1e79b27f3cd",
+          "stage": "3-1",
+          "event": "rewards_cleared",
+          "time": 1791422924.5105257,
+          "receipt": "b357b989fec14bdd97d0f1e79b27f3cd"
+        },
+        {
+          "id": "9a9bbe3e9dd54d67b1d1764ad3a27872",
+          "stage": "3-1",
+          "event": "departure_approved",
+          "time": 1791422973.483999,
+          "receipt": "9a9bbe3e9dd54d67b1d1764ad3a27872"
+        },
+        {
+          "id": "5c4b9ef950f14107ac57b804a32e5c4d",
+          "stage": "3-1",
+          "event": "formal_loss",
+          "time": 1791423136.1943212,
+          "receipt": "5c4b9ef950f14107ac57b804a32e5c4d"
+        }
+      ]
+    },
+    {
+      "stage": "3-2",
+      "prepare_seconds": 147.979,
+      "reward_clear_seconds": 50.657,
+      "reward_clear_to_depart_seconds": 97.321,
+      "battle_to_formal_seconds": 203.361,
+      "departure_to_formal_seconds": 203.361,
+      "events": [
+        {
+          "id": "04ddb6dcb67541faa791f6dfcbb93692",
+          "stage": "3-2",
+          "event": "prepare_start",
+          "time": 1791423234.5760133,
+          "receipt": "04ddb6dcb67541faa791f6dfcbb93692"
+        },
+        {
+          "id": "8799da045eff4c24b5f8feb2121cc327",
+          "stage": "3-2",
+          "event": "rewards_cleared",
+          "time": 1791423285.2333379,
+          "receipt": "8799da045eff4c24b5f8feb2121cc327"
+        },
+        {
+          "id": "69e2f9c82518492ab3ac24311c400850",
+          "stage": "3-2",
+          "event": "departure_approved",
+          "time": 1791423382.554759,
+          "receipt": "69e2f9c82518492ab3ac24311c400850"
+        },
+        {
+          "id": "9b5546db5e0944818ab682019cb35fcb",
+          "stage": "3-2",
+          "event": "formal_loss",
+          "time": 1791423585.9153466,
+          "receipt": "9b5546db5e0944818ab682019cb35fcb"
+        }
+      ]
+    },
+    {
+      "stage": "3-3",
+      "prepare_seconds": null,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": null,
+      "departure_to_formal_seconds": null,
+      "events": [
+        {
+          "id": "650b2d8b90f6473ebc35500312067c6c",
+          "stage": "3-3",
+          "event": "supply_ready",
+          "time": 1791423656.431038,
+          "receipt": "650b2d8b90f6473ebc35500312067c6c"
+        }
+      ]
+    },
+    {
+      "stage": "3-4",
+      "prepare_seconds": 1426.986,
+      "reward_clear_seconds": 70.453,
+      "reward_clear_to_depart_seconds": 1356.533,
+      "battle_to_formal_seconds": null,
+      "departure_to_formal_seconds": null,
+      "events": [
+        {
+          "id": "3a2bf7818d2d402bae85ccb0774e6c23",
+          "stage": "3-4",
+          "event": "prepare_start",
+          "time": 1791423731.0316012,
+          "receipt": "3a2bf7818d2d402bae85ccb0774e6c23"
+        },
+        {
+          "id": "511c8a12caf646fb8b59bd7a976bf3e0",
+          "stage": "3-4",
+          "event": "reward_clear",
+          "time": 1791423801.484565,
+          "receipt": "511c8a12caf646fb8b59bd7a976bf3e0"
+        },
+        {
+          "id": "03018589d7da466385d3c46753c55b87",
+          "stage": "3-4",
+          "event": "departure_approved",
+          "time": 1791425158.0180497,
+          "receipt": "03018589d7da466385d3c46753c55b87"
+        },
+        {
+          "id": "d4e6f1184aeb42e49e264d6bd70c686a",
+          "stage": "3-4",
+          "event": "battle_input",
+          "time": 1791425181.3690894,
+          "receipt": "d4e6f1184aeb42e49e264d6bd70c686a"
+        }
+      ]
+    },
+    {
+      "stage": "3-5",
+      "prepare_seconds": null,
+      "reward_clear_seconds": null,
+      "reward_clear_to_depart_seconds": null,
+      "battle_to_formal_seconds": null,
+      "departure_to_formal_seconds": null,
+      "events": [
+        {
+          "id": "2598b4caf27f481d9a23589077d53373",
+          "stage": "3-5",
+          "event": "formal_loss",
+          "time": 1791425951.7988298,
+          "receipt": "2598b4caf27f481d9a23589077d53373"
+        }
+      ]
+    },
+    {
+      "stage": "3-6",
+      "prepare_seconds": 1057.051,
+      "reward_clear_seconds": 53.446,
+      "reward_clear_to_depart_seconds": 1003.605,
+      "battle_to_formal_seconds": 85.396,
+      "departure_to_formal_seconds": 129.507,
+      "events": [
+        {
+          "id": "3dc6664fcb714f77b9912a00f4525a27",
+          "stage": "3-6",
+          "event": "prepare_start",
+          "time": 1791426014.4073594,
+          "receipt": "3dc6664fcb714f77b9912a00f4525a27"
+        },
+        {
+          "id": "ac4b856990a34f51aa1d919b6b50721d",
+          "stage": "3-6",
+          "event": "reward_clear",
+          "time": 1791426067.8531375,
+          "receipt": "ac4b856990a34f51aa1d919b6b50721d"
+        },
+        {
+          "id": "6b5626452c1a4d85a77eb82297a9c8d9",
+          "stage": "3-6",
+          "event": "departure_approved",
+          "time": 1791427071.457957,
+          "receipt": "6b5626452c1a4d85a77eb82297a9c8d9"
+        },
+        {
+          "id": "d19d390d72e8483aa4381c8a9c0f9508",
+          "stage": "3-6",
+          "event": "battle_input",
+          "time": 1791427115.5684562,
+          "receipt": "d19d390d72e8483aa4381c8a9c0f9508"
+        },
+        {
+          "id": "7b60a7b4a207475caff4a22e2ed3a6c1",
+          "stage": "3-6",
+          "event": "formal_win",
+          "time": 1791427200.9646022,
+          "receipt": "7b60a7b4a207475caff4a22e2ed3a6c1"
+        }
+      ]
+    },
+    {
+      "stage": "3-7",
+      "prepare_seconds": 1280.767,
+      "reward_clear_seconds": 430.412,
+      "reward_clear_to_depart_seconds": 850.355,
+      "battle_to_formal_seconds": 319.603,
+      "departure_to_formal_seconds": 358.282,
+      "events": [
+        {
+          "id": "11f98bba6eaa4c9897ffca7b45042fbd",
+          "stage": "3-7",
+          "event": "preparation_started",
+          "time": 1791427294.543229,
+          "receipt": "11f98bba6eaa4c9897ffca7b45042fbd"
+        },
+        {
+          "id": "b810e735c6ce4b9ab7af1a00ce3a75d3",
+          "stage": "3-7",
+          "event": "reward_clear",
+          "time": 1791427724.9549155,
+          "receipt": "b810e735c6ce4b9ab7af1a00ce3a75d3"
+        },
+        {
+          "id": "a24c67854f3c4a289085ee704b075ebd",
+          "stage": "3-7",
+          "event": "departure_approved",
+          "time": 1791428575.3097942,
+          "receipt": "a24c67854f3c4a289085ee704b075ebd"
+        },
+        {
+          "id": "3480dcfe40ed4569b1944a22dcc3b4d1",
+          "stage": "3-7",
+          "event": "battle_input",
+          "time": 1791428613.989157,
+          "receipt": "3480dcfe40ed4569b1944a22dcc3b4d1"
+        },
+        {
+          "stage": "3-7",
+          "event": "formal_whole_match_win",
+          "receipt": "45b92f287bdf4f289a69c03146833285",
+          "time": 1791428933.5919974
+        }
+      ]
+    }
+  ],
+  "receipts": [
+    {
+      "id": "e85b3562ad83433bbb3dc7df31c7db21",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791418752.0785449
+    },
+    {
+      "id": "c31259e271e148b5b5d4f09dc564d708",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            795.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791418791.1320791
+    },
+    {
+      "id": "5e34fd87f55f496baa5a9bbfb5344a94",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            980.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791418833.8681693
+    },
+    {
+      "id": "a5633b922c594d0c90e2d7a230adce79",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1483.0,
+            397.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1337.0,
+            275.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1346.0,
+            407.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1420.0,
+            381.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1558.0,
+            329.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1576.0,
+            391.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791418877.4206922
+    },
+    {
+      "id": "8d42d4f7de8d4f2e8e0ec78d8ecfa87b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            941.0,
+            909.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791418936.3100204
+    },
+    {
+      "id": "a12a4f92bfe74406a12c073fe6448d81",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            955.0,
+            210.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            438.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419020.1449854
+    },
+    {
+      "id": "81f6efe6aea9451e96df53629ff83005",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            565.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            690.0,
+            910.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419067.7188852
+    },
+    {
+      "id": "c1db9fb8b27d4d5a8ffa4906a155b1c3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            887.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            887.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            980.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419111.3312569
+    },
+    {
+      "id": "d630fee2b8c74433a3fac8011cd3b5bb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1840.0,
+            193.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            980.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419152.928172
+    },
+    {
+      "id": "4ddafe9d54eb426e9221137f10603984",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            905.0,
+            480.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            980.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419195.9209926
+    },
+    {
+      "id": "d195fba568e04e798352bf2c744192f4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419279.864394
+    },
+    {
+      "id": "5f11e74bdbe2491393d37da82ba63d3e",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1810.0,
+            755.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419367.4036422
+    },
+    {
+      "id": "83cc3d864e9c4391b82d4f9b16f6cd08",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419630.5482738
+    },
+    {
+      "id": "d9de6766162e43569a02098adf35f063",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419653.877588
+    },
+    {
+      "id": "226380a1e1064a25b51cee9bee99b20f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            953.0,
+            961.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419670.7143068
+    },
+    {
+      "id": "8824c5ec633b4045815c26819dee3a57",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419686.744866
+    },
+    {
+      "id": "f3c546c336b3444e99eb283242684ffd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1590.0,
+            402.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1340.0,
+            279.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419702.277121
+    },
+    {
+      "id": "760017a56cd64d13ae61c9eaf3e19c28",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419735.4700463
+    },
+    {
+      "id": "7a39ae01a7444847a7d48cc96d63b311",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1066.0,
+            910.0,
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            1170.0,
+            396.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1685.0,
+            64.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419756.5612645
+    },
+    {
+      "id": "4aa1edccfed547a1a3610b6d57ac15d9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1361.0,
+            340.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419774.4182281
+    },
+    {
+      "id": "f8c61cc7296042cb93cd92b7232f1aa4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1379.0,
+            989.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419792.4560716
+    },
+    {
+      "id": "6f88ee1a707645cbbd85735c5f59fcbf",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1862.0,
+            65.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1590.0,
+            235.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419808.0746343
+    },
+    {
+      "id": "197deb097a56477d8eb9ce109820e37f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419841.621746
+    },
+    {
+      "id": "fff7cf127e7b4f7b8a1ef17159fe7fca",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419916.1965127
+    },
+    {
+      "id": "fb352114de4549088f5e368ffcfdb51c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791419995.3293529
+    },
+    {
+      "id": "893800ed6cb84e1a9947b2069b3ccb73",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1454.0,
+            493.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            958.0,
+            987.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420023.9342287
+    },
+    {
+      "id": "5f8ad906db734962859f9bd4ff88fb29",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420058.5922582
+    },
+    {
+      "id": "24c83556c3be44e2bdc2b3cf8a0c0acb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420080.6174462
+    },
+    {
+      "id": "a023509b0e174edcbbd490e75d34a5ad",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420116.5599115
+    },
+    {
+      "id": "005991282042418caa01f3149fea5e30",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420244.854089
+    },
+    {
+      "id": "e8cc85c224f44c84bb2c60006d411d38",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420301.9798436
+    },
+    {
+      "id": "41fd477c4cc346ae8f21591e8673cb3e",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420325.2346127
+    },
+    {
+      "id": "8b1e5f860ac84aa7a679954aa734f184",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            602.0,
+            485.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1702.0,
+            985.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420351.3681786
+    },
+    {
+      "id": "8ad111fd2eb24da2bd101ffec68fa647",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420389.5395334
+    },
+    {
+      "id": "eefb127fe8b34242bfcd0c4b99cdb663",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1491.0,
+            429.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.6
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420411.776774
+    },
+    {
+      "id": "d14018bc6c7146f2b9568aa852dde153",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1764.0,
+            193.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420439.417259
+    },
+    {
+      "id": "4e2ac19920104097b1d8782c69017ec4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1764.0,
+            191.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            563.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420483.053897
+    },
+    {
+      "id": "2da4791e0e79480892737a59cb2256d4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1766.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420523.0247753
+    },
+    {
+      "id": "ff8b6d19b3df4b508226b8a0369e7298",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420558.37151
+    },
+    {
+      "id": "2d9cd2bba0f94beea0127ad7ee8c2eb0",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1313.0,
+            665.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            423.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            347.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420598.9788072
+    },
+    {
+      "id": "49f4afb8d22e4e4faee60f9e9cccf32b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420643.5523775
+    },
+    {
+      "id": "219321fd916547ac9799ef818060c45d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420777.7091942
+    },
+    {
+      "id": "58300252e9f84b7eb45b55fe70805f71",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420838.8550508
+    },
+    {
+      "id": "feb25cf4274d4528adc771d22d809afe",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1250.0,
+            493.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            961.0,
+            898.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420871.1493523
+    },
+    {
+      "id": "fb2b98b40dc84fd9b39bec8ffe7e7615",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420909.2244656
+    },
+    {
+      "id": "3f392cc746f6412ab4f6a62744c3fff7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1563.0,
+            199.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420939.924
+    },
+    {
+      "id": "5a450d6f2e03431595bce4f60ffb9351",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791420965.1619406
+    },
+    {
+      "id": "865d6573c1f0460c8bc00c0caa363599",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            192.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421006.0244367
+    },
+    {
+      "id": "31d4cb61d59c4bbe81efcb5451069339",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421035.286858
+    },
+    {
+      "id": "7a7e34e48d414ee3917a925e76b0f682",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421077.8193498
+    },
+    {
+      "id": "b3fceba05b0741e0be22634c849b4a9b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421123.5737271
+    },
+    {
+      "id": "6b936892851c44849e164c6b3203f1cb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421219.2218065
+    },
+    {
+      "id": "3562114b4d864f60b72469048ace35d8",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421282.8437948
+    },
+    {
+      "id": "59bab1d65c0148c6885df3d10c98f8df",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421336.9735138
+    },
+    {
+      "id": "6cd03987baf4474f85c8ee7db94acef4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421370.8925717
+    },
+    {
+      "id": "fd53011c687e40d0b2a77a125a8fb024",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            194.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421453.14746
+    },
+    {
+      "id": "d0961f7e14074a709dc4f88019dc5bed",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            437.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421489.1824465
+    },
+    {
+      "id": "630292bd60fa4daea80b62313e4583de",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            437.0,
+            910.0,
+            1030.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421537.6286092
+    },
+    {
+      "id": "754a6c1efde94af6989589984e1e2a80",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421595.175786
+    },
+    {
+      "id": "e2eae20790eb4b0883e61298c7edf631",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            5.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421728.537116
+    },
+    {
+      "id": "75575b6548db43fa9e8d01fcee402401",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421856.224944
+    },
+    {
+      "id": "5a1f5a7d7eb041cfa7a9a3e5e11e7f57",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            795.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            7.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421904.1337783
+    },
+    {
+      "id": "f2cf61a70be04abaa0cc92b9b4647aff",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421949.2419248
+    },
+    {
+      "id": "b92a567af68447099fae0544ae557528",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1572.0,
+            358.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1524.0,
+            287.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1346.0,
+            291.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1419.0,
+            277.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1510.0,
+            320.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1515.0,
+            409.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1598.0,
+            420.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791421992.6723855
+    },
+    {
+      "id": "454436ccd69847d3a3c24b2eee049bc4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            437.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791422059.6787179
+    },
+    {
+      "id": "4b22df7e86da4995be31bceedf1350e1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            940.0,
+            912.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791422113.260955
+    },
+    {
+      "id": "c705f09dd084426e8508fc0142032077",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1245.0,
+            222.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            437.0,
+            910.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            437.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791422166.184772
+    },
+    {
+      "id": "ecc882b35bf241948d0d8bcf359f87b7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1298.0,
+            195.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791422213.211751
+    },
+    {
+      "id": "a27ff3064dd94f28bfc60a602f35f4b5",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791422455.6243658
+    },
+    {
+      "id": "be3a1175e74d453985e5a73d26a2c84f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1790.0,
+            264.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422481.2323098
+    },
+    {
+      "id": "88e552e222ba46699944af26c6baed9a",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1764.0,
+            191.0,
+            1846.0,
+            499.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.8
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422500.9815028
+    },
+    {
+      "id": "d12536c86f8e426eb8b13e3d7a293d11",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791422528.7205563
+    },
+    {
+      "id": "1dda80a52c284acb85d8d9723be480d3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            499.0,
+            746.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422546.6677306
+    },
+    {
+      "id": "bd3d223f80a64ca3a61e1fef48148993",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            499.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422565.192504
+    },
+    {
+      "id": "1010cd1036924f52b0fff7a3cffae40d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "scroll",
+          "args": [
+            1652.0,
+            48.0,
+            0.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422588.1343863
+    },
+    {
+      "id": "10a403adde084593b75a630bac10fe4d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422660.914778
+    },
+    {
+      "id": "8bf54018b2b146618c908b8b13b98aca",
+      "ok": true,
+      "completed": [
+        {
+          "type": "scroll",
+          "args": [
+            1652.0,
+            48.0,
+            0.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422692.6880045
+    },
+    {
+      "id": "c82ac7371aff4ec7bdfd90fd27b4b4cf",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1652.0,
+            48.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422709.5136752
+    },
+    {
+      "id": "7aec89f3ab5241ddac152d9d4e4f55da",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422752.2472565
+    },
+    {
+      "id": "8c3fff9d662a40fabd7d489675050be3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422790.5428536
+    },
+    {
+      "id": "4ed7b09520d44df48d4a69c1867c5aaf",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            962.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422814.6035647
+    },
+    {
+      "id": "dea51c63299c4de0adb40012df3b8fb4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1430.0,
+            354.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1450.0,
+            274.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422834.4080424
+    },
+    {
+      "id": "332a3ec114ec4750b83648df6c6b76d8",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            938.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422857.6800556
+    },
+    {
+      "id": "888c3d1d12a94e85881c1323cc7175fb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422880.698888
+    },
+    {
+      "id": "eae1f2439fbb412b99424ffb827f0158",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1430.0,
+            354.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422904.5386977
+    },
+    {
+      "id": "b357b989fec14bdd97d0f1e79b27f3cd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1450.0,
+            274.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422924.5105257
+    },
+    {
+      "id": "9a9bbe3e9dd54d67b1d1764ad3a27872",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            574.0,
+            1030.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            499.0,
+            887.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            424.0,
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            887.0,
+            665.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791422973.483999
+    },
+    {
+      "id": "dba0d691ad9743e899d6885b2df8cc51",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423056.2731714
+    },
+    {
+      "id": "5c4b9ef950f14107ac57b804a32e5c4d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423136.1943212
+    },
+    {
+      "id": "681f192b472943048de6242a6611f63d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            4.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423206.4739068
+    },
+    {
+      "id": "04ddb6dcb67541faa791f6dfcbb93692",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            495.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            984.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423234.5760133
+    },
+    {
+      "id": "4f47ae0f84cc4ec2a809e57e5e40cd01",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423258.4689877
+    },
+    {
+      "id": "8799da045eff4c24b5f8feb2121cc327",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423285.2333379
+    },
+    {
+      "id": "8fbb0cab7f344895800ee9a3057f39e7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            70
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            812.0,
+            910.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423319.1010604
+    },
+    {
+      "id": "ad78c2086c924808bc2e4f06e81fd23e",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            812.0,
+            910.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423355.4627502
+    },
+    {
+      "id": "69e2f9c82518492ab3ac24311c400850",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423382.554759
+    },
+    {
+      "id": "6b7a9c7c33a141d9ae7dc4588c4e0dc4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1812.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            18.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423429.026009
+    },
+    {
+      "id": "9b5546db5e0944818ab682019cb35fcb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791423585.9153466
+    },
+    {
+      "id": "ad0264e09d5b40e19a83217c2fae9882",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            4.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423626.7239528
+    },
+    {
+      "id": "650b2d8b90f6473ebc35500312067c6c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423656.431038
+    },
+    {
+      "id": "7e7be626e7b54e2e80e560744b3decbc",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            600.0,
+            470.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1695.0,
+            982.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423692.987006
+    },
+    {
+      "id": "3a2bf7818d2d402bae85ccb0774e6c23",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423731.0316012
+    },
+    {
+      "id": "cca70fb1d2be42d4bc10ac9b14dc4ef1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423764.2079904
+    },
+    {
+      "id": "511c8a12caf646fb8b59bd7a976bf3e0",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1480.0,
+            354.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.7
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423801.484565
+    },
+    {
+      "id": "cdbec283e0064947b2ab93700b5564e7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1190.0,
+            910.0,
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1190.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423852.0076573
+    },
+    {
+      "id": "b39982e8672045fdb1e76bd33874f42f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1190.0,
+            910.0,
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1190.0,
+            910.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423904.5370896
+    },
+    {
+      "id": "645ccf5d45d04e5e99fdc1cf997badcb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1190.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791423963.8278933
+    },
+    {
+      "id": "ee9d714584a34a45b6dd16ccf0c55179",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            938.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424037.6653988
+    },
+    {
+      "id": "98429e4ef3964963a52b1e3fee303453",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1060.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424071.2780905
+    },
+    {
+      "id": "17639c83b9fe499a89f0144e04598ec1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            812.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1846.0,
+            274.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424130.735495
+    },
+    {
+      "id": "7094e37204794db0922a20143885d2c5",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            424.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424185.3119116
+    },
+    {
+      "id": "f5c8dcea7a3b46fd86ce2575d10b58a9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424219.1377082
+    },
+    {
+      "id": "ec519470d7a74a4f9e699214ec1cdba3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424253.4755754
+    },
+    {
+      "id": "6efa73fc043d493599cdaf1814700e7d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424291.2313962
+    },
+    {
+      "id": "d44d005288c445a78808de1fd456dbbb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424325.8920498
+    },
+    {
+      "id": "c4554228ff4849bdb8ff587e423b1da4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1565.0,
+            260.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424365.3824975
+    },
+    {
+      "id": "35b54748ac124df0b19643411fc69207",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            260.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1295.0,
+            260.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424411.45959
+    },
+    {
+      "id": "ecbd4b8fe02a42ec8e460a2e64e4d203",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424452.5813303
+    },
+    {
+      "id": "098b5eff06454233823c0a120da0b7fb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            260.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1313.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424528.6645727
+    },
+    {
+      "id": "55fc654843354e32aaafa1acf6644103",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1313.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424567.821934
+    },
+    {
+      "id": "121e49947fcd4f1b8e13ddd656678ed0",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.3
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424664.8414047
+    },
+    {
+      "id": "7cdd09c254704954912407ab1c524bdc",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            760.0,
+            260.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791424727.4560037
+    },
+    {
+      "id": "a4c91e1103434b9fb1ab6c81834b61a9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425015.4644132
+    },
+    {
+      "id": "31dada233c1d46d4819a03500eba2c42",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1610.0,
+            65.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425041.4946175
+    },
+    {
+      "id": "5eaa2196c8834c74af1db513cbfeab86",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1180.0,
+            264.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425054.5953984
+    },
+    {
+      "id": "bebadc59cedf4ab79dd1f20ebbfacf65",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1864.0,
+            64.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1864.0,
+            64.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425083.8885527
+    },
+    {
+      "id": "df95ace42188459b92d73c5869994739",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1864.0,
+            64.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425098.2094328
+    },
+    {
+      "id": "77c9f3febdb64630ab85e2ea590e75bd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1439.0,
+            910.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1190.0,
+            910.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            688.0,
+            910.0,
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425119.964417
+    },
+    {
+      "id": "f49139db5065431380fd59e13107a028",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            191.0,
+            1439.0,
+            910.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            191.0,
+            1190.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425138.2409725
+    },
+    {
+      "id": "03018589d7da466385d3c46753c55b87",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            1313.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425158.0180497
+    },
+    {
+      "id": "d4e6f1184aeb42e49e264d6bd70c686a",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1804.0,
+            751.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425181.3690894
+    },
+    {
+      "id": "bf288643313e44698e166318aea4bdb2",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425224.177855
+    },
+    {
+      "id": "eb0b6aebe6964c99a13066f3d3e7b192",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425373.954452
+    },
+    {
+      "id": "def54536438242eca3f71b8cc2627ab0",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425398.0685363
+    },
+    {
+      "id": "805f0612b4ea47efab8a73294f020443",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425422.2976134
+    },
+    {
+      "id": "dd6c0f01c9f4495490bdc60d8e353e39",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            667.0,
+            500.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            900.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425446.631627
+    },
+    {
+      "id": "dc9da6d28053415199e8165bb4a8effa",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425488.839671
+    },
+    {
+      "id": "93c1b7d6711c4e38898978bb24473421",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            812.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425520.3836577
+    },
+    {
+      "id": "e3d26292cbaf4986a3c8606c9f75b8a8",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425543.7040365
+    },
+    {
+      "id": "8ee63125b98540f58db4167c59fb02b3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            205.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1287.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425564.7643545
+    },
+    {
+      "id": "ab4898f1a59c4066bafb022c4b4b19ff",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1015.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425591.485604
+    },
+    {
+      "id": "01430f66cced471983306d2d936b65fc",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425618.7571075
+    },
+    {
+      "id": "9458daa231a744fd9ea63b9e99aafba0",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425640.5390413
+    },
+    {
+      "id": "4dd0f489bda44f3ba7d891e62cce2d61",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425669.8665662
+    },
+    {
+      "id": "0e9892523f274ed5a1b5f6a9e34d333c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1804.0,
+            751.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425702.4496944
+    },
+    {
+      "id": "d5ef4892353646eca8348d52d9f502c3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425836.5319955
+    },
+    {
+      "id": "2598b4caf27f481d9a23589077d53373",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425951.7988298
+    },
+    {
+      "id": "64ce081c702b429f827b5b2d35ac60bb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            4.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791425985.5722597
+    },
+    {
+      "id": "3dc6664fcb714f77b9912a00f4525a27",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426014.4073594
+    },
+    {
+      "id": "a0b579cd8a7b49c0a01280b57d1eb8a2",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426041.4755018
+    },
+    {
+      "id": "ac4b856990a34f51aa1d919b6b50721d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1490.0,
+            295.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426067.8531375
+    },
+    {
+      "id": "316ac5ee13834ae9829f6cb415695dfc",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            812.0,
+            910.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426094.824877
+    },
+    {
+      "id": "0e2402e418554a19b08ef7a11da994f7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1030.0,
+            398.0,
+            938.0,
+            910.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1313.0,
+            910.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            887.0,
+            665.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1313.0,
+            665.0,
+            887.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            812.0,
+            910.0,
+            1173.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426156.6151357
+    },
+    {
+      "id": "85b2f62554e3436a9c0877a00ae0995c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1313.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            938.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426223.6680784
+    },
+    {
+      "id": "ebfe5e64d7cb4dee9e91e3cdc317970b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1168.0,
+            399.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426255.8324473
+    },
+    {
+      "id": "856d4e08686c4218881f7a414754ad25",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            760.0,
+            478.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            927.0,
+            399.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426288.440979
+    },
+    {
+      "id": "b614a2a59fd94481ad23d0082c835f27",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            760.0,
+            370.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1164.0,
+            250.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1490.0,
+            564.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426320.414104
+    },
+    {
+      "id": "f5bbc774ea6246fd996aa20a692242fc",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1158.0,
+            444.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426361.4142215
+    },
+    {
+      "id": "f3551edc446f4a20b47fbc220218be2a",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1040.0,
+            297.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1490.0,
+            599.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426393.2724473
+    },
+    {
+      "id": "3a127bd0ef154d828ce2a3feb5d41523",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1313.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            938.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426431.974166
+    },
+    {
+      "id": "3b02deb4e0e5410aab56d744c24b1956",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            688.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1190.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426470.4714932
+    },
+    {
+      "id": "c81ede44e2fe48efae8fa36a2c8dec73",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            577.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            502.0,
+            1173.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            424.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426521.987515
+    },
+    {
+      "id": "8a5776732ea24c618d9d3234384094d8",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426607.67499
+    },
+    {
+      "id": "eeb2eca76fa24682ab1d89cd5bb8bb7c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426641.3913898
+    },
+    {
+      "id": "5e3a7613506743acbe338b3cf93d7421",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426686.5000498
+    },
+    {
+      "id": "87309ed76fee472a93966b274d64f072",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426723.1751978
+    },
+    {
+      "id": "35ecea99d49f4b37abe6619f6dfe78fd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426773.9066184
+    },
+    {
+      "id": "991c0d6645ac49a692f1d149e580255a",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            750.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426813.1017854
+    },
+    {
+      "id": "427abb8ca91648078c58f9ccf1dffcc6",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426850.3004265
+    },
+    {
+      "id": "ad941aa5361a4a31bfe7ebf8ae69240c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426885.4527042
+    },
+    {
+      "id": "410c52691e9d4b8b9870a3421483bb62",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            191.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            191.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426936.2442253
+    },
+    {
+      "id": "c7eb0f70f4114e87b10e7743255c1dc1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            424.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            1173.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            191.0,
+            603.0,
+            665.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            887.0,
+            398.0,
+            745.0,
+            398.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            887.0,
+            398.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791426986.4646182
+    },
+    {
+      "id": "6b5626452c1a4d85a77eb82297a9c8d9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            745.0,
+            398.0,
+            1030.0,
+            398.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427071.457957
+    },
+    {
+      "id": "d19d390d72e8483aa4381c8a9c0f9508",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1804.0,
+            751.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427115.5684562
+    },
+    {
+      "id": "7b60a7b4a207475caff4a22e2ed3a6c1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427200.9646022
+    },
+    {
+      "id": "78a4e94c2233447697571a4539b16122",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            960.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427246.4813645
+    },
+    {
+      "id": "11f98bba6eaa4c9897ffca7b45042fbd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            950.0,
+            794.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427294.543229
+    },
+    {
+      "id": "3aefd761e85b451cbddd1e608b99f04e",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427345.92757
+    },
+    {
+      "id": "4e1de3135cae47fab286a3292dbe14bb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427667.547951
+    },
+    {
+      "id": "401b9ae67fad49f5952771c0f478ae5d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1342.0,
+            389.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427680.414657
+    },
+    {
+      "id": "a021759e0e2f40efa016d9ba3a80667f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1439.0,
+            397.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1569.0,
+            346.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1378.0,
+            280.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427695.1602063
+    },
+    {
+      "id": "0b3c6145a1da4459af208d2e5e17cba7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1501.0,
+            327.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427709.6796727
+    },
+    {
+      "id": "b810e735c6ce4b9ab7af1a00ce3a75d3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1530.0,
+            397.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            812.0,
+            910.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427724.9549155
+    },
+    {
+      "id": "bae1343448154f2aa1ff83b48a013c9c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            938.0,
+            910.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427741.8873322
+    },
+    {
+      "id": "adbc8da516e9444ea05c3bd14704346a",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1287.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427766.6053655
+    },
+    {
+      "id": "9d9908af521c4ee2a777c76f5c0e17db",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1846.0,
+            191.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427786.4748452
+    },
+    {
+      "id": "9d5e4f8648be4778b947c85248e9684b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            191.0,
+            1173.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427807.3620262
+    },
+    {
+      "id": "013d13e0718f4719a0329700464d4e4f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            949.0,
+            320.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427832.549229
+    },
+    {
+      "id": "2326e00847ab4a7182293595a9b90aa3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1861.0,
+            65.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            200.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427851.641579
+    },
+    {
+      "id": "fec859204405424ab89843def3ec6c42",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            349.0,
+            1173.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1768.0,
+            191.0,
+            1846.0,
+            274.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1846.0,
+            274.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427876.4296362
+    },
+    {
+      "id": "fb60c1536c03405ca203b5c55633e236",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1340.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1768.0,
+            191.0,
+            1846.0,
+            274.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1846.0,
+            274.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427904.328622
+    },
+    {
+      "id": "dba78e94a3bd4212876485d5e07a3bbd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1340.0,
+            550.0
+          ]
+        },
+        {
+          "type": "drag",
+          "args": [
+            1846.0,
+            274.0,
+            1030.0,
+            665.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427927.4695158
+    },
+    {
+      "id": "b7ef5d87197c4165adef53baaf42fa77",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427952.3488755
+    },
+    {
+      "id": "5296614a56794d6681bc46f374c92d5f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1287.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427973.8742647
+    },
+    {
+      "id": "e8a465af033146c7b44b59555cf738a1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791427995.8827696
+    },
+    {
+      "id": "46bb6461bcad4a588fed3009897d097f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428018.8509326
+    },
+    {
+      "id": "e2b0df28c5554ce5999150d73ed6a5c7",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428043.165432
+    },
+    {
+      "id": "ac6298399b6242beb3a3188c85f54c74",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428065.5460575
+    },
+    {
+      "id": "caf58fdfca804a1aaf0cf7aa0714ecad",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428085.5560155
+    },
+    {
+      "id": "e7a3389e882842afa948f912fe4b7980",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428105.2230449
+    },
+    {
+      "id": "66e80e3b556645e593b582f479ae175d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428129.5895014
+    },
+    {
+      "id": "a28ab7401f4041c4ab448d83c90d7dbb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428151.8018157
+    },
+    {
+      "id": "e4bc7d452aea455382bb5046254cf452",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428174.1748438
+    },
+    {
+      "id": "a0a43cec85fe4772a726aa3eebf11ce8",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            490.0,
+            205.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428201.1626296
+    },
+    {
+      "id": "4f0b70b50416498dabaf25d52a2e5687",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428226.8888552
+    },
+    {
+      "id": "d9e7dd8830c34ce58a637c862a0180f9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428250.978046
+    },
+    {
+      "id": "4a76c5bdcabf450ebcf1d42f029e965b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428279.7749913
+    },
+    {
+      "id": "e074d1aa32384552a3d29a8dbb69abab",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428309.4776268
+    },
+    {
+      "id": "aa697c9d95ec49f59fe32877707d0bc9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            437.0,
+            910.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1765.0,
+            916.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1364.0,
+            550.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428349.498538
+    },
+    {
+      "id": "25c14d6b3b9644039015faa578ed92de",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428379.3216352
+    },
+    {
+      "id": "958cc69ccce2405b9356c15583579869",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428409.6940038
+    },
+    {
+      "id": "edfd695eb5214f6596ff6b951a9682a2",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428436.6422956
+    },
+    {
+      "id": "64f93d028ba74308b665be0e2fcd8d8f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "key",
+          "args": [
+            68
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.4
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428466.2446618
+    },
+    {
+      "id": "4e247e7cf9864ee487b3937837106d2d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1620.0,
+            915.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428512.284349
+    },
+    {
+      "id": "1968fe3024dd4450999f249b74cc70e0",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1173.0,
+            398.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428544.4466712
+    },
+    {
+      "id": "a24c67854f3c4a289085ee704b075ebd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1340.0,
+            550.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428575.3097942
+    },
+    {
+      "id": "3480dcfe40ed4569b1944a22dcc3b4d1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1820.0,
+            750.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            6.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428613.989157
+    },
+    {
+      "id": "5e96f764c1eb40c5a8ab6af8995d7744",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428674.278779
+    },
+    {
+      "id": "421497791a0b46fb8c8b0046259f5da9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            15.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428786.2535884
+    },
+    {
+      "id": "825e48d4e7474e18889f9dd9054ef7e4",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            955.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            2.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428850.4281409
+    },
+    {
+      "id": "6f2f578927b44354a34e9a022a7765e1",
+      "ok": true,
+      "completed": [
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428887.742496
+    },
+    {
+      "id": "45b92f287bdf4f289a69c03146833285",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428933.5919974
+    },
+    {
+      "id": "86db9c2af95947e387ea5235fd718828",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791428970.6461515
+    },
+    {
+      "id": "b12aaedea3bd4ab0aa30b3a114c08904",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            895.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            3.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429015.0988295
+    },
+    {
+      "id": "7523e95b54d84b2bb44a4b9763412c7b",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1592.0,
+            457.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429062.2208762
+    },
+    {
+      "id": "de080c6cf66c46cab734d95fa0eb99c9",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            315.0,
+            574.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429103.5675247
+    },
+    {
+      "id": "4944cecef5434283a5df82635dcb13f3",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            790.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1860.0,
+            65.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1600.0,
+            291.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            1.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429158.617975
+    },
+    {
+      "id": "ef0a6b61ebe946ab81035d21c9bd3349",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            959.0,
+            840.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429200.9826214
+    },
+    {
+      "id": "a31ec35773414a9895b9f670f96629ae",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            956.0,
+            790.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1860.0,
+            65.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            154.0,
+            362.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429260.2927256
+    },
+    {
+      "id": "eea4541f394c4849aee7f72f29906229",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429307.2806063
+    },
+    {
+      "id": "576c3a9647df4ce9858f91831298c78d",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1840.0,
+            753.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429350.791054
+    },
+    {
+      "id": "9cbda0513e9745a7a9a4bfcbcc4ab8a8",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1840.0,
+            617.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429439.7262752
+    },
+    {
+      "id": "2814d5bfb35b4d82acd522dd3bed09bd",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1840.0,
+            434.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429488.636183
+    },
+    {
+      "id": "013901bf1b184874a73ee18f7413eb64",
+      "ok": true,
+      "completed": [
+        {
+          "type": "drag",
+          "args": [
+            1450.0,
+            250.0,
+            640.0,
+            250.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429537.8888588
+    },
+    {
+      "id": "f94799a62d19467db5ca1c21067113fe",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1214.0,
+            526.0
+          ]
+        },
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791429580.473242
+    },
+    {
+      "id": "59182d0fbbbe4c688bae6ecab52d953f",
+      "ok": true,
+      "completed": [
+        {
+          "type": "observe",
+          "args": []
+        }
+      ],
+      "error": null,
+      "time": 1791430059.1508114
+    },
+    {
+      "id": "e48c99f3b620430189c3b6570b865351",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1356.0,
+            385.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791430072.6663957
+    },
+    {
+      "id": "57f34741ec4f440ca6f98f20dd113d87",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1356.0,
+            664.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791430088.064226
+    },
+    {
+      "id": "9ccdfb2ce4aa4f679731ff5dbbe1a36c",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1356.0,
+            385.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1175.0,
+            525.0
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791430113.3262625
+    },
+    {
+      "id": "8ed1949fd80f44d7872c49573e697beb",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1499.0,
+            525.0
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791430132.8379288
+    },
+    {
+      "id": "fdc604e04d8640a7a9e2ec17ade4e260",
+      "ok": true,
+      "completed": [
+        {
+          "type": "click",
+          "args": [
+            1720.0,
+            935.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        },
+        {
+          "type": "click",
+          "args": [
+            1860.0,
+            65.0
+          ]
+        },
+        {
+          "type": "wait",
+          "args": [
+            0.5
+          ]
+        }
+      ],
+      "error": null,
+      "time": 1791430153.3577337
+    }
+  ],
+  "result": {
+    "rating": "A",
+    "hp": 51,
+    "rank": "投资大师5",
+    "settlement": "45b92f287bdf4f289a69c03146833285",
+    "dot4_reward": {
+      "jade": 40,
+      "promotion_points": 400
+    },
+    "promotion_level": 105,
+    "season_nodes": 28
+  }
+}
