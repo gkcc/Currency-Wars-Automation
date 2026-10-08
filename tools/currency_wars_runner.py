@@ -350,6 +350,10 @@ class ManualReviewDeferred(ValueError):
     """The identity is intact; a new current observation/review is still needed."""
 
 
+class RewardEffectPending(ValueError):
+    """Delivery is known; only the bounded read-only effect check may continue."""
+
+
 class GuardedSubmission:
     """Delegate unchanged Entry semantics; guard only its locked publication."""
     def __init__(self, control, guard, publication_span=None):
@@ -3136,7 +3140,7 @@ class Worker:
             if (not reward or action.get('type') != 'click_point'
                     or action.get('args') != reward.get('target', {}).get('center')
                     or physical != ['click:' + ':'.join(map(str, action['args']))]
-                    or reward.get('kind') not in ('close_shop', 'blue_orb')):
+                    or reward.get('kind') not in ('close_shop', 'blue_orb', 'gray_orb')):
                 raise ValueError('本地领奖意图没有当前单控件pending；旧球坐标不发布')
             return self.guard_reward_step(reward, observed)
         if action.get('purpose') == 'reward_capacity':
@@ -3432,7 +3436,11 @@ class Worker:
         try:
             observed = self.read_frame(result, scope=read_scope)
         except entry.ObservationUnavailable:
-            observed = self.observe(scope=read_scope)
+            # This fallback is part of the SAME reward's two-read budget.
+            # Original input delivery must be known before a successor frame
+            # replaces the broker notification; observe never repeats input.
+            observed = (self.observe_reward_result(reward) if reward is not None
+                        else self.observe(scope=read_scope))
         self.log({'event': 'actual_result', 'decision_id': rid, 'page': observed['page'],
                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
                   'after_evidence': after, 'expected_change': postcondition,
@@ -3967,8 +3975,11 @@ class Worker:
         """Same submission lock as command; this does not make screen/input atomic."""
         before, latest = pending['before'], optional(self.run / 'result.json') or {}
         stored = optional(self.run / 'reward-step.json') or {}
+        frame = (getattr(self, 'frame_result', None) or {}).get('observation', {})
         if (stored.get('step_id') != pending['step_id'] or stored.get('request_id') != pending['request_id']
-                or any(stored.get(key) != pending.get(key) for key in ('before', 'target', 'match_id', 'resume_epoch', 'kind'))
+                or any(stored.get(key) != pending.get(key) for key in ('before', 'target', 'match_id', 'resume_epoch',
+                    'kind', 'source', 'roi_evidence', 'manual_step_id'))
+                or pending.get('publication_attempted') is not False
                 or pending['match_id'] != self.active_match_id or not pending['resume_epoch']
                 or pending['resume_epoch'] != self.epoch()
                 or self.preparation_checklist(observed)['phase'] != 'rewards'
@@ -3976,65 +3987,154 @@ class Worker:
                 or any(observed.get(key) != before['observation'].get(key)
                        for key in ('page', 'snapshot_id', 'capture_request_id', 'frame_id'))
                 or latest.get('id') != observed.get('capture_request_id')
+                or frame.get('request_id') != observed.get('capture_request_id')
+                or frame.get('frame_id') != observed.get('frame_id')
+                or frame.get('snapshot_sha256') != observed.get('snapshot_id')
                 or hashlib.sha256(self.frame_path.read_bytes()).hexdigest() != observed['snapshot_id']
                 or hashlib.sha256(Path(pending['before_png']).read_bytes()).hexdigest() != observed['snapshot_id']
                 or self.pending_reward_capacity()):
             raise ValueError('领奖发布前帧/阶段/epoch/原pending已变化，未提交')
+        if pending.get('source') == 'supervising_agent':
+            from currency_wars_rewards import stable_reward_target
+            context = getattr(self, 'manual_step_context', None) or {}
+            evidence = pending.get('roi_evidence')
+            request = self.state.get('decision_request') or {}
+            if (not manual_steps.active(self) or context.get('step_id') != pending.get('manual_step_id')
+                    or context.get('payload', {}).get('reply') != {'reward_roi': evidence}):
+                raise ValueError('单球标注没有当前ManualPhase单次意图，未提交')
+            manual_steps.validate_reward_roi(evidence, request, context['binding'],
+                                             context['payload']['checkpoint_id'])
+            if (any(pending['target'].get(key) != evidence.get(key) for key in ('kind', 'bounds', 'center'))
+                    or not stable_reward_target(request['observation'], observed,
+                        Path(request['original_png']).read_bytes(), self.frame_path.read_bytes(), pending['target'])):
+                raise ValueError('主管单球的原帧/当前目标暴露或位置改变，未提交')
+
+    def reward_delivery(self, pending):
+        """The original one-input receipt, never a replacement or inferred result."""
+        if (pending.get('match_id') != self.active_match_id or pending.get('resume_epoch') != self.epoch()
+                or not pending.get('request_id') or pending.get('publication_attempted') is not True):
+            raise ValueError('领奖原请求/match/epoch未决，保持pending且不重发')
+        self.verify_economy_fence(pending)
+        item = await_existing_receipt(self.run, self.c, pending['request_id'], 0)
+        delivery = manual_receipt_state(item)
+        if (delivery['unknown_input'] or delivery['state'] != 'completed'
+                or item['result'].get('ok') is not True
+                or len([a for a in item['request']['actions'] if a['type'] not in ('wait', 'observe')]) != 1):
+            raise ValueError('领奖原回执不是一笔完整确定输入，保持pending且不重发')
+        return item
+
+    def observe_reward_result(self, pending):
+        """Spend one persistent read-only attempt, including a missing result frame."""
+        with self.c.submission_lock():
+            self.reward_delivery(pending)  # BEFORE any successor capture.
+            stored = optional(self.run / 'reward-step.json') or {}
+            if (stored.get('step_id') != pending.get('step_id')
+                    or stored.get('request_id') != pending.get('request_id')
+                    or stored.get('verification_reads', 0) != pending.get('verification_reads', 0)
+                    or pending.get('verification_reads', 0) >= 2 or time.monotonic() >= self.deadline
+                    or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
+                raise ValueError('领奖两次只读核效预算/停止期限已到；原输入保持待验，不重发')
+            pending['verification_reads'] = pending.get('verification_reads', 0) + 1
+            self.save_reward_step(pending)  # Failed reads/crashes never refund the budget.
+            with self.profile_span('reward_effect_observe', operation='rules', business_step=pending['kind'],
+                                   request_id=pending['request_id']):
+                return self.observe(scope='rewards', max_attempts=1)
+
+    def verify_reward_effect(self, pending, observed):
+        """A receipt and stable visual result are separate obligations."""
+        while True:
+            try:
+                self.reconcile_reward_step(pending, observed)
+                return self.last_observation
+            except RewardEffectPending as exc:
+                pending['reason'] = str(exc)
+                self.save_reward_step(pending)
+                observed = self.observe_reward_result(pending)
 
     def reconcile_reward_step(self, pending, observed):
         """Verify one control effect. No absent-orb inference clears a phase."""
         with self.c.submission_lock():
-            if (pending['match_id'] != self.active_match_id or pending['resume_epoch'] != self.epoch()
-                    or canonical_stage(observed.get('fields', {}).get('stage')) != pending['before']['stage']):
+            if pending['match_id'] != self.active_match_id or pending['resume_epoch'] != self.epoch():
                 raise ValueError('领奖后页面/节点/epoch变化，原效果待复核')
-            self.verify_economy_fence(pending)  # The existing original-request/read-only-successor fence.
-            item = await_existing_receipt(self.run, self.c, pending['request_id'], 0)
-            delivery = manual_receipt_state(item)
-            if (delivery['unknown_input'] or delivery['state'] != 'completed'
-                    or item['result'].get('ok') is not True
-                    or len([a for a in item['request']['actions'] if a['type'] not in ('wait', 'observe')]) != 1):
-                raise ValueError('领奖原回执不是一笔完整确定输入，保持pending且不重发')
+            item = self.reward_delivery(pending)
             frame = self.frame_result.get('observation', {})
             latest = optional(self.run / 'result.json') or {}
             if (latest.get('id') != observed.get('capture_request_id')
                     or frame.get('request_id') != observed.get('capture_request_id')
                     or frame.get('frame_id') != observed.get('frame_id')
                     or frame.get('snapshot_sha256') != observed['snapshot_id']
+                    or observed.get('capture_request_id') in pending['prior_receipt_ids']
+                    or observed.get('frame_id') == pending['before']['observation'].get('frame_id')
                     or hashlib.sha256(self.frame_path.read_bytes()).hexdigest() != observed['snapshot_id']):
                 raise ValueError('领奖后图不是当前不可变同请求帧，保持pending')
-            path = self.records / ('reward-step-' + pending['step_id'] + '-after.png')
-            path.write_bytes(self.frame_path.read_bytes())
+            capture = await_existing_receipt(self.run, self.c, observed['capture_request_id'], 0)
+            descriptor = (capture.get('result') or {}).get('observation') or {}
+            if (descriptor.get('request_id') != observed['capture_request_id']
+                    or descriptor.get('frame_id') != observed['frame_id']
+                    or descriptor.get('snapshot_sha256') != observed['snapshot_id']):
+                raise ValueError('领奖后图与其原生回执帧身份不同；保持pending')
+            if observed['capture_request_id'] != pending['request_id'] and (
+                    any(a.get('type') not in ('observe', 'wait') for a in capture['request'].get('actions', []))
+                    or manual_receipt_state(capture)['unknown_input']):
+                raise ValueError('领奖后图不属于原输入或明确只读后继，保持pending')
+            path = self.records / ('reward-step-' + pending['step_id'] + '-after-'
+                + hashlib.sha256(observed['capture_request_id'].encode()).hexdigest()[:16] + '-'
+                + observed['snapshot_id'][:16] + '.png')
+            data = self.frame_path.read_bytes()
+            if path.exists():
+                if path.read_bytes() != data:
+                    raise ValueError('领奖不可变后图已存在且字节冲突；不覆盖')
+            else:
+                with path.open('xb') as stream:
+                    stream.write(data)
             after_coins, before_coins = self.reward_coins(observed), pending['before']['coins']
             scan = observed.get('semantic', {}).get('rewards', {})
             pending.update(after_png=str(path), after_snapshot_id=observed['snapshot_id'],
                            after_capture_request_id=observed.get('capture_request_id'),
                            after_coins=after_coins, receipt=redact(item['result']))
+            frames = pending.setdefault('verification_frames', [])
+            if not any(value['capture_request_id'] == observed['capture_request_id'] for value in frames):
+                if len(frames) >= 3:
+                    raise ValueError('领奖后图有界归档已满；不重置核效预算')
+                frames.append({'capture_request_id': observed['capture_request_id'], 'frame_id': observed['frame_id'],
+                    'snapshot_id': observed['snapshot_id'], 'png': str(path),
+                    'relation': 'original_input' if observed['capture_request_id'] == pending['request_id']
+                        else 'read_only_successor'})
             self.save_reward_step(pending)
+            stage = canonical_stage(observed.get('fields', {}).get('stage'))
+            if stage is not None and stage != pending['before']['stage']:
+                raise ValueError('领奖后页面/节点变化，废弃本批后续目标')
+            if stage is None or observed.get('page') == 'unknown':
+                raise RewardEffectPending('领奖后当前节点/页面未知；只读有界核效')
             if after_coins is None or before_coins is None or after_coins < before_coins:
                 raise ValueError('免费领奖/收店后的金币未知或下降，不能记0实花或继续')
-            if (observed.get('page') != 'preparation' or scan.get('snapshot_id') != observed['snapshot_id']
-                    or scan.get('scanned') is not True or scan.get('uncertain')
-                    or scan.get('area_fully_visible') is not True or scan.get('interaction_required')):
+            if observed.get('page') != 'preparation' or scan.get('interaction_required'):
                 raise ValueError('领奖后有选择/遮挡或扫描未知；只回传当前证据')
             if pending['kind'] == 'close_shop':
-                if after_coins != before_coins:
-                    raise ValueError('收店后金币变化，不能归为纯导航')
+                if (after_coins != before_coins or scan.get('snapshot_id') != observed['snapshot_id']
+                        or scan.get('scanned') is not True or scan.get('uncertain')
+                        or scan.get('area_fully_visible') is not True):
+                    raise ValueError('收店后金币/暴露页面未核，不能归为纯导航')
                 effect = 'shop_collapsed'
             else:
-                before_targets = pending['before']['observation']['semantic']['rewards']['targets']
-                remaining = [target for target in before_targets if target != pending['target']]
-                after_targets = list(scan['targets'])
-                if len(after_targets) != len(before_targets) - 1:
-                    raise ValueError('单次领奖后控件数量未恰好减少1；组回执或缺中间图不能拆成功')
-                for target in remaining:
-                    matches = [other for other in after_targets if other['template_id'] == target['template_id']
-                               and max(abs(a-b) for a, b in zip(other['center'], target['center'])) <= 8]
-                    if len(matches) != 1:
-                        raise ValueError('未点击控件的后图身份/位置不明，不能用旧位置消失证明领取')
-                    after_targets.remove(matches[0])
+                from currency_wars_rewards import target_effect, stable_absence
+                evidence = target_effect(pending['before']['observation'], observed,
+                    Path(pending['before_png']).read_bytes(), data, pending['target'])
+                frames[-1]['effect_evidence'] = evidence
+                previous = pending.pop('absence_candidate', None)
+                if evidence.get('state') != 'absent':
+                    self.save_reward_step(pending)
+                    raise RewardEffectPending('单目标仍可见/移动/暴露未知；只读有界核效：' + str(evidence.get('reason')))
+                if (not previous or not stable_absence(previous['observation'], observed,
+                        Path(previous['png']).read_bytes(), data, pending['target'])):
+                    pending['absence_candidate'] = {'png': str(path), 'observation': copy.deepcopy(observed)}
+                    self.save_reward_step(pending)
+                    raise RewardEffectPending('单目标消失尚缺第二张独立稳定后图；不重发点击')
+                pending['effect_contract'] = 'single_exposed_orb_absent_two_frames/v1'
                 effect = 'one_visible_orb_removed'
             pending.update(status='verified', outcome=effect, observed_coin_delta=after_coins-before_coins,
                            all_rewards_cleared=None, verified_at=now())
+            pending.pop('reason', None)
             self.save_reward_step(pending)
         self.node_progress = getattr(self, 'node_progress', 0) + 1
         self.log({'event': 'reward_control_effect', 'business_step': pending['kind'],
@@ -4047,6 +4147,45 @@ class Worker:
         with self.profile_span('reward_scan', operation='rules', business_step='reward_scan',
                                snapshot_id=observed.get('snapshot_id')):
             return self._advance_rewards(observed)
+
+    def collect_reward_roi(self, evidence):
+        """One explicitly supervised current ROI through the existing reward intent.
+
+        Native targets/unknown are preserved. This is not an arbitrary-point
+        plan, a permanent location profile, or permission for a second input.
+        """
+        if not manual_steps.active(self):
+            raise ValueError('主管单球救援只接受当前Worker的manual-step/ManualPhase')
+        context = self.manual_step_context
+        request = self.state.get('decision_request') or {}
+        manual_steps.validate_reward_roi(evidence, request, context['binding'],
+                                         context['payload']['checkpoint_id'])
+        if self.pending_reward_step(self.last_observation) or self.pending_reward_capacity():
+            raise ValueError('已有领奖输入/效果pending；只核原ID，不发布第二球')
+        target = {key: copy.deepcopy(evidence[key]) for key in ('kind', 'bounds', 'center')}
+        target.update(source='supervising_agent', template_id='supervised_current_roi',
+                      snapshot_id=evidence['snapshot_id'])
+        old_png = Path(request['original_png']).read_bytes()
+        with self.observation_input_lease():
+            if manual_steps.unknown_receipts(self.run, self.c):
+                raise ValueError('原输入交付未知；先对账原ID，不以新帧代替交付')
+            fresh = self.observe(scope='rewards')
+            from currency_wars_rewards import stable_reward_target
+            if not stable_reward_target(request['observation'], fresh, old_png,
+                                        self.frame_path.read_bytes(), target):
+                manual_steps._ask_current(self)
+                raise ValueError('主管单球的页面/布局/暴露/位置或来源已变；废弃旧坐标，零输入')
+            if self.reward_coins(fresh) is None:
+                manual_steps._ask_current(self)
+                raise ValueError('当前领奖金币HUD未知，不能核免费动作；零输入')
+            # The explicit pending rewards checkpoint restarts only the
+            # preparation reviews, never a budget, strategy, or battle approval.
+            self.preparation_scope = (self.active_match_id, evidence['stage'], self.epoch())
+            self.preparation_reviews = {}
+            self.economy_binding = None
+            self.context['economy_plan'] = None
+            target['snapshot_id'] = fresh['snapshot_id']
+            return self._execute_reward_target(fresh, target, roi_evidence=evidence)
 
     @contextlib.contextmanager
     def observation_input_lease(self):
@@ -4129,12 +4268,27 @@ class Worker:
         coins = self.reward_coins(observed)
         if coins is None:
             return self.last_observation
+        return self._execute_reward_target(observed, target)
+
+    def _execute_reward_target(self, observed, target, *, roi_evidence=None):
+        """One physical target, one immutable receipt, at most two effect reads."""
+        coins = self.reward_coins(observed)
+        if coins is None:
+            raise ValueError('当前绑定金币未知，未提交领奖')
         step_id = uuid.uuid4().hex
         before_png = self.records / ('reward-step-' + step_id + '-before.png')
-        before_png.write_bytes(self.frame_path.read_bytes())
+        data = self.frame_path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != observed.get('snapshot_id'):
+            raise ValueError('当前领奖源PNG字节不符，未提交')
+        with before_png.open('xb') as stream:
+            stream.write(data)
         pending = {'step_id': step_id, 'kind': target['kind'], 'match_id': self.active_match_id,
                    'resume_epoch': self.epoch(), 'status': 'pending', 'outcome': 'unknown',
                    'request_id': None, 'publication_attempted': False, 'target': target,
+                   'source': 'supervising_agent' if roi_evidence is not None else 'native_reader',
+                   'roi_evidence': copy.deepcopy(roi_evidence),
+                   'manual_step_id': (getattr(self, 'manual_step_context', None) or {}).get('step_id'),
+                   'verification_reads': 0, 'verification_frames': [],
                    'before_png': str(before_png), 'prior_receipt_ids': self.economy_receipt_watermark(),
                    'before': {'stage': canonical_stage(observed['fields']['stage']), 'coins': coins,
                               'observation': copy.deepcopy(observed)}, 'all_rewards_cleared': None}
@@ -4145,13 +4299,15 @@ class Worker:
                                    snapshot_id=observed['snapshot_id']):
                 point = target['center']
                 after = self.command([f'click:{point[0]}:{point[1]}', 'wait:0.7'],
-                    '当前单个收店/蓝球控件；后图验证后再定位下一目标', observed['page'],
+                    '当前单个收店/奖励球控件；稳定后图验证后再定位下一目标', observed['page'],
                     '单控件效果，不代表全部领空', action={'type': 'click_point', 'purpose': 'local_reward',
                         'args': point, 'expected_page': observed['page']}, read_scope='rewards')
-                if target['kind'] == 'blue_orb':
+                if target['kind'] in ('blue_orb', 'gray_orb'):
                     self.invalidate_preparation('inventory')
-                self.reconcile_reward_step(pending, after)
-        except (ValueError, RuntimeError) as exc:
+                self.verify_reward_effect(pending, after)
+        except (ValueError, RuntimeError, OSError) as exc:
+            if pending.get('publication_attempted') and target['kind'] in ('blue_orb', 'gray_orb'):
+                self.invalidate_preparation('inventory')
             pending['reason'] = str(exc)
             if pending.get('publication_attempted') is False:
                 pending.update(status='refused', outcome='not_published')
@@ -5322,8 +5478,10 @@ class Worker:
                 'reason': '奖励已领空，进入第二创业指南核对章节任务；执行前仍须双帧图标验证'}]
         return decision
 
-    def observe(self, *, scope='full'):
-        for attempt in range(2):
+    def observe(self, *, scope='full', max_attempts=2):
+        if type(max_attempts) is not int or not 1 <= max_attempts <= 2:
+            raise ValueError('observation retry count must be bounded to one or two')
+        for attempt in range(max_attempts):
             rid = uuid.uuid4().hex
             self.worker_request_ids = getattr(self, 'worker_request_ids', set())
             self.worker_request_ids.add(rid)
@@ -5338,7 +5496,7 @@ class Worker:
             except entry.ObservationUnavailable as exc:
                 self.log({'event': 'observation_unavailable', 'request_id': rid,
                           'attempt': attempt + 1, 'reason': str(exc), 'input_resent': False})
-                if attempt or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists():
+                if attempt + 1 == max_attempts or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists():
                     raise
 
     def click_text(self, observed, label, reason, exact=True, bounds=None):

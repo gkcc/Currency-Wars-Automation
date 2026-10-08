@@ -81,6 +81,14 @@
       "required_files": [
         "blue-orb-q01.png"
       ]
+    },
+    {
+      "path": "tools/reward_resources/native-orbs-sources.json",
+      "layout": "resources",
+      "required_files": [
+        "initial-blue.png",
+        "initial-gray.png"
+      ]
     }
   ],
   "resource_files": [
