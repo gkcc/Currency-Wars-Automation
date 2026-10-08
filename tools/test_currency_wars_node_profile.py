@@ -79,56 +79,80 @@ class NodeProfileTests(unittest.TestCase):
             self.assertEqual({span['timing_source'] for span in engines}, {'perception_read'})
 
     def test_invalid_or_reused_timing_cannot_fill_the_parent_window(self):
-        faults = ('snapshot', 'request', 'request_missing', 'clock', 'scope', 'parent_closed', 'before_parent',
-                  'overlap', 'future', 'cached_interval', 'duplicate', 'timer_error')
-        for fault in faults:
-            with self.subTest(fault=fault), tempfile.TemporaryDirectory() as directory:
-                recorder = ProfileRecorder(directory, run_id='fixture', enabled=True)
-                recorder.set_context(match_id='match', stage='1-1')
-                snapshot, read_id = 'a' * 64, 'b' * 32
-                parent = recorder.start_span('perception', operation='perception',
-                    request_id='request', snapshot_id=snapshot)
-                start = perception.time.monotonic_ns()
-                end = perception.time.monotonic_ns()
-                timing = {'schema': perception.PERCEPTION_TIMING_SCHEMA, 'read_id': read_id,
-                    'snapshot_id': snapshot, 'clock': 'same_process_monotonic',
-                    'ocr_scope': 'perception_engine_calls', 'error': None,
-                    'start_ns': start, 'end_ns': end,
-                    'ocr_intervals': [{'start_ns': start, 'end_ns': end, 'outcome': 'returned'}]}
-                kwargs = {'parent_id': parent, 'request_id': 'request', 'snapshot_id': snapshot}
-                if fault == 'snapshot':
-                    timing['snapshot_id'] = 'c' * 64
-                elif fault == 'request':
-                    kwargs['request_id'] = 'other'
-                elif fault == 'request_missing':
-                    recorder._spans[parent]['request_id'] = None
-                    kwargs['request_id'] = None
-                elif fault == 'clock':
-                    timing['clock'] = 'other_machine'
-                elif fault == 'scope':
-                    timing['ocr_scope'] = 'all_engines_inferred'
-                elif fault == 'parent_closed':
-                    recorder.end_span(parent)
-                elif fault == 'before_parent':
-                    timing['start_ns'] = 0
-                elif fault == 'overlap':
-                    timing['ocr_intervals'] *= 2
-                elif fault == 'future':
-                    timing['end_ns'] += 10**18
-                elif fault == 'cached_interval':
-                    timing['cache_hit'] = True
-                elif fault == 'duplicate':
-                    self.assertEqual(len(recorder.record_perception_timing(timing, **kwargs)), 1)
-                else:
-                    timing['error'] = 'monotonic_clock_unavailable'
-                self.assertEqual(recorder.record_perception_timing(timing, **kwargs), [])
-                recorder.end_span(parent)
-                recorder.close()
+        scenarios = ('snapshot', 'request', 'request_missing', 'clock', 'scope', 'parent_closed', 'before_parent',
+                     'overlap', 'future', 'cached_interval', 'duplicate', 'timer_error', 'valid_zero_span')
+        for scenario in scenarios:
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
+                clock = {'now': 1_000_000_000}
+                with patch('currency_wars_profile.time.monotonic_ns', side_effect=lambda: clock['now']):
+                    recorder = ProfileRecorder(directory, run_id='fixture', enabled=True)
+                    try:
+                        recorder.set_context(match_id='match', stage='1-1')
+                        snapshot, read_id = 'a' * 64, 'b' * 32
+                        parent = recorder.start_span('perception', operation='perception',
+                            request_id='request', snapshot_id=snapshot)
+                        # Explicit positive intervals: consecutive clock reads may be equal on Windows.
+                        start, end = 2_000_000_000, 3_000_000_000
+                        clock['now'] = 4_000_000_000
+                        timing = {'schema': perception.PERCEPTION_TIMING_SCHEMA, 'read_id': read_id,
+                            'snapshot_id': snapshot, 'clock': 'same_process_monotonic',
+                            'ocr_scope': 'perception_engine_calls', 'error': None,
+                            'start_ns': start, 'end_ns': end,
+                            'ocr_intervals': [{'start_ns': start, 'end_ns': end, 'outcome': 'returned'}]}
+                        kwargs = {'parent_id': parent, 'request_id': 'request', 'snapshot_id': snapshot}
+                        if scenario == 'snapshot':
+                            timing['snapshot_id'] = 'c' * 64
+                        elif scenario == 'request':
+                            kwargs['request_id'] = 'other'
+                        elif scenario == 'request_missing':
+                            recorder._spans[parent]['request_id'] = None
+                            kwargs['request_id'] = None
+                        elif scenario == 'clock':
+                            timing['clock'] = 'other_machine'
+                        elif scenario == 'scope':
+                            timing['ocr_scope'] = 'all_engines_inferred'
+                        elif scenario == 'parent_closed':
+                            recorder.end_span(parent)
+                        elif scenario == 'before_parent':
+                            timing['start_ns'] = 0
+                        elif scenario == 'overlap':
+                            timing['ocr_intervals'] *= 2
+                        elif scenario == 'future':
+                            timing['end_ns'] += 10**18
+                        elif scenario == 'cached_interval':
+                            timing['cache_hit'] = True
+                        elif scenario == 'duplicate':
+                            self.assertEqual(len(recorder.record_perception_timing(timing, **kwargs)), 1)
+                        elif scenario == 'timer_error':
+                            timing['error'] = 'monotonic_clock_unavailable'
+                        else:
+                            # Two calls at one clock tick are legal, with no measured OCR time.
+                            timing['end_ns'] = start
+                            timing['ocr_intervals'][0]['end_ns'] = start
+                            timing['ocr_intervals'] *= 2
+                        imported = recorder.record_perception_timing(timing, **kwargs)
+                        if scenario == 'valid_zero_span':
+                            self.assertEqual(len(imported), 2)
+                            self.assertEqual(len(set(imported)), 2)
+                        else:
+                            self.assertEqual(imported, [])
+                        recorder.end_span(parent)
+                    finally:
+                        # Release the JSONL handle before TemporaryDirectory exits, even on assertion failure.
+                        recorder.close()
                 events, issues = read_events([recorder.path])
                 report = summarize_events(events, issues)
-                self.assertEqual([issue['reason'] for issue in report['issues']], ['unverified_perception_timing'])
-                self.assertEqual(len([span for span in report['spans'] if span['operation'] == 'ocr_engine']),
-                                 1 if fault == 'duplicate' else 0)
+                engines = [span for span in report['spans'] if span['operation'] == 'ocr_engine']
+                if scenario == 'valid_zero_span':
+                    self.assertEqual(report['issues'], [])
+                    self.assertEqual(len(engines), 2)
+                    self.assertTrue(all(span['inclusive_seconds'] == span['exclusive_seconds'] == 0
+                                        for span in engines))
+                    self.assertEqual(report['nodes'][0]['operation_seconds']['ocr_engine'], 0)
+                    self.assertEqual(report['nodes'][0]['operation_seconds']['perception'], 3)
+                else:
+                    self.assertEqual([issue['reason'] for issue in report['issues']], ['unverified_perception_timing'])
+                    self.assertEqual(len(engines), 1 if scenario == 'duplicate' else 0)
 
     def test_cache_and_primary_reuse_record_only_this_read_actual_calls(self):
         with declared_reader('shop') as (reader, path):
@@ -194,25 +218,45 @@ class NodeProfileTests(unittest.TestCase):
                                                event('span_end', 'old', 10)])
         self.assertEqual(legacy['nodes'][0]['operation_seconds']['ocr'], 10)
         self.assertEqual(legacy['nodes'][0]['operation_seconds']['ocr_engine'], 0)
-        with tempfile.TemporaryDirectory() as directory:
-            recorder = ProfileRecorder(directory, run_id='fixture', enabled=True,
-                                       comparison_key='synthetic-contract-only')
-            recorder.set_context(match_id='match', stage='1-1')
-            parent = recorder.start_span('perception', operation='perception', request_id='r', snapshot_id='a' * 64)
-            self.assertEqual(recorder.record_perception_timing({'primary_ocr_executed': True},
-                parent_id=parent, request_id='r', snapshot_id='a' * 64), [])
-            recorder.end_span(parent)
-            recorder.close()
-            events, issues = read_events([recorder.path])
-            report = summarize_events(events, issues)
-            self.assertEqual(report['issues'], [])
-            self.assertEqual(report['nodes'][0]['operation_seconds']['ocr_engine'], 0)
-            self.assertEqual(set(report['nodes'][0]['operation_seconds']), set(OPERATIONS))
-            self.assertEqual(legacy['operation_contracts'], [None])
-            self.assertEqual(report['operation_contracts'], [2])
-            comparison = compare_reports(legacy, report)
-            self.assertFalse(comparison['comparable'])
-            self.assertIn('计时分类来源契约不同', comparison['reason'])
+        for duration_ns in (0, 1_000_000_000):
+            with self.subTest(duration_ns=duration_ns), tempfile.TemporaryDirectory() as directory:
+                clock = {'now': 1_000_000_000}
+                with patch('currency_wars_profile.time.monotonic_ns', side_effect=lambda: clock['now']):
+                    recorder = ProfileRecorder(directory, run_id='fixture', enabled=True,
+                                               comparison_key='synthetic-contract-only')
+                    try:
+                        recorder.set_context(match_id='match', stage='1-1')
+                        parent = recorder.start_span('perception', operation='perception',
+                            request_id='r', snapshot_id='a' * 64)
+                        self.assertEqual(recorder.record_perception_timing({'primary_ocr_executed': True},
+                            parent_id=parent, request_id='r', snapshot_id='a' * 64), [])
+                        clock['now'] += duration_ns
+                        recorder.end_span(parent)
+                    finally:
+                        recorder.close()
+                events, issues = read_events([recorder.path])
+                report = summarize_events(events, issues)
+                self.assertEqual(report['issues'], [])
+                self.assertEqual(report['operation_totals_seconds']['ocr_engine'], 0)
+                self.assertEqual(set(report['operation_totals_seconds']), set(OPERATIONS))
+                if duration_ns:
+                    self.assertEqual(len(report['nodes']), 1)
+                    self.assertEqual(report['nodes'][0]['operation_seconds']['ocr_engine'], 0)
+                    self.assertEqual(report['nodes'][0]['operation_seconds']['perception'], 1)
+                    self.assertEqual(set(report['nodes'][0]['operation_seconds']), set(OPERATIONS))
+                else:
+                    # No positive observed interval means no node bucket; do not manufacture one.
+                    self.assertEqual(report['nodes'], [])
+                    self.assertEqual(report['observed_seconds'], 0)
+                    self.assertTrue(all(value == 0 for value in report['operation_totals_seconds'].values()))
+                    self.assertEqual(len(report['spans']), 1)
+                    self.assertEqual(report['spans'][0]['inclusive_seconds'], 0)
+                    self.assertEqual(report['spans'][0]['exclusive_seconds'], 0)
+                self.assertEqual(legacy['operation_contracts'], [None])
+                self.assertEqual(report['operation_contracts'], [2])
+                comparison = compare_reports(legacy, report)
+                self.assertFalse(comparison['comparable'])
+                self.assertIn('计时分类来源契约不同', comparison['reason'])
 
 
 if __name__ == '__main__':
