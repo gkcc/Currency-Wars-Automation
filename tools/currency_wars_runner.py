@@ -3976,8 +3976,125 @@ class Worker:
         pending = optional(self.run / 'reward-step.json')
         if (pending and pending.get('status') not in ('verified', 'refused')
                 and pending.get('match_id') == self.active_match_id):
+            if manual_steps.reward_continuation(self.run, self.owner, self.c, self.records, pending):
+                return None  # Only this historical blocker; no input/phase authority.
             return pending
         return None
+
+    def recover_reward(self, evidence):
+        """One explicit current-state recovery through the owning manual Worker.
+
+        Do not append an automatic verification frame, refund a retry, infer
+        the old fee, or turn the old unknown outcome into a success. There is
+        exactly one new read-only capture under the existing Entry lease.
+        """
+        if not manual_steps.active(self):
+            raise ValueError('reward recovery requires the current ManualPhase')
+        context = self.manual_step_context
+        request = copy.deepcopy(self.state.get('decision_request') or {})
+        pending = optional(self.run / 'reward-step.json') or {}
+        binding = context['binding']
+        identity = manual_steps.validate_reward_recovery(evidence, request, binding,
+            context['payload']['checkpoint_id'], pending)
+        if context.get('reward_recovery_intent') != identity or self.pending_reward_capacity():
+            raise ValueError('reward recovery intent differs or capacity is still pending')
+        path = self.records / ('reward-continuation-' + pending['step_id'] + '.json')
+        if path.exists():
+            raise ValueError('original reward already has a recovery record; never replay it')
+        source_digest = manual_steps._digest(pending)
+
+        def guard():
+            if (not manual_steps.active(self) or time.monotonic() >= self.deadline
+                    or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()
+                    or self.active_match_id != binding['match_id'] or self.epoch() != binding['old_epoch']
+                    or manual_steps._digest(optional(self.run / 'reward-step.json') or {}) != source_digest
+                    or self.state.get('decision_request') != request
+                    or not self.c.status().get('game_foreground')):
+                raise ValueError('reward recovery stopped or owner/request/epoch/pending changed')
+            manual_steps.validate_reward_recovery(evidence, request, binding,
+                context['payload']['checkpoint_id'], pending)
+
+        with self.observation_input_lease():
+            guard()
+            # Unlike the old delta-attribution fence, a proved control handoff
+            # is permitted here. No later game input may be hidden in recovery.
+            original = manual_steps._recovery_original(self.run, self.c, self.records, pending)
+            if pending['resume_epoch'] != self.epoch():
+                event, unused = verified_resume_event(self.run, self.owner, self.c,
+                    optional(self.run / 'runner-resume-epoch.json') or {})
+                if (event.get('old_epoch') != pending['resume_epoch']
+                        or event.get('match_id') != self.active_match_id or event.get('stage') != binding['stage']):
+                    raise ValueError('reward recovery requires the exact original single-hop resume event')
+            reviewed = request['observation']
+            manual_steps._bound_reward_frame(self.run, self.c, reviewed, request['original_png'])
+            prior = pending.get('prior_receipt_ids')
+            watermark = self.economy_receipt_watermark()
+            if (not isinstance(prior, list) or len(set(prior)) != len(prior)
+                    or not set(prior).issubset(watermark) or pending['request_id'] not in watermark):
+                raise ValueError('reward recovery lacks the complete original receipt watermark')
+            for rid in set(watermark) - set(prior) - {pending['request_id']}:
+                item = await_existing_receipt(self.run, self.c, rid, 0)
+                delivery, req, result = manual_receipt_state(item), item['request'], item['result']
+                if delivery['state'] == 'control' and not delivery['unknown_input']:
+                    continue  # Existing exact pause-id resume receipt, not an orb effect.
+                if (delivery['unknown_input'] or req.get('kind') != 'actions'
+                        or req.get('handoff') is not False or not req.get('actions')
+                        or any(a['type'] not in ('observe', 'wait') for a in req['actions'])
+                        or result.get('input_attempted') not in (None, False)
+                        or result.get('attempted_actions') not in (None, [])):
+                    raise ValueError('later input/unknown delivery prevents single-reward current recovery')
+            before_coins = pending['before'].get('coins')
+            reviewed_coins = self.reward_coins(reviewed)
+            if (type(before_coins) is not int or reviewed_coins is None or reviewed_coins < before_coins):
+                raise ValueError('reward recovery current native coins unknown or below original; no fee inference')
+            from currency_wars_rewards import target_effect, stable_absence
+            before_data = Path(pending['before_png']).read_bytes()
+            reviewed_data = Path(request['original_png']).read_bytes()
+            reviewed_effect = target_effect(pending['before']['observation'], reviewed,
+                before_data, reviewed_data, pending['target'])
+            if reviewed_effect.get('state') != 'absent':
+                raise ValueError('reviewed current target is not exposed/absent; inspect current page first')
+            guard()
+            with self.profile_span('reward_supervisor_recovery', operation='rules', business_step=pending['kind'],
+                                   request_id=pending['request_id']):
+                fresh = self.observe(scope='rewards', max_attempts=1)
+            guard()
+            if (fresh.get('capture_request_id') in watermark
+                    or set(self.economy_receipt_watermark()) != set(watermark) | {fresh.get('capture_request_id')}
+                    or (optional(self.run / 'result.json') or {}).get('id') != fresh.get('capture_request_id')):
+                raise ValueError('reward recovery current capture watermark changed')
+            manual_steps._bound_reward_frame(self.run, self.c, fresh, self.frame_path, read_only=True)
+            data = self.frame_path.read_bytes()
+            current_effect = target_effect(pending['before']['observation'], fresh,
+                before_data, data, pending['target'])
+            coins = self.reward_coins(fresh)
+            if (coins != reviewed_coins or current_effect.get('state') != 'absent'
+                    or not stable_absence(reviewed, fresh, reviewed_data, data, pending['target'])):
+                raise ValueError('reward recovery current page/target/coins is not stable; zero input, history unknown')
+            current_path = self.records / ('reward-continuation-' + pending['step_id'] + '-'
+                + context['step_id'] + '-current.png')
+            with current_path.open('xb') as stream:
+                stream.write(data)
+            continuation = dict(schema='supervised-reward-continuation/v1', status='authorized',
+                source='supervising_agent', binding=copy.deepcopy(binding), evidence=copy.deepcopy(evidence),
+                reward_step_id=pending['step_id'], original_request_id=pending['request_id'],
+                manual_step_id=context['step_id'], source_record_sha256=source_digest,
+                original_receipt_sha256=manual_steps._digest(redact(original)),
+                reviewed=dict(png=request['original_png'], observation=reviewed, effect_evidence=reviewed_effect),
+                current=dict(png=str(current_path), observation=copy.deepcopy(fresh), effect_evidence=current_effect),
+                current_coins=coins, receipt_watermark=self.economy_receipt_watermark(),
+                prior_outcome_remains_unknown=True, all_rewards_cleared=None, input_resent=False, recorded_at=now())
+            guard()
+            with path.open('x', encoding='utf-8') as stream:
+                json.dump(redact(continuation), stream, ensure_ascii=False, indent=2)
+            self.preparation_scope = (self.active_match_id, binding['stage'], self.epoch())
+            self.preparation_reviews = {}
+            self.economy_binding = None
+            self.context['economy_plan'] = None
+            self.log({'event': 'reward_current_recovery', 'request_id': pending['request_id'],
+                'manual_step_id': context['step_id'], 'current_snapshot_id': fresh['snapshot_id'],
+                'historical_outcome': 'unknown', 'all_rewards_cleared': None, 'input_resent': False})
+        return continuation
 
     def guard_reward_step(self, pending, observed):
         """Same submission lock as command; this does not make screen/input atomic."""
@@ -4044,6 +4161,20 @@ class Worker:
                 raise ValueError('领奖两次只读核效预算/停止期限已到；原输入保持待验，不重发')
             pending['verification_reads'] = pending.get('verification_reads', 0) + 1
             self.save_reward_step(pending)  # Failed reads/crashes never refund the budget.
+            # Let transient page/context settle inside the same bounded job.
+            # No extra capture or retry is added, and a stop interrupts the wait.
+            with self.profile_span('reward_effect_wait', operation='rules', business_step=pending['kind'],
+                                   request_id=pending['request_id']):
+                until = time.monotonic() + (.25 if pending['verification_reads'] == 1 else .5)
+                while True:
+                    if (time.monotonic() >= self.deadline or self.epoch() != pending['resume_epoch']
+                            or self.manual_input_blocked() or (self.run / 'runner-stop').exists()
+                            or (self.run / 'broker-stop').exists()):
+                        raise ValueError('领奖核效等待被停止/交接/期限中止；已花只读额度不退回')
+                    remaining = until - time.monotonic()
+                    if remaining <= 0:
+                        break
+                    time.sleep(min(.05, remaining))
             with self.profile_span('reward_effect_observe', operation='rules', business_step=pending['kind'],
                                    request_id=pending['request_id']):
                 return self.observe(scope='rewards', max_attempts=1)
@@ -4224,7 +4355,8 @@ class Worker:
     def _advance_reward_once(self, observed):
         pending = self.pending_reward_step(observed)
         if pending:
-            self.ask(observed, 'reward_result', '原单次领奖效果仍待复核；只补原回执/后图或当前全场复核，不重发。',
+            self.ask(observed, 'reward_result', '原单次领奖效果仍待复核；交付确定后可用manual-step recover_reward'
+                     '核当前继续资格，历史unknown与原预算保留，不重发。',
                      choices={'pending': pending}, category='exception', business_step=pending['kind'])
             return None
         if self.pending_reward_capacity():
