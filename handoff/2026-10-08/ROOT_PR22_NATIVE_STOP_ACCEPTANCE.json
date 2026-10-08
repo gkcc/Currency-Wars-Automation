@@ -1,0 +1,40 @@
+{
+  "candidate": "5d3818034197c40a1c3b13cf940208e0000fce82",
+  "stopped_at": "2026-10-08T04:30:36.342165+00:00",
+  "ok": true,
+  "control_mode": "stopped",
+  "durable_fields_preserved": {
+    "journal_file": true,
+    "match_id": true,
+    "business_checkpoint_identity": true,
+    "broker_identity": true
+  },
+  "runtime_directory_exists": false,
+  "game_inputs_sent_by_stop": false,
+  "pending_next_start_verified": false,
+  "normal_lifecycle_update": {
+    "business_awaiting_next_lease": true,
+    "broker_identity_retained_from_actual_broker": true
+  },
+  "durable_records_and_latest_business_lease_validated": true,
+  "original_record_sha256": "6f063a2c19e51f2cd80554e168e3ab5593fb768a2282ebe7d791fd60e684dbcf",
+  "exit_evidence": {
+    "worker": {
+      "state": "exited",
+      "exit_code": 0
+    },
+    "broker": {
+      "state": "absent",
+      "error": 87
+    }
+  },
+  "profiling": {
+    "event_count": 946,
+    "observed_seconds": 755.36,
+    "unassigned_seconds": 755.36,
+    "utc_start": "2026-10-08T04:18:00.857647+00:00",
+    "utc_end": "2026-10-08T04:30:36.223339+00:00",
+    "gameplay_node_count": 0,
+    "purpose": "Outside inspection and input-guard maintenance, no new gameplay timing claim"
+  }
+}
