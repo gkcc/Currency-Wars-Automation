@@ -39,6 +39,8 @@ SUPPLY_FIVE_CARD_LAYOUT = ((84, 292, 419, 783), (439, 292, 774, 783),
                            (793, 292, 1129, 783), (1147, 292, 1482, 783),
                            (1501, 292, 1836, 783))
 GOLD_HUD = [1613, 892, 1687, 950]
+GOLD_DIGIT_ROI = [1638, 900, 1687, 940]
+GOLD_DIGIT_CONTEXT = [1558, 885, 1687, 950]
 DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 # Complete native player Lv label and number, including the taller numeral.
 # This is the lower-left purchase-experience panel, never a card/boss title.
@@ -542,6 +544,206 @@ def guide_targets(body_lines):
                                 'use_transition_equipment': any('有就合' in line for line in body_lines)}}
 
 
+def _gold_digit_crop(crop):
+    """Bounded fallback for the native light panel's complete dark digits.
+
+    The two retained 1-1 crops have an uncut 18x26 glyph in a 49x40 ROI;
+    its large trailing background is not another numeral. Locate all dark
+    components, retain their original RGB/antialiasing, and add fixed padding.
+    No component is discarded, no digit is classified by this geometry, and
+    an unsupported dark panel keeps the original OCR path only.
+    """
+    import cv2
+    if crop.mode != 'RGB' or crop.size != (49, 40):
+        return None, {'reason': 'unexpected_digit_crop'}
+    pixels = np.array(crop)
+    hsv = cv2.cvtColor(pixels, cv2.COLOR_RGB2HSV)
+    pale = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 180)
+    evidence = {'pale_fraction': round(float(np.mean(pale)), 6),
+                'source_rgb_sha256': hashlib.sha256(pixels.tobytes()).hexdigest()}
+    if int(hsv[:, :, 2].max()) - int(hsv[:, :, 2].min()) < 40:
+        return None, {**evidence, 'reason': 'missing_digit_contrast'}
+    if float(np.mean(pale)) < .65:
+        return None, {**evidence, 'reason': 'unsupported_digit_background'}
+    mask = (hsv[:, :, 2] < 160).astype(np.uint8)
+    count, unused_labels, stats, unused_centers = cv2.connectedComponentsWithStats(mask, 8)
+    components = stats[1:]
+    evidence['components'] = components.tolist()
+    if not 1 <= count - 1 <= 3:
+        return None, {**evidence, 'reason': 'missing_or_ambiguous_digit_components'}
+    left, top = int(components[:, 0].min()), int(components[:, 1].min())
+    right = int((components[:, 0] + components[:, 2]).max())
+    bottom = int((components[:, 1] + components[:, 3]).max())
+    evidence['glyph_bounds'] = [left, top, right, bottom]
+    border = np.zeros(mask.shape, bool)
+    border[:2] = border[-2:] = True
+    border[:, :2] = border[:, -2:] = True
+    if (left < 2 or top < 2 or right > 47 or bottom > 38
+            or not np.all(pale[border])):
+        return None, {**evidence, 'reason': 'digit_crop_not_complete'}
+    if (any(not (3 <= width <= 24 and 18 <= height <= 32 and area >= 28)
+            for x, y, width, height, area in components)
+            or int(components[:, 1].max()) - top > 3
+            or bottom - int((components[:, 1] + components[:, 3]).min()) > 3):
+        return None, {**evidence, 'reason': 'extra_or_misaligned_digit_component'}
+    ordered = sorted(components.tolist())
+    if any(not 1 <= b[0] - (a[0] + a[2]) <= 12 for a, b in zip(ordered, ordered[1:])):
+        return None, {**evidence, 'reason': 'ambiguous_digit_spacing'}
+    bounds = [left-2, top-2, right+2, bottom+2]
+    original = crop.crop(bounds)
+    padded = Image.new('RGB', (original.width+8, original.height+8), 'white')
+    padded.paste(original, (4, 4))
+    evidence.update(reason=None, tight_bounds=bounds, padding=4,
+                    component_count=count-1, preprocessing='complete_dark_digits_rgb_padding4_2x')
+    return padded.resize((padded.width*2, padded.height*2)), evidence
+
+
+def _gold_digit_boundary(context, crop):
+    """Use the complete icon/number band only to veto a clipped small ROI.
+
+    The retained one-digit panel and old two-digit panels move the coin icon
+    horizontally. The complete unique colored icon locates its outside edge;
+    every dark component after it must also exist in the fixed numeric ROI.
+    This does not introduce OCR of a wider, uncalibrated number rectangle.
+    """
+    import cv2
+    evidence = {'context_bounds': list(GOLD_DIGIT_CONTEXT)}
+    if context is None or context.mode != 'RGB' or context.size != (129, 65):
+        return {**evidence, 'reason': 'complete_digit_context_missing'}
+    pixels = np.array(context)
+    evidence['context_rgb_sha256'] = hashlib.sha256(pixels.tobytes()).hexdigest()
+    offset = (GOLD_DIGIT_ROI[0]-GOLD_DIGIT_CONTEXT[0], GOLD_DIGIT_ROI[1]-GOLD_DIGIT_CONTEXT[1])
+    if not np.array_equal(pixels[offset[1]:offset[1]+40, offset[0]:offset[0]+49], np.array(crop)):
+        return {**evidence, 'reason': 'digit_context_source_mismatch'}
+    hsv = cv2.cvtColor(pixels, cv2.COLOR_RGB2HSV)
+    gold = ((15 <= hsv[:, :, 0]) & (hsv[:, :, 0] <= 40)
+            & (hsv[:, :, 1] > 90) & (hsv[:, :, 2] > 160)).astype(np.uint8)
+    groups = cv2.connectedComponents(cv2.dilate(gold, np.ones((5, 5), np.uint8)), 8)[0]-1
+    yy, xx = np.nonzero(gold)
+    if groups != 1 or not len(xx):
+        return {**evidence, 'reason': 'complete_currency_icon_not_unique'}
+    x, y, right, bottom = int(xx.min()), int(yy.min()), int(xx.max())+1, int(yy.max())+1
+    evidence['gold_bounds'] = [x+1558, y+885, right+1558, bottom+885]
+    if not (45 <= right-x <= 60 and 40 <= bottom-y <= 55
+            and 3 <= x < right <= 126 and 3 <= y < bottom <= 62):
+        return {**evidence, 'reason': 'complete_currency_icon_boundary_unavailable'}
+    start = right+2  # Native colored rim plus its two-pixel outer dark edge.
+    evidence['digit_band_bounds'] = [start+1558, 900, 1687, 940]
+    if start > offset[0]:
+        return {**evidence, 'reason': 'currency_icon_overlaps_digit_roi'}
+    whole = hsv[15:55, start:, 2] < 160
+    fixed = hsv[15:55, offset[0]:offset[0]+49, 2] < 160
+    represented = np.zeros(whole.shape, bool)
+    represented[:, offset[0]-start:] = fixed
+    if not np.array_equal(whole, represented):
+        return {**evidence, 'reason': 'adjacent_digit_outside_fixed_roi'}
+    return {**evidence, 'reason': None}
+
+
+def read_gold_hud_digits(crop, engine, *, context=None):
+    """One original read and at most one complete-glyph read; never lower .90."""
+    boundary = _gold_digit_boundary(context, crop)
+    if boundary['reason'] is not None:
+        return None, {'ocr_bounds': list(GOLD_DIGIT_ROI), 'attempts': [],
+                      'boundary': boundary, 'reason': boundary['reason']}
+    focused, geometry = _gold_digit_crop(crop)
+    evidence = {'ocr_bounds': list(GOLD_DIGIT_ROI), 'attempts': [], 'geometry': geometry,
+                'boundary': boundary}
+    if geometry['reason'] not in (None, 'unsupported_digit_background'):
+        return None, {**evidence, 'reason': geometry['reason']}
+    if engine is None:
+        return None, {**evidence, 'reason': 'digit_engine_unavailable'}
+    previous = None
+    for method, prepared in (('fixed_hud_digit_ocr', crop.resize((98, 80))),
+                             ('fixed_hud_complete_digit_ocr', focused)):
+        if prepared is None:
+            break
+        attempt = {'method': method, 'input_size': list(prepared.size),
+                   'raw_text': None, 'confidence': None}
+        evidence['attempts'].append(attempt)
+        try:
+            rows, unused = engine(np.array(prepared), use_det=False, use_cls=False)
+            if rows is None or len(rows) != 1:
+                attempt['reason'] = 'missing_or_multiple_digit_reads'
+                continue
+            text, confidence = rows[0][-2:]
+            raw, confidence = str(text), float(confidence)
+            attempt.update(raw_text=raw, confidence=confidence)
+            digits = raw.strip()
+            if not re.fullmatch(r'[0-9]+', digits) or not 0 <= confidence <= 1.:
+                attempt['reason'] = 'non_numeric_or_invalid_confidence'
+                continue
+            if previous is not None and int(digits) != previous:
+                return None, {**evidence, 'reason': 'conflicting_digit_reads'}
+            previous = int(digits)
+            if (geometry.get('component_count') is not None
+                    and len(digits) != geometry['component_count']):
+                attempt['reason'] = 'digit_count_differs_from_complete_components'
+                continue
+            if confidence < .90:
+                attempt['reason'] = 'digit_confidence_below_threshold'
+                continue
+            attempt['reason'] = None
+            return {'value': int(digits), 'method': method, 'raw_text': raw,
+                    'confidence': confidence, 'ocr_bounds': list(GOLD_DIGIT_ROI)}, {**evidence, 'reason': None}
+        except Exception as exc:
+            attempt['reason'] = 'digit_ocr_error'
+            attempt['error_type'] = type(exc).__name__
+    return None, {**evidence, 'reason': 'digit_unreadable'}
+
+
+def native_gold_hud(rows, image, page, engine=None, snapshot_id=None):
+    """Only current bound HUD evidence supplies coins; missing stays absent."""
+    import cv2
+    reading = {'source': 'native_gold_hud', 'snapshot_id': snapshot_id,
+               'bounds': list(GOLD_HUD), 'attempts': [], 'reason': 'hud_context_unavailable'}
+    if image.size != (1920, 1080) or page not in ('preparation', 'shop', 'investment_summary'):
+        return None, reading
+    button = (find_text(rows, '收起', [1554, 943, 1694, 1020])
+              or find_text(rows, '商店', [1554, 943, 1694, 1020]))
+    xp = find_text(rows, '购买经验', [220, 815, 375, 889])
+    def contained(row, bounds):
+        box = row['box']
+        return bounds[0] <= box[0] < box[2] <= bounds[2] and bounds[1] <= box[1] < box[3] <= bounds[3]
+    if not (button and xp and .90 <= button['confidence'] <= 1. and .90 <= xp['confidence'] <= 1.
+            and contained(button, [1554, 943, 1694, 1020]) and contained(xp, [220, 815, 375, 889])):
+        return None, reading
+    icon = cv2.cvtColor(np.array(image.crop((1572, 891, 1626, 949))), cv2.COLOR_RGB2HSV)
+    gold = float(np.mean((icon[:, :, 0] >= 15) & (icon[:, :, 0] <= 40)
+                         & (icon[:, :, 1] > 90) & (icon[:, :, 2] > 160)))
+    reading.update(currency_icon_gold_fraction=gold, context_rows=[xp, button])
+    if gold < .15:
+        return None, {**reading, 'reason': 'currency_icon_unconfirmed'}
+    # A row crossing the current HUD cannot be repaired by silently selecting
+    # only the numeral fragment that fits the smaller fallback rectangle.
+    for row in rows:
+        box = row['box']
+        if (.78 <= row['confidence'] <= 1. and re.fullmatch(r'[0-9]+', str(row['text']).strip())
+                and max(box[0], GOLD_HUD[0]) < min(box[2], GOLD_HUD[2])
+                and max(box[1], GOLD_HUD[1]) < min(box[3], GOLD_HUD[3])
+                and not contained(row, GOLD_HUD)):
+            return None, {**reading, 'reason': 'numeric_row_crosses_current_hud'}
+    numbers = [row for row in rows_in(rows, GOLD_HUD) if contained(row, GOLD_HUD)]
+    digits = [row for row in numbers if re.fullmatch(r'[0-9]+', str(row['text']).strip())]
+    if len(digits) > 1:
+        return None, {**reading, 'reason': 'conflicting_current_hud_rows'}
+    if len(numbers) == 1 and digits and .90 <= digits[0]['confidence'] <= 1.:
+        row = digits[0]
+        value = {'value': int(str(row['text']).strip()), 'method': 'native_hud_row',
+                 'raw_text': row.get('raw_text', row['text']), 'confidence': row['confidence']}
+        reading.update(reason=None, row=row)
+    else:
+        value, evidence = read_gold_hud_digits(image.crop(GOLD_DIGIT_ROI), engine,
+                                              context=image.crop(GOLD_DIGIT_CONTEXT))
+        reading.update(evidence)
+        if value is not None and digits and int(str(digits[0]['text']).strip()) != value['value']:
+            return None, {**reading, 'reason': 'conflicting_current_hud_rows'}
+    if value is None:
+        return None, reading
+    return {**value, 'bounds': list(GOLD_HUD), 'snapshot_id': snapshot_id,
+            'currency_icon_gold_fraction': round(gold, 3)}, reading
+
+
 def semantic_facts(rows, image, page, engine=None, snapshot_id=None):
     """Factual fields are produced locally, never from a strategy assertion."""
     facts = {'options': option_facts(rows, page)}
@@ -599,35 +801,10 @@ def semantic_facts(rows, image, page, engine=None, snapshot_id=None):
         if summary:
             facts.update(summary)
     if page in ('preparation', 'shop', 'investment_summary'):
-        button = (find_text(rows, '收起', [1554, 943, 1694, 1020])
-                  or find_text(rows, '商店', [1554, 943, 1694, 1020]))
-        xp = find_text(rows, '购买经验', [220, 815, 375, 889])
-        numbers = rows_in(rows, GOLD_HUD)
-        # Location, two native HUD labels and the gold icon all must agree.
-        import cv2
-        icon = cv2.cvtColor(np.array(image.crop((1572, 891, 1626, 949))), cv2.COLOR_RGB2HSV)
-        gold = float(np.mean((icon[:, :, 0] >= 15) & (icon[:, :, 0] <= 40)
-                             & (icon[:, :, 1] > 90) & (icon[:, :, 2] > 160)))
-        if (button and xp and len(numbers) == 1 and clean(numbers[0]['text']).isdigit()
-                and numbers[0]['confidence'] >= .90 and gold >= .15):
-            facts['coins'] = {'value': int(clean(numbers[0]['text'])), 'bounds': GOLD_HUD,
-                              'currency_icon_gold_fraction': round(gold, 3)}
-        elif button and xp and gold >= .15 and engine is not None:
-            # Only the actual native HUD's numeric subregion, excluding its icon.
-            digit_bounds = [1638, 900, 1687, 940]
-            crop = image.crop(digit_bounds).resize((98, 80))
-            try:
-                result, unused = engine(np.array(crop), use_det=False, use_cls=False)
-            except Exception:
-                result = None
-            if result is not None and len(result) == 1:
-                text, confidence = result[0][-2:]
-                raw = str(text).strip()
-                if re.fullmatch(r'[0-9]+', raw) and .90 <= float(confidence) <= 1.:
-                    facts['coins'] = {'value': int(raw), 'bounds': GOLD_HUD,
-                                      'currency_icon_gold_fraction': round(gold, 3),
-                                      'method': 'fixed_hud_digit_ocr', 'ocr_bounds': digit_bounds,
-                                      'raw_text': raw, 'confidence': round(float(confidence), 4)}
+        value, reading = native_gold_hud(rows, image, page, engine, snapshot_id)
+        facts['coins_read'] = reading
+        if value is not None:
+            facts['coins'] = value
     return facts
 
 

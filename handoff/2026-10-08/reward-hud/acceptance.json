@@ -1,0 +1,482 @@
+{
+  "schema": "currency-wars-reward-hud/v1",
+  "basis_commit": "d536da965fa42d800b24992aae363246c9f3d67c",
+  "evidence_commit": "f6c7588c932cd5406a238267783e0723a7cccb16",
+  "tested_checkout_head": "d536da965fa42d800b24992aae363246c9f3d67c",
+  "source_binding_authority": "Exact tested bytes; HEAD may precede uncommitted changes or be null in an archive.",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "12.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92",
+      "rapidocr-onnxruntime": null,
+      "onnxruntime": null
+    }
+  },
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+    "tools/currency_wars_manual_steps.py": "c7aacdd61d8c20d3aece053761e27e2dce36e7714d07ecbf9f2203a354807adf",
+    "tools/currency_wars_perception.py": "ae5daa4ca2e0bfdef4abfbc0dcee2df8c7da4c2a992657c1256c3ccde452fff9",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "3e0d7c5185ee3c40b68b9852299010d1abd2d9cd32eaf024496eed1fd16e718c",
+    "tools/currency_wars_runner.py": "70e51eaae9e86c0b2f9cbf2836e49957d7d3b76d07b50e8944453fa14b6a1b3f",
+    "tools/currency_wars_runtime_sources.json": "1c90624daed8f1a3ff58656238685b901174a7ad7fc927427f511cedae0b0668",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "f667ad734c0af1ef110074c58b05a2b0be011cdeb77683a89dac532de1eb5881",
+    "tools/replay_currency_wars_preparation.py": "778805b12814a4a28f36677842d7f0d4c81b1cd1be29360134c761cf89774a4d",
+    "tools/replay_currency_wars_reward_hud.py": "218441b5ba00282a79d00b85e39a3a314952575c476de6a44f63fe45e6e3832e",
+    "tools/replay_currency_wars_rewards.py": "b7914699511186e10419c1556209fef4f1360d866f7069ea7b760a1a10690d64",
+    "tools/test_currency_wars_native_reward_detector.py": "55e11063f099b0967af38c8c468a0ab9889fa4e211ab4dc9bab63db714f00f3b",
+    "tools/test_currency_wars_reward_hud.py": "1ea2a95eaddb7295d1309e0dab11f39a62d51791e906af53d9ceea710857eba8",
+    "tools/test_currency_wars_reward_hud_flow.py": "d4abc99a5ba9c9790ec5b6bc130452310673cdc9e45e8caf776ee032d2373780",
+    "tools/test_currency_wars_reward_roi_flow.py": "4774bf50bfa233b5db10ac270e6146973243c689b186c3e1fadf2af85ada0846",
+    "tools/test_currency_wars_submission_queue.py": "058c39657468d61f51e2a7a819a4d5448c2ddf88a1dd13ebc352370bf42dda76",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "source_file_count": 33,
+  "runtime_source_count": 24,
+  "artifact_sha256": {
+    "handoff/2026-10-07/reward-sequence/manifest.json": "2c66fad7b2cd5a5b74a2317c1e368df0470de64dee9664a00abcc934de1a1906",
+    "handoff/2026-10-07/reward-sequence/q00.png": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+    "handoff/2026-10-07/reward-sequence/q01.png": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/diagnosis.json": "e1347f3f15cc7a992caaa47f9d5145fe05740d4ee0cf96a950a659a1e05baab9",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/fresh_worker-scan.png": "a17366ab16cbe9248f2d2da223a3a6122c7b8676f39cb8a5f0e917b5293381f4",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-scan.png": "8e93e3d3967bf4bd86ccdf2ab9f6f3db5d7b8ca0ec06f9b47f8796d64233d708",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/manual_before-scan.png": "d3e9905b2a37bdcdcf2f4d345222d2180c6808348d90c50cb29d4f413a8f82ac",
+    "handoff/2026-10-08/ROOT_PR27_HUD/diagnosis.json": "8fe9b908610a501c2537c9695373d68d3506fbab28bb4e549741757d4b92e9de",
+    "handoff/2026-10-08/ROOT_PR27_HUD/resume-coins.png": "4f46559f8b39d511b2e959d4add277aab6f3a0f0fec904df70964281688d661f",
+    "handoff/2026-10-08/ROOT_PR27_HUD/resume-player.png": "23b9dae06e56252a02e820ad012e9fb0d6c5dd7889dad45f35dbf50d082d898a",
+    "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-coins.png": "996fce70a7f82d358055f2ecd1eec538c9f084b913fd48901c089eb05f86f8c0",
+    "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-player.png": "1ecad10647247a1e5cb9772fecc0a77df9fe3c981c9e03b30704ee0ddd14145e",
+    "tools/reward_resources/blue-orb-q01.png": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+    "tools/reward_resources/initial-blue.png": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+    "tools/reward_resources/initial-gray.png": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+    "tools/reward_resources/manifest.json": "0b2d5da751483150a0194d52a43dcb6d1b5dd6970309c3e7efe192541d03e635",
+    "tools/reward_resources/native-orbs-sources.json": "165705869c47b56cdda51c4f697ce09f34fb16a5b9dd042112094bfb221be87c"
+  },
+  "native_source_map": [
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/resume-coins.png",
+      "original_png_sha256": "84929b723a979bffd1eb7cef1e0c353577dad7b08dcfc7921387be26a2c63267",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "crop_sha256": "4f46559f8b39d511b2e959d4add277aab6f3a0f0fec904df70964281688d661f",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/resume-player.png",
+      "original_png_sha256": "84929b723a979bffd1eb7cef1e0c353577dad7b08dcfc7921387be26a2c63267",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        220,
+        815,
+        375,
+        1020
+      ],
+      "crop_sha256": "23b9dae06e56252a02e820ad012e9fb0d6c5dd7889dad45f35dbf50d082d898a",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-coins.png",
+      "original_png_sha256": "a88e445efd199830b171f0c5dbed4bf15d993d66f52356ad532ba857178a7348",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "crop_sha256": "996fce70a7f82d358055f2ecd1eec538c9f084b913fd48901c089eb05f86f8c0",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-player.png",
+      "original_png_sha256": "a88e445efd199830b171f0c5dbed4bf15d993d66f52356ad532ba857178a7348",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        220,
+        815,
+        375,
+        1020
+      ],
+      "crop_sha256": "1ecad10647247a1e5cb9772fecc0a77df9fe3c981c9e03b30704ee0ddd14145e",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    }
+  ],
+  "manifest_unchanged_from_pr27": true,
+  "game_inputs": 0,
+  "controllers_started": 0,
+  "new_game_captures": 0,
+  "online_model_called": false,
+  "candidate_installed": false,
+  "ready_changed": false,
+  "full_original_pngs_available": false,
+  "native_reward_chain_verified": false,
+  "whole_game_speedup": null,
+  "focused_checks": {
+    "selection": [
+      "test_currency_wars_reward_hud.RewardHudPixelTests",
+      "test_currency_wars_reward_hud.RewardHudNativeOcrTests",
+      "test_currency_wars_reward_hud_flow.RewardHudFlowTests"
+    ],
+    "tests": 8,
+    "failures": 0,
+    "errors": 1,
+    "skips": 0,
+    "seconds": 17.440596989999904,
+    "results": [
+      {
+        "test": "test_currency_wars_reward_hud.RewardHudPixelTests.test_declared_ocr_keeps_raw_confidence_and_bounded_rejection",
+        "status": "passed",
+        "seconds": 0.00668102100098622
+      },
+      {
+        "test": "test_currency_wars_reward_hud.RewardHudPixelTests.test_declared_page_labels_icon_conflict_and_full_row_path",
+        "status": "passed",
+        "seconds": 0.010398487000202294
+      },
+      {
+        "test": "test_currency_wars_reward_hud.RewardHudPixelTests.test_generated_blank_clipped_and_extra_mark_do_not_trigger_ocr",
+        "status": "passed",
+        "seconds": 0.0026405380012874957
+      },
+      {
+        "test": "test_currency_wars_reward_hud.RewardHudPixelTests.test_native_digit_is_complete_and_identical_at_two_times",
+        "status": "passed",
+        "seconds": 0.0015710910010966472
+      },
+      {
+        "test": "test_currency_wars_reward_hud.RewardHudNativeOcrTests.test_two_unchanged_native_digit_crops_use_existing_rapidocr",
+        "status": "failed",
+        "seconds": 0.001629709000553703
+      },
+      {
+        "test": "test_currency_wars_reward_hud_flow.RewardHudFlowTests.test_after_coin_unknown_uses_same_two_read_budget_and_never_replays",
+        "status": "passed",
+        "seconds": 10.645789427002455
+      },
+      {
+        "test": "test_currency_wars_reward_hud_flow.RewardHudFlowTests.test_inspect_preserves_unknown_and_native_collect_is_not_a_read_only_api",
+        "status": "passed",
+        "seconds": 2.347634804998961
+      },
+      {
+        "test": "test_currency_wars_reward_hud_flow.RewardHudFlowTests.test_reward_result_inspect_one_orb_then_current_full_review_keeps_phase_order",
+        "status": "passed",
+        "seconds": 4.421962753000116
+      }
+    ],
+    "failure_details": [
+      {
+        "test": "test_currency_wars_reward_hud.RewardHudNativeOcrTests.test_two_unchanged_native_digit_crops_use_existing_rapidocr",
+        "traceback": "Traceback (most recent call last):\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/metadata/__init__.py\", line 397, in from_name\n    return next(cls.discover(name=name))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nStopIteration\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/workspace/scratch/455e3b5c6726/currency-wars-pr28-hud/tools/test_currency_wars_reward_hud.py\", line 214, in test_two_unchanged_native_digit_crops_use_existing_rapidocr\n    distribution = importlib.metadata.distribution('rapidocr-onnxruntime')\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/metadata/__init__.py\", line 862, in distribution\n    return Distribution.from_name(distribution_name)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/metadata/__init__.py\", line 399, in from_name\n    raise PackageNotFoundError(name)\nimportlib.metadata.PackageNotFoundError: No package metadata was found for rapidocr-onnxruntime\n"
+      }
+    ]
+  },
+  "native_crop_geometry": [
+    {
+      "source": {
+        "file": "handoff/2026-10-08/ROOT_PR27_HUD/resume-coins.png",
+        "original_png_sha256": "84929b723a979bffd1eb7cef1e0c353577dad7b08dcfc7921387be26a2c63267",
+        "original_size": [
+          1920,
+          1080
+        ],
+        "source_bounds": [
+          1520,
+          805,
+          1720,
+          1020
+        ],
+        "crop_sha256": "4f46559f8b39d511b2e959d4add277aab6f3a0f0fec904df70964281688d661f",
+        "root_reading": {
+          "coins": 4,
+          "level": 3,
+          "xp": [
+            0,
+            4
+          ]
+        },
+        "source": "supervising_agent_independent_current_frame_read",
+        "native_fields_unchanged": true
+      },
+      "scope": "native_digit_pixel_geometry_only",
+      "digit_bounds": [
+        1638,
+        900,
+        1687,
+        940
+      ],
+      "geometry": {
+        "pale_fraction": 0.89949,
+        "source_rgb_sha256": "ddb87ff84c0cdd74b84265d2ab687fe2712197068933066071ad0a7f4f1d1aab",
+        "components": [
+          [
+            3,
+            6,
+            18,
+            26,
+            194
+          ]
+        ],
+        "glyph_bounds": [
+          3,
+          6,
+          21,
+          32
+        ],
+        "reason": null,
+        "tight_bounds": [
+          1,
+          4,
+          23,
+          34
+        ],
+        "padding": 4,
+        "component_count": 1,
+        "preprocessing": "complete_dark_digits_rgb_padding4_2x"
+      },
+      "boundary": {
+        "context_bounds": [
+          1558,
+          885,
+          1687,
+          950
+        ],
+        "context_rgb_sha256": "289d95661bbf1655a1623a8fc4487dd73c4afc49da1820d2df5607e08cda7a23",
+        "gold_bounds": [
+          1585,
+          897,
+          1636,
+          943
+        ],
+        "digit_band_bounds": [
+          1638,
+          900,
+          1687,
+          940
+        ],
+        "reason": null
+      },
+      "prepared_rgb_sha256": "dec004b577bbb16c73e0c296af802b8f34225acc3749daca58431e5ef8382e7b"
+    },
+    {
+      "source": {
+        "file": "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-coins.png",
+        "original_png_sha256": "a88e445efd199830b171f0c5dbed4bf15d993d66f52356ad532ba857178a7348",
+        "original_size": [
+          1920,
+          1080
+        ],
+        "source_bounds": [
+          1520,
+          805,
+          1720,
+          1020
+        ],
+        "crop_sha256": "996fce70a7f82d358055f2ecd1eec538c9f084b913fd48901c089eb05f86f8c0",
+        "root_reading": {
+          "coins": 4,
+          "level": 3,
+          "xp": [
+            0,
+            4
+          ]
+        },
+        "source": "supervising_agent_independent_current_frame_read",
+        "native_fields_unchanged": true
+      },
+      "scope": "native_digit_pixel_geometry_only",
+      "digit_bounds": [
+        1638,
+        900,
+        1687,
+        940
+      ],
+      "geometry": {
+        "pale_fraction": 0.89949,
+        "source_rgb_sha256": "ddb87ff84c0cdd74b84265d2ab687fe2712197068933066071ad0a7f4f1d1aab",
+        "components": [
+          [
+            3,
+            6,
+            18,
+            26,
+            194
+          ]
+        ],
+        "glyph_bounds": [
+          3,
+          6,
+          21,
+          32
+        ],
+        "reason": null,
+        "tight_bounds": [
+          1,
+          4,
+          23,
+          34
+        ],
+        "padding": 4,
+        "component_count": 1,
+        "preprocessing": "complete_dark_digits_rgb_padding4_2x"
+      },
+      "boundary": {
+        "context_bounds": [
+          1558,
+          885,
+          1687,
+          950
+        ],
+        "context_rgb_sha256": "289d95661bbf1655a1623a8fc4487dd73c4afc49da1820d2df5607e08cda7a23",
+        "gold_bounds": [
+          1585,
+          897,
+          1636,
+          943
+        ],
+        "digit_band_bounds": [
+          1638,
+          900,
+          1687,
+          940
+        ],
+        "reason": null
+      },
+      "prepared_rgb_sha256": "dec004b577bbb16c73e0c296af802b8f34225acc3749daca58431e5ef8382e7b"
+    }
+  ],
+  "native_crop_ocr": [],
+  "native_ocr_test_passed": false,
+  "consumer_protocol": [
+    {
+      "contract": "declared_after_coin_unknown",
+      "unknown_reads": 1,
+      "input_requests": 1,
+      "verification_reads": 2,
+      "status": "verified",
+      "no_input_replay": true,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_after_coin_unknown",
+      "unknown_reads": "all",
+      "input_requests": 1,
+      "verification_reads": 2,
+      "status": "pending",
+      "no_input_replay": true,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_unknown_hud_routing",
+      "inspect_physical_inputs": 0,
+      "inspect_kind": "preparation_strategy",
+      "native_loop_kind": "reward_result",
+      "native_loop_first_scope": "rewards",
+      "unknown_preserved": true,
+      "economic_authorization": false,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_current_hud_consumer_chain",
+      "initial_kind": "reward_result",
+      "inspect_capture_requests": 1,
+      "inspect_physical_inputs": 0,
+      "inspect_read_scopes": [
+        "full"
+      ],
+      "stale_native_coins_unchanged": true,
+      "one_orb_input_requests": 1,
+      "one_orb_effect_reads": 1,
+      "all_rewards_cleared": null,
+      "total_declared_orb_inputs": 2,
+      "final_phase": "startup_guide",
+      "full_review_source": "supervising_agent",
+      "actual_fixture_resume": true,
+      "old_manual_clear_not_inherited": true,
+      "full_review_entry": "Worker.execute_plan",
+      "full_review_fresh_captures": 1,
+      "cli_dispatch_executed": false,
+      "global_fingerprint_exception_added": false,
+      "real_game_input": false
+    }
+  ],
+  "source_set_sha256_before": "7257e7f377d7d5ebf622e0c313b54a91d503bd0947a76af87dd307c72400f445",
+  "source_set_sha256_after": "7257e7f377d7d5ebf622e0c313b54a91d503bd0947a76af87dd307c72400f445",
+  "source_unchanged": true,
+  "artifacts_unchanged": true,
+  "loaded_source_closure_missing": [],
+  "ok": false
+}

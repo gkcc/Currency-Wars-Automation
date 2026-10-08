@@ -3575,8 +3575,16 @@ class Worker:
                 or record['proof'].get('snapshot_id') != request.get('snapshot_id')
                 or phase != status['phase'] or not isinstance(value.get('findings'), str) or not value['findings'].strip()):
             raise ValueError('复核须按当前节点准备顺序、当前请求鲜帧，由监督助手写明实际检查结果')
-        if phase == 'rewards' and coaching.reward_status(source, record) != 'clear':
-            raise ValueError('领奖须关闭商店后重新扫全场，奖励球及待选奖励确认领空')
+        if phase == 'rewards':
+            if self.pending_reward_step(self.last_observation) or self.pending_reward_capacity():
+                raise ValueError('原领奖/腾位效果仍待验；全场复核不能覆盖原pending')
+            for observation in (source, self.last_observation):
+                scan = observation.get('semantic', {}).get('rewards') or {}
+                if (scan.get('snapshot_id') == observation.get('snapshot_id')
+                        and (scan.get('targets') or scan.get('interaction_required'))):
+                    raise ValueError('当前原生观察仍有奖励目标/待选奖励，不能关闭领奖阶段')
+            if coaching.reward_status(source, record) != 'clear':
+                raise ValueError('领奖须关闭商店后重新扫全场，奖励球及待选奖励确认领空')
         startup_title = find_text(source['rows'], '创业指南', exact=True) if phase == 'startup_guide' else None
         if phase == 'startup_guide' and (value.get('entry_index') != 2 or value.get('rewards_claimed') is not True
                 or not isinstance(value.get('goals'), list)
@@ -4106,8 +4114,12 @@ class Worker:
                 raise ValueError('领奖后页面/节点变化，废弃本批后续目标')
             if stage is None or observed.get('page') == 'unknown':
                 raise RewardEffectPending('领奖后当前节点/页面未知；只读有界核效')
-            if after_coins is None or before_coins is None or after_coins < before_coins:
-                raise ValueError('免费领奖/收店后的金币未知或下降，不能记0实花或继续')
+            if before_coins is None:
+                raise ValueError('原领奖前金币来源缺失，不能用后图补造免费输入资格')
+            if after_coins is None:
+                raise RewardEffectPending('领奖后金币暂未知；只读有界补读，不能记0实花或重发')
+            if after_coins < before_coins:
+                raise ValueError('免费领奖/收店后金币下降，不能记0实花或继续')
             if observed.get('page') != 'preparation' or scan.get('interaction_required'):
                 raise ValueError('领奖后有选择/遮挡或扫描未知；只回传当前证据')
             if pending['kind'] == 'close_shop':
