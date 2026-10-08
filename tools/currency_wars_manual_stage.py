@@ -286,7 +286,13 @@ def pending_remaining(entries, *, run, owner, control, records=None):
             elif item['source_kind'] == 'reward_step':
                 # A same-ID pointer still pending (or reused for another step)
                 # vetoes an older verified archive. Never merge their effects.
-                if all(value.get('status') == 'refused' and value.get('publication_attempted') is False for value in values):
+                if all(r.manual_steps.reward_continuation(run, owner, control, records, value)
+                       for value in values):
+                    # This list is the set of planning blockers. The original
+                    # business_pending entry/archive still says effect_pending
+                    # and outcome unknown; no fee or old action is inherited.
+                    resolved = True
+                elif all(value.get('status') == 'refused' and value.get('publication_attempted') is False for value in values):
                     resolved = delivery['state'] == 'zero_input'
                 elif all(value.get('status') == 'verified' and value.get('outcome') ==
                          ('shop_collapsed' if item['kind'] == 'close_shop' else 'one_visible_orb_removed')
