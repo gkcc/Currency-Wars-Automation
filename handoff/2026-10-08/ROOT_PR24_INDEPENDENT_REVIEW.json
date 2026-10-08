@@ -1,0 +1,226 @@
+{
+  "schema": "currency-wars-pr24-independent-review/v1",
+  "status": "PASS",
+  "reviewer_chat_id": "01a11991-2a1e-7442-8ec0-693df7b5591d",
+  "reviewer_task": "/root/pr19_deployment_review",
+  "reviewed_at": "2026-10-08T05:22:38Z",
+  "scope": "Independent frozen PR24 inspection-checkpoint patch/source review with prospective runtime binding; current PR23 controller remains ROOT-owned and untouched",
+  "candidate": "604649be9906aee86d7e648beb01976607e9175e",
+  "parent": "02e0a7c86f82e74216b759bed60a1a7cb55849eb",
+  "tree": "28b42488683884058b565258568cdac196e425b3",
+  "immutable_patch": {
+    "sha256": "CD65027BF89979752736C77AA454534493390C570B2D5B9A3FE7FDB621577809",
+    "command": "git diff --no-ext-diff --binary --full-index 02e0a7c86f82e74216b759bed60a1a7cb55849eb 604649be9906aee86d7e648beb01976607e9175e"
+  },
+  "changed_files": [
+    "handoff/2026-10-08/INSPECTION_CHECKPOINT.md",
+    "handoff/2026-10-08/inspection-checkpoint/acceptance.json",
+    "tools/currency_wars_runner.py",
+    "tools/replay_currency_wars_inspection_checkpoint.py",
+    "tools/test_currency_wars_inspection_checkpoint.py"
+  ],
+  "production_changed_files": [
+    "tools/currency_wars_runner.py"
+  ],
+  "candidate_runtime_source_hashes": {
+    "gui/launch.py": "B67E505A6DA4CA3F5EC034A9F9740379EF814DB2D5044EFDB57ED77DBE5F6986",
+    "gui/processes.py": "9DE7D4EF8A6E09E9C193E3DA2325AB6A37C60CE82C2D4F2E43BB0655E0E98296",
+    "requirements.txt": "A82867E765C48504225DCA4A82E0DE6ED7F92ED515BD113D029E8144C3BD661A",
+    "tools/currency_wars_artifacts.py": "133BBCA1A4D854E6EBE904E7D8BF7B61720430E6DCC0D929ACD9BAF3D0B36788",
+    "tools/currency_wars_bridge_task.py": "B83259EE0741A67BD2D396823279B7DDCB2FFC07EDEEB8C3F95882CA59E69911",
+    "tools/currency_wars_broker_entry.py": "6C0FD3C9116794F69B61D16241DB47837227F4025641599C197D08581AFF10E2",
+    "tools/currency_wars_coaching.py": "9EE40DAE3B476504F6BFB61DC29EEEFB97E55FEFAC9EEE5E7000CAC701640895",
+    "tools/currency_wars_control.py": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+    "tools/currency_wars_economy.py": "7A2C704510D9A064F893A4164921DE7A0A7B1BDEEF0594A9E783792E093EC9C7",
+    "tools/currency_wars_input_bridge.py": "00E84C0E838F890C9C084EC241FA9D3B75131190EB62D24CEF70FF1AADC58388",
+    "tools/currency_wars_manual_stage.py": "0B8039225251683BC76ECE97079240408AC2B9A68F4D0984DDED79CC1C0C860E",
+    "tools/currency_wars_manual_steps.py": "9A148F6EC78556CDBB31CB54077465707A2FCA9AA87877F4B7C68DD369D1BBD8",
+    "tools/currency_wars_perception.py": "604B4B6D6912E3D8415F066BBB32307555B9564E2F2D5EBDDC6D94F9FDED4ABA",
+    "tools/currency_wars_profile.py": "25A4402B6B4BCBC1709CD23A938535D0562BBB974CB4E905D8A1F9479342641D",
+    "tools/currency_wars_progression.py": "19C0E8C60D768604D8B6DBF13804533449E6804B5BA23D070A2832E291BEBEC5",
+    "tools/currency_wars_refresh_offer.py": "1CD55C43821BA1F99FB0B07F4AE945F4A5146D83DE5A538645D47A25454FAA59",
+    "tools/currency_wars_rewards.py": "73F857AC9EB65143CC45CBEF4A7B9E96BA59A4D034D7945C1CBB63D1DE735F5C",
+    "tools/currency_wars_runner.py": "9AE2CBE65F6CAA7083C147C6726F8B766084BCEF5AF45751C0FBB4413BB75236",
+    "tools/currency_wars_runtime_sources.json": "FA6010108D731FC050432F40DDE6223DAD53A6D9CEAF15E64C0F05A10412E15D",
+    "tools/currency_wars_shop_reader.py": "55760B092DA7B45F73B18633B62B88AB9D74574449B4B511BD38964712BFD8B8",
+    "tools/currency_wars_source_guard.py": "4C31CD78B48A6FAA6F88B5C1D8BD32C1D0CF96F8FB6A29282B2ED4F2459E50BF",
+    "tools/currency_wars_state_reader.py": "69ACCA4D20625FC23F41FA9872B9855FD9F3F526A1F29B949E432DD9422ED8A2",
+    "tools/currency_wars_update.py": "A513962220E013F356B4E4223F44F62D6849F280D2BCC091BF5E48072123EF98",
+    "tools/currency_wars_visual_guards.py": "0E878AC428A5A5132C5CCD4E044248C4F6263303A830F2916265F1E96FD24934"
+  },
+  "runtime_source_count": 24,
+  "ast_dependency_files": 22,
+  "checkout": {
+    "head": "02e0a7c86f82e74216b759bed60a1a7cb55849eb",
+    "candidate_deployed": false,
+    "all_24_source_bytes_match_previous_pr23": true,
+    "all_24_source_bytes_match_candidate": false,
+    "active_pr23_controller_state": "Reported by ROOT as manual with no input after an environment-card guard failure; reviewer performed no lifecycle or input operation."
+  },
+  "runtime_binding": {
+    "canonical_sha256": "72DC93353DB4C152FB0DC8C0166A32E293DAB050FF18CF71B5CAF22EA9A41588",
+    "binding_kind": "prospective_candidate_source_with_current_verified_resources_and_provider",
+    "algorithm": "SHA256(UTF8(json.dumps(binding, sort_keys=True, separators=(',', ':')))); binding is current runtime_source_binding(PROJECT) with its source hashes replaced by the frozen candidate 24-source map",
+    "current_production_binding_sha256": "C7A2E4EDA9126E61DC6AC50BFE5BBC423B7466667CF6608608E0A30B9AF360CF",
+    "existing_resources_and_provider_unchanged": true,
+    "resource_files": 61,
+    "verification": "Actual current 24-source/resource/provider binding reproduces the prior independently reviewed PR23 digest. Frozen candidate changes only runner.py; replacing the source map produces the prospective candidate digest above.",
+    "provider": {
+      "kind": "installed",
+      "path": "D:\\Codex\\home\\skills\\agent-workflow\\scripts\\artifacts.py",
+      "sha256": "03DCB408C80C13CA70E52AB3B2ADB4519F1AAF6AECEB5120410882CCEC29C142"
+    },
+    "installed_control_and_driver_match": true,
+    "installed_control_sha256": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+    "installed_driver_sha256": "B83259EE0741A67BD2D396823279B7DDCB2FFC07EDEEB8C3F95882CA59E69911",
+    "installer_manifest_requirements_rust_and_gui_unchanged": true,
+    "build_state_sha256": "961CD5ABE423C6C592F2C5B2D860A335AF594BFFF00409D2A88E2A7F76C5468D",
+    "gui_binary_sha256": "E1FD5EA665A9F8C608B20A84492F53A097581D02FF7320578337A4E4C4A7F7B4",
+    "active_run_launch_verification_performed": false,
+    "launch_prerequisites_rerun": false,
+    "protected_component_configuration_rerun": false,
+    "component_and_gui_reuse_basis": "Source paths and actual installed control/driver/GUI hashes remain identical to PR23. This is reuse of the prior attestation with byte verification, not a candidate launch."
+  },
+  "review_conclusions": [
+    {
+      "area": "four durable panel completion sources",
+      "sources": [
+        "Worker.complete_inspection",
+        "Worker.inspection_source",
+        "Worker.inspection_coverage",
+        "Worker.inspection_candidates"
+      ],
+      "finding": "The fixed four-panel checkpoint binds its revision and actual last-settlement digest. An eligible record binds panel, match, request, original lease owner and epoch, unmodified accepted result, explicit coverage, capture receipt, original PNG and strategy JPEG by hashes and fixed durable paths. Record, receipt and both frames are re-read and verified before reuse. Legacy or malformed coverage and missing or changed sources remain ineligible."
+    },
+    {
+      "area": "one current business_resume exact reuse",
+      "sources": [
+        "Worker.prepare_inspection_resume",
+        "Worker.review_business_resume",
+        "Worker.save_business"
+      ],
+      "finding": "The current resume must acknowledge the exact offered candidate map, checkpoint revision and settlement digest. Reuse, changed and unknown form a disjoint complete partition of the four panels; reused digests must equal eligible source records. Explicit continuity basis is bound to this current snapshot, requires no unobserved interval for reuse, and cannot clear known pending history. New or unknown settlement and omitted resume evidence clear eligibility. Business CAS saves the review and checkpoint change before enabling in-memory reuse."
+    },
+    {
+      "area": "current-page scheduling",
+      "sources": [
+        "Worker.schedule_inspections",
+        "Worker.tick"
+      ],
+      "finding": "After current resume acceptance, scheduling selects the first missing panel. It inspects directly if already on that panel, enters it from the lobby, or returns to the lobby from another panel. All four current approvals are required before new_match. Pending rewards and business resume remain ahead of panel scheduling; unknown and modal pages retain the existing fail-closed route."
+    },
+    {
+      "area": "settlement atomic invalidation",
+      "sources": [
+        "Worker.confirm_match_result",
+        "Worker.save_business",
+        "Worker.initialize_business"
+      ],
+      "finding": "A confirmed settlement prepares completed-match state, the new settlement and an empty inspection checkpoint in one proposed business document and one guarded CAS write. Counters, consumed settlement state and in-memory flags update only after that write succeeds. New-business initialization clears approvals and records; a lobby new_match intent alone does not allocate or migrate a business."
+    },
+    {
+      "area": "pending and read-only capture watermark",
+      "sources": [
+        "Worker.inspection_readonly_watermark",
+        "Worker.complete_inspection",
+        "Worker.save_business"
+      ],
+      "finding": "Fresh completion requires no current unresolved receipt, retains all original receipt ids, and accepts only newly added successful read-only observe/wait receipts without handoff, attempted input or unknown action. The current capture must be new in the watermark. Exact reuse separately refuses both current and historical pending evidence; fresh completion does not erase older pending history."
+    },
+    {
+      "area": "stop epoch ownership and CAS",
+      "sources": [
+        "Worker.save_business",
+        "Worker.commit_guard",
+        "Worker.review_business_resume",
+        "Worker.execute_plan"
+      ],
+      "finding": "Checkpoint mutations retain the business.lock revision CAS and exact current lease owner chat/run/worker PID/creation binding. The existing manual/stop/epoch/request tuple, deadline, foreground and state guards remain applied before guarded publication. Epoch change revokes current approvals while leaving historical evidence auditable. Candidate code adds no direct game-input or old-command replay route."
+    },
+    {
+      "area": "cross-file transaction boundary",
+      "sources": [
+        "handoff/2026-10-08/INSPECTION_CHECKPOINT.md",
+        "Worker.save_business",
+        "Worker.commit_guard"
+      ],
+      "finding": "The business CAS and final pending/stop checks do not form one atomic transaction with a separate Entry publication. The implementation and its handoff preserve this limit and rely on the existing single input writer and manual-handoff guard. This review supplies source eligibility only; no active-run launch or competing-writer experiment was performed."
+    }
+  ],
+  "validation": {
+    "public_acceptance": {
+      "path": "handoff/2026-10-08/inspection-checkpoint/acceptance.json",
+      "sha256": "10A8277F8703B5CF1C7B710396F29001944D867FA67E3CE7F30577598AAA1941",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "source_count": 29,
+      "source_set_sha256": "06525d0b5dbbd63fa11ef6c226f8e68b0e9fca4c7b6b6fc2d5a088275939a3cb",
+      "source_set_matches_frozen_archive": true
+    },
+    "root_windows_acceptance": {
+      "path": "handoff/2026-10-08/ROOT_PR24_WINDOWS_ACCEPTANCE.json",
+      "sha256": "0F8E164D762CC2E3F42DC9EE65C735EB40398635B31C8A6161BFCA38746ABCEA",
+      "root_frozen_archive_head": "604649be9906aee86d7e648beb01976607e9175e",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "elapsed_seconds": 22.854763399984222,
+      "source_count": 29,
+      "source_set_sha256": "06525d0b5dbbd63fa11ef6c226f8e68b0e9fca4c7b6b6fc2d5a088275939a3cb",
+      "source_map_matches_frozen_git_blobs": true,
+      "before_after_identical": true,
+      "execution_boundary": "Real Worker/Entry consumers, inert transport, generated fixture frames, temporary durable records and actual file-based CAS; no native game or cross-lease launch."
+    },
+    "tests_rerun_by_reviewer": false,
+    "ocr_rerun_by_reviewer": false,
+    "frozen_source_static_review_completed": true
+  },
+  "readiness": {
+    "ready_file_modified": false,
+    "ready_observed": true,
+    "ready_sha256_at_review": "3CB7FFEEFDF84018A41923D24BE0D8BCE1CC2D1C9825C850C1AA6119B1A6B718",
+    "ready_observation_applies_to": "existing PR23 production state only",
+    "source_review_eligible": true,
+    "source_blockers": [],
+    "operational_readiness_verified": false,
+    "root_must_match_actual_candidate_binding_after_safe_source_transition": true,
+    "root_fresh_business_resume_and_native_inspection_acceptance_required": true,
+    "continuous_whole_match_user_authorization_preserved": true,
+    "sole_live_controller": "ROOT"
+  },
+  "limits": {
+    "game_inputs": 0,
+    "new_controller_started": false,
+    "existing_controller_stopped": false,
+    "installation_performed": false,
+    "production_source_edits": [],
+    "candidate_loaded_in_production": false,
+    "active_run_cross_lease_launch_verified": false,
+    "native_page_skipping_verified": false,
+    "new_match_or_settlement_verified": false,
+    "runtime_speed_proof": false,
+    "whole_game_speedup": null,
+    "coverage_attestation_is_not_new_ocr_or_whole_activity_completion_proof": true,
+    "old_pr23_in_memory_inspections_automatically_migrated": false,
+    "old_inspection_reuse_requires_new_sourced_candidate_completion": true,
+    "unrelated_environment_card_failure_fixed": false
+  },
+  "temporary_artifacts": {
+    "provider": "artifacts.scratch_directory",
+    "helper_sha256": "03DCB408C80C13CA70E52AB3B2ADB4519F1AAF6AECEB5120410882CCEC29C142",
+    "archive_sha256": "73116DC36948908C1C0D8576F485796E903DEEDEE8C45BB0BF02FC8988EC7236",
+    "archive_selected_files": 31,
+    "archived_source_count": 29,
+    "source_set_sha256": "06525d0b5dbbd63fa11ef6c226f8e68b0e9fca4c7b6b6fc2d5a088275939a3cb",
+    "owned_directory": "C:\\Users\\zy958\\AppData\\Local\\Temp\\codex-agent-workflow\\cw-pr24-review-8b06bf66ed5e441b9ad125105362c234-i2maprbp",
+    "owner_run_id": "37080461accd4df08521dfdf86467f1b",
+    "owner_chat_id": "01a11991-2a1e-7442-8ec0-693df7b5591d",
+    "containment_and_nonlink_checks_passed": true,
+    "child_processes_waited_before_cleanup": true,
+    "cleanup_removed": true,
+    "retained": 0
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "at": "2026-10-08T05:11:03.792056+00:00",
+  "run_id": "48e1e0c9281e4bcfbd6a0cb9c520a356",
+  "source_head": "02e0a7c86f82e74216b759bed60a1a7cb55849eb",
+  "classification": "B_generic_dynamic_card_guard",
+  "page": "environment",
+  "request_id": "939061bf00684efab97fa416591f0483",
+  "rejected_reason": "目标ROI实际已变；全屏dHash近似不能批准旧选项",
+  "original_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+  "actual_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+  "complete_original_pair_retained": false,
+  "input_sent": false,
+  "options_equal": true,
+  "confirm_native_box": [
+    1054,
+    968,
+    1110,
+    1000
+  ],
+  "guard_confirm_roi": [
+    880,
+    935,
+    1040,
+    1030
+  ],
+  "additional_native_label": {
+    "text": "装备",
+    "box": [
+      422,
+      744,
+      459,
+      766
+    ],
+    "omitted_from_options_effect_lines": true
+  },
+  "proposed_fix": "Keep full source identity/epoch/deadline; derive correct per-page confirmation ROI from original native frame; distinguish structural captions from complete effect text without omitting them from visual validation; require all cards/badges/selected state unchanged. No global similarity relaxation.",
+  "native_anchor_diagnostic": [
+    {
+      "label": "投资环境",
+      "bounds": [
+        850,
+        55,
+        1070,
+        145
+      ],
+      "rows": [
+        {
+          "text": "投资环境",
+          "raw_text": "投资环境",
+          "normalization_basis": null,
+          "confidence": 0.997,
+          "box": [
+            898,
+            81,
+            1023,
+            120
+          ]
+        },
+        {
+          "text": "投资环境",
+          "raw_text": "投资环境",
+          "normalization_basis": null,
+          "confidence": 0.997,
+          "box": [
+            898,
+            81,
+            1023,
+            120
+          ]
+        }
+      ],
+      "paired_pass": true
+    },
+    {
+      "label": "确认",
+      "bounds": [
+        880,
+        935,
+        1040,
+        1030
+      ],
+      "rows": [
+        null,
+        null
+      ],
+      "paired_pass": false
+    },
+    {
+      "label": "确认",
+      "bounds": [
+        1020,
+        935,
+        1150,
+        1030
+      ],
+      "rows": [
+        {
+          "text": "确认",
+          "raw_text": "确认",
+          "normalization_basis": null,
+          "confidence": 0.9994,
+          "box": [
+            1054,
+            968,
+            1110,
+            1000
+          ]
+        },
+        {
+          "text": "确认",
+          "raw_text": "确认",
+          "normalization_basis": null,
+          "confidence": 0.9994,
+          "box": [
+            1054,
+            968,
+            1110,
+            1000
+          ]
+        }
+      ],
+      "paired_pass": false
+    }
+  ],
+  "retained_evidence": "Original request and reply and both native PNGs retained; CURRENT redacts actual OCR rows. Full actual observation is an explicitly labeled independent offline re-read of the exact original actual PNG, not the lost production observation.",
+  "offline_reread_guard_allowed": false,
+  "additional_issue": "Corrected confirmation ROI still fails white-ink paired-row check on native disabled gray confirmation. Minimum ink counts measured on original and independently reread retained actual PNG. No production change or input.",
+  "disabled_confirmation_ink_diagnostic": {
+    "white_ink_counts": [
+      0,
+      0
+    ],
+    "required_minimum": 24,
+    "gray_confirmation_roi_rgb_equal": false
+  },
+  "private_sources_retained_under": "debug/runner-01a10ddf-48e1e0c9281e"
+}

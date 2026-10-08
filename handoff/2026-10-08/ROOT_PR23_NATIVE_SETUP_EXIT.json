@@ -1,0 +1,27 @@
+{
+  "run_id": "48e1e0c9281e4bcfbd6a0cb9c520a356",
+  "state": "failed",
+  "reason": "所属broker已退出/未知；没有自动新控制器或重发",
+  "exit_verified_now": {
+    "worker": {
+      "pid": 257672,
+      "state": "absent",
+      "error": 87,
+      "expected_creation_id": "134359086661977260"
+    },
+    "broker": {
+      "pid": 261284,
+      "state": "absent",
+      "error": 87,
+      "expected_creation_id": "134359086683440345"
+    }
+  },
+  "normal_stop_called": false,
+  "normal_stop_attempt": "No owner file: read failed before command_cli; no stop mutation or input",
+  "runtime_removed": true,
+  "cause_basis": "Broker serve() source has 600-second no-request lease; last actual request 05:09:19.729701Z, failure 05:19:19.861232Z. This aligns with lease expiry during manual repair pause; no crash proof.",
+  "game_input_sent": false,
+  "continuous_authorization_retained": true,
+  "original_business_load_verified": true,
+  "business_match_id": "cb87319ba61b4d5c9e1e952e8a0eb799"
+}

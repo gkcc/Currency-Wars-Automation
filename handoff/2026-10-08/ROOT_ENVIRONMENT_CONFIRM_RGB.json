@@ -1,0 +1,543 @@
+{
+  "schema": "currency-wars-native-roi-pair/v1",
+  "purpose": "Native disabled confirmation RGB diagnostic only; no live input eligibility",
+  "bounds": [
+    1020,
+    950,
+    1150,
+    1025
+  ],
+  "array_shape": [
+    75,
+    130,
+    3
+  ],
+  "encoding": "zlib_base64_rgb_uint8_row_major",
+  "full_native_pngs_not_exported": true,
+  "original_request_id": "939061bf00684efab97fa416591f0483",
+  "original_observation_rows": [
+    {
+      "text": "图例",
+      "raw_text": "图例",
+      "normalization_basis": null,
+      "confidence": 0.9981,
+      "box": [
+        237,
+        84,
+        292,
+        116
+      ]
+    },
+    {
+      "text": "投资环境",
+      "raw_text": "投资环境",
+      "normalization_basis": null,
+      "confidence": 0.997,
+      "box": [
+        898,
+        81,
+        1023,
+        120
+      ]
+    },
+    {
+      "text": "攻略",
+      "raw_text": "攻略",
+      "normalization_basis": null,
+      "confidence": 0.9812,
+      "box": [
+        1670,
+        84,
+        1728,
+        117
+      ]
+    },
+    {
+      "text": "6",
+      "raw_text": "6",
+      "normalization_basis": null,
+      "confidence": 0.6164,
+      "box": [
+        921,
+        255,
+        996,
+        336
+      ]
+    },
+    {
+      "text": "++++",
+      "raw_text": "++++",
+      "normalization_basis": null,
+      "confidence": 0.8534,
+      "box": [
+        1460,
+        260,
+        1503,
+        276
+      ]
+    },
+    {
+      "text": "夜之半神概念股",
+      "raw_text": "夜之半神概念股",
+      "normalization_basis": null,
+      "confidence": 0.9912,
+      "box": [
+        345,
+        374,
+        534,
+        412
+      ]
+    },
+    {
+      "text": "成功经验",
+      "raw_text": "成功经验",
+      "normalization_basis": null,
+      "confidence": 0.9986,
+      "box": [
+        908,
+        378,
+        1016,
+        410
+      ]
+    },
+    {
+      "text": "人才引进",
+      "raw_text": "人才引进",
+      "normalization_basis": null,
+      "confidence": 0.9978,
+      "box": [
+        1426,
+        376,
+        1538,
+        412
+      ]
+    },
+    {
+      "text": "开局时获得【夜之半神】角色和初始简易",
+      "raw_text": "开局时获得【夜之半神】角色和初始简易",
+      "normalization_basis": null,
+      "confidence": 0.9975,
+      "box": [
+        237,
+        418,
+        630,
+        447
+      ]
+    },
+    {
+      "text": "在你升到8级后，进入接下来3个节点时，",
+      "raw_text": "在你升到8级后，进入接下来3个节点时，",
+      "normalization_basis": null,
+      "confidence": 0.9967,
+      "box": [
+        756,
+        417,
+        1140,
+        446
+      ]
+    },
+    {
+      "text": "开局拥有1个随机4费角色。",
+      "raw_text": "开局拥有1个随机4费角色。",
+      "normalization_basis": null,
+      "confidence": 0.9958,
+      "box": [
+        1348,
+        420,
+        1605,
+        448
+      ]
+    },
+    {
+      "text": "装备，【夜之半神】角色的刷新概率提",
+      "raw_text": "装备，【夜之半神】角色的刷新概率提",
+      "normalization_basis": null,
+      "confidence": 0.9976,
+      "box": [
+        236,
+        444,
+        608,
+        474
+      ]
+    },
+    {
+      "text": "获得12经验。",
+      "raw_text": "获得12经验。",
+      "normalization_basis": null,
+      "confidence": 0.9948,
+      "box": [
+        756,
+        446,
+        888,
+        476
+      ]
+    },
+    {
+      "text": "高。",
+      "raw_text": "高。",
+      "normalization_basis": null,
+      "confidence": 0.9999,
+      "box": [
+        238,
+        474,
+        279,
+        502
+      ]
+    },
+    {
+      "text": "角色",
+      "raw_text": "角色",
+      "normalization_basis": null,
+      "confidence": 0.9999,
+      "box": [
+        420,
+        598,
+        462,
+        626
+      ]
+    },
+    {
+      "text": "装备",
+      "raw_text": "装备",
+      "normalization_basis": null,
+      "confidence": 0.9999,
+      "box": [
+        422,
+        744,
+        459,
+        766
+      ]
+    },
+    {
+      "text": "剩余次数：1",
+      "raw_text": "剩余次数：1",
+      "normalization_basis": null,
+      "confidence": 0.9993,
+      "box": [
+        704,
+        969,
+        843,
+        999
+      ]
+    },
+    {
+      "text": "确认",
+      "raw_text": "确认",
+      "normalization_basis": null,
+      "confidence": 0.9994,
+      "box": [
+        1054,
+        968,
+        1110,
+        1000
+      ]
+    }
+  ],
+  "original_options": [
+    {
+      "card_index": 1,
+      "bounds": [
+        207,
+        198,
+        671,
+        868
+      ],
+      "title": "夜之半神概念股",
+      "effect_lines": [
+        "开局时获得【夜之半神】角色和初始简易",
+        "装备，【夜之半神】角色的刷新概率提",
+        "高。",
+        "角色"
+      ]
+    },
+    {
+      "card_index": 2,
+      "bounds": [
+        727,
+        198,
+        1193,
+        868
+      ],
+      "title": "成功经验",
+      "effect_lines": [
+        "在你升到8级后，进入接下来3个节点时，",
+        "获得12经验。"
+      ]
+    },
+    {
+      "card_index": 3,
+      "bounds": [
+        1253,
+        198,
+        1717,
+        868
+      ],
+      "title": "人才引进",
+      "effect_lines": [
+        "开局拥有1个随机4费角色。"
+      ]
+    }
+  ],
+  "actual_observation_basis": "Independent offline reread of retained actual PNG; original production actual OCR rows were not retained",
+  "actual_observation_rows": [
+    {
+      "text": "图例",
+      "raw_text": "图例",
+      "normalization_basis": null,
+      "confidence": 0.9981,
+      "box": [
+        237,
+        84,
+        292,
+        116
+      ]
+    },
+    {
+      "text": "投资环境",
+      "raw_text": "投资环境",
+      "normalization_basis": null,
+      "confidence": 0.997,
+      "box": [
+        898,
+        81,
+        1023,
+        120
+      ]
+    },
+    {
+      "text": "攻略",
+      "raw_text": "攻略",
+      "normalization_basis": null,
+      "confidence": 0.9806,
+      "box": [
+        1670,
+        84,
+        1728,
+        117
+      ]
+    },
+    {
+      "text": "++++",
+      "raw_text": "++++",
+      "normalization_basis": null,
+      "confidence": 0.8534,
+      "box": [
+        1460,
+        260,
+        1503,
+        276
+      ]
+    },
+    {
+      "text": "夜之半神概念股",
+      "raw_text": "夜之半神概念股",
+      "normalization_basis": null,
+      "confidence": 0.9916,
+      "box": [
+        345,
+        374,
+        537,
+        412
+      ]
+    },
+    {
+      "text": "成功经验",
+      "raw_text": "成功经验",
+      "normalization_basis": null,
+      "confidence": 0.9986,
+      "box": [
+        908,
+        378,
+        1016,
+        410
+      ]
+    },
+    {
+      "text": "人才引进",
+      "raw_text": "人才引进",
+      "normalization_basis": null,
+      "confidence": 0.9976,
+      "box": [
+        1426,
+        376,
+        1538,
+        412
+      ]
+    },
+    {
+      "text": "开局时获得【夜之半神】角色和初始简易",
+      "raw_text": "开局时获得【夜之半神】角色和初始简易",
+      "normalization_basis": null,
+      "confidence": 0.9975,
+      "box": [
+        237,
+        418,
+        630,
+        447
+      ]
+    },
+    {
+      "text": "在你升到8级后，进入接下来3个节点时，",
+      "raw_text": "在你升到8级后，进入接下来3个节点时，",
+      "normalization_basis": null,
+      "confidence": 0.9967,
+      "box": [
+        756,
+        417,
+        1140,
+        446
+      ]
+    },
+    {
+      "text": "开局拥有1个随机4费角色。",
+      "raw_text": "开局拥有1个随机4费角色。",
+      "normalization_basis": null,
+      "confidence": 0.9958,
+      "box": [
+        1348,
+        420,
+        1605,
+        448
+      ]
+    },
+    {
+      "text": "装备，【夜之半神】角色的刷新概率提",
+      "raw_text": "装备，【夜之半神】角色的刷新概率提",
+      "normalization_basis": null,
+      "confidence": 0.9976,
+      "box": [
+        236,
+        444,
+        608,
+        474
+      ]
+    },
+    {
+      "text": "获得12经验。",
+      "raw_text": "获得12经验。",
+      "normalization_basis": null,
+      "confidence": 0.9948,
+      "box": [
+        756,
+        446,
+        888,
+        476
+      ]
+    },
+    {
+      "text": "高。",
+      "raw_text": "高。",
+      "normalization_basis": null,
+      "confidence": 0.9999,
+      "box": [
+        238,
+        474,
+        279,
+        502
+      ]
+    },
+    {
+      "text": "角色",
+      "raw_text": "角色",
+      "normalization_basis": null,
+      "confidence": 0.9999,
+      "box": [
+        420,
+        598,
+        462,
+        626
+      ]
+    },
+    {
+      "text": "装备",
+      "raw_text": "装备",
+      "normalization_basis": null,
+      "confidence": 0.9999,
+      "box": [
+        422,
+        744,
+        459,
+        766
+      ]
+    },
+    {
+      "text": "剩余次数：1",
+      "raw_text": "剩余次数：1",
+      "normalization_basis": null,
+      "confidence": 0.9995,
+      "box": [
+        704,
+        969,
+        843,
+        999
+      ]
+    },
+    {
+      "text": "确认",
+      "raw_text": "确认",
+      "normalization_basis": null,
+      "confidence": 0.9994,
+      "box": [
+        1054,
+        968,
+        1110,
+        1000
+      ]
+    }
+  ],
+  "actual_options": [
+    {
+      "card_index": 1,
+      "bounds": [
+        207,
+        198,
+        671,
+        868
+      ],
+      "title": "夜之半神概念股",
+      "effect_lines": [
+        "开局时获得【夜之半神】角色和初始简易",
+        "装备，【夜之半神】角色的刷新概率提",
+        "高。",
+        "角色"
+      ]
+    },
+    {
+      "card_index": 2,
+      "bounds": [
+        727,
+        198,
+        1193,
+        868
+      ],
+      "title": "成功经验",
+      "effect_lines": [
+        "在你升到8级后，进入接下来3个节点时，",
+        "获得12经验。"
+      ]
+    },
+    {
+      "card_index": 3,
+      "bounds": [
+        1253,
+        198,
+        1717,
+        868
+      ],
+      "title": "人才引进",
+      "effect_lines": [
+        "开局拥有1个随机4费角色。"
+      ]
+    }
+  ],
+  "original": {
+    "full_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+    "roi_rgb_sha256": "019eddd459ab176e580182bb448f0ee38ed67357552baf58eaf41c37b2ef3759",
+    "pixels": "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"
+  },
+  "actual": {
+    "full_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+    "roi_rgb_sha256": "7b4bda8805d9cd541734145a497129b021c7fc69a42493b845af398a42080733",
+    "pixels": "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"
+  }
+}
