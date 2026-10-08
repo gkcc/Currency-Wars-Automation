@@ -1624,7 +1624,7 @@ def stable_inspection_completion(reply, request, actual):
 
 
 def stable_lobby_entry_navigation(reply, request, actual, current_png):
-    """Eligibility only: one native start button with exact retained pixels."""
+    """One native start button; its stable content excludes the search box's bottom edge."""
     original = request.get('observation', {})
     actions = reply.get('actions')
     if (request.get('kind') != 'new_match'
@@ -1639,6 +1639,9 @@ def stable_lobby_entry_navigation(reply, request, actual, current_png):
             or action.get('expected_page') != 'lobby'):
         return False
     button_roi = (1360, 930, 1810, 1020)
+    # ROOT's retained pair differs only on y=1019, the search box's last row.
+    # Keep every other pixel exact; do not crop each OCR box independently.
+    content_roi = (1360, 930, 1810, 1019)
     bounds = action.get('bounds')
     if (not isinstance(bounds, list) or bounds != list(button_roi)
             or any(type(edge) is not int for edge in bounds)):
@@ -1668,6 +1671,10 @@ def stable_lobby_entry_navigation(reply, request, actual, current_png):
             boxes.append(found[0])
         if any(abs(before - after) > 12 for before, after in zip(*boxes)):
             return False
+        if label == '开始「货币战争」' and any(
+                not (content_roi[0] <= box[0] < box[2] <= content_roi[2]
+                     and content_roi[1] <= box[1] < box[3] <= content_roi[3]) for box in boxes):
+            return False  # The whole current label, hence its click center, must be inside.
     try:
         from io import BytesIO
         from PIL import Image
@@ -1679,7 +1686,7 @@ def stable_lobby_entry_navigation(reply, request, actual, current_png):
         with Image.open(BytesIO(original_bytes)) as old, Image.open(BytesIO(actual_bytes)) as fresh:
             if old.format != 'PNG' or fresh.format != 'PNG' or old.size != (1920, 1080) or fresh.size != (1920, 1080):
                 return False
-            return old.crop(button_roi).convert('RGB').tobytes() == fresh.crop(button_roi).convert('RGB').tobytes()
+            return old.crop(content_roi).convert('RGB').tobytes() == fresh.crop(content_roi).convert('RGB').tobytes()
     except (OSError, ValueError, TypeError):
         return False
 
@@ -5426,6 +5433,18 @@ class Worker:
         original = request['observation']
         if actual['page'] != original['page']:
             raise ValueError('战略回答到达时页面已变，拒绝旧计划')
+        lobby_navigation_verified = False
+        if (original.get('page') == 'lobby'
+                and any(action.get('type') == 'click_text'
+                        and (clean(action.get('text', '')) == '开始「货币战争」'
+                             or action.get('exact') is False and clean(action.get('text', ''))
+                             and clean(action['text']) in '开始「货币战争」')
+                        for action in reply['actions'])):
+            lobby_navigation_verified = stable_lobby_entry_navigation(reply, request, actual, self.frame_path)
+            if not lobby_navigation_verified:
+                raise ValueError('大厅开始按钮的原生锚点、稳定内容或来源已变，拒绝旧计划')
+            self.log({'event': 'local_navigation_guard_matched', 'request_id': request['request_id'],
+                      'control_id': 'lobby_start', 'snapshot_id': actual['snapshot_id'], 'input_sent': False})
         local_navigation = any(navigation_target(action, request) is not None for action in reply['actions'])
         navigation_verified = False
         if local_navigation:
@@ -5478,7 +5497,7 @@ class Worker:
                     or stable_peace_guide_tab_navigation(reply, request, actual)
                     or stable_advantages_navigation(reply, request, actual)
                     or stable_inspection_completion(reply, request, actual)
-                    or stable_lobby_entry_navigation(reply, request, actual, self.frame_path)
+                    or lobby_navigation_verified
                     or stable_standard_entry_navigation(reply, request, actual, self.frame_path)
                     or stable_plane_intro_navigation(reply, request, actual, self.frame_path)
                     or stable_semantic_plan(reply, request, actual, self.frame_path)
