@@ -1,0 +1,33 @@
+{
+  "observed_at": "2026-10-08T10:34:03.590708+00:00",
+  "previous": "e9e6ca7f4e4d943612d85ed3d28bd483b8224958",
+  "candidate": "d2477df7c5620fe606340e068642bf684445a5fb",
+  "independent_review": "docs/PR30_RETRY_FIX_INDEPENDENT_REVIEW.json",
+  "source_ff_installed": true,
+  "native_navigation_verified": false,
+  "gui_rebuilt": false,
+  "canonical_binding_sha256": "24d161ab6acc1cef54aab5356da417a93558dde6b816ec8c51078521d6edd8d2",
+  "untracked_collisions_now_frozen_tracked": [
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-front-caption.png",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-header.png",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-navigation.png",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/diagnosis.json",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-front-caption.png",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-header.png",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-navigation.png"
+  ],
+  "semantically_equal_json_original_retained": [
+    {
+      "source": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/diagnosis.json",
+      "retained": "docs/PR31_ORIGINAL_STARTUP_GUIDE_DIAGNOSIS.json",
+      "original_sha256": "49f152c380e7fe6c21443d20d1371ab88c847237ffc9b9caf11f759f4e7b9c00",
+      "candidate_sha256": "7338de3a98a77a4b97396dafa39387d6f90e3de301a4143b7f5890c7b26d187b",
+      "json_semantics_equal": true
+    }
+  ],
+  "all24_sources_match_frozen": true,
+  "resources64_unchanged": true,
+  "provider_unchanged": true,
+  "gui16_unchanged": true,
+  "owned_run_actually_removed": true
+}
