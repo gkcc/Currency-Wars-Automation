@@ -1,0 +1,63 @@
+{
+  "schema": "currency-wars-confirmation-local-calibration/v1",
+  "spec_sha256": "886956e3ada52cf7b5fb3d36ecf9d82725841a8e40d0e468f4c4fd1856935700",
+  "artifacts": [
+    {
+      "artifact_name": "pair-886956e3ada52cf7-0-confirm-roi.png",
+      "source_frame_index": 0,
+      "source_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+      "crop_bounds": [
+        770,
+        950,
+        1160,
+        1025
+      ],
+      "crop_png_sha256": "14bd876a520186181d223976f41c6ffb613d254b593a0b7cb81d294ecadc2ceb",
+      "role": "confirm-roi"
+    },
+    {
+      "artifact_name": "pair-886956e3ada52cf7-0-confirm-text.png",
+      "source_frame_index": 0,
+      "source_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+      "crop_bounds": [
+        1052,
+        966,
+        1112,
+        1002
+      ],
+      "crop_png_sha256": "bba43de081fdee55d550651be5920220239eab6dadb091bc98620f05a391b2ed",
+      "role": "confirm-text"
+    },
+    {
+      "artifact_name": "pair-886956e3ada52cf7-1-confirm-roi.png",
+      "source_frame_index": 1,
+      "source_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+      "crop_bounds": [
+        770,
+        950,
+        1160,
+        1025
+      ],
+      "crop_png_sha256": "c9daacdd76f2623cd0e1ccbece11c6560926ed45ae3bfa23c9fd1b06ff41f407",
+      "role": "confirm-roi"
+    },
+    {
+      "artifact_name": "pair-886956e3ada52cf7-1-confirm-text.png",
+      "source_frame_index": 1,
+      "source_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+      "crop_bounds": [
+        1052,
+        966,
+        1112,
+        1002
+      ],
+      "crop_png_sha256": "5f28851c8649c589cfdfbbecbdc15d8106462fd095011e600ec55c55fa5ce816",
+      "role": "confirm-text"
+    }
+  ],
+  "derived_calibration_samples": true,
+  "independent_generalization_examples": false,
+  "historical_input_qualification": false,
+  "native_disabled_state": "unknown",
+  "automatically_uploaded": false
+}

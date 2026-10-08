@@ -1,0 +1,1699 @@
+{
+  "schema": "currency-wars-card-confirmation-diagnostic/v1",
+  "basis_commit": "02e0a7c86f82e74216b759bed60a1a7cb55849eb",
+  "tested_checkout_head": null,
+  "source_binding_authority": "Exact before/after bytes; checkout HEAD does not identify uncommitted files.",
+  "environment": {
+    "system": "Windows",
+    "python": "3.12.2",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "11.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "source_file_count": 27,
+  "runtime_source_count": 24,
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+    "tools/currency_wars_manual_steps.py": "9a148f6ec78556cdbb31cb54077465707a2fca9aa87877f4b7c68dd369d1bbd8",
+    "tools/currency_wars_perception.py": "d09a5c586c7f82fbadda5cbf43f5cb90b0c38e8a7da453cec5adc95153f15808",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "73f857ac9eb65143cc45cbef4a7b9e96ba59a4d034d7945c1cbb63d1de735f5c",
+    "tools/currency_wars_runner.py": "3a9e623ce3d33fce1e4e605a0119c20f5e4b64fe369771c06ee450511c4fe35d",
+    "tools/currency_wars_runtime_sources.json": "fa6010108d731fc050432f40dde6223dad53a6d9ceaf15e64c0f05a10412e15d",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "73b379efb109181f028a6a9917f19bc03fe6cea24279ba312ccdfb12230a121e",
+    "tools/replay_currency_wars_card_confirmation.py": "74e3809dec67fdbccaa37bbf11b25478ee1f9793f1830312d170e96e545b7554",
+    "tools/test_currency_wars_card_confirmation.py": "03600e0306d136cae063b521b5bce01113080bfa349e97653ffdc0db4008ffec",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "game_inputs": 0,
+  "controllers_started": 0,
+  "new_game_captures": 0,
+  "new_ocr_calls": 0,
+  "online_model_called": false,
+  "private_resources_read_or_exported": false,
+  "candidate_installed": false,
+  "ready_changed": false,
+  "whole_game_speedup": null,
+  "same_endpoint_speedup": null,
+  "native_disabled_state": "unknown",
+  "limits": [
+    "Six focused protocol methods use generated frames and declared reader rows, not native gameplay.",
+    "Independent rereads cannot fill historical actual rows, frame/capture identities or epoch.",
+    "Gray or zero-mask text is not inferred to be disabled, enabled, or safe to click.",
+    "Existing region checks are diagnostics only and do not bypass the production visual guard.",
+    "Optional local crops are derived calibration samples, not independent generalization positives.",
+    "No live epoch, pending, foreground, capture authenticity, input receipt or selection outcome is verified."
+  ],
+  "retained_pairs": [
+    {
+      "spec_sha256": "886956e3ada52cf7b5fb3d36ecf9d82725841a8e40d0e468f4c4fd1856935700",
+      "request_json_sha256": "f695a045ae55277f92c5717312a72a0d15f895e335bb351d5cf0aa39312defe3",
+      "reply_json_sha256": "872013f9817ce15fc9827da39495a9ae6f390d6aeb1fe9770186ef92e5a6dca1",
+      "supplied_observation_json_sha256": "57138f9e7b1b895fb2a173e518340b23815cf1d12e96118d4853042c3168ca9f",
+      "supplied_observation_kind": "independent_reread",
+      "png_sha256": [
+        "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+        "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2"
+      ],
+      "png_format_and_1920x1080_verified": true,
+      "original_png_matches_request": true,
+      "supplied_observation_png_matches": true,
+      "original_source_identities_present": false,
+      "original_png_digests_match": true,
+      "original_fingerprints_match": true,
+      "request_reply_identity_match": true,
+      "reply_has_single_action": true,
+      "historical_qualification_available": false,
+      "historical_visual_eligibility": null,
+      "historical_byte_bound_visual_eligibility": false,
+      "historical_qualification_status": "missing_historical_actual",
+      "independent_visual_eligibility": false,
+      "independent_byte_bound_visual_eligibility": false,
+      "independent_reread_requires_historical_capture_identities": false,
+      "native_disabled_state": "unknown",
+      "native_enabled_state": "unknown",
+      "manual_annotation": {
+        "confirm_disabled": true,
+        "is_native_state": false
+      },
+      "confirm_frames": [
+        {
+          "source_frame_index": 0,
+          "row_source": "original_request",
+          "rows_present": true,
+          "rows": [
+            {
+              "text": "确认",
+              "confidence": 0.9994,
+              "box": [
+                1054,
+                968,
+                1110,
+                1000
+              ],
+              "text_redacted": false
+            }
+          ],
+          "fixed_roi": {
+            "bounds": [
+              770,
+              950,
+              1160,
+              1025
+            ],
+            "pixels": 29250,
+            "white_mask_count": 181,
+            "existing_text_mask_count": 181,
+            "rgb": {
+              "r": {
+                "min": 0.0,
+                "p10": 1.0,
+                "p25": 1.0,
+                "median": 2.0,
+                "p75": 5.0,
+                "p90": 8.0,
+                "max": 220.0
+              },
+              "g": {
+                "min": 0.0,
+                "p10": 0.0,
+                "p25": 0.0,
+                "median": 1.0,
+                "p75": 3.0,
+                "p90": 5.0,
+                "max": 220.0
+              },
+              "b": {
+                "min": 0.0,
+                "p10": 7.0,
+                "p25": 7.0,
+                "median": 15.0,
+                "p75": 18.0,
+                "p90": 26.0,
+                "max": 222.0
+              }
+            },
+            "opencv_hsv": {
+              "h": {
+                "min": 0.0,
+                "p10": 120.0,
+                "p25": 122.0,
+                "median": 124.0,
+                "p75": 124.0,
+                "p90": 126.0,
+                "max": 135.0
+              },
+              "s": {
+                "min": 0.0,
+                "p10": 204.0,
+                "p25": 215.0,
+                "median": 227.0,
+                "p75": 255.0,
+                "p90": 255.0,
+                "max": 255.0
+              },
+              "v": {
+                "min": 0.0,
+                "p10": 7.0,
+                "p25": 7.0,
+                "median": 15.0,
+                "p75": 18.0,
+                "p90": 26.0,
+                "max": 222.0
+              }
+            }
+          },
+          "unique_high_confidence_text_crop": {
+            "bounds": [
+              1052,
+              966,
+              1112,
+              1002
+            ],
+            "pixels": 2160,
+            "white_mask_count": 0,
+            "existing_text_mask_count": 0,
+            "rgb": {
+              "r": {
+                "min": 0.0,
+                "p10": 1.0,
+                "p25": 2.0,
+                "median": 4.0,
+                "p75": 21.0,
+                "p90": 148.1,
+                "max": 181.0
+              },
+              "g": {
+                "min": 0.0,
+                "p10": 0.0,
+                "p25": 2.0,
+                "median": 3.0,
+                "p75": 19.25,
+                "p90": 148.1,
+                "max": 180.0
+              },
+              "b": {
+                "min": 1.0,
+                "p10": 11.0,
+                "p25": 16.0,
+                "median": 19.0,
+                "p75": 34.25,
+                "p90": 154.0,
+                "max": 187.0
+              }
+            },
+            "opencv_hsv": {
+              "h": {
+                "min": 114.0,
+                "p10": 120.0,
+                "p25": 120.0,
+                "median": 122.0,
+                "p75": 123.0,
+                "p90": 124.0,
+                "max": 130.0
+              },
+              "s": {
+                "min": 4.0,
+                "p10": 11.0,
+                "p25": 110.25,
+                "median": 219.0,
+                "p75": 227.0,
+                "p90": 255.0,
+                "max": 255.0
+              },
+              "v": {
+                "min": 1.0,
+                "p10": 11.0,
+                "p25": 16.0,
+                "median": 19.0,
+                "p75": 34.25,
+                "p90": 154.0,
+                "max": 187.0
+              }
+            }
+          }
+        },
+        {
+          "source_frame_index": 1,
+          "row_source": "independent_reread",
+          "rows_present": true,
+          "rows": [
+            {
+              "text": "确认",
+              "confidence": 0.9994,
+              "box": [
+                1054,
+                968,
+                1110,
+                1000
+              ],
+              "text_redacted": false
+            }
+          ],
+          "fixed_roi": {
+            "bounds": [
+              770,
+              950,
+              1160,
+              1025
+            ],
+            "pixels": 29250,
+            "white_mask_count": 177,
+            "existing_text_mask_count": 177,
+            "rgb": {
+              "r": {
+                "min": 0.0,
+                "p10": 1.0,
+                "p25": 1.0,
+                "median": 2.0,
+                "p75": 4.0,
+                "p90": 7.0,
+                "max": 220.0
+              },
+              "g": {
+                "min": 0.0,
+                "p10": 0.0,
+                "p25": 0.0,
+                "median": 1.0,
+                "p75": 3.0,
+                "p90": 5.0,
+                "max": 220.0
+              },
+              "b": {
+                "min": 0.0,
+                "p10": 7.0,
+                "p25": 7.0,
+                "median": 12.0,
+                "p75": 18.0,
+                "p90": 26.0,
+                "max": 222.0
+              }
+            },
+            "opencv_hsv": {
+              "h": {
+                "min": 0.0,
+                "p10": 120.0,
+                "p25": 122.0,
+                "median": 124.0,
+                "p75": 124.0,
+                "p90": 126.0,
+                "max": 135.0
+              },
+              "s": {
+                "min": 0.0,
+                "p10": 204.0,
+                "p25": 215.0,
+                "median": 227.0,
+                "p75": 255.0,
+                "p90": 255.0,
+                "max": 255.0
+              },
+              "v": {
+                "min": 0.0,
+                "p10": 7.0,
+                "p25": 7.0,
+                "median": 12.0,
+                "p75": 18.0,
+                "p90": 26.0,
+                "max": 222.0
+              }
+            }
+          },
+          "unique_high_confidence_text_crop": {
+            "bounds": [
+              1052,
+              966,
+              1112,
+              1002
+            ],
+            "pixels": 2160,
+            "white_mask_count": 0,
+            "existing_text_mask_count": 0,
+            "rgb": {
+              "r": {
+                "min": 0.0,
+                "p10": 1.0,
+                "p25": 2.0,
+                "median": 4.0,
+                "p75": 21.0,
+                "p90": 147.2,
+                "max": 181.0
+              },
+              "g": {
+                "min": 0.0,
+                "p10": 0.0,
+                "p25": 1.0,
+                "median": 2.0,
+                "p75": 19.0,
+                "p90": 147.1,
+                "max": 180.0
+              },
+              "b": {
+                "min": 0.0,
+                "p10": 7.0,
+                "p25": 13.0,
+                "median": 18.0,
+                "p75": 34.0,
+                "p90": 151.1,
+                "max": 187.0
+              }
+            },
+            "opencv_hsv": {
+              "h": {
+                "min": 0.0,
+                "p10": 120.0,
+                "p25": 120.0,
+                "median": 122.0,
+                "p75": 124.0,
+                "p90": 126.0,
+                "max": 130.0
+              },
+              "s": {
+                "min": 0.0,
+                "p10": 9.0,
+                "p25": 96.0,
+                "median": 219.0,
+                "p75": 228.5,
+                "p90": 255.0,
+                "max": 255.0
+              },
+              "v": {
+                "min": 0.0,
+                "p10": 7.0,
+                "p25": 13.0,
+                "median": 18.0,
+                "p75": 34.0,
+                "p90": 151.1,
+                "max": 187.0
+              }
+            }
+          }
+        }
+      ],
+      "confirm_fixed_roi_difference": {
+        "bounds": [
+          770,
+          950,
+          1160,
+          1025
+        ],
+        "pixels_equal": false,
+        "changed_pixels": 7284,
+        "changed_fraction": 0.24902564102564104,
+        "mean_absolute_rgb_delta": [
+          0.22782905982905982,
+          0.25384615384615383,
+          1.4506666666666668
+        ],
+        "max_absolute_channel_delta": 19,
+        "difference_bounds_local": [
+          0,
+          0,
+          390,
+          75
+        ]
+      },
+      "confirm_text_pair": {
+        "box_edges_within_existing_four_pixel_rule": true,
+        "pixel_difference": {
+          "bounds": [
+            1052,
+            966,
+            1112,
+            1002
+          ],
+          "pixels_equal": false,
+          "changed_pixels": 1130,
+          "changed_fraction": 0.5231481481481481,
+          "mean_absolute_rgb_delta": [
+            0.4652777777777778,
+            0.5412037037037037,
+            3.086574074074074
+          ],
+          "max_absolute_channel_delta": 17,
+          "difference_bounds_local": [
+            0,
+            0,
+            60,
+            36
+          ]
+        },
+        "existing_text_equal": false
+      },
+      "text_mask_definition": "Existing _text_equal: (S < 70 and V > 190) or (80 <= H <= 110 and S > 80 and V > 140); OpenCV HSV.",
+      "card_sources": [
+        {
+          "rows_present": true,
+          "native_options_present": true,
+          "native_option_count": 3,
+          "native_options_sha256": "5f31940326ef8e61b717422eec740ccff0632c97f6839ee4e6c907e1d43b613e",
+          "native_options_equal_pure_row_derivation": true,
+          "pure_row_derivation_is_new_ocr": false,
+          "cards": [
+            {
+              "card_index": 1,
+              "bounds": [
+                207,
+                198,
+                671,
+                868
+              ],
+              "rows": [
+                {
+                  "text": "夜之半神概念股",
+                  "confidence": 0.9912,
+                  "box": [
+                    345,
+                    374,
+                    534,
+                    412
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "开局时获得【夜之半神】角色和初始简易",
+                  "confidence": 0.9975,
+                  "box": [
+                    237,
+                    418,
+                    630,
+                    447
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "装备，【夜之半神】角色的刷新概率提",
+                  "confidence": 0.9976,
+                  "box": [
+                    236,
+                    444,
+                    608,
+                    474
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "高。",
+                  "confidence": 0.9999,
+                  "box": [
+                    238,
+                    474,
+                    279,
+                    502
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "角色",
+                  "confidence": 0.9999,
+                  "box": [
+                    420,
+                    598,
+                    462,
+                    626
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "装备",
+                  "confidence": 0.9999,
+                  "box": [
+                    422,
+                    744,
+                    459,
+                    766
+                  ],
+                  "text_redacted": false
+                }
+              ],
+              "native_option_present": true,
+              "native_bounds_match": true,
+              "native_index_match": true,
+              "native_label_count": 5,
+              "native_labels_each_have_one_row": true,
+              "native_effect_count": 4
+            },
+            {
+              "card_index": 2,
+              "bounds": [
+                727,
+                198,
+                1193,
+                868
+              ],
+              "rows": [
+                {
+                  "text": "6",
+                  "confidence": 0.6164,
+                  "box": [
+                    921,
+                    255,
+                    996,
+                    336
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "成功经验",
+                  "confidence": 0.9986,
+                  "box": [
+                    908,
+                    378,
+                    1016,
+                    410
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "在你升到8级后，进入接下来3个节点时，",
+                  "confidence": 0.9967,
+                  "box": [
+                    756,
+                    417,
+                    1140,
+                    446
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "获得12经验。",
+                  "confidence": 0.9948,
+                  "box": [
+                    756,
+                    446,
+                    888,
+                    476
+                  ],
+                  "text_redacted": false
+                }
+              ],
+              "native_option_present": true,
+              "native_bounds_match": true,
+              "native_index_match": true,
+              "native_label_count": 3,
+              "native_labels_each_have_one_row": true,
+              "native_effect_count": 2
+            },
+            {
+              "card_index": 3,
+              "bounds": [
+                1253,
+                198,
+                1717,
+                868
+              ],
+              "rows": [
+                {
+                  "text": "++++",
+                  "confidence": 0.8534,
+                  "box": [
+                    1460,
+                    260,
+                    1503,
+                    276
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "人才引进",
+                  "confidence": 0.9978,
+                  "box": [
+                    1426,
+                    376,
+                    1538,
+                    412
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "开局拥有1个随机4费角色。",
+                  "confidence": 0.9958,
+                  "box": [
+                    1348,
+                    420,
+                    1605,
+                    448
+                  ],
+                  "text_redacted": false
+                }
+              ],
+              "native_option_present": true,
+              "native_bounds_match": true,
+              "native_index_match": true,
+              "native_label_count": 2,
+              "native_labels_each_have_one_row": true,
+              "native_effect_count": 1
+            }
+          ]
+        },
+        {
+          "rows_present": true,
+          "native_options_present": true,
+          "native_option_count": 3,
+          "native_options_sha256": "5f31940326ef8e61b717422eec740ccff0632c97f6839ee4e6c907e1d43b613e",
+          "native_options_equal_pure_row_derivation": true,
+          "pure_row_derivation_is_new_ocr": false,
+          "cards": [
+            {
+              "card_index": 1,
+              "bounds": [
+                207,
+                198,
+                671,
+                868
+              ],
+              "rows": [
+                {
+                  "text": "夜之半神概念股",
+                  "confidence": 0.9916,
+                  "box": [
+                    345,
+                    374,
+                    537,
+                    412
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "开局时获得【夜之半神】角色和初始简易",
+                  "confidence": 0.9975,
+                  "box": [
+                    237,
+                    418,
+                    630,
+                    447
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "装备，【夜之半神】角色的刷新概率提",
+                  "confidence": 0.9976,
+                  "box": [
+                    236,
+                    444,
+                    608,
+                    474
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "高。",
+                  "confidence": 0.9999,
+                  "box": [
+                    238,
+                    474,
+                    279,
+                    502
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "角色",
+                  "confidence": 0.9999,
+                  "box": [
+                    420,
+                    598,
+                    462,
+                    626
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "装备",
+                  "confidence": 0.9999,
+                  "box": [
+                    422,
+                    744,
+                    459,
+                    766
+                  ],
+                  "text_redacted": false
+                }
+              ],
+              "native_option_present": true,
+              "native_bounds_match": true,
+              "native_index_match": true,
+              "native_label_count": 5,
+              "native_labels_each_have_one_row": true,
+              "native_effect_count": 4
+            },
+            {
+              "card_index": 2,
+              "bounds": [
+                727,
+                198,
+                1193,
+                868
+              ],
+              "rows": [
+                {
+                  "text": "成功经验",
+                  "confidence": 0.9986,
+                  "box": [
+                    908,
+                    378,
+                    1016,
+                    410
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "在你升到8级后，进入接下来3个节点时，",
+                  "confidence": 0.9967,
+                  "box": [
+                    756,
+                    417,
+                    1140,
+                    446
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "获得12经验。",
+                  "confidence": 0.9948,
+                  "box": [
+                    756,
+                    446,
+                    888,
+                    476
+                  ],
+                  "text_redacted": false
+                }
+              ],
+              "native_option_present": true,
+              "native_bounds_match": true,
+              "native_index_match": true,
+              "native_label_count": 3,
+              "native_labels_each_have_one_row": true,
+              "native_effect_count": 2
+            },
+            {
+              "card_index": 3,
+              "bounds": [
+                1253,
+                198,
+                1717,
+                868
+              ],
+              "rows": [
+                {
+                  "text": "++++",
+                  "confidence": 0.8534,
+                  "box": [
+                    1460,
+                    260,
+                    1503,
+                    276
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "人才引进",
+                  "confidence": 0.9976,
+                  "box": [
+                    1426,
+                    376,
+                    1538,
+                    412
+                  ],
+                  "text_redacted": false
+                },
+                {
+                  "text": "开局拥有1个随机4费角色。",
+                  "confidence": 0.9958,
+                  "box": [
+                    1348,
+                    420,
+                    1605,
+                    448
+                  ],
+                  "text_redacted": false
+                }
+              ],
+              "native_option_present": true,
+              "native_bounds_match": true,
+              "native_index_match": true,
+              "native_label_count": 2,
+              "native_labels_each_have_one_row": true,
+              "native_effect_count": 1
+            }
+          ]
+        }
+      ],
+      "existing_card_region_checks": [
+        {
+          "card_index": 1,
+          "bounds": [
+            207,
+            198,
+            671,
+            868
+          ],
+          "existing_card_outline_equal": true,
+          "existing_outline_covers_complete_corners": false,
+          "corner_pixel_diagnostics": [
+            {
+              "bounds": [
+                199,
+                190,
+                231,
+                222
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 243,
+              "changed_fraction": 0.2373046875,
+              "mean_absolute_rgb_delta": [
+                0.03515625,
+                0.0625,
+                0.205078125
+              ],
+              "max_absolute_channel_delta": 2,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                32
+              ]
+            },
+            {
+              "bounds": [
+                647,
+                190,
+                679,
+                222
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 94,
+              "changed_fraction": 0.091796875,
+              "mean_absolute_rgb_delta": [
+                0.025390625,
+                0.0302734375,
+                0.0478515625
+              ],
+              "max_absolute_channel_delta": 1,
+              "difference_bounds_local": [
+                0,
+                0,
+                31,
+                31
+              ]
+            },
+            {
+              "bounds": [
+                199,
+                844,
+                231,
+                876
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 127,
+              "changed_fraction": 0.1240234375,
+              "mean_absolute_rgb_delta": [
+                0.1357421875,
+                0.1591796875,
+                0.5419921875
+              ],
+              "max_absolute_channel_delta": 17,
+              "difference_bounds_local": [
+                0,
+                1,
+                31,
+                32
+              ]
+            },
+            {
+              "bounds": [
+                647,
+                844,
+                679,
+                876
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 147,
+              "changed_fraction": 0.1435546875,
+              "mean_absolute_rgb_delta": [
+                0.0986328125,
+                0.14453125,
+                0.666015625
+              ],
+              "max_absolute_channel_delta": 13,
+              "difference_bounds_local": [
+                3,
+                2,
+                32,
+                30
+              ]
+            }
+          ],
+          "book_bounds": [
+            626,
+            219,
+            650,
+            239
+          ],
+          "existing_book_text_equal": false,
+          "book_pixel_statistics": [
+            {
+              "bounds": [
+                626,
+                219,
+                650,
+                239
+              ],
+              "pixels": 480,
+              "white_mask_count": 0,
+              "existing_text_mask_count": 0,
+              "rgb": {
+                "r": {
+                  "min": 11.0,
+                  "p10": 16.0,
+                  "p25": 18.0,
+                  "median": 133.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                },
+                "g": {
+                  "min": 13.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 110.0,
+                  "p75": 207.0,
+                  "p90": 208.0,
+                  "max": 213.0
+                },
+                "b": {
+                  "min": 15.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 63.0,
+                  "p75": 112.0,
+                  "p90": 113.0,
+                  "max": 115.0
+                }
+              },
+              "opencv_hsv": {
+                "h": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 20.0,
+                  "median": 20.0,
+                  "p75": 20.0,
+                  "p90": 105.0,
+                  "max": 120.0
+                },
+                "s": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 47.75,
+                  "median": 134.0,
+                  "p75": 142.0,
+                  "p90": 143.0,
+                  "max": 143.0
+                },
+                "v": {
+                  "min": 15.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 133.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                }
+              }
+            },
+            {
+              "bounds": [
+                626,
+                219,
+                650,
+                239
+              ],
+              "pixels": 480,
+              "white_mask_count": 0,
+              "existing_text_mask_count": 0,
+              "rgb": {
+                "r": {
+                  "min": 11.0,
+                  "p10": 16.0,
+                  "p25": 18.0,
+                  "median": 133.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                },
+                "g": {
+                  "min": 13.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 110.0,
+                  "p75": 207.0,
+                  "p90": 208.0,
+                  "max": 213.0
+                },
+                "b": {
+                  "min": 15.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 63.0,
+                  "p75": 112.0,
+                  "p90": 113.0,
+                  "max": 115.0
+                }
+              },
+              "opencv_hsv": {
+                "h": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 20.0,
+                  "median": 20.0,
+                  "p75": 20.0,
+                  "p90": 105.0,
+                  "max": 120.0
+                },
+                "s": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 47.75,
+                  "median": 134.0,
+                  "p75": 142.0,
+                  "p90": 143.0,
+                  "max": 143.0
+                },
+                "v": {
+                  "min": 15.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 133.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "card_index": 2,
+          "bounds": [
+            727,
+            198,
+            1193,
+            868
+          ],
+          "existing_card_outline_equal": true,
+          "existing_outline_covers_complete_corners": false,
+          "corner_pixel_diagnostics": [
+            {
+              "bounds": [
+                719,
+                190,
+                751,
+                222
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 102,
+              "changed_fraction": 0.099609375,
+              "mean_absolute_rgb_delta": [
+                0.0146484375,
+                0.0244140625,
+                0.0712890625
+              ],
+              "max_absolute_channel_delta": 2,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                31
+              ]
+            },
+            {
+              "bounds": [
+                1169,
+                190,
+                1201,
+                222
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 129,
+              "changed_fraction": 0.1259765625,
+              "mean_absolute_rgb_delta": [
+                0.02734375,
+                0.0146484375,
+                0.091796875
+              ],
+              "max_absolute_channel_delta": 2,
+              "difference_bounds_local": [
+                3,
+                0,
+                32,
+                32
+              ]
+            },
+            {
+              "bounds": [
+                719,
+                844,
+                751,
+                876
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 388,
+              "changed_fraction": 0.37890625,
+              "mean_absolute_rgb_delta": [
+                0.3115234375,
+                0.419921875,
+                2.14453125
+              ],
+              "max_absolute_channel_delta": 15,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                32
+              ]
+            },
+            {
+              "bounds": [
+                1169,
+                844,
+                1201,
+                876
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 473,
+              "changed_fraction": 0.4619140625,
+              "mean_absolute_rgb_delta": [
+                0.015625,
+                0.0341796875,
+                2.6865234375
+              ],
+              "max_absolute_channel_delta": 9,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                32
+              ]
+            }
+          ],
+          "book_bounds": [
+            1148,
+            219,
+            1172,
+            239
+          ],
+          "existing_book_text_equal": false,
+          "book_pixel_statistics": [
+            {
+              "bounds": [
+                1148,
+                219,
+                1172,
+                239
+              ],
+              "pixels": 480,
+              "white_mask_count": 0,
+              "existing_text_mask_count": 0,
+              "rgb": {
+                "r": {
+                  "min": 14.0,
+                  "p10": 16.0,
+                  "p25": 18.0,
+                  "median": 144.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                },
+                "g": {
+                  "min": 15.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 118.5,
+                  "p75": 207.0,
+                  "p90": 209.0,
+                  "max": 217.0
+                },
+                "b": {
+                  "min": 17.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 68.0,
+                  "p75": 112.0,
+                  "p90": 113.0,
+                  "max": 117.0
+                }
+              },
+              "opencv_hsv": {
+                "h": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 20.0,
+                  "median": 20.0,
+                  "p75": 20.0,
+                  "p90": 110.0,
+                  "max": 150.0
+                },
+                "s": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 29.5,
+                  "median": 135.0,
+                  "p75": 142.0,
+                  "p90": 143.0,
+                  "max": 143.0
+                },
+                "v": {
+                  "min": 17.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 144.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                }
+              }
+            },
+            {
+              "bounds": [
+                1148,
+                219,
+                1172,
+                239
+              ],
+              "pixels": 480,
+              "white_mask_count": 0,
+              "existing_text_mask_count": 0,
+              "rgb": {
+                "r": {
+                  "min": 14.0,
+                  "p10": 16.0,
+                  "p25": 18.0,
+                  "median": 144.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                },
+                "g": {
+                  "min": 15.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 118.5,
+                  "p75": 207.0,
+                  "p90": 209.0,
+                  "max": 217.0
+                },
+                "b": {
+                  "min": 17.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 68.0,
+                  "p75": 112.0,
+                  "p90": 113.0,
+                  "max": 117.0
+                }
+              },
+              "opencv_hsv": {
+                "h": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 20.0,
+                  "median": 20.0,
+                  "p75": 20.0,
+                  "p90": 110.0,
+                  "max": 150.0
+                },
+                "s": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 29.5,
+                  "median": 135.0,
+                  "p75": 142.0,
+                  "p90": 143.0,
+                  "max": 143.0
+                },
+                "v": {
+                  "min": 17.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 144.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                }
+              }
+            }
+          ]
+        },
+        {
+          "card_index": 3,
+          "bounds": [
+            1253,
+            198,
+            1717,
+            868
+          ],
+          "existing_card_outline_equal": true,
+          "existing_outline_covers_complete_corners": false,
+          "corner_pixel_diagnostics": [
+            {
+              "bounds": [
+                1245,
+                190,
+                1277,
+                222
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 254,
+              "changed_fraction": 0.248046875,
+              "mean_absolute_rgb_delta": [
+                0.68359375,
+                0.8876953125,
+                1.42578125
+              ],
+              "max_absolute_channel_delta": 26,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                31
+              ]
+            },
+            {
+              "bounds": [
+                1693,
+                190,
+                1725,
+                222
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 123,
+              "changed_fraction": 0.1201171875,
+              "mean_absolute_rgb_delta": [
+                0.048828125,
+                0.02734375,
+                0.0537109375
+              ],
+              "max_absolute_channel_delta": 1,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                32
+              ]
+            },
+            {
+              "bounds": [
+                1245,
+                844,
+                1277,
+                876
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 364,
+              "changed_fraction": 0.35546875,
+              "mean_absolute_rgb_delta": [
+                0.00390625,
+                0.0205078125,
+                1.876953125
+              ],
+              "max_absolute_channel_delta": 10,
+              "difference_bounds_local": [
+                0,
+                0,
+                32,
+                32
+              ]
+            },
+            {
+              "bounds": [
+                1693,
+                844,
+                1725,
+                876
+              ],
+              "pixels_equal": false,
+              "changed_pixels": 210,
+              "changed_fraction": 0.205078125,
+              "mean_absolute_rgb_delta": [
+                0.1884765625,
+                0.2412109375,
+                0.97265625
+              ],
+              "max_absolute_channel_delta": 13,
+              "difference_bounds_local": [
+                5,
+                0,
+                32,
+                32
+              ]
+            }
+          ],
+          "book_bounds": [
+            1672,
+            219,
+            1696,
+            239
+          ],
+          "existing_book_text_equal": false,
+          "book_pixel_statistics": [
+            {
+              "bounds": [
+                1672,
+                219,
+                1696,
+                239
+              ],
+              "pixels": 480,
+              "white_mask_count": 0,
+              "existing_text_mask_count": 0,
+              "rgb": {
+                "r": {
+                  "min": 14.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 115.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                },
+                "g": {
+                  "min": 14.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 95.0,
+                  "p75": 207.0,
+                  "p90": 208.0,
+                  "max": 217.0
+                },
+                "b": {
+                  "min": 16.0,
+                  "p10": 18.0,
+                  "p25": 18.0,
+                  "median": 56.0,
+                  "p75": 112.0,
+                  "p90": 113.0,
+                  "max": 188.0
+                }
+              },
+              "opencv_hsv": {
+                "h": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 20.0,
+                  "median": 20.0,
+                  "p75": 20.0,
+                  "p90": 105.0,
+                  "max": 170.0
+                },
+                "s": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 15.0,
+                  "median": 130.0,
+                  "p75": 142.0,
+                  "p90": 143.0,
+                  "max": 143.0
+                },
+                "v": {
+                  "min": 16.0,
+                  "p10": 18.0,
+                  "p25": 18.0,
+                  "median": 115.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                }
+              }
+            },
+            {
+              "bounds": [
+                1672,
+                219,
+                1696,
+                239
+              ],
+              "pixels": 480,
+              "white_mask_count": 0,
+              "existing_text_mask_count": 0,
+              "rgb": {
+                "r": {
+                  "min": 14.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 115.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                },
+                "g": {
+                  "min": 14.0,
+                  "p10": 17.0,
+                  "p25": 18.0,
+                  "median": 95.0,
+                  "p75": 207.0,
+                  "p90": 208.0,
+                  "max": 217.0
+                },
+                "b": {
+                  "min": 16.0,
+                  "p10": 18.0,
+                  "p25": 18.0,
+                  "median": 56.0,
+                  "p75": 112.0,
+                  "p90": 113.0,
+                  "max": 188.0
+                }
+              },
+              "opencv_hsv": {
+                "h": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 20.0,
+                  "median": 20.0,
+                  "p75": 20.0,
+                  "p90": 105.0,
+                  "max": 170.0
+                },
+                "s": {
+                  "min": 0.0,
+                  "p10": 0.0,
+                  "p25": 15.0,
+                  "median": 130.0,
+                  "p75": 142.0,
+                  "p90": 143.0,
+                  "max": 143.0
+                },
+                "v": {
+                  "min": 16.0,
+                  "p10": 18.0,
+                  "p25": 18.0,
+                  "median": 115.0,
+                  "p75": 255.0,
+                  "p90": 255.0,
+                  "max": 255.0
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "diagnostic_region_checks_grant_input_eligibility": false,
+      "native_capture_authentication_replayed": false,
+      "current_epoch_pending_foreground_verified": false,
+      "historical_rows_or_identities_reconstructed": false,
+      "input_published": false,
+      "card_selection_outcome_verified": false,
+      "confirmation_outcome_verified": false,
+      "local_calibration": {
+        "schema": "currency-wars-confirmation-local-calibration/v1",
+        "spec_sha256": "886956e3ada52cf7b5fb3d36ecf9d82725841a8e40d0e468f4c4fd1856935700",
+        "artifacts": [
+          {
+            "artifact_name": "pair-886956e3ada52cf7-0-confirm-roi.png",
+            "source_frame_index": 0,
+            "source_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+            "crop_bounds": [
+              770,
+              950,
+              1160,
+              1025
+            ],
+            "crop_png_sha256": "14bd876a520186181d223976f41c6ffb613d254b593a0b7cb81d294ecadc2ceb",
+            "role": "confirm-roi"
+          },
+          {
+            "artifact_name": "pair-886956e3ada52cf7-0-confirm-text.png",
+            "source_frame_index": 0,
+            "source_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+            "crop_bounds": [
+              1052,
+              966,
+              1112,
+              1002
+            ],
+            "crop_png_sha256": "bba43de081fdee55d550651be5920220239eab6dadb091bc98620f05a391b2ed",
+            "role": "confirm-text"
+          },
+          {
+            "artifact_name": "pair-886956e3ada52cf7-1-confirm-roi.png",
+            "source_frame_index": 1,
+            "source_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+            "crop_bounds": [
+              770,
+              950,
+              1160,
+              1025
+            ],
+            "crop_png_sha256": "c9daacdd76f2623cd0e1ccbece11c6560926ed45ae3bfa23c9fd1b06ff41f407",
+            "role": "confirm-roi"
+          },
+          {
+            "artifact_name": "pair-886956e3ada52cf7-1-confirm-text.png",
+            "source_frame_index": 1,
+            "source_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+            "crop_bounds": [
+              1052,
+              966,
+              1112,
+              1002
+            ],
+            "crop_png_sha256": "5f28851c8649c589cfdfbbecbdc15d8106462fd095011e600ec55c55fa5ce816",
+            "role": "confirm-text"
+          }
+        ],
+        "derived_calibration_samples": true,
+        "independent_generalization_examples": false,
+        "historical_input_qualification": false,
+        "native_disabled_state": "unknown",
+        "automatically_uploaded": false
+      }
+    }
+  ],
+  "pair_errors": [],
+  "source_sha256_after_differences": {},
+  "source_set_sha256_before": "e5d75b812b76020a0c2dfeb77e665a51c0565217c6c421487a838e16f886b64f",
+  "source_set_sha256_after": "e5d75b812b76020a0c2dfeb77e665a51c0565217c6c421487a838e16f886b64f",
+  "source_unchanged": true,
+  "ok": true,
+  "root_frozen_archive_head": "30870dd5113456fae930d5a23d44b7556611605e"
+}

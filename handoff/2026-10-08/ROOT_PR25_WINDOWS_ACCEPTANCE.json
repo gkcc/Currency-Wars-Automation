@@ -1,0 +1,119 @@
+{
+  "schema": "currency-wars-card-confirmation-diagnostic/v1",
+  "basis_commit": "02e0a7c86f82e74216b759bed60a1a7cb55849eb",
+  "tested_checkout_head": null,
+  "source_binding_authority": "Exact before/after bytes; checkout HEAD does not identify uncommitted files.",
+  "environment": {
+    "system": "Windows",
+    "python": "3.12.2",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "11.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "source_file_count": 27,
+  "runtime_source_count": 24,
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+    "tools/currency_wars_manual_steps.py": "9a148f6ec78556cdbb31cb54077465707a2fca9aa87877f4b7c68dd369d1bbd8",
+    "tools/currency_wars_perception.py": "d09a5c586c7f82fbadda5cbf43f5cb90b0c38e8a7da453cec5adc95153f15808",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "73f857ac9eb65143cc45cbef4a7b9e96ba59a4d034d7945c1cbb63d1de735f5c",
+    "tools/currency_wars_runner.py": "3a9e623ce3d33fce1e4e605a0119c20f5e4b64fe369771c06ee450511c4fe35d",
+    "tools/currency_wars_runtime_sources.json": "fa6010108d731fc050432f40dde6223dad53a6d9ceaf15e64c0f05a10412e15d",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "73b379efb109181f028a6a9917f19bc03fe6cea24279ba312ccdfb12230a121e",
+    "tools/replay_currency_wars_card_confirmation.py": "74e3809dec67fdbccaa37bbf11b25478ee1f9793f1830312d170e96e545b7554",
+    "tools/test_currency_wars_card_confirmation.py": "03600e0306d136cae063b521b5bce01113080bfa349e97653ffdc0db4008ffec",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "game_inputs": 0,
+  "controllers_started": 0,
+  "new_game_captures": 0,
+  "new_ocr_calls": 0,
+  "online_model_called": false,
+  "private_resources_read_or_exported": false,
+  "candidate_installed": false,
+  "ready_changed": false,
+  "whole_game_speedup": null,
+  "same_endpoint_speedup": null,
+  "native_disabled_state": "unknown",
+  "limits": [
+    "Six focused protocol methods use generated frames and declared reader rows, not native gameplay.",
+    "Independent rereads cannot fill historical actual rows, frame/capture identities or epoch.",
+    "Gray or zero-mask text is not inferred to be disabled, enabled, or safe to click.",
+    "Existing region checks are diagnostics only and do not bypass the production visual guard.",
+    "Optional local crops are derived calibration samples, not independent generalization positives.",
+    "No live epoch, pending, foreground, capture authenticity, input receipt or selection outcome is verified."
+  ],
+  "protocol": {
+    "selection": [
+      "test_currency_wars_card_confirmation.CardConfirmationTests"
+    ],
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "elapsed_seconds": 2.566756999993231,
+    "test_results": [
+      {
+        "test": "test_currency_wars_card_confirmation.CardConfirmationTests.test_changed_title_effect_book_border_or_page_is_rejected",
+        "status": "passed",
+        "seconds": 0.610948899993673
+      },
+      {
+        "test": "test_currency_wars_card_confirmation.CardConfirmationTests.test_epoch_deadline_multiple_actions_and_changed_source_reject_before_input",
+        "status": "passed",
+        "seconds": 0.35197299998253584
+      },
+      {
+        "test": "test_currency_wars_card_confirmation.CardConfirmationTests.test_gray_confirmation_with_zero_white_mask_rejects_even_identical_cards",
+        "status": "passed",
+        "seconds": 0.26370279997354373
+      },
+      {
+        "test": "test_currency_wars_card_confirmation.CardConfirmationTests.test_publication_fence_rejects_late_pending_and_replaced_request",
+        "status": "passed",
+        "seconds": 0.3061462999903597
+      },
+      {
+        "test": "test_currency_wars_card_confirmation.CardConfirmationTests.test_reported_structure_missing_shifted_duplicate_unknown_or_incomplete_is_rejected",
+        "status": "passed",
+        "seconds": 0.8461707000387833
+      },
+      {
+        "test": "test_currency_wars_card_confirmation.CardConfirmationTests.test_white_confirmation_in_shared_roi_and_accounted_structure_publish_one_selection",
+        "status": "passed",
+        "seconds": 0.1876738999853842
+      }
+    ],
+    "failure_details": [],
+    "skip_details": [],
+    "ok": true
+  },
+  "retained_pairs": [],
+  "pair_errors": [],
+  "source_sha256_after_differences": {},
+  "source_set_sha256_before": "e5d75b812b76020a0c2dfeb77e665a51c0565217c6c421487a838e16f886b64f",
+  "source_set_sha256_after": "e5d75b812b76020a0c2dfeb77e665a51c0565217c6c421487a838e16f886b64f",
+  "source_unchanged": true,
+  "ok": true,
+  "root_frozen_archive_head": "30870dd5113456fae930d5a23d44b7556611605e"
+}
