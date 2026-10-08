@@ -1429,6 +1429,9 @@ def validate_plan(reply, request, epoch):
             proof = action.get('target_evidence')
             if not isinstance(proof, dict) or proof.get('snapshot_id') != request['snapshot_id']:
                 raise ValueError('坐标动作须绑定本次原始PNG的目标ROI证据')
+            if (proof.get('source') == 'supervising_agent'
+                    and proof.get('control_id') != PREPARATION_GUIDE_CONTROL):
+                raise ValueError('主管导航ROI声明仅限第二创业指南，不能转入普通坐标路径')
             box = proof.get('bounds')
             if (not isinstance(box, list) or len(box) != 4 or any(type(x) is not int for x in box)
                     or not 0 <= box[0] < box[2] <= 1920 or not 0 <= box[1] < box[3] <= 1080):
@@ -3227,6 +3230,10 @@ class Worker:
         loot_pickup = action.get('target_evidence', {}).get('control_id') in _NATIVE_LOOT_PICKUP_PROFILES
         self.guard_preparation_action(action, observed, loot_pickup=loot_pickup,
                                       verified_navigation=guide_navigation)
+        if guide_navigation:
+            # This runs under Entry's publication lock, after the fresh frame
+            # was read. The fixed-control exception still checks its pixels.
+            self.guard_startup_navigation(action, self.state.get('decision_request') or {}, observed)
         if action.get('type') == 'click_point' and not (guide_navigation or loot_pickup
                 or action.get('purpose') == 'reward_capacity'):
             self.check_target_roi(action, self.state.get('decision_request') or {}, observed)
@@ -3341,6 +3348,9 @@ class Worker:
                     self.guard_reward_step(reward, current)
                     reward.update(publication_attempted=True, broker_actions=value['actions'])
                     self.save_reward_step(reward)
+                if navigation is not None:
+                    navigation.update(publication_attempted=True, broker_actions=value['actions'])
+                    self.save_startup_navigation(navigation)
                 if hasattr(self, 'business'):
                     self.save_business()  # Original lease CAS still owns this publication.
                     # This is an intent before the actual publisher. A crash
@@ -3364,6 +3374,10 @@ class Worker:
         if reward is not None:
             reward['request_id'] = rid
             self.save_reward_step(reward)
+        navigation = getattr(self, 'startup_navigation_inflight', None)
+        if navigation is not None:
+            navigation['input_request_id'] = rid
+            self.save_startup_navigation(navigation)
         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
         self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
@@ -3392,6 +3406,11 @@ class Worker:
             if reward is not None:
                 reward.update(publication_attempted=guarded.publication_attempted, error=str(exc))
                 self.save_reward_step(reward)
+            if navigation is not None:
+                navigation.update(publication_attempted=guarded.publication_attempted, error=str(exc),
+                    status='pending' if guarded.publication_attempted else 'refused',
+                    outcome='unknown' if guarded.publication_attempted else 'zero_input')
+                self.save_startup_navigation(navigation)
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
@@ -3414,6 +3433,9 @@ class Worker:
         if reward is not None:
             reward.update(publication_attempted=guarded.publication_attempted, receipt=redact(result))
             self.save_reward_step(reward)
+        if navigation is not None:
+            navigation.update(publication_attempted=guarded.publication_attempted)
+            self.save_startup_navigation(navigation)
         self.c.write_json(self.records / (rid + '-result.json'), redact(result))
         after = None
         try:
@@ -3440,6 +3462,7 @@ class Worker:
             # Original input delivery must be known before a successor frame
             # replaces the broker notification; observe never repeats input.
             observed = (self.observe_reward_result(reward) if reward is not None
+                        else self.observe_startup_navigation(navigation) if navigation is not None
                         else self.observe(scope=read_scope))
         self.log({'event': 'actual_result', 'decision_id': rid, 'page': observed['page'],
                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
@@ -5725,7 +5748,181 @@ class Worker:
         self.log({'event': 'strategy_request', 'request': request})
         self.publish(control_mode='waiting_decision', phase=kind, reason=reason, decision_request=request)
 
+    def guard_startup_navigation(self, action, request, actual):
+        """One current fixed control; a supervisor identity is never native OCR."""
+        proof = action.get('target_evidence') or {}
+        if (request.get('match_id') != self.active_match_id or request.get('resume_epoch') != self.epoch()
+                or request != self.state.get('decision_request')):
+            raise ValueError('创业指南导航的当前请求/局/代次已变')
+        validate_plan({'request_id': request.get('request_id'), 'snapshot_id': request.get('snapshot_id'),
+                       'resume_epoch': self.epoch(), 'actions': [action]}, request, self.epoch())
+        if 'source' in proof:
+            context = getattr(self, 'manual_step_context', None) or {}
+            if (proof.get('source') != 'supervising_agent' or not manual_steps.active(self)
+                    or context.get('payload', {}).get('operation') != 'reviewed_plan'
+                    or context['payload'].get('reply', {}).get('actions') != [action]):
+                raise ValueError('主管图标标注只接受当前同Worker reviewed_plan，不接受普通decide或裸坐标')
+            intent = manual_steps.validate_guide_roi(action, request, context['binding'],
+                                                    context['payload']['checkpoint_id'])
+            if intent != context.get('guide_roi_intent'):
+                raise ValueError('主管导航标注与已排队原意图不符')
+        # Reuse the existing same-owner immutable frame/receipt verifier. It
+        # reads saved bytes only; no new screenshot or OCR is requested here.
+        manual_steps._bound_reward_frame(self.run, self.c, request['observation'], request['original_png'])
+        manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
+        diagnostic = {}
+        if not stable_preparation_icon_target(action, request, actual, self.frame_path, diagnostic):
+            self.log({'event': 'startup_navigation_guard_rejected', 'request_id': request['request_id'],
+                      'diagnostic': diagnostic, 'input_sent': False})
+            raise ValueError('创业指南当前页面/唯一图标/局部暴露或来源未通过，零输入')
+        return diagnostic
+
+    def save_startup_navigation(self, value):
+        value['record_file'] = str(self.records / ('guide-navigation-' + value['request_id'] + '.json'))
+        value.update(pending=value['status'] == 'pending', input_resent=False,
+                     automatic_phase_completion=False, expected_title='创业指南')
+        self.c.write_json(Path(value['record_file']), value)
+        self.c.write_json(self.run / 'startup-navigation.json', value)
+        self.startup_navigation_result = copy.deepcopy(value)
+        self.state['startup_navigation_result'] = copy.deepcopy(value)
+
+    def check_startup_navigation_attempt(self, action, request):
+        path = self.records / ('guide-navigation-' + request['request_id'] + '.json')
+        if path.exists():
+            raise ValueError('本次创业指南请求已有原尝试；读取原记录，不重发')
+        previous = optional(self.run / 'startup-navigation.json') or {}
+        if (previous.get('match_id') == self.active_match_id and previous.get('status') == 'pending'
+                and previous.get('publication_attempted') is True):
+            if (previous.get('run_id') != self.owner['run_id'] or optional(self.records /
+                    ('guide-navigation-' + previous['request_id'] + '.json')) != previous):
+                raise ValueError('原导航记录归属/归档不符；不绕过pending')
+            self.startup_navigation_delivery(previous)
+            # A later explicitly reviewed current target is a new manual
+            # intent. The prior navigation's historical unknown is retained.
+            if (action.get('target_evidence', {}).get('source') != 'supervising_agent'
+                    or any(request.get('observation', {}).get(key) == previous.get('source_frame', {}).get(key)
+                           for key in ('capture_request_id', 'frame_id'))):
+                raise ValueError('原导航后继未知；只读/当前ManualPhase复核，不能自动再点原图标')
+            return previous['request_id']
+        return None
+
+    def retain_startup_frame(self, request_id, label, observed):
+        # save_frame is a display JPEG. Result evidence needs these exact PNG
+        # bytes before read_frame releases its preceding transport frame.
+        data = self.frame_path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != observed.get('snapshot_id'):
+            raise entry.ObservationUnavailable('导航证据帧字节已变，保持未知')
+        path = self.records / (request_id + '-guide-' + label + '.png')
+        with path.open('xb') as stream:
+            stream.write(data)
+        return {**{key: observed.get(key) for key in
+                   ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at', 'page')}, 'png': str(path)}
+
+    def begin_startup_navigation(self, action, request, actual):
+        prior = self.check_startup_navigation_attempt(action, request)
+        value = dict(schema='startup-guide-navigation/v1', run_id=self.owner['run_id'],
+            match_id=self.active_match_id, stage=canonical_stage(actual.get('fields', {}).get('stage')),
+            resume_epoch=self.epoch(), request_id=request['request_id'], deadline_at=request['deadline_at'],
+            source=action['target_evidence'].get('source', 'native_visual_guard'),
+            source_frame={key: request['observation'].get(key) for key in
+                          ('snapshot_id', 'capture_request_id', 'frame_id')},
+            source_png=request['original_png'], target_evidence=copy.deepcopy(action['target_evidence']),
+            manual_step_id=(getattr(self, 'manual_step_context', None) or {}).get('step_id'),
+            prior_unknown_navigation_request_id=prior, input_request_id=None,
+            publication_attempted=False, status='pending', outcome='unknown',
+            verification_reads=0, frames=[], created_at=now())
+        value['validated_before'] = self.retain_startup_frame(request['request_id'], 'before', actual)
+        self.save_startup_navigation(value)
+        self.startup_navigation_inflight = value
+        return value
+
+    def startup_navigation_delivery(self, value):
+        rid = value.get('input_request_id')
+        if not rid or value.get('publication_attempted') is not True:
+            raise ValueError('导航尚无已发布原输入；不能用后图推定交付')
+        receipt = await_existing_receipt(self.run, self.c, rid, 0)
+        request, result = receipt.get('request') or {}, receipt.get('result') or {}
+        if (request.get('actions') != value.get('broker_actions') or request.get('kind') != 'actions'
+                or request.get('handoff') is not False or result.get('ok') is not True
+                or manual_receipt_state(receipt)['state'] != 'completed'
+                or [item for item in request.get('actions', []) if item.get('type') not in ('wait', 'observe')]
+                    != [{'type': 'click', 'args': list(PREPARATION_GUIDE_POINT)}]):
+            raise ValueError('导航原单点击交付未核；先对账原ID，不重发或用新图覆盖')
+        return receipt
+
+    def observe_startup_navigation(self, value):
+        """At most two persisted read-only attempts, including missing-frame fallback."""
+        self.startup_navigation_delivery(value)
+        if value['verification_reads'] >= 2:
+            raise ValueError('导航两次只读预算已用；保留未知，由当前ManualPhase复核')
+        value['verification_reads'] += 1
+        self.save_startup_navigation(value)  # Spend before waiting/capture, even on failure.
+        end = time.monotonic() + (.25 if value['verification_reads'] == 1 else .5)
+        with self.profile_span('startup_navigation_wait', operation='rules', business_step='startup_guide'):
+            while True:
+                if (self.epoch() != value['resume_epoch'] or self.active_match_id != value['match_id']
+                        or self.manual_input_blocked() or (self.run / 'runner-stop').exists()
+                        or (self.run / 'broker-stop').exists() or time.monotonic() >= self.deadline
+                        or datetime.now(timezone.utc) >= datetime.fromisoformat(value['deadline_at'])):
+                    raise ValueError('导航核效的局/代次/期限/停止条件已变；不再观察或输入')
+                remaining = end - time.monotonic()
+                if remaining <= 0:
+                    break
+                time.sleep(min(.05, remaining))
+        return self.observe(max_attempts=1)
+
+    def finish_startup_navigation(self, value):
+        self.startup_navigation_delivery(value)
+        while True:
+            if (self.epoch() != value['resume_epoch'] or self.active_match_id != value['match_id']
+                    or self.manual_input_blocked() or (self.run / 'runner-stop').exists()
+                    or (self.run / 'broker-stop').exists() or time.monotonic() >= self.deadline
+                    or datetime.now(timezone.utc) >= datetime.fromisoformat(value['deadline_at'])):
+                raise ValueError('导航后效来源已跨局/代次/期限或停止；保留未知，不继承新页面')
+            observed = self.last_observation or {}
+            manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path)
+            if observed.get('capture_request_id') != value['input_request_id']:
+                manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path, read_only=True)
+            stage = canonical_stage(observed.get('fields', {}).get('stage'))
+            title = find_text(observed.get('rows', []), '创业指南', exact=True)
+            title = title if title and title.get('confidence', 0) >= .90 else None
+            # Existing startup review consumes this exact native title. Page
+            # 'guide' means a different guide-detail reader, so never rewrite
+            # observation.page or claim a complete panel from that enum.
+            after = self.retain_startup_frame(value['request_id'], 'result-' + str(len(value['frames'])), observed)
+            after.update(stage=stage, expected_title_row=copy.deepcopy(title))
+            value['frames'].append(after)
+            changed = stage is not None and stage != value['stage']
+            if title and not changed:
+                value.update(status='observed', outcome='expected_title_observed',
+                             page_result='requires_current_startup_review')
+                self.save_startup_navigation(value)
+                return
+            if changed or observed.get('page') not in ('preparation', 'unknown', 'guide', 'lobby'):
+                value['reason'] = 'successor_page_or_stage_changed'
+                self.save_startup_navigation(value)
+                return
+            if value['verification_reads'] >= 2:
+                value['reason'] = 'expected_title_unknown_after_bounded_reads'
+                self.save_startup_navigation(value)
+                return
+            self.save_startup_navigation(value)
+            self.observe_startup_navigation(value)
+
     def execute_plan(self, reply):
+        actions = reply.get('actions', []) if isinstance(reply, dict) else []
+        if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
+               == PREPARATION_GUIDE_CONTROL for action in actions):
+            request = self.state.get('decision_request') or {}
+            validate_plan(reply, request, self.epoch())
+            self.check_startup_navigation_attempt(actions[0], request)
+            if manual_steps.unknown_receipts(self.run, self.c):
+                raise ValueError('原输入交付未知；先对账，不用导航新观察替换原结果')
+            with self.observation_input_lease():
+                return self._execute_plan(reply)
+        return self._execute_plan(reply)
+
+    def _execute_plan(self, reply):
         request = self.state['decision_request']
         validate_plan(reply, request, self.epoch())
         policy = coaching_policy()
@@ -5740,6 +5937,11 @@ class Worker:
         original = request['observation']
         if actual['page'] != original['page']:
             raise ValueError('战略回答到达时页面已变，拒绝旧计划')
+        guide_navigation_verified = False
+        if (len(reply['actions']) == 1 and reply['actions'][0].get('target_evidence', {}).get('control_id')
+                == PREPARATION_GUIDE_CONTROL):
+            self.guard_startup_navigation(reply['actions'][0], request, actual)
+            guide_navigation_verified = True
         lobby_navigation_verified = False
         if (original.get('page') == 'lobby'
                 and any(action.get('type') == 'click_text'
@@ -5808,8 +6010,7 @@ class Worker:
                     or stable_standard_entry_navigation(reply, request, actual, self.frame_path)
                     or stable_plane_intro_navigation(reply, request, actual, self.frame_path)
                     or stable_semantic_plan(reply, request, actual, self.frame_path)
-                    or len(reply['actions']) == 1 and stable_preparation_icon_target(
-                        reply['actions'][0], request, actual, self.frame_path)):
+                    or guide_navigation_verified):
                 raise ValueError('战略回答到达时页面已变，拒绝旧计划')
             # OCR and anchor matching never replace the original request,
             # deadline, resume epoch, or exact source-frame identity checks.
@@ -5878,9 +6079,8 @@ class Worker:
                 raise ValueError('计划前置页面变化；后续动作停止')
             guide_navigation = (kind == 'click_point'
                 and action.get('target_evidence', {}).get('control_id') == PREPARATION_GUIDE_CONTROL)
-            if guide_navigation and not stable_preparation_icon_target(
-                    action, request, actual, self.frame_path):
-                raise ValueError('第二创业指南图标的双帧定位/页面/遮挡守卫拒绝，未提交')
+            if guide_navigation:
+                self.guard_startup_navigation(action, request, actual)
             capacity_review = self.guard_preparation_action(action, actual, loot_pickup=loot_pickup,
                                                             verified_navigation=guide_navigation)
             for label in action.get('guard_texts', []):
@@ -5944,6 +6144,32 @@ class Worker:
                               'input_sent': False, 'retry_allowed': False})
                 if action.get('purpose') == 'reward_capacity':
                     self.begin_reward_capacity(capacity_review, action, actual)
+                if guide_navigation:
+                    navigation = self.begin_startup_navigation(action, request, actual)
+                    try:
+                        self.command([command + ':' + ':'.join(map(str, values)), 'wait:0.7'],
+                                     action['reason'], actual['page'], '创业指南', action=action)
+                        self.finish_startup_navigation(navigation)
+                    except Exception as error:
+                        navigation['error'] = str(error)
+                        if not navigation['publication_attempted']:
+                            navigation.update(status='refused', outcome='zero_input')
+                        self.save_startup_navigation(navigation)
+                        raise
+                    finally:
+                        self.startup_navigation_inflight = None
+                    self.invalidate_preparation('navigation')
+                    self.log({'event': 'startup_navigation_result', 'request_id': request['request_id'],
+                              'result': copy.deepcopy(navigation), 'input_resent': False})
+                    self.publish(control_mode='auto', decision_request=None, reason=None)
+                    self.ask(self.last_observation, 'preparation_strategy'
+                        if self.last_observation['page'] in ('preparation', 'shop') else 'unknown_page',
+                        '已提交一次第二图标导航；当前实读创业指南标题后仍须核章节/奖励。'
+                        if navigation['outcome'] == 'expected_title_observed'
+                        else '原导航后继仍未知；原输入不重发，按当前ManualPhase/新鲜帧复核。',
+                        choices={'startup_navigation': copy.deepcopy(navigation)},
+                        category='exception', business_step='startup_guide')
+                    return
                 self.command([command + ':' + ':'.join(map(str, values)), 'wait:0.7'], action['reason'], actual['page'], action.get('expected_change'), action=action)
                 if action.get('purpose') == 'reward_capacity':
                     self.preparation_reviews.pop('rewards', None)
@@ -6010,9 +6236,7 @@ class Worker:
             self.reward_capacity_action(action, actual, pixels=True)
             return
         if proof.get('control_id') == PREPARATION_GUIDE_CONTROL:
-            if (request.get('match_id') != self.active_match_id
-                    or not stable_preparation_icon_target(action, request, actual, self.frame_path)):
-                raise ValueError('固定第二创业指南导航图标的双帧守卫未通过')
+            self.guard_startup_navigation(action, request, actual)
             return
         if proof.get('control_id') in tuple(_NATIVE_LOOT_PICKUP_PROFILES):
             if (request.get('match_id') != self.active_match_id
