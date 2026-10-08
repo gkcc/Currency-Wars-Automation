@@ -1,0 +1,358 @@
+{
+  "candidate": "8bcff97b5a9287a6ffda405ee33a17473d1e32ac",
+  "platform": "win32",
+  "game_inputs": 0,
+  "exit": 0,
+  "pr19": {
+    "schema": "currency-wars-reward-manual-boundary-acceptance/v1",
+    "basis_commit": "1c48d12f88944a5532371ac3192710b85984cc42",
+    "tested_checkout_head": null,
+    "source_binding_authority": "exact file hashes before/after; HEAD alone does not identify uncommitted bytes",
+    "environment": {
+      "system": "Windows",
+      "python": "3.12.2"
+    },
+    "selection": [
+      "test_currency_wars_submission_queue.SubmissionQueueTests",
+      "test_currency_wars_manual_stage.ManualStageTests",
+      "test_currency_wars_node_profile.NodeProfileTests",
+      "test_currency_wars_manual_step_evidence.ManualStepEvidenceTests",
+      "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests"
+    ],
+    "tests": 39,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "elapsed_seconds": 11.172165900003165,
+    "test_results": [
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_busy_queue_and_earlier_deadline_refuse_before_ledger_without_deleting_lock",
+        "status": "passed",
+        "seconds": 0.017917599994689226
+      },
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_lease_and_production_guarded_submission_compose_without_reentering_original_mutex",
+        "status": "passed",
+        "seconds": 0.03525390004506335
+      },
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_manual_capture_and_input_share_lease_while_worker_observe_waits",
+        "status": "passed",
+        "seconds": 0.04886640002951026
+      },
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_publisher_busy_text_is_not_retried_and_pending_or_same_id_never_republishes",
+        "status": "passed",
+        "seconds": 0.029880399990361184
+      },
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_queue_diagnostic_failure_does_not_replace_acquisition_deadline_busy_or_published_body_outcome",
+        "status": "passed",
+        "seconds": 0.06049840000923723
+      },
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_runner_owned_raw_input_refuses_but_reads_resume_and_original_receipts_remain_available",
+        "status": "passed",
+        "seconds": 0.034338400000706315
+      },
+      {
+        "test": "test_currency_wars_submission_queue.SubmissionQueueTests.test_runner_ownership_appearing_during_acquisition_is_checked_inside_original_mutex",
+        "status": "passed",
+        "seconds": 0.034460099996067584
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_completed_delivery_keeps_economy_reward_and_capacity_effects_pending",
+        "status": "passed",
+        "seconds": 0.21796690003247932
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_completed_manual_claim_receipts_allow_scope_only_after_shop_closes",
+        "status": "passed",
+        "seconds": 0.2637317000189796
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_current_hud_can_defer_but_bad_source_and_epoch_are_hard_refusals",
+        "status": "passed",
+        "seconds": 0.17703129997244105
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_delayed_shop_stage_and_anchor_changes_stop_bridge_without_input",
+        "status": "passed",
+        "seconds": 0.3580583999864757
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_economy_debt_requires_original_effect_log_and_exact_spending_to_clear",
+        "status": "passed",
+        "seconds": 0.06212839996442199
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_missing_original_png_receipt_and_changed_archive_are_refused",
+        "status": "passed",
+        "seconds": 0.23193889996036887
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_missing_original_receipt_or_old_business_file_does_not_clear_effect",
+        "status": "passed",
+        "seconds": 0.11543429997982457
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_new_manual_epoch_and_later_input_do_not_adopt_old_scope",
+        "status": "passed",
+        "seconds": 0.46474809997016564
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_nonterminal_blocks_capture_and_terminal_unknown_is_retained_without_authorization",
+        "status": "passed",
+        "seconds": 0.14156640000874177
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_resume_requires_new_observe_and_preserves_spending_pending_and_reviews",
+        "status": "passed",
+        "seconds": 0.12368429999332875
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_two_native_observations_rebind_manual_scope_without_claiming_completion",
+        "status": "passed",
+        "seconds": 0.0950472999829799
+      },
+      {
+        "test": "test_currency_wars_manual_stage.ManualStageTests.test_verified_reward_archive_cannot_hide_same_id_pending_pointer",
+        "status": "passed",
+        "seconds": 0.0806569000124
+      },
+      {
+        "test": "test_currency_wars_node_profile.NodeProfileTests.test_cache_and_primary_reuse_record_only_this_read_actual_calls",
+        "status": "passed",
+        "seconds": 0.06755199999315664
+      },
+      {
+        "test": "test_currency_wars_node_profile.NodeProfileTests.test_import_binds_same_read_request_snapshot_and_parent_interval",
+        "status": "passed",
+        "seconds": 0.007898000010754913
+      },
+      {
+        "test": "test_currency_wars_node_profile.NodeProfileTests.test_invalid_or_reused_timing_cannot_fill_the_parent_window",
+        "status": "passed",
+        "seconds": 0.07974180002929643
+      },
+      {
+        "test": "test_currency_wars_node_profile.NodeProfileTests.test_legacy_ocr_and_missing_timing_are_never_relabelled_as_engine",
+        "status": "passed",
+        "seconds": 0.01469009998254478
+      },
+      {
+        "test": "test_currency_wars_node_profile.NodeProfileTests.test_node_wait_tool_observation_and_ocr_are_exclusive_not_causal",
+        "status": "passed",
+        "seconds": 0.0004885000525973737
+      },
+      {
+        "test": "test_currency_wars_node_profile.NodeProfileTests.test_timing_failure_preserves_ocr_result_and_original_exception",
+        "status": "passed",
+        "seconds": 0.10344119998626411
+      },
+      {
+        "test": "test_currency_wars_manual_step_evidence.ManualStepEvidenceTests.test_before_after_or_disappearing_watermark_stays_unknown_without_replaying_step",
+        "status": "passed",
+        "seconds": 0.15162319998489693
+      },
+      {
+        "test": "test_currency_wars_manual_step_evidence.ManualStepEvidenceTests.test_finalization_failures_preserve_primary_error_and_never_make_running_job_replayable",
+        "status": "passed",
+        "seconds": 0.12471080000977963
+      },
+      {
+        "test": "test_currency_wars_manual_step_evidence.ManualStepEvidenceTests.test_unreadable_pending_and_unknown_receipts_preserve_known_subset_and_original_ids",
+        "status": "passed",
+        "seconds": 0.14117529999930412
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_actual_widget_labels_shortcuts_prices_and_background_require_the_same_budget_intent",
+        "status": "passed",
+        "seconds": 0.06654079997679219
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_budgeted_text_to_key_and_capacity_first_publications_keep_exact_authorization",
+        "status": "passed",
+        "seconds": 0.2949330999981612
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_common_command_and_both_raw_clients_refuse_reward_economy_bypasses",
+        "status": "passed",
+        "seconds": 1.369128999998793
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_delayed_shop_open_stops_old_orb_batch_and_next_tick_closes_current_shop",
+        "status": "passed",
+        "seconds": 1.0270090000121854
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_late_original_result_is_folded_before_observe_and_unknown_effect_never_retries",
+        "status": "passed",
+        "seconds": 0.5629091000300832
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_local_layout_allows_background_animation_and_refuses_changed_target_page_overlay_or_source",
+        "status": "passed",
+        "seconds": 0.7535743999760598
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_manual_checkpoint_epoch_and_known_recovery_are_rechecked_at_publication",
+        "status": "passed",
+        "seconds": 1.2467946999822743
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_native_budget_path_survives_common_gate_but_removed_reward_review_stops_next_input",
+        "status": "passed",
+        "seconds": 0.17257349996361881
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_new_runtime_modules_are_in_shared_source_manifest_and_changed_bytes_refuse",
+        "status": "passed",
+        "seconds": 1.128246099979151
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_same_worker_manual_batch_has_one_final_root_boundary_and_same_job_never_replays",
+        "status": "passed",
+        "seconds": 1.0270371999940835
+      },
+      {
+        "test": "test_currency_wars_reward_manual_boundary.RewardManualBoundaryTests.test_stage_adoption_preserves_old_effect_pending_and_missing_hud_defers_without_takeover",
+        "status": "passed",
+        "seconds": 0.23833830002695322
+      }
+    ],
+    "failure_details": [],
+    "source_sha256": {
+      "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+      "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+      "gui/src/source_guard.rs": "b5718036f7f4ceb366dd109b869f8df7f8115101dab26911174dc7cff69b3ae7",
+      "handoff/2026-10-07/reward-sequence/manifest.json": "2c66fad7b2cd5a5b74a2317c1e368df0470de64dee9664a00abcc934de1a1906",
+      "handoff/2026-10-07/reward-sequence/q00.png": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+      "handoff/2026-10-07/reward-sequence/q01.png": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+      "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+      "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+      "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+      "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+      "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+      "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+      "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+      "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+      "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+      "tools/currency_wars_manual_steps.py": "9a148f6ec78556cdbb31cb54077465707a2fca9aa87877f4b7c68dd369d1bbd8",
+      "tools/currency_wars_perception.py": "a718a80ddb0a21a1efbc0c2c7c2c358e7942f9c4bdb06747e5b9355694566243",
+      "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+      "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+      "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+      "tools/currency_wars_rewards.py": "73f857ac9eb65143cc45cbef4a7b9e96ba59a4d034d7945c1cbb63d1de735f5c",
+      "tools/currency_wars_runner.py": "d4e3148246d1c4d575b3e4ab99b4097bedc681b952f06a3ceecaafd3ffe44345",
+      "tools/currency_wars_runtime_sources.json": "fa6010108d731fc050432f40dde6223dad53a6d9ceaf15e64c0f05a10412e15d",
+      "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+      "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+      "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+      "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+      "tools/currency_wars_visual_guards.py": "0e878ac428a5a5132c5ccd4e044248c4f6263303a830f2916265f1e96fd24934",
+      "tools/replay_currency_wars_reward_manual_boundary.py": "e557968754b0e96a4f0e4a667d784a77f6a0c4ddb9d6d07a843231dd813d4c05",
+      "tools/replay_currency_wars_rewards.py": "b7914699511186e10419c1556209fef4f1360d866f7069ea7b760a1a10690d64",
+      "tools/reward_resources/blue-orb-q01.png": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+      "tools/reward_resources/manifest.json": "0b2d5da751483150a0194d52a43dcb6d1b5dd6970309c3e7efe192541d03e635",
+      "tools/test_currency_wars_economy.py": "2baa2d1bab19fd91753d77f2e1d3d87841cbeb59c55fa046086723d662d39653",
+      "tools/test_currency_wars_manual_stage.py": "49f82998d2f4bc3ec45636f51359b7223d76d95187410e9ef06d67836c6720f0",
+      "tools/test_currency_wars_manual_step_evidence.py": "0839b2c0f4f36e8c3031829a580a853b25e3a762c0241e725e43473bdfea99f4",
+      "tools/test_currency_wars_node_profile.py": "148f376d8f1b812c0b80c13689df23e713e09aae6ddc44d65c9c05eb24b824aa",
+      "tools/test_currency_wars_perception_scope.py": "e68c41c53d993e7890f581cd9d25e106d0e3438bd2d753d9603b135ef7e2a61a",
+      "tools/test_currency_wars_profile.py": "3dfc36eb9ec84d29e39dd59051ba009a3873ee8d44f71af44b9b04ddc0670393",
+      "tools/test_currency_wars_reward_manual_boundary.py": "a87d30c498536ae894c0cadd004f8f2a45cc34ffa62d76ce9cec651f6b0b5cfb",
+      "tools/test_currency_wars_submission_queue.py": "058c39657468d61f51e2a7a819a4d5448c2ddf88a1dd13ebc352370bf42dda76",
+      "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+    },
+    "source_sha256_after_differences": {},
+    "source_set_sha256_before": "eeae5e854276d74ee16d976cb8b80001e79dac50b0f062708e39c220936b2e7f",
+    "source_set_sha256_after": "eeae5e854276d74ee16d976cb8b80001e79dac50b0f062708e39c220936b2e7f",
+    "runtime_source_count": 24,
+    "broker_pin": "E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F",
+    "measurements": {
+      "delayed_shop": {
+        "fixture": "retained_pixels_with_declared_delayed_shop_protocol",
+        "old_orb_publications": 0,
+        "current_page_after_refusal": "shop",
+        "next_pass_inputs": 3,
+        "first_action": "current_close_shop",
+        "terminal_request": "preparation_strategy",
+        "all_rewards_cleared": null
+      },
+      "one_authorized_f": {
+        "fixture": "declared_numeric_economy_protocol",
+        "published_keys": [
+          70
+        ],
+        "actual_spent_in_protocol": 4,
+        "pending": null,
+        "live_automation_verified": false
+      },
+      "manual_batch": {
+        "fixture": "retained_pixels_with_declared_stable_reward_protocol",
+        "same_worker": true,
+        "physical_actions": [
+          "close_shop",
+          "blue_orb",
+          "blue_orb"
+        ],
+        "input_receipts": 3,
+        "zero_input_receipts": 4,
+        "worker_root_requests": 1,
+        "endpoint": "preparation_strategy",
+        "endpoint_phase": "rewards",
+        "manual_latch_retained": true,
+        "epoch_changed": false,
+        "all_rewards_cleared": null,
+        "same_id_replayed": false,
+        "profile_error": null,
+        "profile_issues": [],
+        "profile_operation_contracts": [
+          2
+        ],
+        "profile_nodes": [
+          {
+            "stage": "3-6",
+            "total_seconds": 0.875,
+            "complete_boundaries": false,
+            "operation_seconds": {
+              "capture": 0.406,
+              "ocr": 0.0,
+              "takeover": 0.0,
+              "input_animation": 0.0,
+              "decision": 0.0,
+              "rules": 0.376,
+              "publication": 0.016,
+              "tool_roundtrip": 0.077,
+              "queue_wait": 0.0,
+              "perception": 0.0,
+              "ocr_engine": 0.0,
+              "supervisor_wait": 0.0,
+              "manual_wait": 0.0,
+              "unknown": 0.0
+            },
+            "overlap_unknown_seconds": 0.0
+          }
+        ],
+        "resume_boundary_included": false,
+        "live_automation_verified": false
+      }
+    },
+    "live_automation_verified": false,
+    "whole_game_speedup": null,
+    "same_endpoint_before_after_speedup": null,
+    "current_root_receipt_replayed": false,
+    "current_root_receipt_reference": "34daf6e5da314e29bb7b1aa22e90257a",
+    "historical_limits": [
+      "The reported current ROOT receipt/original transition frames were not in the fetched public tree.",
+      "Old mixed completed groups and shared preview aliases were not upgraded to immutable receipt identities.",
+      "Protocol reward batches end at current full-field ROOT review, not reward-clear or battle-ready.",
+      "Manual-stage tests verify scope/receipts, not a real continuous match transition.",
+      "Private local templates are neither read by this driver nor exported; public absence says nothing about ROOT resources.",
+      "No game, broker process, GUI, online model, installation, Rust build, or Windows live acceptance was executed."
+    ],
+    "development_record": "handoff/2026-10-07/MANUAL_STAGE_DEVELOPMENT.md",
+    "ok": true
+  }
+}
