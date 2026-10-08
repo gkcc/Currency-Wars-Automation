@@ -65,6 +65,24 @@ def _guide_roi(operation, reply):
     return None
 
 
+def _task_scroll(operation, reply):
+    """Recognize the bounded list intent; pixels remain the Worker's guard."""
+    if operation != 'reviewed_plan' or not isinstance(reply, dict):
+        return None
+    actions = reply.get('actions')
+    if not isinstance(actions, list):
+        return None
+    marked = [action for action in actions if isinstance(action, dict)
+              and isinstance(action.get('target_evidence'), dict)
+              and action['target_evidence'].get('control_id') == 'startup_guide_task_list']
+    if marked:
+        if (len(actions) != 1 or len(marked) != 1 or marked[0].get('type') != 'scroll'
+                or reply.get('context_update')):
+            raise ValueError('task list scroll requires one reviewed scroll without context updates')
+        return marked[0]
+    return None
+
+
 def validate_guide_roi(action, request, binding, checkpoint_id):
     """Bind a current supervisor target without changing native recognition.
 
@@ -470,6 +488,7 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
     annotation = _reward_roi(operation, reply)
     recovery = _recovery_reply(operation, reply)
     guide = _guide_roi(operation, reply)
+    task_scroll = _task_scroll(operation, reply)
     if (operation == 'reviewed_plan' and not isinstance(reply, dict)
             or operation not in ('reviewed_plan', 'collect_rewards', 'recover_reward') and reply is not None):
         raise ValueError('only reviewed_plan, annotated collect_rewards or recover_reward accepts a reply')
@@ -487,13 +506,31 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
                     raise ValueError('native reward loop belongs only to the rewards checkpoint')
                 if guide is not None and checkpoint.get('phase') != 'startup_guide':
                     raise ValueError('supervised guide ROI belongs only to the startup-guide checkpoint')
+                if task_scroll is not None and checkpoint.get('phase') != 'startup_guide':
+                    raise ValueError('task list scroll belongs only to the startup-guide checkpoint')
+            intent, request = None, None
+            if operation == 'reviewed_plan':
+                actions = reply.get('actions')
+                if reply.get('context_update') or not isinstance(actions, list) or len(actions) != 1:
+                    raise ValueError('manual plan is one existing guarded action; budgets/reviews use the ordinary current decision')
+                unused_records, state = r._manual_records(run, owner)
+                request = state.get('decision_request')
+                if not isinstance(request, dict) or not request:
+                    raise ValueError('manual plan has no current Worker request; inspect first')
+                r.validate_plan(reply, request, binding['old_epoch'])
             path.parent.mkdir(exist_ok=True)
             existing = list(path.parent.glob('*.json'))
             if len(existing) >= 128:
                 raise ValueError('manual-step mailbox reached its bounded capacity')
             if any(r.entry.read_json(p).get('status') in ('queued', 'running') for p in existing):
                 raise ValueError('a manual-step is already pending; inspect that original ID')
-            intent, request = None, None
+            if task_scroll is not None:
+                for prior_path in existing:
+                    prior_payload = r.entry.read_json(prior_path).get('payload', {})
+                    prior_reply = prior_payload.get('reply')
+                    if (_task_scroll(prior_payload.get('operation'), prior_reply) is not None
+                            and prior_reply.get('request_id') == request['request_id']):
+                        raise ValueError('task list scroll already used this request; read its original step or inspect a new current request')
             if annotation is not None:
                 unused_records, state = r._manual_records(run, owner)
                 request = state.get('decision_request')
@@ -544,6 +581,7 @@ def summary(item):
                     or ((result.get('reward_step') or {}).get('pending') is True
                         and (result.get('reward_recovery') or {}).get('continuation_allowed') is not True)
                     or (result.get('startup_navigation') or {}).get('pending') is True
+                    or (result.get('task_scroll') or {}).get('status') == 'pending'
                     or bool(result.get('prior_unknown_receipt_ids'))
                     or bool(item.get('finalization_errors'))
                     or any(value.get('unknown_input') for value in result.get('receipt_states', [])),
@@ -565,6 +603,9 @@ def active(worker):
             if item['payload']['operation'] in ('collect_rewards', 'recover_reward') and checkpoint.get('phase') != 'rewards':
                 return False
             if (_guide_roi(item['payload']['operation'], item['payload'].get('reply')) is not None
+                    and checkpoint.get('phase') != 'startup_guide'):
+                return False
+            if (_task_scroll(item['payload']['operation'], item['payload'].get('reply')) is not None
                     and checkpoint.get('phase') != 'startup_guide'):
                 return False
         return (current.get('status') == 'running' and current.get('binding') == item['binding'] == binding
@@ -681,6 +722,11 @@ def _finish_result(worker, item, before_ids, evidence_errors):
             ('request_id', 'input_request_id', 'manual_step_id', 'status', 'outcome', 'pending',
              'source', 'verification_reads', 'expected_title', 'record_file', 'input_resent',
              'automatic_phase_completion')}
+    task_scroll = getattr(worker, 'task_scroll_result', None)
+    if isinstance(task_scroll, dict) and task_scroll.get('manual_step_id') == item['step_id']:
+        item['result']['task_scroll'] = {key: copy.deepcopy(task_scroll.get(key)) for key in
+            ('request_id', 'input_request_id', 'manual_step_id', 'status', 'outcome', 'shift_y',
+             'record_file', 'input_resent', 'automatic_phase_completion', 'verification_reads')}
     if item['payload']['operation'] == 'recover_reward':
         try:
             evidence = item['payload']['reply']['reward_recovery']
@@ -803,6 +849,10 @@ def process(worker):
                     raise ValueError('original input outcome is unknown; only inspect or emergency controls may continue')
                 if not worker.state.get('decision_request'):
                     raise ValueError('manual plan has no current Worker request; inspect first')
+                if _task_scroll(operation, reply) is not None:
+                    checkpoint = _checkpoint(worker.run, binding, item['payload']['checkpoint_id'])
+                    if checkpoint.get('phase') != 'startup_guide':
+                        raise ValueError('task list scroll requires its current startup-guide checkpoint')
                 guide = _guide_roi(operation, reply)
                 if guide is not None:
                     checkpoint = _checkpoint(worker.run, binding, item['payload']['checkpoint_id'])

@@ -7,6 +7,7 @@ import copy
 import ctypes
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -34,7 +35,8 @@ from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
 from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target, navigation_target,
     stable_preparation_icon_target, PREPARATION_GUIDE_CONTROL,
-    PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT)
+    PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT, TASK_LIST_SCROLL_CONTROL,
+    validate_task_list_scroll, stable_task_list_scroll, task_list_scroll_postcondition)
 
 artifacts = entry.artifacts
 PROJECT = Path(__file__).resolve().parent.parent
@@ -1419,6 +1421,10 @@ def validate_plan(reply, request, epoch):
             raise ValueError('每个动作须有具体中文理由')
         if action['type'] not in ('finish_inspection', 'confirm_match_result', 'finish_preparation_review') and not action.get('expected_page'):
             raise ValueError('游戏输入须指定实际页面前置条件')
+        if isinstance(action.get('target_evidence'), dict) and action['target_evidence'].get('control_id') == TASK_LIST_SCROLL_CONTROL:
+            if len(actions) != 1 or reply.get('context_update'):
+                raise ValueError('任务列表滚动须独立单动作，不附带预算或阶段完成项')
+            validate_task_list_scroll(action, request)
         if action['type'] == 'click_text' and (not isinstance(action.get('text'), str)
                 or not clean(action['text']) or type(action.get('exact', True)) is not bool):
             raise ValueError('文字点击须有非空目标及布尔exact，不能用空子串或隐式类型匹配')
@@ -1436,6 +1442,16 @@ def validate_plan(reply, request, epoch):
             if (not isinstance(box, list) or len(box) != 4 or any(type(x) is not int for x in box)
                     or not 0 <= box[0] < box[2] <= 1920 or not 0 <= box[1] < box[3] <= 1080):
                 raise ValueError('目标ROI边界无效')
+            if action['type'] == 'scroll':
+                values = action.get('args')
+                if not isinstance(proof.get('text'), str) or not clean(proof['text']):
+                    raise ValueError('滚动计划缺少target_evidence.text，调用端未提交')
+                if (not isinstance(values, list) or len(values) != 3
+                        or any(type(v) not in (int, float) or not math.isfinite(v) for v in values)
+                        or abs(values[2]) > 1200 or not float(values[2]).is_integer()):
+                    raise ValueError('滚动计划须含两个有限坐标与有界整数滚轮量，调用端未提交')
+                if not box[0] <= values[0] < box[2] or not box[1] <= values[1] < box[3]:
+                    raise ValueError('输入点不在指定目标ROI内，调用端未提交')
             if proof.get('control_id') == PREPARATION_GUIDE_CONTROL and (
                     action['type'] != 'click_point' or len(actions) != 1
                     or request.get('kind') != 'preparation_strategy'
@@ -3127,6 +3143,13 @@ class Worker:
             self.manual_stage_business_pending = retained_effects
         if retained_effects and not (page == 'reward_overlay' and physical == ['key:27']):
             raise ValueError('原节点业务效果仍pending；完整completed不能清费用/领奖效果，只核原来源')
+        if isinstance(action, dict) and action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
+            pending = getattr(self, 'task_scroll_inflight', None)
+            if (physical != ['scroll:' + ':'.join(map(str, action.get('args', [])))]
+                    or not pending or pending.get('input_request_id') != request_id
+                    or pending.get('action') != action or pending.get('publication_attempted') is not False):
+                raise ValueError('任务列表意图与实际单滚动不符')
+            self.guard_task_scroll(action, self.state.get('decision_request') or {}, observed)
         if page not in ('preparation', 'shop', 'unit_gear'):
             return
         if not isinstance(action, dict):
@@ -3268,6 +3291,11 @@ class Worker:
         captured_stage = battle_stage(request)
         approval = None
         submit_deadline = self.deadline
+        if action and action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
+            context = self.task_scroll_binding(action, request)
+            for expires in (request['deadline_at'], context['expires_at']):
+                remaining = (datetime.fromisoformat(expires) - datetime.now(timezone.utc)).total_seconds()
+                submit_deadline = min(submit_deadline, time.monotonic() + remaining)
         policy = coaching_policy()
         if policy['require_battle_confirmation'] and battle_input(observed, action, tokens):
             with file_lock(self.run, 'decision-submit.lock'):
@@ -3351,12 +3379,22 @@ class Worker:
                 if navigation is not None:
                     navigation.update(publication_attempted=True, broker_actions=value['actions'])
                     self.save_startup_navigation(navigation)
+                if task_scroll is not None:
+                    task_scroll.update(publication_attempted=True, broker_actions=value['actions'])
+                    self.save_task_scroll(task_scroll)
                 if hasattr(self, 'business'):
                     self.save_business()  # Original lease CAS still owns this publication.
                     # This is an intent before the actual publisher. A crash
                     # here is unknown, never proof of input or zero effect.
                     archive_business_receipt(self.records, self.owner,
                         {'id': value['id'], 'request': value, 'result': None}, self.c)
+                if task_scroll is not None:
+                    # Local PNG/receipt checks can themselves cross the short
+                    # request/manual deadline. Recheck after their IO, before
+                    # returning to the sole publisher; never just worker age.
+                    self.task_scroll_binding(action, current_request)
+                    if time.monotonic() >= submit_deadline:
+                        raise entry.SubmissionDeadlineExpired('任务列表滚动在发布前已到原请求/手操期限')
 
         rid = uuid.uuid4().hex
         if action and action.get('purpose') == 'reward_capacity':
@@ -3378,6 +3416,10 @@ class Worker:
         if navigation is not None:
             navigation['input_request_id'] = rid
             self.save_startup_navigation(navigation)
+        task_scroll = getattr(self, 'task_scroll_inflight', None)
+        if task_scroll is not None:
+            task_scroll['input_request_id'] = rid
+            self.save_task_scroll(task_scroll)
         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
         self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
@@ -3411,6 +3453,11 @@ class Worker:
                     status='pending' if guarded.publication_attempted else 'refused',
                     outcome='unknown' if guarded.publication_attempted else 'zero_input')
                 self.save_startup_navigation(navigation)
+            if task_scroll is not None:
+                task_scroll.update(publication_attempted=guarded.publication_attempted, error=str(exc),
+                    status='pending' if guarded.publication_attempted else 'refused',
+                    outcome='效果未确认' if guarded.publication_attempted else '未发布')
+                self.save_task_scroll(task_scroll)
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
@@ -3461,9 +3508,15 @@ class Worker:
             # This fallback is part of the SAME reward's two-read budget.
             # Original input delivery must be known before a successor frame
             # replaces the broker notification; observe never repeats input.
-            observed = (self.observe_reward_result(reward) if reward is not None
-                        else self.observe_startup_navigation(navigation) if navigation is not None
-                        else self.observe(scope=read_scope))
+            if task_scroll is not None:
+                self.task_scroll_delivery(task_scroll)
+                task_scroll['verification_reads'] += 1
+                self.save_task_scroll(task_scroll)
+                observed = self.observe(scope=read_scope, max_attempts=1)
+            else:
+                observed = (self.observe_reward_result(reward) if reward is not None
+                            else self.observe_startup_navigation(navigation) if navigation is not None
+                            else self.observe(scope=read_scope))
         self.log({'event': 'actual_result', 'decision_id': rid, 'page': observed['page'],
                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
                   'after_evidence': after, 'expected_change': postcondition,
@@ -5748,6 +5801,103 @@ class Worker:
         self.log({'event': 'strategy_request', 'request': request})
         self.publish(control_mode='waiting_decision', phase=kind, reason=reason, decision_request=request)
 
+    def task_scroll_binding(self, action, request):
+        """Current manual phase, not a flag granting input on an unknown page."""
+        context = getattr(self, 'manual_step_context', None) or {}
+        if (request != self.state.get('decision_request') or request.get('match_id') != self.active_match_id
+                or request.get('resume_epoch') != self.epoch() or not manual_steps.active(self)
+                or context.get('payload', {}).get('operation') != 'reviewed_plan'
+                or context['payload'].get('reply', {}).get('actions') != [action]):
+            raise ValueError('任务列表滚动只接受当前同Worker的受检手操请求')
+        validate_plan(context['payload']['reply'], request, self.epoch())
+        binding = context['binding']
+        checkpoint = manual_steps._checkpoint(self.run, binding, context['payload']['checkpoint_id'])
+        if (checkpoint.get('phase') != 'startup_guide' or binding.get('stage') != battle_stage(request)
+                or self.preparation_checklist(self.last_observation)['phase'] != 'startup_guide'):
+            raise ValueError('当前创业指南phase/章节复核归属已失效，未批准滚动')
+        return context
+
+    def guard_task_scroll(self, action, request, actual):
+        self.task_scroll_binding(action, request)
+        if (not full_observation(request['observation']) or not full_observation(actual)
+                or any(actual.get(key) != (self.last_observation or {}).get(key)
+                       for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'page'))
+                or any(not actual.get(key) or actual.get(key) == request['observation'].get(key)
+                       for key in ('capture_request_id', 'frame_id'))):
+            raise ValueError('任务列表必须用当前同Worker的新capture/frame完整复核')
+        manual_steps._bound_reward_frame(self.run, self.c, request['observation'], request['original_png'])
+        manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
+        diagnostic = {}
+        if not stable_task_list_scroll(action, request, actual, self.frame_path, diagnostic):
+            self.log({'event': 'task_scroll_guard_rejected', 'request_id': request['request_id'],
+                      'diagnostic': diagnostic, 'input_sent': False})
+            raise ValueError('任务列表当前唯一文字、几何、章节、覆盖或局部像素守卫未通过')
+        return diagnostic
+
+    def save_task_scroll(self, value):
+        value.update(record_file=str(self.records / ('task-scroll-' + value['request_id'] + '.json')),
+                     input_resent=False, automatic_phase_completion=False)
+        self.c.write_json(Path(value['record_file']), value)
+        self.task_scroll_result = copy.deepcopy(value)
+        self.state['task_scroll_result'] = copy.deepcopy(value)
+
+    def begin_task_scroll(self, action, request, actual):
+        diagnostic = self.guard_task_scroll(action, request, actual)
+        record = self.records / ('task-scroll-' + request['request_id'] + '.json')
+        if record.exists():
+            raise ValueError('该原请求已经尝试任务列表滚动；只读原结果，不重发')
+        before = self.records / ('task-scroll-' + request['request_id'] + '-before.png')
+        with before.open('xb') as stream:
+            stream.write(self.frame_path.read_bytes())
+        value = dict(schema='task-list-scroll/v1', request_id=request['request_id'],
+            manual_step_id=self.manual_step_context['step_id'], match_id=self.active_match_id,
+            resume_epoch=self.epoch(), action=copy.deepcopy(action), before=copy.deepcopy(actual),
+            before_png=str(before), input_request_id=None, publication_attempted=False,
+            status='pending', outcome='效果未确认', shift_y=None, verification_reads=0,
+            local_guard=diagnostic)
+        self.save_task_scroll(value)
+        self.task_scroll_inflight = value
+        return value
+
+    def task_scroll_delivery(self, value):
+        receipt = await_existing_receipt(self.run, self.c, value['input_request_id'], 0)
+        issued = receipt.get('request') or {}
+        physical = [item for item in issued.get('actions', []) if item.get('type') not in ('observe', 'wait')]
+        if (manual_receipt_state(receipt)['state'] != 'completed'
+                or (receipt.get('result') or {}).get('ok') is not True
+                or issued.get('handoff') is not False or issued.get('kind') != 'actions'
+                or issued.get('actions') != value.get('broker_actions')
+                or physical != [{'type': 'scroll', 'args': value['action']['args']}]):
+            raise ValueError('原Entry收据未核实为唯一完整滚动；不重发')
+
+    def finish_task_scroll(self, value, action, request):
+        """Use the existing command's returned frame; no automatic retry/read loop."""
+        try:
+            self.task_scroll_binding(action, request)
+            self.task_scroll_delivery(value)
+            actual = self.last_observation
+            if (not full_observation(actual)
+                    or any(not actual.get(key) or actual.get(key) == value['before'].get(key)
+                           for key in ('capture_request_id', 'frame_id'))):
+                raise ValueError('滚动后缺少新capture/frame，不以旧帧证明位移')
+            manual_steps._bound_reward_frame(self.run, self.c, value['before'], value['before_png'])
+            after_receipt = manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
+            if actual['capture_request_id'] != value['input_request_id']:
+                # The existing missing-notification fallback may only observe;
+                # its new frame cannot stand in for unknown input delivery.
+                if (actual['capture_request_id'] not in self.worker_request_ids
+                        or after_receipt.get('request', {}).get('actions') != [{'type': 'observe', 'args': []}]):
+                    raise ValueError('滚动后继不是原返回或同Worker只读回帧')
+            measured = task_list_scroll_postcondition(action, value['before'], value['before_png'], actual, self.frame_path)
+            value.update(postcondition=measured, shift_y=measured['shift_y'],
+                         after_snapshot_id=actual['snapshot_id'], after_capture_request_id=actual['capture_request_id'],
+                         after_frame_id=actual['frame_id'])
+            if measured['verified']:
+                value.update(status='verified', outcome='位移已核实')
+        except (OSError, ValueError, KeyError, TypeError, RuntimeError, TimeoutError) as error:
+            value['error'] = str(error)
+        self.save_task_scroll(value)
+
     def guard_startup_navigation(self, action, request, actual):
         """One current fixed control; a supervisor identity is never native OCR."""
         proof = action.get('target_evidence') or {}
@@ -5957,6 +6107,15 @@ class Worker:
 
     def execute_plan(self, reply):
         actions = reply.get('actions', []) if isinstance(reply, dict) else []
+        if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
+               == TASK_LIST_SCROLL_CONTROL for action in actions):
+            request = self.state.get('decision_request') or {}
+            validate_plan(reply, request, self.epoch())
+            self.task_scroll_binding(actions[0], request)
+            if manual_steps.unknown_receipts(self.run, self.c):
+                raise ValueError('原输入交付未知；先对账，不以任务滚动覆盖原结果')
+            with self.observation_input_lease():
+                return self._execute_plan(reply)
         if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
                == PREPARATION_GUIDE_CONTROL for action in actions):
             request = self.state.get('decision_request') or {}
@@ -6190,6 +6349,24 @@ class Worker:
                               'input_sent': False, 'retry_allowed': False})
                 if action.get('purpose') == 'reward_capacity':
                     self.begin_reward_capacity(capacity_review, action, actual)
+                if action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
+                    scroll = self.begin_task_scroll(action, request, actual)
+                    try:
+                        self.command([command + ':' + ':'.join(map(str, values)), 'wait:0.7'],
+                                     action['reason'], actual['page'], '核实同一任务文字的有向位移', action=action)
+                        self.finish_task_scroll(scroll, action, request)
+                    except Exception as error:
+                        scroll['error'] = str(error)
+                        if not scroll['publication_attempted']:
+                            scroll.update(status='refused', outcome='未发布')
+                        self.save_task_scroll(scroll)
+                        raise
+                    finally:
+                        self.task_scroll_inflight = None
+                    self.log({'event': 'task_scroll_result', 'request_id': request['request_id'],
+                              'result': copy.deepcopy(scroll), 'input_resent': False})
+                    self.publish(control_mode='auto', decision_request=None, reason=None)
+                    return  # manual-step presents this same returned frame for the next review.
                 if guide_navigation:
                     navigation = self.begin_startup_navigation(action, request, actual)
                     try:
@@ -6278,6 +6455,9 @@ class Worker:
         reference = Path(request['original_png'])
         if hashlib.sha256(reference.read_bytes()).hexdigest() != request['snapshot_id']:
             raise ValueError('本次请求原始帧已更换，拒绝坐标计划')
+        if proof.get('control_id') == TASK_LIST_SCROLL_CONTROL:
+            self.guard_task_scroll(action, request, actual)
+            return
         if proof.get('control_id') == 'reward_capacity_sale':
             self.reward_capacity_action(action, actual, pixels=True)
             return

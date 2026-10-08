@@ -27,6 +27,7 @@ from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
 PREPARATION_GUIDE_CONTROL = 'prep_startup_guide_2'
 PREPARATION_GUIDE_BOUNDS = [1650, 39, 1727, 94]
 PREPARATION_GUIDE_POINT = [1687, 65]
+TASK_LIST_SCROLL_CONTROL = 'startup_guide_task_list'
 _PREPARATION_GUIDE_MASK = (
     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAA/gAAAAD/4AAAAP/8AAAAf//AAAB///wAAH/z/8AAP/x/+AAP/h/+AAH/g/8AAH/A/4AAD/Af4AAD8EHwAABwMDgAAAgeAgAAAA/gAAAAA/gAAAAgOBgAAB4MDwAAD8EPwAAD/Af4AAH/A/8AAH/g/8AAP/h/+AAP/x/+AAD/7/4AAB///gAAAf//AAAAH/8AAAAB/wAAAAA/AAAAAAOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 )
@@ -211,6 +212,160 @@ def _preparation_modal_row(observation):
                                  clean(row.get('text', '')))):
             return row
     return None
+
+
+def validate_task_list_scroll(action, request):
+    """Static contract only; the owning Worker still authenticates both frames.
+
+    The chapter label is selected from current OCR by the supervisor. It is a
+    local anchor, never a new native page classification or a completed task.
+    """
+    proof = action.get('target_evidence', {})
+    original = request.get('observation', {})
+    keys = {'control_id', 'source', 'snapshot_id', 'capture_request_id', 'frame_id',
+            'text', 'bounds', 'chapter_text', 'chapter_bounds'}
+    if (not isinstance(proof, dict) or set(proof) != keys
+            or proof.get('control_id') != TASK_LIST_SCROLL_CONTROL
+            or proof.get('source') != 'observed_screen'
+            or action.get('type') != 'scroll' or action.get('expected_page') != 'unknown'
+            or request.get('kind') != 'unknown_page' or original.get('page') != 'unknown'
+            or request.get('preparation_checklist', {}).get('phase') != 'startup_guide'
+            or proof.get('snapshot_id') != request.get('snapshot_id')
+            or original.get('snapshot_id') != request.get('snapshot_id')):
+        raise ValueError('任务列表滚动仅限当前创业指南复核的原生unknown页和原帧证据')
+    for key in ('capture_request_id', 'frame_id'):
+        if (not isinstance(proof.get(key), str) or not proof[key]
+                or proof[key] != original.get(key)):
+            raise ValueError('任务列表滚动的原capture/frame来源不符')
+    values, box = action.get('args'), proof.get('bounds')
+    if (not isinstance(values, list) or len(values) != 3
+            or any(type(v) not in (int, float) or not np.isfinite(v) for v in values)
+            or values[2] not in (-120, 120) or not _box(box)
+            or not box[0] <= values[0] < box[2] or not box[1] <= values[1] < box[3]):
+        raise ValueError('任务列表只允许目标ROI内单次正负120滚动')
+    label, chapter = proof.get('text'), proof.get('chapter_text')
+    if (not isinstance(label, str) or not clean(label)
+            or not isinstance(chapter, str) or not clean(chapter)
+            or len({clean(label), clean(chapter), '创业指南'}) != 3
+            or not _box(proof.get('chapter_bounds'))
+            or not isinstance(action.get('guard_texts'), list)
+            or not {clean(label), clean(chapter), '创业指南'}.issubset(
+                {clean(value) for value in action['guard_texts'] if isinstance(value, str)})):
+        raise ValueError('任务列表滚动须提供不同的当前唯一目标、章节行和创业指南标题')
+    for text, bounds in ((label, box), (chapter, proof['chapter_bounds'])):
+        row = _unique_row(original, re.escape(clean(text)), [0, 0, 1920, 1020])
+        if row is None or row['box'] != bounds:
+            raise ValueError('任务列表ROI必须来自当前完整唯一OCR行，不能扩大ROI稀释差异')
+    if box[2] - box[0] > 800 or box[3] - box[1] > 100:
+        raise ValueError('任务列表滚动目标不是有界的单行文字')
+    return proof
+
+
+def _low_amplitude_rgb_equal(before, after, diagnostic=None):
+    """Bounded local color noise, calibrated from the frozen PR31 counter pair.
+
+    The native 52x35 pair has max=4, mean=.05018315 and changed=.05329670.
+    These bounds apply only after identity/geometry/exposure checks. They do
+    not identify a rendering cause and never alter global image thresholds.
+    """
+    if (before.shape != after.shape or before.ndim != 3 or before.shape[2] != 3
+            or not before.size or before.dtype != np.uint8 or after.dtype != np.uint8):
+        return False
+    delta = np.abs(before.astype(np.int16) - after.astype(np.int16))
+    metrics = dict(max_abs_rgb=int(np.max(delta)), mean_abs_rgb=float(np.mean(delta)),
+                   changed_fraction=float(np.mean(np.any(delta != 0, axis=2))))
+    if diagnostic is not None:
+        diagnostic.update(metrics)
+    return (metrics['max_abs_rgb'] <= 4 and metrics['mean_abs_rgb'] <= .06
+            and metrics['changed_fraction'] <= .06)
+
+
+def _task_scroll_anchors(action, original, actual, images):
+    proof = action['target_evidence']
+    if (actual.get('page') != 'unknown' or original.get('page') != 'unknown'
+            or any(classify(obs.get('rows', [])) != 'unknown' for obs in (original, actual))
+            or original.get('fields', {}).get('stage') != actual.get('fields', {}).get('stage')
+            or any(_preparation_modal_row(obs) is not None for obs in (original, actual))):
+        return False
+    for label, expected in (('创业指南', None), (proof['chapter_text'], proof['chapter_bounds'])):
+        rows = [_unique_row(obs, re.escape(clean(label)), [0, 0, 1920, 1020])
+                for obs in (original, actual)]
+        if (any(row is None for row in rows) or rows[0]['box'] != rows[1]['box']
+                or expected is not None and rows[0]['box'] != expected):
+            return False
+        anchor, target = rows[0]['box'], proof['bounds']
+        if (max(anchor[0], target[0]) < min(anchor[2], target[2])
+                and max(anchor[1], target[1]) < min(anchor[3], target[3])):
+            return False
+        x, y, right, bottom = anchor
+        # These labels can be gray. Require real contours and the same tight
+        # complete-ROI color bound, not an uncalibrated white/dark-ink model.
+        if (np.count_nonzero(_edges(images[0], anchor)) < 24
+                or not _low_amplitude_rgb_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right])):
+            return False
+    return True
+
+
+def stable_task_list_scroll(action, request, actual, current_png, diagnostic=None):
+    """One noncritical list scroll: same text and geometry, tiny RGB changes."""
+    result = dict(allowed=False, reason='任务列表局部证据未通过')
+    try:
+        proof = validate_task_list_scroll(action, request)
+        images = _frames(request, actual, current_png)
+        if images is None or not _task_scroll_anchors(action, request['observation'], actual, images):
+            result['reason'] = '当前页面、章节、覆盖或PNG来源已变'
+            return False
+        row = _unique_row(actual, re.escape(clean(proof['text'])), [0, 0, 1920, 1020])
+        if row is None or row['box'] != proof['bounds']:
+            result['reason'] = '当前唯一文字或完整几何已变'
+            return False
+        x, y, right, bottom = proof['bounds']
+        if np.count_nonzero(_edges(images[0], proof['bounds'])) < 24:
+            result['reason'] = '原目标缺少可核实的文字轮廓'
+            return False
+        allowed = _low_amplitude_rgb_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right], result)
+        result.update(allowed=bool(allowed), reason='局部低幅变化已核实' if allowed else '局部像素变化超出已证范围')
+        return allowed
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
+        return False
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def task_list_scroll_postcondition(action, before, before_png, actual, current_png):
+    """Measure a signed displacement from the actual pre-input frame, once.
+
+    Disappearance or a changed string is not success. The caller authenticates
+    the original input receipt, fresh capture/frame and current manual phase.
+    """
+    result = dict(verified=False, shift_y=None, reason='滚动后位移未核实')
+    try:
+        pair = dict(observation=before, snapshot_id=before['snapshot_id'], original_png=before_png)
+        images = _frames(pair, actual, current_png)
+        if images is None or not _task_scroll_anchors(action, before, actual, images):
+            result['reason'] = '滚动后页面、章节、覆盖或PNG来源已变'
+            return result
+        proof = action['target_evidence']
+        rows = [_unique_row(obs, re.escape(clean(proof['text'])), [0, 0, 1920, 1020])
+                for obs in (before, actual)]
+        if any(row is None for row in rows) or rows[0]['box'] != proof['bounds']:
+            return result
+        old, fresh = rows[0]['box'], rows[1]['box']
+        shift = fresh[1] - old[1]
+        result['shift_y'] = shift
+        if (fresh[0] != old[0] or fresh[2] != old[2] or fresh[3] - old[3] != shift
+                or not 2 <= abs(shift) <= 240 or shift * action['args'][2] <= 0):
+            result['reason'] = '未观察到方向一致的有界纵向位移'
+            return result
+        if not _low_amplitude_rgb_equal(images[0][old[1]:old[3], old[0]:old[2]],
+                                        images[1][fresh[1]:fresh[3], fresh[0]:fresh[2]], result):
+            result['reason'] = '移动后的同一文字轮廓或颜色未核实'
+            return result
+        result.update(verified=True, reason='位移已核实')
+        return result
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
+        return result
 
 
 def stable_preparation_icon_target(action, request, actual, current_png, diagnostic=None):
