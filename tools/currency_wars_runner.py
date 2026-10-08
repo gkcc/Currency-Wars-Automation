@@ -4139,7 +4139,7 @@ class Worker:
         return {**{key: step.get(key) for key in ('step_id', 'request_id', 'stage', 'status', 'outcome')},
             'name': step.get('spec', {}).get('name'), 'target': step.get('spec', {}).get('target'),
             'effect_pending': pending is not None, 'input_resent': False,
-            'equipment_verified': False, 'equipment_reason': 'equipped_owner_source_unavailable',
+            'equipment_verified': False, 'equipment_reason': 'actual_unit_equipment_slot_binding_unverified',
             'automatic_phase_completion': False, 'battle_ready': False}
 
     def archive_deployment_frame(self, step, observed, prefix):
@@ -4268,7 +4268,8 @@ class Worker:
         """One reviewed named deployment, then bounded observation, then ROOT.
 
         There is one input at most. Unknown results never re-enter publication.
-        No equipment ownership reader exists, so this slice cannot close gear.
+        A readable item tooltip still needs the actual unit-page/slot binding;
+        this deployment slice cannot close gear from an unbound item name.
         """
         with self.observation_input_lease():
             return self._execute_deployment_action(action, request)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import copy
 from pathlib import Path
 
 import cv2
@@ -18,6 +19,7 @@ from PIL import Image
 
 
 SCHEMA = 'currency-wars-state-observation/v1'
+TOOLTIP_SCHEMA = 'currency-wars-native-tooltip-observation/v1'
 RESOURCE_DIR = Path(__file__).with_name('shop_reader_resources') / 'state_reader'
 EXPECTED_SIZE = (1920, 1080)
 
@@ -251,32 +253,79 @@ class StateReader:
 
     @staticmethod
     def _tooltips(rows, snapshot_id):
-        """Typed full names from readable native popup; never bind to a slot."""
+        """Raw title/type candidates only; adjacency never proves ownership."""
+        def valid(row):
+            if not isinstance(row, dict):
+                return False
+            box, confidence = row.get('box'), row.get('confidence')
+            raw_confidence = row.get('raw_confidence', confidence)
+            return (isinstance(row.get('text'), str)
+                and isinstance(row.get('raw_text', row['text']), str)
+                and row['text'] == row.get('raw_text', row['text'])
+                and not row.get('normalization_basis')
+                and all(type(value) in (int, float) and .90 <= value <= 1.
+                        for value in (confidence, raw_confidence))
+                and isinstance(box, list) and len(box) == 4
+                and all(type(value) in (int, float) for value in box)
+                and 0 <= box[0] < box[2] <= 1920 and 0 <= box[1] < box[3] <= 1080)
+
+        def adjacent(title, anchor):
+            return (8 <= anchor['box'][1] - title['box'][3] <= 45
+                    and abs(title['box'][0] - anchor['box'][0]) <= 75)
+
+        native = [row for row in rows or [] if valid(row)]
+        types = {'简易装备': 'item', '进阶装备': 'item', '消耗品': 'item',
+                 '前台': 'unit', '后台': 'unit', '前后台': 'unit'}
+        anchors = [row for row in native if row['text'] in types]
         found = []
-        for row in rows or []:
-            if not isinstance(row, dict) or row.get('confidence', 0) < .90:
+        for row in anchors:
+            candidates = [title for title in native if adjacent(title, row)]
+            if len(candidates) != 1:
                 continue
-            text, box = row.get('text'), row.get('box')
-            if not isinstance(text, str) or not isinstance(box, list) or len(box) != 4:
+            title, kind, text = candidates[0], types[row['text']], row['text']
+            if (title['text'] in types
+                    or sum(adjacent(title, anchor) for anchor in anchors) != 1):
                 continue
-            kind = ('item' if text in ('简易装备', '进阶装备', '消耗品') else
-                    'unit' if text in ('前台', '后台', '前后台') else None)
-            if kind is None:
-                continue
-            candidates = [r for r in rows if isinstance(r, dict) and r.get('confidence', 0) >= .90
-                and isinstance(r.get('box'), list) and len(r['box']) == 4
-                and 8 <= box[1] - r['box'][3] <= 45
-                and abs(r['box'][0] - box[0]) <= 75 and isinstance(r.get('text'), str)]
-            if len(candidates) == 1:
-                title = candidates[0]
-                name = title['text'].split('Lv.')[0].split('LV.')[0].strip()
-                if 1 <= len(name) <= 32:
-                    found.append({'kind': kind, 'name': name, 'snapshot_id': snapshot_id,
-                        'origin': 'readable_native_tooltip', 'owned': None,
-                        'location': None, 'bounds': title['box'], 'confidence': title['confidence'],
-                        'position': text if kind == 'unit' else None,
-                        'evidence': {'title': title, 'type_anchor': row}})
+            name = title.get('raw_text', title['text']).strip()
+            if kind == 'unit':
+                name = name.split('Lv.')[0].split('LV.')[0].strip()
+            if 1 <= len(name) <= 32:
+                found.append({'kind': kind, 'name': name, 'snapshot_id': snapshot_id,
+                    'origin': 'readable_native_tooltip', 'status': 'candidate',
+                    'owned': None, 'location': None, 'owner': None, 'slot': None, 'equipped': None,
+                    'item_type': text if kind == 'item' else None,
+                    'wearable_type': text in ('简易装备', '进阶装备') if kind == 'item' else None,
+                    'bounds': list(title['box']), 'confidence': title['confidence'],
+                    'position': text if kind == 'unit' else None,
+                    'evidence': copy.deepcopy({'title': title, 'type_anchor': row})})
         return found
+
+    @staticmethod
+    def read_tooltips(path, *, rows, page, rows_snapshot_id):
+        """Read saved PNG/OCR evidence without roster templates or new OCR.
+
+        There is no calibrated actual-role panel or equipment-slot locator in
+        this slice. Even a readable name remains an unbound candidate.
+        """
+        data = Path(path).read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        with Image.open(io.BytesIO(data)) as image:
+            fmt, size = image.format, image.size
+        reasons = ['actual_unit_panel_source_missing', 'actual_equipment_slot_source_missing',
+                   'owner_selection_receipt_unbound']
+        native = fmt == 'PNG' and size == EXPECTED_SIZE
+        bound = rows_snapshot_id == digest and isinstance(rows, list)
+        if not native:
+            reasons.append('unsupported_tooltip_image')
+        if not bound:
+            reasons.append('ocr_snapshot_missing_or_mismatch')
+        return {'schema': TOOLTIP_SCHEMA, 'origin': 'native_ocr_tooltip_candidates',
+            'snapshot_id': digest, 'input': {'sha256': digest, 'format': fmt, 'size': list(size)},
+            'rows_snapshot_id': rows_snapshot_id, 'page': page,
+            'context': 'guide_recommendation_only' if page in ('guide', 'unit_gear') else 'actual_role_page_unverified',
+            'status': 'unknown', 'checked': False, 'equipped': None, 'owned': None,
+            'location': None, 'owner': None, 'slot': None, 'reasons': reasons,
+            'candidates': StateReader._tooltips(rows, digest) if native and bound else []}
 
     def read(self, path, *, rows=None, page=None, selection=None):
         selected = deployment_selection(selection) if selection is not None else None
