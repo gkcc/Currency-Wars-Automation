@@ -1,0 +1,78 @@
+{
+  "parent": "51798ecf7a62d8f778a799c130fc111fc2f836a5",
+  "patch_sha256": "12fc881195ff239f38deb0676a224c979bf71a8da7fddbd5d9fcfc92b31fc863",
+  "production_modified": false,
+  "inherited_git": {
+    "paths": {
+      "tools/currency_wars_manual_steps.py": {
+        "exact_bytes": false,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 865,
+        "expected_crlf_count": 0
+      },
+      "tools/currency_wars_runner.py": {
+        "exact_bytes": false,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 7338,
+        "expected_crlf_count": 0
+      },
+      "handoff/2026-10-08/RETRY_OBLIGATION_FIX.md": {
+        "exact_bytes": false,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 50,
+        "expected_crlf_count": 0
+      },
+      "tools/replay_currency_wars_retry_obligations.py": {
+        "exact_bytes": false,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 118,
+        "expected_crlf_count": 0
+      },
+      "tools/test_currency_wars_retry_obligations.py": {
+        "exact_bytes": false,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 209,
+        "expected_crlf_count": 0
+      }
+    },
+    "all_exact": false,
+    "all_lf_normalized_exact": true
+  },
+  "explicit_lf": {
+    "paths": {
+      "tools/currency_wars_manual_steps.py": {
+        "exact_bytes": true,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 0,
+        "expected_crlf_count": 0
+      },
+      "tools/currency_wars_runner.py": {
+        "exact_bytes": true,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 0,
+        "expected_crlf_count": 0
+      },
+      "handoff/2026-10-08/RETRY_OBLIGATION_FIX.md": {
+        "exact_bytes": true,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 0,
+        "expected_crlf_count": 0
+      },
+      "tools/replay_currency_wars_retry_obligations.py": {
+        "exact_bytes": true,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 0,
+        "expected_crlf_count": 0
+      },
+      "tools/test_currency_wars_retry_obligations.py": {
+        "exact_bytes": true,
+        "lf_normalized_exact": true,
+        "actual_crlf_count": 0,
+        "expected_crlf_count": 0
+      }
+    },
+    "all_exact": true,
+    "all_lf_normalized_exact": true
+  },
+  "owned_run_actually_removed": true
+}
