@@ -42,8 +42,8 @@ DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 PLAYER_LEVEL_ROI = [240, 880, 358, 936]
 # Current parsing support, not a claim about the game's permanent maximum.
 MAX_SUPPORTED_POPULATION = 12
-READ_CONTRACT_VERSION = 3
-READ_SCOPES = ('full', 'rewards', 'economy', 'deployment')
+READ_CONTRACT_VERSION = 4
+READ_SCOPES = ('full', 'rewards', 'economy', 'deployment', 'equipment_tooltip')
 # Raw full-frame OCR only: 1920x1080 RGB, Pillow RGB default resize to
 # 1280x720, RapidOCR with use_cls=False. Bump when that pipeline changes.
 # The same engine object binds its loaded models; runtime defaults and the
@@ -822,8 +822,8 @@ class Perception:
     def read(self, path, force=False, *, scope='full', reuse_primary=False, deployment_slots=None):
         if scope not in READ_SCOPES:
             raise ValueError('unsupported perception read scope: ' + str(scope))
-        if reuse_primary and scope != 'full':
-            raise ValueError('primary OCR reuse requires a full semantic read')
+        if reuse_primary and scope not in ('full', 'equipment_tooltip'):
+            raise ValueError('primary OCR reuse requires full or equipment_tooltip scope')
         selection = None
         if scope == 'deployment':
             from currency_wars_state_reader import deployment_selection
@@ -885,7 +885,37 @@ class Perception:
                          "normalization_basis": alias[1] if alias else None,
                          "confidence": round(float(confidence), 4),
                          "box": [round(min(xs)), round(min(ys)), round(max(xs)), round(max(ys))]})
+        # The legacy display rows retain their rounded confidence. This new
+        # candidate reader also retains the original score, so rounding a weak
+        # title up to .9000 cannot promote it to a native tooltip candidate.
+        tooltip_rows = [{**row, 'raw_confidence': float(item[2])} for row, item in zip(rows, raw or [])]
         page = classify(rows)
+        if scope == 'equipment_tooltip':
+            from currency_wars_state_reader import StateReader
+            def unread_tooltip_scope(field):
+                return {'status': 'not_read', 'reason': 'outside_requested_read_scope',
+                        'read_scope': scope, 'snapshot_id': digest, 'field': field,
+                        'checked': False, 'fully_read': False}
+            unread_fields = ('team', 'inventory', 'player_hud', 'refresh_offer', 'gear', 'rewards',
+                             'shop', 'coins', 'hp', 'deployed', 'options', 'guide')
+            semantic = {field: unread_tooltip_scope(field) for field in unread_fields}
+            semantic['team']['units'], semantic['inventory']['items'] = [], []
+            semantic['native_tooltips'] = StateReader.read_tooltips(
+                path, rows=tooltip_rows, page=page, rows_snapshot_id=digest)
+            result = {'snapshot_id': digest, 'page': page, 'rows': rows,
+                'fields': {'stage': None, 'level': None, 'deployed': None},
+                'fingerprint': fingerprint(image), 'shop': {**semantic['shop'], 'ok': False, 'slots': []},
+                'semantic': semantic, 'state_read': {**unread_tooltip_scope('state_read'),
+                    'team': copy.deepcopy(semantic['team']), 'inventory': copy.deepcopy(semantic['inventory'])},
+                'read_contract': {'version': READ_CONTRACT_VERSION, 'requested_scope': scope,
+                    'effective_scope': scope, 'page_ocr': 'full_frame',
+                    'unread': list(unread_fields), 'fallback_reason': None},
+                'image': str(path), 'elapsed_ms': round((time.perf_counter() - started) * 1000, 2)}
+            result['read_timing'] = {'cache_hit': False, 'primary_ocr_reused': primary_reused,
+                'primary_ocr_executed': not primary_reused, 'primary_ocr_contract_version': OCR_CONTRACT_VERSION,
+                'elapsed_ms': result['elapsed_ms'], **timing.finish()}
+            self.cache = cache_key, copy.deepcopy(result), self.engine
+            return result
         if page == 'supply':
             # The retained native controller decoration is read as "）".
             # Normalize only this fixed button, with the full five-card page
@@ -1055,6 +1085,10 @@ class Perception:
         elif page == "battle":
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
         semantic = semantic_facts(rows, image, page, engine=None if deployment_read else engine, snapshot_id=digest)
+        if not narrow:
+            from currency_wars_state_reader import StateReader
+            semantic['native_tooltips'] = StateReader.read_tooltips(
+                path, rows=tooltip_rows, page=page, rows_snapshot_id=digest)
         semantic['player_hud'] = player
         from currency_wars_refresh_offer import read_offer, unread_offer
         semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope in ('rewards', 'deployment') else
@@ -1078,7 +1112,7 @@ class Perception:
             from currency_wars_state_reader import StateReader, native_slots
             if self.state_reader is None:
                 self.state_reader = StateReader()
-            state_read = self.state_reader.read(path, rows=rows, page=page)
+            state_read = self.state_reader.read(path, rows=tooltip_rows, page=page)
             team = state_read['team']
             population = re.fullmatch(r'([0-9]{1,2})/([0-9]{1,2})', native_deployed_count(rows) or '')
             board = [unit for unit in team['units'] if unit['location'] == 'board']
