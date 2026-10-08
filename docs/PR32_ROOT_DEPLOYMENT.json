@@ -1,0 +1,24 @@
+{
+  "observed_at": "2026-10-08T12:00:58.664957+00:00",
+  "previous": "d2477df7c5620fe606340e068642bf684445a5fb",
+  "candidate": "d0056bdc03bc967d5138781f29518a970b7ceab9",
+  "review": {
+    "path": "D:\\货币战争\\docs\\PR31_TASK_SCROLL_INDEPENDENT_REVIEW.json",
+    "sha256": "3f1aea1843a9c36384f46a4755a1ccb699e25f6084fb24a550d4bf4ff2349059",
+    "owner_id": "01a11b57-ed01-74e1-b147-5f1e99d09762",
+    "verdict": "PASS"
+  },
+  "native_scroll_verified": false,
+  "source_ff_installed": true,
+  "gui_rebuilt": false,
+  "whole_match_speedup_verified": false,
+  "canonical_binding_sha256": "c1b41f8f85bad1b89c09b81a2773a485626db1f74955d9736e506c218f296b4e",
+  "all24_sources_match_frozen": true,
+  "actual64_resources_unchanged": true,
+  "provider_unchanged": true,
+  "gui16_unchanged": true,
+  "check_launch_exit_code": 0,
+  "check_launch_stdout": "{\n  \"python_supported\": true,\n  \"dependencies\": {\n    \"Pillow\": \"11.3.0\",\n    \"numpy\": \"2.3.5\",\n    \"opencv-python\": \"4.13.0.92\",\n    \"rapidocr-onnxruntime\": \"1.4.4\",\n    \"psutil\": \"7.2.2\"\n  },\n  \"gui_binary_present\": true,\n  \"shop_resources_present\": true,\n  \"readiness_record_present\": true,\n  \"runtime_sources_verified\": true,\n  \"runtime_source_error\": null,\n  \"note\": \"Byte binding alone does not grant readiness; GUI/runner also require the independent review and matching session ownership.\",\n  \"game_inputs\": 0,\n  \"controllers_started\": 0,\n  \"launch_blocker\": null\n}\n",
+  "check_launch_stderr": "",
+  "check_launch_passed": true
+}

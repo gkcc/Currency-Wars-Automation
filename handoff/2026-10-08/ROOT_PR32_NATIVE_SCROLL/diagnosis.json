@@ -1,0 +1,340 @@
+{
+  "schema": "root-pr32-native-scroll-evidence/v1",
+  "observed_at": "2026-10-08T12:37:49.768933+00:00",
+  "candidate": "d0056bdc03bc967d5138781f29518a970b7ceab9",
+  "match_stage": "third standard 1-1",
+  "owner": "ROOT",
+  "native_full_frame_size": [
+    1920,
+    1080
+  ],
+  "frames": {
+    "guard-source": {
+      "path": "handoff/2026-10-08/ROOT_PR32_NATIVE_SCROLL/guard-source.png",
+      "native_full_png_sha256": "bf5d8625f15a3e3090f0a364f7764e2ff8f8b3d86e1b01e09f474a38fb707b1b",
+      "crop_bounds": [
+        270,
+        186,
+        1650,
+        895
+      ],
+      "crop_sha256": "3696f85f65291e31e0e9d3c001ca1c5e7d3c49b6dc11c967c27d0451e2243f91",
+      "resized": false,
+      "pixels_edited": false
+    },
+    "scroll-one-before": {
+      "path": "handoff/2026-10-08/ROOT_PR32_NATIVE_SCROLL/scroll-one-before.png",
+      "native_full_png_sha256": "79f7fd80b0a9fb0e43dba5c01042e7f23d4b6222ae9a942465cda0a26331b389",
+      "crop_bounds": [
+        270,
+        186,
+        1650,
+        895
+      ],
+      "crop_sha256": "c66ac7e00c72c7d98687255ae333296adb712bc0555d7d6049fcd67d1b3ded68",
+      "resized": false,
+      "pixels_edited": false
+    },
+    "scroll-one-after": {
+      "path": "handoff/2026-10-08/ROOT_PR32_NATIVE_SCROLL/scroll-one-after.png",
+      "native_full_png_sha256": "eabc9ec1fadf56d5feb77e80d8a35ff9b7165d1f0b1ca6e2b5610986de0a47bf",
+      "crop_bounds": [
+        270,
+        186,
+        1650,
+        895
+      ],
+      "crop_sha256": "78c217d323f8fac343913fdcb538737d04f7b4b542eef952a0273ef8008aaf64",
+      "resized": false,
+      "pixels_edited": false
+    },
+    "scroll-two-before": {
+      "path": "handoff/2026-10-08/ROOT_PR32_NATIVE_SCROLL/scroll-two-before.png",
+      "native_full_png_sha256": "f7b431b995995675b5425b36c7c730a94172292454c608ba61050b45ffbce1e7",
+      "crop_bounds": [
+        270,
+        186,
+        1650,
+        895
+      ],
+      "crop_sha256": "724a654a3de25927fb30178fd03a0da89e5db209486ba528c11253f509b6e5a9",
+      "resized": false,
+      "pixels_edited": false
+    },
+    "scroll-two-after": {
+      "path": "handoff/2026-10-08/ROOT_PR32_NATIVE_SCROLL/scroll-two-after.png",
+      "native_full_png_sha256": "5a0997ff37e66f365f5ffc5fbe2e33fbbc8978ad799751b2f4c3c7367cff8b13",
+      "crop_bounds": [
+        270,
+        186,
+        1650,
+        895
+      ],
+      "crop_sha256": "425ac2339e02d314a69a63aa4bcb89931f323cf324d02f7c94e6637a34d88061",
+      "resized": false,
+      "pixels_edited": false
+    }
+  },
+  "guard_failure": {
+    "request_id": "dbb00d1ae051406ca635bdb4c6f87309",
+    "step_id": "b76ec9bf3a424290b4b68bcd8950c2f1",
+    "input_sent": false,
+    "guard_passed": false,
+    "guard_diagnostic": {
+      "allowed": false,
+      "reason": "当前页面、章节、覆盖或PNG来源已变"
+    },
+    "old_page": "unknown",
+    "actual_page": "unknown",
+    "modal_old": null,
+    "modal_actual": null,
+    "metrics": {
+      "创业指南": {
+        "rows": [
+          {
+            "text": "创业指南",
+            "raw_text": "创业指南",
+            "normalization_basis": null,
+            "confidence": 0.9998,
+            "box": [
+              308,
+              207,
+              466,
+              255
+            ]
+          },
+          {
+            "text": "创业指南",
+            "raw_text": "创业指南",
+            "normalization_basis": null,
+            "confidence": 0.9998,
+            "box": [
+              308,
+              207,
+              466,
+              255
+            ]
+          }
+        ],
+        "max_abs_rgb": 5,
+        "mean_abs_rgb": 0.026415260196905765,
+        "changed_fraction": 0.05419303797468354,
+        "rgb_equal": false,
+        "edges": 1267
+      },
+      "第4章": {
+        "rows": [
+          {
+            "text": "第4章",
+            "raw_text": "第4章",
+            "normalization_basis": null,
+            "confidence": 0.9997,
+            "box": [
+              483,
+              279,
+              570,
+              320
+            ]
+          },
+          {
+            "text": "第4章",
+            "raw_text": "第4章",
+            "normalization_basis": null,
+            "confidence": 0.9997,
+            "box": [
+              483,
+              279,
+              570,
+              320
+            ]
+          }
+        ],
+        "max_abs_rgb": 17,
+        "mean_abs_rgb": 0.16456405943369778,
+        "changed_fraction": 0.07120829828987946,
+        "rgb_equal": false,
+        "edges": 588
+      },
+      "0/2": {
+        "rows": [
+          {
+            "text": "0/2",
+            "raw_text": "0/2",
+            "normalization_basis": null,
+            "confidence": 0.9967,
+            "box": [
+              1462,
+              326,
+              1510,
+              357
+            ]
+          },
+          {
+            "text": "0/2",
+            "raw_text": "0/2",
+            "normalization_basis": null,
+            "confidence": 0.9967,
+            "box": [
+              1462,
+              326,
+              1510,
+              357
+            ]
+          }
+        ],
+        "max_abs_rgb": 0,
+        "mean_abs_rgb": 0.0,
+        "changed_fraction": 0.0,
+        "rgb_equal": true,
+        "edges": 214
+      }
+    }
+  },
+  "guard_failure_actual_frame_retained": false,
+  "guard_failure_actual_frame_sha256": "0c2d5593135e6980de30cd4b1a1efabc8a794a806d44d49761f3f4bf300ab10f",
+  "guard_failure_retention_note": "Actual rejected frame was independently measured while present; only diagnostic JSON and receipt metadata retained. Original broker transient frame later released. No replacement image is claimed as this missing frame. The two successful scroll before/after pairs are fully retained native pairs.",
+  "public_manual_path": {
+    "actual_succeeded": true,
+    "sequence": [
+      "normal decide Escape queued, then current frame preparation verified",
+      "takeover persistent manual plus broker pause ACK",
+      "entry.request resume no actions handoff True expected old pause_id",
+      "manual intent and epoch unchanged",
+      "real rewards checkpoint fresh whole-field empty review completed",
+      "real startup_guide checkpoint then manual-step inspect",
+      "native second-icon one reviewed_plan successful",
+      "current single reviewed_plan list scroll"
+    ],
+    "manual_id": "3aff6ba63afb43a89cd6e0fbd3f737e5",
+    "epoch": "1d88d799899e4687802932ecd17afb2f",
+    "rewards_checkpoint": "a8f563ab92664b8492d46bcc99b97cd2",
+    "startup_checkpoint": "e206c20b602044eaa31d763da7bc474f",
+    "handoff_request": "4026c200ee16471aac89c3252a834c3a",
+    "source_changes": false,
+    "private_flags": false
+  },
+  "scroll_one": {
+    "ok": true,
+    "step_id": "0eb00f283861423f9d3d529b0f8cb042",
+    "status": "returned",
+    "input_resent": false,
+    "result": {
+      "receipt_states": [
+        {
+          "request_id": "1842beef64834ba0afa330a8b99652c7",
+          "state": "completed",
+          "unknown_input": false,
+          "input_attempted": true
+        },
+        {
+          "request_id": "c04f8ec2f0af420c89bed7dbf647c95d",
+          "state": "zero_input",
+          "unknown_input": false,
+          "input_attempted": false
+        }
+      ],
+      "receipt_watermark_verified": true,
+      "receipt_delivery_verified": true,
+      "evidence_errors": [],
+      "input_receipt_ids": [
+        "1842beef64834ba0afa330a8b99652c7"
+      ],
+      "snapshot_id": "eabc9ec1fadf56d5feb77e80d8a35ff9b7165d1f0b1ca6e2b5610986de0a47bf",
+      "capture_request_id": "1842beef64834ba0afa330a8b99652c7",
+      "frame_id": "dc758bcf9e754e22ad33d1f130dea149",
+      "page": "unknown",
+      "stage": null,
+      "decision_request_id": "fcc479d0606e45d5b52e267c8aa1b5c0",
+      "decision_kind": "unknown_page",
+      "all_rewards_cleared": null,
+      "automatic_phase_completion": false,
+      "input_resent": false,
+      "reward_step": null,
+      "prior_unknown_receipt_ids": [],
+      "task_scroll": {
+        "request_id": "3019abc68e91484faa13130ae736fb7c",
+        "input_request_id": "1842beef64834ba0afa330a8b99652c7",
+        "manual_step_id": "0eb00f283861423f9d3d529b0f8cb042",
+        "status": "pending",
+        "outcome": "效果未确认",
+        "shift_y": null,
+        "record_file": "D:\\货币战争\\debug\\runner-01a10ddf-211cdc6c1944\\task-scroll-3019abc68e91484faa13130ae736fb7c.json",
+        "input_resent": false,
+        "automatic_phase_completion": false,
+        "verification_reads": 0
+      }
+    },
+    "error": null,
+    "pending": true,
+    "next_step": "same step ID only; no replay of a queued/running or published action"
+  },
+  "scroll_two": {
+    "ok": true,
+    "step_id": "a8e2705d420a4b8191c5655a996d20f7",
+    "status": "returned",
+    "input_resent": false,
+    "result": {
+      "receipt_states": [
+        {
+          "request_id": "85ef10ae7a2f4965bb7c4fc1f93a0e25",
+          "state": "completed",
+          "unknown_input": false,
+          "input_attempted": true
+        },
+        {
+          "request_id": "d14ecb7f98384bc78dc48d5e7979dec1",
+          "state": "zero_input",
+          "unknown_input": false,
+          "input_attempted": false
+        }
+      ],
+      "receipt_watermark_verified": true,
+      "receipt_delivery_verified": true,
+      "evidence_errors": [],
+      "input_receipt_ids": [
+        "85ef10ae7a2f4965bb7c4fc1f93a0e25"
+      ],
+      "snapshot_id": "5a0997ff37e66f365f5ffc5fbe2e33fbbc8978ad799751b2f4c3c7367cff8b13",
+      "capture_request_id": "85ef10ae7a2f4965bb7c4fc1f93a0e25",
+      "frame_id": "b4b1bffb8f2246fa96e277f44f3e5511",
+      "page": "unknown",
+      "stage": null,
+      "decision_request_id": "ad019bb518044987838684f5ef7def4b",
+      "decision_kind": "unknown_page",
+      "all_rewards_cleared": null,
+      "automatic_phase_completion": false,
+      "input_resent": false,
+      "reward_step": null,
+      "prior_unknown_receipt_ids": [],
+      "task_scroll": {
+        "request_id": "47db5486775642d89856e7b748c653c5",
+        "input_request_id": "85ef10ae7a2f4965bb7c4fc1f93a0e25",
+        "manual_step_id": "a8e2705d420a4b8191c5655a996d20f7",
+        "status": "pending",
+        "outcome": "效果未确认",
+        "shift_y": null,
+        "record_file": "D:\\货币战争\\debug\\runner-01a10ddf-211cdc6c1944\\task-scroll-47db5486775642d89856e7b748c653c5.json",
+        "input_resent": false,
+        "automatic_phase_completion": false,
+        "verification_reads": 0
+      }
+    },
+    "error": null,
+    "pending": true,
+    "next_step": "same step ID only; no replay of a queued/running or published action"
+  },
+  "root_visual_observation": "Both delivered wheel steps moved list up about30px each. Original script outcome pending remains unchanged; native OCR0/2 box first moved [1462,326,1510,357] to [1462,297,1510,327] (height31 to30), and later partly clipped/misread U/Z.",
+  "remaining": "Guide bottom and last two rows not yet inspected; rewards there remain unknown; no economy/lineup/battle input.",
+  "classification": "B generic guard calibration/geometry and postcondition gap; public manual flow reachable (not an interface impossibility)",
+  "local_verification_provenance": {
+    "docs/PR31_TASK_SCROLL_WINDOWS_ACCEPTANCE.json": {
+      "sha256": "bc0e431c4ef84fde67aacba3cad771b4f067e4962d7ac0008337b9edad39c43a"
+    },
+    "docs/PR31_TASK_SCROLL_INDEPENDENT_REVIEW.json": {
+      "sha256": "3f1aea1843a9c36384f46a4755a1ccb699e25f6084fb24a550d4bf4ff2349059"
+    },
+    "docs/PR32_ROOT_DEPLOYMENT.json": {
+      "sha256": "045068fd5544303d22cda211f0ecf9ecf0881b993c4cd3cc0f5c8609cef6a45f"
+    }
+  }
+}

@@ -1,0 +1,802 @@
+{
+  "schema": "currency-wars-task-scroll/v1",
+  "basis_commit": "d2477df7c5620fe606340e068642bf684445a5fb",
+  "evidence_commit": "0e43fadea064a52141fdd3b322ba4a8b14b04a62",
+  "source_binding_authority": "Exact before/after bytes; HEAD alone does not certify uncommitted source.",
+  "environment": {
+    "system": "Windows",
+    "python": "3.12.2",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "11.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "execution_scope": "Ten exact new methods through existing manual mailbox, Worker and Entry consumers.",
+  "game_inputs": 0,
+  "controllers_started": 0,
+  "new_game_captures": 0,
+  "native_ocr_calls": 0,
+  "online_model_called": false,
+  "candidate_installed": false,
+  "ready_changed": false,
+  "require_runtime_resources": true,
+  "old_navigation_suite_rerun": false,
+  "public_original_full_game_pngs_available": false,
+  "natural_scroll_success_verified": false,
+  "whole_game_speedup": null,
+  "native_scope": "Two unedited 52x35 crops only; complete canvases/OCR/successors/historical records are declared fixtures.",
+  "tested_checkout_head": null,
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "1f0ac7cf85896b5e8c92b625de494ca5de5269e8aa8d0574e4b79641c6ede5ef",
+    "tools/currency_wars_manual_steps.py": "500685928d3333b93537700035e135c795bcf1a28aa354b9ec0e2618cfbce0e1",
+    "tools/currency_wars_perception.py": "ae5daa4ca2e0bfdef4abfbc0dcee2df8c7da4c2a992657c1256c3ccde452fff9",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "3e0d7c5185ee3c40b68b9852299010d1abd2d9cd32eaf024496eed1fd16e718c",
+    "tools/currency_wars_runner.py": "78a93c503c50b6894541e0aa8b0e8b9e8b0b7bca9202908d763022a2e82bd6ce",
+    "tools/currency_wars_runtime_sources.json": "1c90624daed8f1a3ff58656238685b901174a7ad7fc927427f511cedae0b0668",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "c6fec06605297888b379b2503ccb9ee10bf11241efa20085546c4b045e5cf30c",
+    "tools/replay_currency_wars_preparation.py": "778805b12814a4a28f36677842d7f0d4c81b1cd1be29360134c761cf89774a4d",
+    "tools/replay_currency_wars_task_scroll.py": "fa0aa57db95a9bcbed8f785b40a36da3bb5ae9d526358238920d5035a326bbef",
+    "tools/test_currency_wars_task_scroll.py": "133d189150536d79949355d01fe6ff164ace57a8a3e96af61ddaeda0fbce08e0",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "source_file_count": 28,
+  "runtime_source_files": [
+    "gui/launch.py",
+    "gui/processes.py",
+    "requirements.txt",
+    "tools/currency_wars_artifacts.py",
+    "tools/currency_wars_bridge_task.py",
+    "tools/currency_wars_broker_entry.py",
+    "tools/currency_wars_coaching.py",
+    "tools/currency_wars_control.py",
+    "tools/currency_wars_economy.py",
+    "tools/currency_wars_input_bridge.py",
+    "tools/currency_wars_manual_stage.py",
+    "tools/currency_wars_manual_steps.py",
+    "tools/currency_wars_perception.py",
+    "tools/currency_wars_profile.py",
+    "tools/currency_wars_progression.py",
+    "tools/currency_wars_refresh_offer.py",
+    "tools/currency_wars_rewards.py",
+    "tools/currency_wars_runner.py",
+    "tools/currency_wars_runtime_sources.json",
+    "tools/currency_wars_shop_reader.py",
+    "tools/currency_wars_source_guard.py",
+    "tools/currency_wars_state_reader.py",
+    "tools/currency_wars_update.py",
+    "tools/currency_wars_visual_guards.py"
+  ],
+  "runtime_source_count": 24,
+  "artifact_sha256": {
+    "docs/GAME_KNOWLEDGE.json": "ce683565cebab1849d793ab9cab86f658d03b1501857a1d31af8545f323603e0",
+    "handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/actual-progress.png": "d3475e5e4fd339a2a0205df120496090f70d4688f03bb94e4e12a1a8e72a3062",
+    "handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/diagnosis.json": "a38fe6da05d2f061a146aafce5271ed4cc04d9312f7ae3c365b3631fcad7f2b6",
+    "handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/source-progress.png": "161df85362d5c3094bf93963290726123aaab077a13cc27ea025a3de10a27a8d"
+  },
+  "artifact_file_count": 4,
+  "runtime_resource_sha256": {
+    "tools/shop_reader_resources/cost_1.png": "78687CE1CCE9799676595E18226756389DE358F4152CE9B716181D750BBBDC9F",
+    "tools/shop_reader_resources/cost_1_flash.png": "33FCFDA67A9DEB7951688BB1A026ADE263A142F38755EB84683386349168F53E",
+    "tools/shop_reader_resources/cost_2.png": "B45D3C7C054381CFD154E83AC60E54E9C87D8919D30A8A90B0C56AEA7AEB5A21",
+    "tools/shop_reader_resources/cost_2_flash.png": "24ACAEC860A320D9A2064B5361ADEFA10C03E9C95D2F42C656756A3C39273E0F",
+    "tools/shop_reader_resources/cost_3.png": "29C6AEFC4302329C56853EA43DFF36B25D2A68F3347B76C0BD48319082ADE966",
+    "tools/shop_reader_resources/empty_bottom.png": "CD9E4E93991D300662E543F3771248A99CAAD82F01A6BD73528F6B8E8C505B3A",
+    "tools/shop_reader_resources/empty_bottom_flash.png": "CDA1873D9B08B10137FB59EAD12539B549946B96BFD5993E429FD8BCD993A2B5",
+    "tools/shop_reader_resources/empty_top.png": "16E12371CE5F3491A61C1170BFA996A23C9768C1B0243C854A402D5154616E9D",
+    "tools/shop_reader_resources/empty_top_flash.png": "EEC4211828633BEE9B75C2032E830EA14F141702CFFDF8E3C9B3E8E0365D051E",
+    "tools/shop_reader_resources/names.json": "017C903D0199852A82D77B486348213883422ABFDBE2AE7354AE66D5ECA5D782",
+    "tools/shop_reader_resources/recommend_badge.png": "BA135E986412D90A7F72263A34912E9EE951360645DA60D7D7162F54514C9725",
+    "tools/shop_reader_resources/SOURCES.json": "43140034D88A7A7F01B2B6AA2A10B542A1BB6BB92B890FEE135E6E54E7DE88BE",
+    "tools/shop_reader_resources/SRA_LICENSE.txt": "0D96A4FF68AD6D4B6F1F30F713B18D5184912BA8DD389F86AA7710DB079ABCB0",
+    "tools/shop_reader_resources/state_reader/anchor_short_back.png": "F09BF2946AE4D87CF888719F8A5CD774FBFACE6439E46DEBDC832815A1FB5284",
+    "tools/shop_reader_resources/state_reader/anchor_short_front.png": "DBE4250D0B3E7A0BBE4C01DC17456613A7C11FA48CB8B3FCDE418B2E27847E4D",
+    "tools/shop_reader_resources/state_reader/back_anchor.png": "B431745BD75B24FB95E136FDFE170486D456C4667A157117774DFB8B1D3107EE",
+    "tools/shop_reader_resources/state_reader/badge_back.png": "962D0CB346431E0B66ADF80CDE95122E21CBBAB59D5C0F1345B59A394B2900E6",
+    "tools/shop_reader_resources/state_reader/badge_both.png": "0CD50EAD2C7FF98451727F6697ABCA61A0EA298A1C75F0D41BE5F56BEAB5191C",
+    "tools/shop_reader_resources/state_reader/badge_front.png": "E5A3BD60604CCE9C1687BCA5D0E9C05F6851E08BDEF38443E5FACDA10869EC44",
+    "tools/shop_reader_resources/state_reader/empty_back.png": "056589D77CCDB53A5A8EC1B1812D8BFC40173B643086313C7BCF3B0F545CD44F",
+    "tools/shop_reader_resources/state_reader/empty_back_1.png": "98B44DD0A2A852020F8D6F1AE745E39101B88C35BF91A0DD55B5BA6A41D678BF",
+    "tools/shop_reader_resources/state_reader/empty_back_3.png": "12B44A2C287F758A571137F1BBED35A39982625D9686F0350EBA54708D92A5B3",
+    "tools/shop_reader_resources/state_reader/empty_back_4.png": "35331B6B2081360DAF61CDEAC582C6B05E7AB00449378842DBFEAA1F2A05DEB2",
+    "tools/shop_reader_resources/state_reader/empty_back_5.png": "026906D76B3C38F9AA3F553027D9F7652C6B1660F77D5F02CEB5CFF2FF999708",
+    "tools/shop_reader_resources/state_reader/empty_back_6.png": "0C6D3007825BA04B5229C452BA432DDECD6A27D6372E9015FE231FC1474CF7C0",
+    "tools/shop_reader_resources/state_reader/empty_bench.png": "22072552540726C4502B18C0D77D5DE162CD4B18BE7F16188E7D005011CA6EF6",
+    "tools/shop_reader_resources/state_reader/empty_bench_1.png": "BBC2A7F8EDE9C724C49C981AD320AE735FEF03B336887CA909E9526937E60D17",
+    "tools/shop_reader_resources/state_reader/empty_bench_2.png": "181872E1568C65CEF9DB98F89D69C282751828093C81AB7A3F849C5C7B384452",
+    "tools/shop_reader_resources/state_reader/empty_bench_3.png": "1B7290410FB4E45BB86156F236D1E87D529B47076471804A0042393B2428EB31",
+    "tools/shop_reader_resources/state_reader/empty_bench_4.png": "3D5B8F847423D453BE76AC12120C1F634A7D417973FCFCDF75FCC17661FFB8F4",
+    "tools/shop_reader_resources/state_reader/empty_bench_5.png": "C78C51FACE3B2F2E37B59D5F4EF855A6AA04D75395DD5693DB50CC89BF73442E",
+    "tools/shop_reader_resources/state_reader/empty_bench_6.png": "F2F9D79FD1F25DCB46068E5EAD57D177BF87D96780B98BFE4E248F3EB0C61E3E",
+    "tools/shop_reader_resources/state_reader/empty_bench_7.png": "041090646909E695025E0A51E34A6D1574D42A07B338A955E86950E0DD1615DE",
+    "tools/shop_reader_resources/state_reader/empty_bench_8.png": "501FADE9B964865F9D366F6BA5DF59C2E4FCACFB0DB17278D0C597A4C6BDEC5A",
+    "tools/shop_reader_resources/state_reader/empty_bench_9.png": "9E92247FBACC06903307E10072E7A590B95879F49F26306C13B92BF04B25EF80",
+    "tools/shop_reader_resources/state_reader/empty_front.png": "5E888B7106AEBECC796DBE3A458469F489DADB572BCCA6370115952B6746A2E7",
+    "tools/shop_reader_resources/state_reader/empty_front_3.png": "5C32B4190656CE1EF108729BF79413C7BB765E3803602A104A335EEE846F6039",
+    "tools/shop_reader_resources/state_reader/empty_front_4.png": "FBB1126CA48CD0313009089F395690FCA8E20CDF28D2557B821FF203732253FE",
+    "tools/shop_reader_resources/state_reader/front_anchor.png": "CCF3E687168F89D9703FCAEF8C9FE6567816792B1A27ABE177603141EEADC3E2",
+    "tools/shop_reader_resources/state_reader/item_drill.png": "892988B95684BB973760E59C85440CDE588B463FF3B36A40AF4635907E0065B6",
+    "tools/shop_reader_resources/state_reader/item_shoes.png": "25C8F624CDC55F435037B8D073E4FF12C07F429B4BDD46AEB9C74079E02137D4",
+    "tools/shop_reader_resources/state_reader/SOURCES.json": "899468C515B015E50638505528A616E3FC3B34456AB9CA929ABEFFC298069C74",
+    "tools/shop_reader_resources/state_reader/starbar_0.png": "00C6DE7DBF4A58C576771B454CF82EAFB04E4D6894FA37FE143A5A201D27A505",
+    "tools/shop_reader_resources/state_reader/starbar_1.png": "3458C7260547B798B6A34E550D42FB4DD3DDE3A8CEB852B7DD0406407E904497",
+    "tools/shop_reader_resources/state_reader/starbar_2.png": "672A464BC6E305DD9131DF9A56789D373887C7D02D60D5A7C05B9B419E71CF8F",
+    "tools/shop_reader_resources/state_reader/starbar_3.png": "627E6ADB65A587CF653A7980F96FDA6628CA96D018C15F010C837B2F76B13056",
+    "tools/shop_reader_resources/state_reader/starbar_4.png": "3D08CF3474E2AC1C948E3D38D584454DDF7909444EC98B2BD581DB7ADC1A9B5E",
+    "tools/shop_reader_resources/state_reader/star_native.png": "00E23AD36D34AC79859498A240416781596007F72997F6E75F92A87DB4C61E17",
+    "tools/shop_reader_resources/state_reader/unit_0.png": "C1F562FDA44D6B555D1A0FE5412FA019F92E47775A6A295BFA32298848635EC1",
+    "tools/shop_reader_resources/state_reader/unit_1.png": "8B14DB56A19F77487858707A8375C9281A6331AD25D7777950D6341963146D7F",
+    "tools/shop_reader_resources/state_reader/unit_2.png": "2195AA022F921772E6B4F67BA4CAD61F4E6701A5AC5E83F968BA08CAF4219D72",
+    "tools/shop_reader_resources/state_reader/unit_3.png": "CBBEFAF858F3E408FC65812AD4E6E914B70279F264F55260920FEE9C49536580",
+    "tools/shop_reader_resources/state_reader/unit_4.png": "C7F027293DB5E5DAD3EF516DC5EC9C00E4979D1086DC08E236040B892973BC97",
+    "tools/shop_reader_resources/state_reader/unit_5.png": "2BFD2AA618800C822B03060FE1D276B7E576E33F56EF8E172CB2FD582DE075D6",
+    "tools/shop_reader_resources/state_reader/unit_6.png": "773F6667923D1053C0B65B997FE692116B74DB0072F97D78A323E0FD18A5AB02",
+    "tools/shop_reader_resources/state_reader/unit_7.png": "329DF8E8BF851AACBFD102B6C5309A38F2F28FDA8427CF92632877BA0B5E96C6",
+    "tools/shop_reader_resources/state_reader/unit_8.png": "C77A1E020B1BD0C46D7959C5072D75D53C4924A41A70045437C81E56A89E55D9",
+    "tools/refresh_offer_resources/currency_coin.png": "188D753BB9D38EE7C85E72C8EF69FE4D4A7EC78A73E7930E214B48CAE8F907DE",
+    "tools/refresh_offer_resources/SOURCES.json": "374DEA48B2C896E2E6674D94C253D3042BC36C2AD3E0850150E9A4FE7CDF89BC",
+    "tools/reward_resources/blue-orb-q01.png": "20AA7AFCEF3C35E05DE5347E27925D4806F41BB7D4178EE34B078BBCF77E3B11",
+    "tools/reward_resources/initial-blue.png": "D362F664AF664E6864A55193F20D5D9FAADF5122C0EB0651B154B4C079AA55FD",
+    "tools/reward_resources/initial-gray.png": "72D266178DE25AFFC73CC0C1D5FD68A047E8A485258B76D394A3BFC0C98D69FD",
+    "tools/reward_resources/manifest.json": "0B2D5DA751483150A0194D52A43DCB6D1B5DD6970309C3E7EFE192541D03E635",
+    "tools/reward_resources/native-orbs-sources.json": "165705869C47B56CDDA51C4F697CE09F34FB16A5B9DD042112094BFB221BE87C"
+  },
+  "runtime_resource_count": 64,
+  "runtime_resource_inventory": {
+    "tools/shop_reader_resources": {
+      "present": true,
+      "files": [
+        "tools/shop_reader_resources/SOURCES.json",
+        "tools/shop_reader_resources/SRA_LICENSE.txt",
+        "tools/shop_reader_resources/cost_1.png",
+        "tools/shop_reader_resources/cost_1_flash.png",
+        "tools/shop_reader_resources/cost_2.png",
+        "tools/shop_reader_resources/cost_2_flash.png",
+        "tools/shop_reader_resources/cost_3.png",
+        "tools/shop_reader_resources/empty_bottom.png",
+        "tools/shop_reader_resources/empty_bottom_flash.png",
+        "tools/shop_reader_resources/empty_top.png",
+        "tools/shop_reader_resources/empty_top_flash.png",
+        "tools/shop_reader_resources/names.json",
+        "tools/shop_reader_resources/recommend_badge.png",
+        "tools/shop_reader_resources/state_reader/SOURCES.json",
+        "tools/shop_reader_resources/state_reader/anchor_short_back.png",
+        "tools/shop_reader_resources/state_reader/anchor_short_front.png",
+        "tools/shop_reader_resources/state_reader/back_anchor.png",
+        "tools/shop_reader_resources/state_reader/badge_back.png",
+        "tools/shop_reader_resources/state_reader/badge_both.png",
+        "tools/shop_reader_resources/state_reader/badge_front.png",
+        "tools/shop_reader_resources/state_reader/empty_back.png",
+        "tools/shop_reader_resources/state_reader/empty_back_1.png",
+        "tools/shop_reader_resources/state_reader/empty_back_3.png",
+        "tools/shop_reader_resources/state_reader/empty_back_4.png",
+        "tools/shop_reader_resources/state_reader/empty_back_5.png",
+        "tools/shop_reader_resources/state_reader/empty_back_6.png",
+        "tools/shop_reader_resources/state_reader/empty_bench.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_1.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_2.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_3.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_4.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_5.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_6.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_7.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_8.png",
+        "tools/shop_reader_resources/state_reader/empty_bench_9.png",
+        "tools/shop_reader_resources/state_reader/empty_front.png",
+        "tools/shop_reader_resources/state_reader/empty_front_3.png",
+        "tools/shop_reader_resources/state_reader/empty_front_4.png",
+        "tools/shop_reader_resources/state_reader/front_anchor.png",
+        "tools/shop_reader_resources/state_reader/item_drill.png",
+        "tools/shop_reader_resources/state_reader/item_shoes.png",
+        "tools/shop_reader_resources/state_reader/star_native.png",
+        "tools/shop_reader_resources/state_reader/starbar_0.png",
+        "tools/shop_reader_resources/state_reader/starbar_1.png",
+        "tools/shop_reader_resources/state_reader/starbar_2.png",
+        "tools/shop_reader_resources/state_reader/starbar_3.png",
+        "tools/shop_reader_resources/state_reader/starbar_4.png",
+        "tools/shop_reader_resources/state_reader/unit_0.png",
+        "tools/shop_reader_resources/state_reader/unit_1.png",
+        "tools/shop_reader_resources/state_reader/unit_2.png",
+        "tools/shop_reader_resources/state_reader/unit_3.png",
+        "tools/shop_reader_resources/state_reader/unit_4.png",
+        "tools/shop_reader_resources/state_reader/unit_5.png",
+        "tools/shop_reader_resources/state_reader/unit_6.png",
+        "tools/shop_reader_resources/state_reader/unit_7.png",
+        "tools/shop_reader_resources/state_reader/unit_8.png"
+      ]
+    },
+    "tools/refresh_offer_resources": {
+      "present": true,
+      "files": [
+        "tools/refresh_offer_resources/SOURCES.json",
+        "tools/refresh_offer_resources/currency_coin.png"
+      ]
+    },
+    "tools/reward_resources": {
+      "present": true,
+      "files": [
+        "tools/reward_resources/blue-orb-q01.png",
+        "tools/reward_resources/initial-blue.png",
+        "tools/reward_resources/initial-gray.png",
+        "tools/reward_resources/manifest.json",
+        "tools/reward_resources/native-orbs-sources.json"
+      ]
+    },
+    "tools/free_lineup_resources": {
+      "present": false,
+      "files": []
+    },
+    "tools/loot_resources": {
+      "present": false,
+      "files": []
+    }
+  },
+  "runtime_provider": {
+    "kind": "installed",
+    "path": "D:\\Codex\\home\\skills\\agent-workflow\\scripts\\artifacts.py",
+    "sha256": "03DCB408C80C13CA70E52AB3B2ADB4519F1AAF6AECEB5120410882CCEC29C142"
+  },
+  "runtime_resource_binding_complete": true,
+  "runtime_resource_binding_error": null,
+  "runtime_provider_error": null,
+  "optional_static_knowledge_present": true,
+  "focused_checks": {
+    "selection": [
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_native_pair_scroll_once_verifies_displacement_and_preserves_unknown",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_request_and_manual_deadline_crossed_during_final_local_guard_refuse",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_missing_notification_counts_one_readonly_fallback_without_resending_scroll",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_critical_actions_cannot_reuse_task_scroll_marker",
+      "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unmarked_scroll_still_requires_byte_identical_target"
+    ],
+    "tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "seconds": 6.896948900015559,
+    "results": [
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_native_pair_scroll_once_verifies_displacement_and_preserves_unknown",
+        "status": "passed",
+        "seconds": 0.3219946000026539
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input",
+        "status": "passed",
+        "seconds": 0.782550000003539
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers",
+        "status": "passed",
+        "seconds": 0.5452492000185885
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses",
+        "status": "passed",
+        "seconds": 0.6480926999938674
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_request_and_manual_deadline_crossed_during_final_local_guard_refuse",
+        "status": "passed",
+        "seconds": 0.5154529999708757
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay",
+        "status": "passed",
+        "seconds": 1.221168200019747
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_missing_notification_counts_one_readonly_fallback_without_resending_scroll",
+        "status": "passed",
+        "seconds": 0.2973306000349112
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture",
+        "status": "passed",
+        "seconds": 0.6579432999715209
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_critical_actions_cannot_reuse_task_scroll_marker",
+        "status": "passed",
+        "seconds": 1.7088800999918021
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unmarked_scroll_still_requires_byte_identical_target",
+        "status": "passed",
+        "seconds": 0.19807620003120974
+      }
+    ],
+    "subcase_count": 23,
+    "subcases": [
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input (change='move')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input (change='cover')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input (change='text')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input (change='overlay')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers (change='source_bytes')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers (change='source_capture')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers (change='current_frame')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses (point='after_queue')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses (point='inside_entry_lock')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses (point='checkpoint_inside_entry_lock')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_request_and_manual_deadline_crossed_during_final_local_guard_refuse (deadline='request')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_request_and_manual_deadline_crossed_during_final_local_guard_refuse (deadline='manual_step')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay (change='no_motion')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay (change='reverse')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay (change='text')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay (change='overlay')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture (marked=False, change='missing_text')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture (marked=False, change='point_outside')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture (marked=True, change='missing_text')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture (marked=True, change='point_outside')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_critical_actions_cannot_reuse_task_scroll_marker (action='key')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_critical_actions_cannot_reuse_task_scroll_marker (action='click_point')",
+        "status": "passed"
+      },
+      {
+        "test": "test_currency_wars_task_scroll.TaskScrollConsumerTests.test_critical_actions_cannot_reuse_task_scroll_marker (action='click_text')",
+        "status": "passed"
+      }
+    ],
+    "failure_details": []
+  },
+  "native_and_consumer_evidence": [
+    {
+      "case": "原生低幅目标、声明位移、同一步只查询",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "returned",
+      "input_publications": 1,
+      "new_entry_publications": 2,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "原生配对与历史未知档案",
+      "native_file_sha256": {
+        "diagnosis.json": "a38fe6da05d2f061a146aafce5271ed4cc04d9312f7ae3c365b3631fcad7f2b6",
+        "source-progress.png": "161df85362d5c3094bf93963290726123aaab077a13cc27ea025a3de10a27a8d",
+        "actual-progress.png": "d3475e5e4fd339a2a0205df120496090f70d4688f03bb94e4e12a1a8e72a3062"
+      },
+      "native_roi": [
+        1460,
+        324,
+        1512,
+        359
+      ],
+      "max_abs_rgb": 4,
+      "mean_abs_rgb": 0.050183150183150185,
+      "changed_fraction": 0.053296703296703295,
+      "original_full_png_sha256": [
+        "e88d6ff5c0cc7db9b47f13bb3cda31d72e55147f361dbbfcf828658f91e3c553",
+        "e6f085993e4b13852b0cf6b117cc7d47cffaea1979c9fd0c4ed0eada659bcf39"
+      ],
+      "original_full_pngs_available": false,
+      "declared_shift_y": -80,
+      "historical_unknown_records_byte_unchanged": true,
+      "verification_reads": 0,
+      "automatic_phase_completion": false,
+      "real_scroll_effect_verified": false,
+      "native_ocr_executed": false
+    },
+    {
+      "case": "输入前拒绝:move",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "输入前拒绝:cover",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "输入前拒绝:text",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "输入前拒绝:overlay",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "来源拒绝:source_bytes",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "来源拒绝:source_capture",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "来源拒绝:current_frame",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 2,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "当前阶段失效:after_queue",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 0,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "当前阶段失效:inside_entry_lock",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "当前阶段失效:checkpoint_inside_entry_lock",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "局部复核跨期限:request",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "最后局部守卫后期限失效",
+      "deadline": "request",
+      "real_local_guard_calls": 3,
+      "elapsed_clock_injected": true,
+      "injected_inside_entry_lock": true,
+      "input_publications": 0,
+      "real_game_input": false
+    },
+    {
+      "case": "局部复核跨期限:manual_step",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "最后局部守卫后期限失效",
+      "deadline": "manual_step",
+      "real_local_guard_calls": 3,
+      "elapsed_clock_injected": true,
+      "injected_inside_entry_lock": true,
+      "input_publications": 0,
+      "real_game_input": false
+    },
+    {
+      "case": "动作后效果待核:no_motion",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "returned",
+      "input_publications": 1,
+      "new_entry_publications": 2,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "动作后效果待核:reverse",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "returned",
+      "input_publications": 1,
+      "new_entry_publications": 2,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "动作后效果待核:text",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "returned",
+      "input_publications": 1,
+      "new_entry_publications": 2,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "动作后效果待核:overlay",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "returned",
+      "input_publications": 1,
+      "new_entry_publications": 2,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "通知缺图仅一次计数回补",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "returned",
+      "input_publications": 1,
+      "new_entry_publications": 3,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "通知缺图回补计数",
+      "original_input_request_id": "d005528bb06a407790ed131c118f7557",
+      "original_delivery": "completed",
+      "original_notification_image_missing": true,
+      "input_publications": 1,
+      "readonly_fallbacks": 1,
+      "verification_reads": 1,
+      "same_step_queried_without_replay": true,
+      "real_game_input": false
+    },
+    {
+      "case": "调用端预检:missing_text",
+      "marked": false,
+      "job_created": false,
+      "new_entry_publications": 0,
+      "input_publications": 0,
+      "new_reader_calls": 0,
+      "worker_paused": false,
+      "real_game_input": false
+    },
+    {
+      "case": "调用端预检:point_outside",
+      "marked": false,
+      "job_created": false,
+      "new_entry_publications": 0,
+      "input_publications": 0,
+      "new_reader_calls": 0,
+      "worker_paused": false,
+      "real_game_input": false
+    },
+    {
+      "case": "调用端预检:missing_text",
+      "marked": true,
+      "job_created": false,
+      "new_entry_publications": 0,
+      "input_publications": 0,
+      "new_reader_calls": 0,
+      "worker_paused": false,
+      "real_game_input": false
+    },
+    {
+      "case": "调用端预检:point_outside",
+      "marked": true,
+      "job_created": false,
+      "new_entry_publications": 0,
+      "input_publications": 0,
+      "new_reader_calls": 0,
+      "worker_paused": false,
+      "real_game_input": false
+    },
+    {
+      "case": "关键动作标记误用:key",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 0,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "关键动作标记误用:click_point",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 0,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "关键动作标记误用:click_text",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 0,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    },
+    {
+      "case": "普通滚动保持逐字节守卫",
+      "consumer": "existing_manual_step_worker_entry",
+      "fixture_scope": "native_target_crop_pair_with_declared_complete_frames_and_ocr",
+      "status": "refused",
+      "input_publications": 0,
+      "new_entry_publications": 1,
+      "actual_page": "unknown",
+      "native_page_overwritten": false,
+      "real_game_input": false
+    }
+  ],
+  "source_set_sha256_before": "886f329c479100c41168a9e919107b6e87a687351a1be120c7f44f2dda4a8803",
+  "source_set_sha256_after": "886f329c479100c41168a9e919107b6e87a687351a1be120c7f44f2dda4a8803",
+  "source_sha256_after_differences": {},
+  "source_unchanged": true,
+  "artifacts_unchanged": true,
+  "optional_runtime_bindings_unchanged": true,
+  "runtime_resources_unchanged": true,
+  "runtime_provider_unchanged": true,
+  "loaded_source_files": [
+    "tools/currency_wars_artifacts.py",
+    "tools/currency_wars_broker_entry.py",
+    "tools/currency_wars_coaching.py",
+    "tools/currency_wars_economy.py",
+    "tools/currency_wars_input_bridge.py",
+    "tools/currency_wars_manual_stage.py",
+    "tools/currency_wars_manual_steps.py",
+    "tools/currency_wars_perception.py",
+    "tools/currency_wars_profile.py",
+    "tools/currency_wars_progression.py",
+    "tools/currency_wars_refresh_offer.py",
+    "tools/currency_wars_runner.py",
+    "tools/currency_wars_shop_reader.py",
+    "tools/currency_wars_source_guard.py",
+    "tools/currency_wars_state_reader.py",
+    "tools/currency_wars_visual_guards.py",
+    "tools/replay_currency_wars_preparation.py",
+    "tools/replay_currency_wars_task_scroll.py",
+    "tools/test_currency_wars_task_scroll.py",
+    "tools/test_local_runtime_compatibility.py"
+  ],
+  "loaded_source_closure_missing": [],
+  "manifest_unchanged_from_pr31": true,
+  "ok": true
+}
