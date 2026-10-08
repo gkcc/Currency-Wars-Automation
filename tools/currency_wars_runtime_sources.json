@@ -16,6 +16,7 @@
     "tools/currency_wars_broker_entry.py",
     "tools/currency_wars_coaching.py",
     "tools/currency_wars_control.py",
+    "tools/currency_wars_deployment.py",
     "tools/currency_wars_economy.py",
     "tools/currency_wars_input_bridge.py",
     "tools/currency_wars_manual_stage.py",

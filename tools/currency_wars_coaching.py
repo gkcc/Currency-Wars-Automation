@@ -104,6 +104,20 @@ def guide_phase(guide, observed, source=None):
             'proof': source, 'mode': mode, 'level': level, 'basis': candidates[0]['text']}
 
 
+def deployment_position(knowledge, name):
+    """Return one cached deployment type; live facts never fill this contract."""
+    roles = knowledge.get('roles') if isinstance(knowledge, dict) else None
+    role = roles.get(name) if isinstance(roles, dict) and isinstance(name, str) and name.strip() else None
+    if not isinstance(role, dict):
+        raise ValueError('角色部署类型缓存缺失')
+    values = [role[key] for key in ('position', 'deployment') if key in role]
+    if not values or any(value not in ('前台', '后台', '前后台') for value in values):
+        raise ValueError('角色部署类型缓存缺失或非法')
+    if len(set(values)) != 1:
+        raise ValueError('角色部署类型缓存字段冲突')
+    return values[0]
+
+
 def lineup_requirements(investments, team, knowledge):
     """Historical chosen_this_match flags are deliberately never consulted."""
     board = [unit for unit in team.get('units', []) if unit.get('location') == 'board']
@@ -131,7 +145,17 @@ def lineup_requirements(investments, team, knowledge):
             violations.append({'name': unit.get('name'), 'reason': '重复占用同一槽位'})
         occupied.add((row, slot))
         counts[row] += 1
-        position = unit.get('position') or roles.get(unit.get('name'), {}).get('position') or roles.get(unit.get('name'), {}).get('deployment')
+        position = unit.get('position')
+        try:
+            cached_position = deployment_position(knowledge, unit.get('name'))
+        except ValueError:
+            role = roles.get(unit.get('name')) if isinstance(roles, dict) else None
+            if isinstance(role, dict) and any(role.get(key) is not None for key in ('position', 'deployment')):
+                violations.append({'name': unit.get('name'), 'reason': '角色部署类型缓存非法或冲突，不能以当前声明覆盖'})
+        else:
+            if position not in (None, '') and position != cached_position:
+                violations.append({'name': unit.get('name'), 'reason': '当前角色类型声明与已核缓存冲突；策略改写需鲜读'})
+            position = cached_position
         if position not in ('前台', '后台', '前后台'):
             unknown.append(unit.get('name'))
         if position in ('前台', '后台') and row != ('front' if position == '前台' else 'back'):

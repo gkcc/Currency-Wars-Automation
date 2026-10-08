@@ -7,6 +7,7 @@ Original receipts, unknown outcomes and economic spending remain untouched.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
 from datetime import datetime, timezone
@@ -105,8 +106,10 @@ def business_pending(run, owner, control, match_id, records=None, *, retained=()
         receipts, unused = _ledger(run, control)
     paths = [('economy', path) for path in records.glob('economy-*.json')]
     paths += [('reward_step', path) for path in records.glob('reward-step-*.json')]
+    paths += [('deployment', path) for path in records.glob('deployment-step-*.json')]
     paths += [(kind, path) for kind, path in (
-        ('reward_step', run / 'reward-step.json'), ('reward_capacity', run / 'reward-capacity.json'))
+        ('reward_step', run / 'reward-step.json'), ('reward_capacity', run / 'reward-capacity.json'),
+        ('deployment', run / 'deployment-step.json'))
         if path.exists()]
     if len(paths) > LIMIT or not isinstance(retained, (list, tuple)) or len(retained) > LIMIT:
         raise ValueError('节点桥业务待验记录超出有界容量；不截断')
@@ -115,7 +118,7 @@ def business_pending(run, owner, control, match_id, records=None, *, retained=()
     def add(value):
         if (not isinstance(value, dict) or value.get('origin_run_id') != owner['run_id']
                 or value.get('match_id') != match_id or value.get('effect_pending') is not True
-                or value.get('source_kind') not in ('economy', 'reward_step', 'reward_capacity')
+                or value.get('source_kind') not in ('economy', 'reward_step', 'reward_capacity', 'deployment')
                 or not isinstance(value.get('record_files'), list)):
             raise ValueError('节点桥保留的业务待验归属/结构不符')
         identity = tuple(value.get(key) for key in ('source_kind', 'origin_run_id', 'match_id',
@@ -154,6 +157,18 @@ def business_pending(run, owner, control, match_id, records=None, *, retained=()
                 raise ValueError('节点桥经济pending结构不符')
             kind, rid = pending.get('kind'), pending.get('request_id')
             spent_before = value['ledger'].get('spent')
+        elif source_kind == 'deployment':
+            stage = r.canonical_stage(value.get('stage'))
+            step_id = value.get('step_id')
+            if (value.get('schema') != 'currency-wars-deployment-step/v1' or not stage
+                    or not isinstance(step_id, str) or not 1 <= len(step_id) <= 100
+                    or value.get('kind') != 'deploy_unit' or value.get('run_id') != owner['run_id']
+                    or path.is_symlink() or (path != run / 'deployment-step.json'
+                        and path.name != 'deployment-step-' + step_id + '.json')):
+                raise ValueError('节点桥部署记录的schema/节点/步骤/路径不符')
+            # A claimed terminal status is not proof. Scan pointer and archive
+            # together, then discharge only their bound original result below.
+            pending, kind, rid, spent_before = value, 'deploy_unit', value.get('request_id'), None
         else:
             final = ('verified', 'refused', 'superseded') if source_kind == 'reward_capacity' else ('verified', 'refused')
             if value.get('status') in final:
@@ -180,8 +195,12 @@ def business_pending(run, owner, control, match_id, records=None, *, retained=()
                 if request is not None and 'broker_actions' in pending else None,
             'delivery_state': delivery['state'] if delivery else 'missing',
             'business_outcome': pending.get('outcome', 'unverified'), 'spent_before': spent_before})
-    return sorted(found.values(), key=lambda item: tuple(str(item.get(key)) for key in
-                  ('source_kind', 'stage', 'request_id', 'kind', 'step_id')))
+    values = list(found.values())
+    deployments = pending_remaining([item for item in values if item['source_kind'] == 'deployment'],
+        run=run, owner=owner, control=control, records=records)
+    return sorted([item for item in values if item['source_kind'] != 'deployment'] + deployments,
+        key=lambda item: tuple(str(item.get(key)) for key in
+            ('source_kind', 'stage', 'request_id', 'kind', 'step_id')))
 
 
 def _business_ids(items):
@@ -214,6 +233,88 @@ def _recent_business_events(records):
     return events
 
 
+def _deployment_result(values, item, receipt, delivery, *, run, control, records):
+    """Consume the Worker's saved rule result and its original frame bindings.
+
+    Re-evaluate the persisted native reading with the production rule; do not
+    start another perception pass or input. A changed pointer never replaces
+    the original deployment archive.
+    """
+    r = _runner()
+    actions = receipt['request'].get('actions')
+    if not all(value.get('receipt') == receipt['result'] and value.get('broker_actions') == actions
+               for value in values):
+        return False
+    if all(value.get('status') == 'refused' and value.get('publication_attempted') is False
+           for value in values):
+        return delivery['state'] == 'zero_input'
+    if (delivery['state'] != 'completed' or receipt['result'].get('ok') is not True
+            or receipt['request'].get('handoff') is not False
+            or not isinstance(actions, list)
+            or sum(action.get('type') == 'drag' for action in actions) != 1
+            or any(action.get('type') not in ('drag', 'wait') for action in actions)
+            or not all(value.get('status') == 'verified' and value.get('outcome') == 'deployed'
+                and value.get('publication_attempted') is True
+                and value.get('receipt') == receipt['result'] and value.get('broker_actions') == actions
+                for value in values)):
+        return False
+    bindings = ('spec', 'before', 'before_png', 'before_snapshot_id', 'before_capture_request_id',
+        'before_frame_id', 'after_png', 'after_snapshot_id', 'after_capture_request_id', 'after_frame_id',
+        'after_read', 'after_result')
+    if (not isinstance(values[0].get('spec'), dict) or not values[0]['spec']
+            or any(any(value.get(key) != values[0].get(key) for key in bindings) for value in values[1:])):
+        return False
+    for value in values:
+        import currency_wars_deployment as deployment
+        after_read, prior = value.get('after_read'), value.get('before')
+        if (not isinstance(prior, dict) or prior.get('plan') != value['spec']
+                or not isinstance(after_read, dict)
+                or any(after_read.get(key) != value.get('after_' + target) for key, target in
+                    (('snapshot_id', 'snapshot_id'), ('capture_request_id', 'capture_request_id'),
+                     ('frame_id', 'frame_id')))):
+            return False
+        result = deployment.after(after_read, value['spec'], prior)
+        if result.get('status') != 'verified' or result != value.get('after_result'):
+            return False
+        for prefix in ('before', 'after'):
+            path = Path(value.get(prefix + '_png', ''))
+            digest = value.get(prefix + '_snapshot_id')
+            if path.is_symlink() or path.parent.resolve() != records.resolve():
+                return False
+            payload = path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() != digest:
+                return False
+            from PIL import Image
+            with Image.open(io.BytesIO(payload)) as image:
+                if image.format != 'PNG' or image.size != (1920, 1080):
+                    return False
+                image.verify()
+            capture_id = value.get(prefix + '_capture_request_id')
+            captured = r.redact(r.await_existing_receipt(run, control, capture_id, 0))
+            frame = (captured.get('result') or {}).get('observation') or {}
+            captured_state = r.manual_receipt_state(captured)
+            if (frame.get('frame_protocol') != 1 or frame.get('request_id') != capture_id
+                    or frame.get('frame_id') != value.get(prefix + '_frame_id')
+                    or not frame.get('frame_id') or frame.get('snapshot_sha256') != digest
+                    or captured_state['unknown_input'] or captured['result'].get('ok') is not True
+                    or captured['request'].get('handoff') is not False):
+                return False
+            if prefix == 'before':
+                if (capture_id == item['request_id'] or not isinstance(value.get('before'), dict)
+                        or not {'snapshot_id', 'stage', 'occupied', 'capacity', 'source', 'target', 'layout'}
+                            <= set(value['before'])
+                        or value['before'].get('snapshot_id') != digest
+                        or r.canonical_stage(value['before'].get('stage')) != item['stage']):
+                    return False
+            elif capture_id == item['request_id']:
+                if captured != receipt:
+                    return False
+            elif (captured['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                    or captured_state['state'] != 'zero_input'):
+                return False
+    return True
+
+
 def pending_remaining(entries, *, run, owner, control, records=None):
     """Recheck only retained sources, allowing their actual business closure.
 
@@ -242,24 +343,41 @@ def pending_remaining(entries, *, run, owner, control, records=None):
                     or _json_sha(receipt['request']) != item.get('request_sha256') or delivery['unknown_input']):
                 raise ValueError('原输入回执缺失、改变或仍未知')
             values = []
-            for filename in item['record_files']:
+            filenames = list(item['record_files'])
+            if item['source_kind'] == 'deployment':
+                archive = records / ('deployment-step-' + str(item.get('step_id')) + '.json')
+                pointer = run / 'deployment-step.json'
+                filenames = sorted(set(filenames) | {str(archive)}
+                    | ({str(pointer)} if pointer.exists() else set()))
+                if len(filenames) > 8:
+                    raise ValueError('部署结果固定来源超限')
+            for filename in filenames:
                 path = Path(filename)
-                if path.parent.resolve() not in (records.resolve(), run.resolve()):
+                if (path.parent.resolve() not in (records.resolve(), run.resolve())
+                        or item['source_kind'] == 'deployment' and path.is_symlink()):
                     raise ValueError('原业务来源不属于当前记录目录')
                 value = r.entry.read_json(path)
                 rid = value.get('input_request_id') if item['source_kind'] == 'reward_capacity' else value.get('request_id')
                 if (item['source_kind'] == 'reward_step' and path == run / 'reward-step.json'
                         and rid != item['request_id'] and len(item['record_files']) > 1):
                     continue  # A new pointer cannot erase the original archive.
+                if (item['source_kind'] == 'deployment' and path == run / 'deployment-step.json'
+                        and rid != item['request_id'] and value.get('step_id') != item.get('step_id')):
+                    continue  # The exact original archive remains mandatory.
                 stage = value.get('stage') if item['source_kind'] != 'reward_step' else value.get('before', {}).get('stage')
                 if (value.get('run_id', owner['run_id']) != owner['run_id']
                         or value.get('match_id') != item['match_id'] or r.canonical_stage(stage) != item['stage']):
                     raise ValueError('原业务记录局/节点已改变')
                 if item['source_kind'] != 'economy' and (
                         rid != item['request_id'] or value.get('resume_epoch') != item['resume_epoch']
-                        or item['source_kind'] == 'reward_step' and
+                        or item['source_kind'] in ('reward_step', 'deployment') and
                             (value.get('step_id') != item.get('step_id') or value.get('kind') != item['kind'])):
                     raise ValueError('原业务请求/动作类型/步骤身份改变')
+                if (item['source_kind'] == 'deployment' and
+                        (value.get('schema') != 'currency-wars-deployment-step/v1'
+                         or path != run / 'deployment-step.json'
+                            and path != records / ('deployment-step-' + item['step_id'] + '.json'))):
+                    raise ValueError('部署结果原始schema/归档路径不符')
                 values.append(value)
             if not values:
                 raise ValueError('没有原业务终态来源')
@@ -313,9 +431,12 @@ def pending_remaining(entries, *, run, owner, control, records=None):
                         and event.get('resolution') == value['status'] and event.get('sale_outcome') == value.get('sale_outcome')
                         and event.get('snapshot_id') == value['after'].get('proof', {}).get('snapshot_id')
                         and event.get('input_resent') is False for event in events)
+            elif item['source_kind'] == 'deployment':
+                resolved = _deployment_result(values, item, receipt, delivery,
+                    run=run, control=control, records=records)
             if not resolved:
                 raise ValueError('缺少原请求的已核业务终态；交付完成不能代替效果')
-        except (OSError, ValueError, TimeoutError, TypeError, KeyError, AttributeError):
+        except (OSError, ValueError, TimeoutError, TypeError, KeyError, AttributeError, SyntaxError):
             remaining.append(item)
     return remaining
 

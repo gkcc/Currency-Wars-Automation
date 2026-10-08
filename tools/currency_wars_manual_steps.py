@@ -86,6 +86,7 @@ def summary(item):
                 pending=item.get('status') in ('queued', 'running')
                     or result.get('receipt_watermark_verified') is False
                     or result.get('receipt_delivery_verified') is False
+                    or result.get('deployment_effect_pending') is True
                     or bool(item.get('finalization_errors'))
                     or any(value.get('unknown_input') for value in result.get('receipt_states', [])),
                 next_step='same step ID only; no replay of a queued/running or published action')
@@ -199,6 +200,14 @@ def _finish_result(worker, item, before_ids, evidence_errors):
         frame_id=observed.get('frame_id'), page=observed.get('page'), stage=fields.get('stage'),
         decision_request_id=request.get('request_id'), decision_kind=request.get('kind'),
         all_rewards_cleared=None, automatic_phase_completion=False, input_resent=False)
+    if callable(getattr(worker, 'deployment_summary', None)):
+        try:
+            deployed = worker.deployment_summary()
+            item['result'].update(deployment_result=deployed,
+                deployment_effect_pending=bool(deployed and deployed['effect_pending']))
+        except Exception as error:
+            item['result']['deployment_effect_pending'] = True
+            evidence_errors.append(_evidence_error('deployment_result', error))
     if evidence_errors and item.get('status') == 'returned':
         item.update(status='refused', error='manual-step evidence is incomplete; inspect this original step ID')
 
@@ -298,12 +307,16 @@ def process(worker):
                 actions = reply.get('actions', [])
                 if reply.get('context_update') or not isinstance(actions, list) or len(actions) != 1:
                     raise ValueError('manual plan is one existing guarded action; budgets/reviews use the ordinary current decision')
-                if unknown_receipts(worker.run, worker.c):
+                if unknown_receipts(worker.run, worker.c) and actions[0].get('type') != 'check_deployment':
                     raise ValueError('original input outcome is unknown; only inspect or emergency controls may continue')
                 if not worker.state.get('decision_request'):
                     raise ValueError('manual plan has no current Worker request; inspect first')
+                original_request = worker.state['decision_request']['request_id']
                 worker.execute_plan(reply)
-                _ask_current(worker)
+                # A bounded semantic step may already return one current ROOT
+                # request. Do not clear it and add a second tool boundary.
+                if (worker.state.get('decision_request') or {}).get('request_id') in (None, original_request):
+                    _ask_current(worker)
             else:
                 worker.observe(scope='rewards' if operation == 'collect_rewards' else 'full')
                 if operation != 'inspect':

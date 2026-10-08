@@ -1,0 +1,237 @@
+{
+  "schema": "currency-wars-deployment-real-png-read/v1",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14"
+  },
+  "source_sha256": {
+    "tools/currency_wars_perception.py": "991c98a95b5f249cd3b77e71d0fb88007f6d03a4a5e098ebcec5f84b735f7b82",
+    "tools/currency_wars_state_reader.py": "97062c7500eb395402c4505cd100236898b1dac6716d503e5704709a09b5fd13",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "73f857ac9eb65143cc45cbef4a7b9e96ba59a4d034d7945c1cbb63d1de735f5c"
+  },
+  "source_bytes_match_final_acceptance": true,
+  "reading": {
+    "kind": "real_retained_png_production_read",
+    "source": "handoff/2026-10-07/reward-sequence/q02.png",
+    "sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+    "requested_slots": [
+      {
+        "row": "bench",
+        "slot": 1
+      },
+      {
+        "row": "front",
+        "slot": 4
+      }
+    ],
+    "actual": {
+      "page": "preparation",
+      "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+      "fields": {
+        "stage": "3-6",
+        "deployed": "8/8"
+      },
+      "rows": [
+        {
+          "text": "3-6",
+          "raw_text": "3-6",
+          "normalization_basis": null,
+          "confidence": 0.9918,
+          "box": [
+            441,
+            58,
+            502,
+            98
+          ]
+        },
+        {
+          "text": "18/8",
+          "raw_text": "18/8",
+          "normalization_basis": null,
+          "confidence": 0.8039,
+          "box": [
+            849,
+            210,
+            1029,
+            279
+          ]
+        },
+        {
+          "text": "8/8",
+          "raw_text": "8/8",
+          "normalization_basis": "fixed_native_deployed_count_roi",
+          "confidence": 0.9500414927800497,
+          "box": [
+            890,
+            210,
+            1029,
+            280
+          ]
+        }
+      ],
+      "state_read": {
+        "schema": "currency-wars-state-observation/v1",
+        "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+        "input": {
+          "sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "size": [
+            1920,
+            1080
+          ],
+          "format": "PNG"
+        },
+        "origin": "native_visual_state_reader",
+        "resource_version": null,
+        "anchors": {},
+        "overlays": [],
+        "team": {
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "slots": [
+            {
+              "location": "board",
+              "row": "front",
+              "slot": 4,
+              "bounds": [
+                1113,
+                327,
+                1245,
+                470
+              ],
+              "point": [
+                1179,
+                398
+              ],
+              "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+              "origin": "native_visual_state_reader",
+              "status": "unknown",
+              "name": null,
+              "position": null,
+              "confidence": null,
+              "reasons": [
+                "unsupported_or_missing_resources"
+              ],
+              "evidence": {}
+            },
+            {
+              "location": "bench",
+              "row": "bench",
+              "slot": 1,
+              "bounds": [
+                381,
+                844,
+                497,
+                981
+              ],
+              "point": [
+                439,
+                912
+              ],
+              "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+              "origin": "native_visual_state_reader",
+              "status": "unknown",
+              "name": null,
+              "position": null,
+              "confidence": null,
+              "reasons": [
+                "unsupported_or_missing_resources"
+              ],
+              "evidence": {}
+            }
+          ]
+        }
+      }
+    },
+    "read_contract": {
+      "version": 3,
+      "requested_scope": "deployment",
+      "effective_scope": "deployment",
+      "page_ocr": "full_frame",
+      "unread": [
+        "inventory",
+        "shop",
+        "player_hud",
+        "hp",
+        "refresh_offer"
+      ],
+      "fallback_reason": null,
+      "deployment_slots": [
+        {
+          "row": "bench",
+          "slot": 1
+        },
+        {
+          "row": "front",
+          "slot": 4
+        }
+      ]
+    },
+    "read_timing": {
+      "cache_hit": false,
+      "primary_ocr_reused": false,
+      "primary_ocr_executed": true,
+      "primary_ocr_contract_version": 1,
+      "elapsed_ms": 1585.51,
+      "schema": "currency-wars-perception-timing/1",
+      "read_id": "151f09393ed140df841c108e8771e1cf",
+      "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+      "clock": "same_process_monotonic",
+      "ocr_scope": "perception_engine_calls",
+      "start_ns": 5478567298447,
+      "end_ns": 5480151883186,
+      "ocr_intervals": [
+        {
+          "start_ns": 5478836187947,
+          "end_ns": 5480056575927,
+          "outcome": "returned"
+        },
+        {
+          "start_ns": 5480057190812,
+          "end_ns": 5480079149240,
+          "outcome": "returned"
+        }
+      ],
+      "error": null
+    },
+    "team_checked": false,
+    "team_fully_read": false,
+    "selected_statuses": [
+      {
+        "row": "front",
+        "slot": 4,
+        "status": "unknown",
+        "name": null,
+        "position": null,
+        "reasons": [
+          "unsupported_or_missing_resources"
+        ]
+      },
+      {
+        "row": "bench",
+        "slot": 1,
+        "status": "unknown",
+        "name": null,
+        "position": null,
+        "reasons": [
+          "unsupported_or_missing_resources"
+        ]
+      }
+    ],
+    "unrelated_not_read": 17,
+    "resource_context": {
+      "scope": "this process only; not ROOT resource availability",
+      "shop_tree_files": 0,
+      "shop_tree_bytes": 0,
+      "native_resource_version": null
+    },
+    "frame_protocol": null,
+    "capture_request_id": null,
+    "equipment_verified": false,
+    "deployment_effect_verified": false,
+    "limitation": "Saved PNG read only; no real named before/after successor or immutable action receipt supplied."
+  },
+  "evidence_boundary": "One actual Perception deployment-scope invocation during first development run; that run had fixture errors, not a passing deployment suite. Original unrequested-slot list omitted, its count retained. No second OCR invocation represented. Source producer bytes above are unchanged in the final acceptance.",
+  "raw_test_report_published": false,
+  "live_automation_verified": false
+}

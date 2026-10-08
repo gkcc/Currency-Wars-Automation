@@ -30,6 +30,7 @@ from currency_wars_shop_reader import purchase_slot
 from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
 import currency_wars_economy as economy
+import currency_wars_deployment as deployment
 from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
 from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target, navigation_target,
@@ -191,6 +192,11 @@ def archive_business_run(state, control):
         reward = optional(run / 'reward-step.json')
         if reward:
             control.write_json(records / 'business-reward-step.json', redact(reward))
+        deployed = optional(run / 'deployment-step.json')
+        if deployed:
+            # Keep the original per-step archive; a newer pointer cannot
+            # replace its evidence when an owned run is archived.
+            control.write_json(records / 'business-deployment-pointer.json', redact(deployed))
         last_result = optional(run / 'result.json')
         if last_result:
             # A broker can finish before the caller folds this reply into its
@@ -233,6 +239,13 @@ def pending_business_requests(business):
                 rid = reward['request_id']
                 pending[lease['run_id'] + ':' + rid] = {'origin_run_id': lease['run_id'], 'request_id': rid,
                     'outcome': 'unknown', 'kind': 'reward', 'amount': None, 'record_file': str(path)}
+        for path in records.glob('deployment-step-*.json'):
+            deployed = entry.read_json(path)
+            if (deployed.get('match_id') == business['match_id']
+                    and deployed.get('status') not in ('verified', 'refused') and deployed.get('request_id')):
+                rid = deployed['request_id']
+                pending[lease['run_id'] + ':' + rid] = {'origin_run_id': lease['run_id'], 'request_id': rid,
+                    'outcome': 'unknown', 'kind': 'deployment', 'amount': None, 'record_file': str(path)}
     for stage, stored in business.get('economy', {}).items():
         item = stored['ledger'].get('pending')
         if item and item.get('request_id'):
@@ -1365,13 +1378,23 @@ def validate_plan(reply, request, epoch):
     if 'reward_capacity' in reply.get('context_update', {}) and (
             len(actions) != 1 or actions[0].get('type') != 'finish_preparation_review'):
         raise ValueError('腾位后回读必须独立无输入复核，之后重新规划领奖')
-    allowed = {'click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'finish_preparation_review',
+    allowed = {'click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'deploy_unit', 'check_deployment', 'finish_preparation_review',
                'finish_inspection', 'confirm_match_result'}
     for action in actions:
         if not isinstance(action, dict) or action.get('type') not in allowed:
             raise ValueError('未知语义动作')
         if not isinstance(action.get('reason'), str) or not 1 <= len(action['reason']) <= 1000:
             raise ValueError('每个动作须有具体中文理由')
+        if action['type'] in ('deploy_unit', 'check_deployment'):
+            if (len(actions) != 1 or reply.get('context_update')
+                    or request.get('kind') != 'preparation_strategy'
+                    or action.get('expected_page') != 'preparation'):
+                raise ValueError('指定部署/原步骤补读须为当前准备请求的独立动作，不附带预算或阶段完成')
+            if action['type'] == 'check_deployment' and (
+                    set(action) != {'type', 'step_id', 'reason', 'expected_page'}
+                    or not isinstance(action.get('step_id'), str)
+                    or not re.fullmatch(r'[0-9a-f]{32}', action['step_id'])):
+                raise ValueError('部署补读只接受原步骤身份，不接受新目标或坐标')
         if action['type'] not in ('finish_inspection', 'confirm_match_result', 'finish_preparation_review') and not action.get('expected_page'):
             raise ValueError('游戏输入须指定实际页面前置条件')
         if action['type'] == 'click_text' and (not isinstance(action.get('text'), str)
@@ -3052,6 +3075,9 @@ class Worker:
         physical = [token for token in tokens if token.split(':', 1)[0] in ('click', 'key', 'drag', 'scroll')]
         if not physical:
             return
+        deployed = self.pending_deployment_step()
+        if deployed and not (observed.get('page') == 'reward_overlay' and physical == ['key:27']):
+            raise ValueError('原指定部署效果仍待验；只核原步骤，不发布装备/出战或重复拖动')
         if getattr(self, 'manual_stage_blocked', None):
             remaining = set(manual_steps.unknown_receipts(self.run, self.c)) & set(self.manual_stage_blocked)
             if remaining:
@@ -3078,6 +3104,8 @@ class Worker:
                              and old.get('request_id') == request_id
                              and old.get('publication_attempted') is False)):
                 raise ValueError('原经济业务效果仍pending；不因阶段变化开始另一笔输入')
+        if action.get('type') == 'deploy_unit':
+            return self.guard_deployment_publication(action, tokens, observed, request_id)
         reward = getattr(self, 'reward_inflight', None)
         if action.get('purpose') == 'local_reward':
             if (not reward or action.get('type') != 'click_point'
@@ -3290,6 +3318,11 @@ class Worker:
                     # here is unknown, never proof of input or zero effect.
                     archive_business_receipt(self.records, self.owner,
                         {'id': value['id'], 'request': value, 'result': None}, self.c)
+                if deployed is not None:
+                    # Last durable intent before the genuine publisher. Earlier
+                    # rule refusals create no fictitious deployment obligation.
+                    deployed.update(publication_attempted=True, broker_actions=value['actions'])
+                    self.save_deployment_step(deployed)
 
         rid = uuid.uuid4().hex
         if action and action.get('purpose') == 'reward_capacity':
@@ -3307,6 +3340,9 @@ class Worker:
         if reward is not None:
             reward['request_id'] = rid
             self.save_reward_step(reward)
+        deployed = getattr(self, 'deployment_inflight', None)
+        if deployed is not None:
+            deployed['request_id'] = rid
         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
         self.worker_request_ids.add(rid)
         before = self.save_frame(rid, 'before')
@@ -3335,6 +3371,12 @@ class Worker:
             if reward is not None:
                 reward.update(publication_attempted=guarded.publication_attempted, error=str(exc))
                 self.save_reward_step(reward)
+            if deployed is not None:
+                if guarded.publication_attempted:
+                    deployed.update(error=str(exc), publication_attempted=True)
+                    self.save_deployment_step(deployed)
+                else:
+                    self.refuse_unpublished_deployment(deployed, str(exc))
             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
@@ -3357,6 +3399,9 @@ class Worker:
         if reward is not None:
             reward.update(publication_attempted=guarded.publication_attempted, receipt=redact(result))
             self.save_reward_step(reward)
+        if deployed is not None:
+            deployed.update(publication_attempted=guarded.publication_attempted, receipt=redact(result))
+            self.save_deployment_step(deployed)
         self.c.write_json(self.records / (rid + '-result.json'), redact(result))
         after = None
         try:
@@ -3393,6 +3438,8 @@ class Worker:
             with self.profile_span('perception', operation='perception', request_id=result.get('id'),
                                    snapshot_id=result['observation']['snapshot_sha256']) as timing:
                 options = {'force': force, 'scope': scope}
+                if scope == 'deployment':
+                    options['deployment_slots'] = getattr(self, 'deployment_read_slots', None)
                 if reuse_primary:
                     options['reuse_primary'] = True
                 observed = (self.perception.read(frame) if scope == 'full' and not force and not reuse_primary else
@@ -3464,6 +3511,15 @@ class Worker:
 
     def invalidate_preparation(self, effect):
         reviews = getattr(self, 'preparation_reviews', {})
+        if effect == 'deployment':
+            # Moving an already owned unit spends nothing and does not reopen
+            # the completed reward/cleanup/economy loops. Its lineup is new.
+            for key in ('lineup_equipment', 'battle_acceptance'):
+                reviews.pop(key, None)
+            for key in ('team', 'gear', 'bonds'):
+                self.strategy_reads.pop(key, None)
+                self.context[key] = None
+            return
         keys = ('inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'inventory' else (
             'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'economy' else ()
         for key in keys:
@@ -3494,6 +3550,8 @@ class Worker:
         if not isinstance(value, dict):
             raise ValueError('准备复核缺少结构化value')
         phase = value.get('phase')
+        if phase in ('lineup_equipment', 'battle_acceptance') and self.pending_deployment_step():
+            raise ValueError('指定部署原效果尚未核实；阶段 completed 或满人口不能覆盖待验')
         if manual_record is not None and (phase != manual_record.get('phase') or value != manual_record.get('review')):
             raise ValueError('人工阶段与原监督复核内容不符；新复核须绑定当前请求单独提交')
         unverified = ManualReviewDeferred if manual_record is not None else ValueError
@@ -4005,6 +4063,300 @@ class Worker:
                 yield
             finally:
                 self.c = original
+
+    def save_deployment_step(self, step):
+        """An original effect obligation, separate from transport completed."""
+        if (step.get('schema') != 'currency-wars-deployment-step/v1'
+                or step.get('run_id') != self.owner['run_id']
+                or step.get('match_id') != self.active_match_id
+                or not re.fullmatch(r'[0-9a-f]{32}', step.get('step_id', ''))):
+            raise ValueError('部署记录归属或步骤身份不符')
+        path = self.records / ('deployment-step-' + step['step_id'] + '.json')
+        previous = optional(path)
+        if previous and any(previous.get(key) != step.get(key) for key in (
+                'step_id', 'run_id', 'match_id', 'stage', 'resume_epoch', 'request_id', 'spec',
+                'action', 'before', 'prior_receipt_ids', 'before_png', 'before_snapshot_id',
+                'before_capture_request_id', 'before_frame_id')):
+            raise ValueError('原部署意图/前帧不得覆盖')
+        if previous and previous.get('receipt') is not None and previous['receipt'] != step.get('receipt'):
+            raise ValueError('原部署回执一旦取得不得改写')
+        if not previous and len(list(self.records.glob('deployment-step-*.json'))) >= 128:
+            raise ValueError('部署记录达到有界容量，不能截断待验')
+        self.c.write_json(path, redact(step))
+        self.c.write_json(self.run / 'deployment-step.json', redact(step))
+
+    def refuse_unpublished_deployment(self, step, error):
+        """Archive our own rejected intent only when publisher was never called."""
+        rid = step['request_id']
+        ledger = self.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+        if ledger.exists():
+            raise ValueError('拒绝后仍有原回执，不清部署待验')
+        archive = self.records / ('deployment-step-' + step['step_id'] + '.json')
+        pointer = self.run / 'deployment-step.json'
+        for path in (archive, pointer):
+            value = optional(path)
+            if path == pointer and value and value.get('step_id') != step['step_id']:
+                continue  # Another original step is never touched by this refusal.
+            if value and (path.is_symlink() or value.get('step_id') != step['step_id']
+                    or value.get('request_id') != rid or value.get('run_id') != self.owner['run_id']):
+                raise ValueError('发布前拒绝记录归属已变，不清任何待验')
+        if archive.exists():
+            rejected = self.records / ('deployment-refusal-' + step['step_id'] + '.json')
+            if rejected.exists():
+                raise ValueError('发布前拒绝归档已存在，不覆盖')
+            self.c.write_json(rejected, redact({**step, 'publication_attempted': False,
+                'status': 'refused', 'outcome': 'not_published', 'error': error,
+                'basis': 'GuardedSubmission publisher was not called; original ledger absent'}))
+            archive.unlink()
+        value = optional(pointer)
+        if value and value.get('step_id') == step['step_id'] and value.get('request_id') == rid:
+            pointer.unlink()
+        step.update(publication_attempted=False, status='refused', outcome='not_published', error=error)
+
+    def pending_deployment_step(self):
+        paths = list(self.records.glob('deployment-step-*.json'))
+        retained = getattr(self, 'manual_stage_business_pending', [])
+        if (not paths and not (self.run / 'deployment-step.json').exists()
+                and not any(item.get('source_kind') == 'deployment' for item in retained)):
+            return None
+        pending = manual_stage.business_pending(self.run, self.owner, self.c,
+            self.active_match_id, self.records,
+            retained=retained)
+        for item in pending:
+            if item['source_kind'] == 'deployment':
+                path = self.records / ('deployment-step-' + str(item['step_id']) + '.json')
+                step = optional(path) or optional(self.run / 'deployment-step.json')
+                if not step or step.get('step_id') != item['step_id']:
+                    raise ValueError('部署待验原档缺失；不能当没有输入')
+                return {**step, 'status': 'unverified'}
+        return None
+
+    def deployment_summary(self):
+        pending = self.pending_deployment_step()
+        step = pending or optional(self.run / 'deployment-step.json')
+        if not step or step.get('match_id') != self.active_match_id:
+            return None
+        return {**{key: step.get(key) for key in ('step_id', 'request_id', 'stage', 'status', 'outcome')},
+            'name': step.get('spec', {}).get('name'), 'target': step.get('spec', {}).get('target'),
+            'effect_pending': pending is not None, 'input_resent': False,
+            'equipment_verified': False, 'equipment_reason': 'equipped_owner_source_unavailable',
+            'automatic_phase_completion': False, 'battle_ready': False}
+
+    def archive_deployment_frame(self, step, observed, prefix):
+        result = self.frame_result
+        frame = entry.observation_frame(self.run, result)
+        source = result['observation']
+        if (frame != self.frame_path or observed.get('capture_request_id') != result['id']
+                or observed.get('frame_id') != source['frame_id']
+                or observed.get('snapshot_id') != source['snapshot_sha256']):
+            raise ValueError('部署当前读数与原生不可变帧身份不符')
+        data = frame.read_bytes()
+        if hashlib.sha256(data).hexdigest() != observed['snapshot_id']:
+            raise ValueError('部署帧字节已改变')
+        target = self.records / ('deployment-step-' + step['step_id'] + '-' + prefix
+            + '-' + observed['snapshot_id'][:16] + '.png')
+        if target.exists():
+            if target.is_symlink() or target.read_bytes() != data:
+                raise ValueError('部署原帧已存在且不符，不覆盖')
+        else:
+            with target.open('xb') as stream:
+                stream.write(data)
+        step.update({prefix + '_png': str(target), prefix + '_snapshot_id': observed['snapshot_id'],
+            prefix + '_capture_request_id': observed['capture_request_id'],
+            prefix + '_frame_id': observed['frame_id']})
+
+    def stable_deployment_intent(self, request, observed, plan):
+        from currency_wars_visual_guards import _frames, _shape_equal
+        original = deployment.intent(request['observation'], plan)
+        current = deployment.intent(observed, plan)
+        if (original['stage'] != current['stage'] or original['resource_version'] != current['resource_version']
+                or request.get('match_id') != self.active_match_id or request.get('resume_epoch') != self.epoch()):
+            raise deployment.DeploymentRejected('部署计划节点/资源/代次改变，旧目标失效')
+        images = _frames(request, observed, self.frame_path)
+        bounds = [plan['source']['bounds'], plan['target']['bounds'],
+                  [900, 285, 1050, 325], [900, 555, 1050, 598]]
+        if images is None or not all(_shape_equal(images, box) for box in bounds):
+            raise deployment.DeploymentRejected('部署两槽或原生行锚点改变，废弃未执行坐标')
+
+    def guard_deployment_publication(self, action, tokens, observed, request_id):
+        step = getattr(self, 'deployment_inflight', None)
+        if (not step or step.get('publication_attempted') is not False
+                or step.get('request_id') != request_id or step.get('action') != action
+                or step.get('resume_epoch') != self.epoch() or step.get('tokens') != tokens
+                or deployment.spec(action, self.knowledge) != step['spec']
+                or deployment.before(observed, step['spec']) != step['before']):
+            raise ValueError('指定部署仅允许本次已核容量/角色/原席/空目标的一次发布')
+        self.guard_preparation_action(action, observed)
+        if self.pending_reward_step(observed) or self.pending_reward_capacity():
+            raise ValueError('原奖励或腾位效果待验，不能开始部署')
+        self.stable_deployment_intent(self.state['decision_request'], observed, step['spec'])
+        current = self.frame_result
+        entry.observation_frame(self.run, current)
+        if any(observed.get(key) != step.get('before_' + key) for key in
+               ('snapshot_id', 'capture_request_id', 'frame_id')):
+            raise ValueError('发布前部署原帧绑定改变')
+
+    def deployment_receipt_fence(self, step):
+        if (step.get('run_id') != self.owner['run_id'] or step.get('match_id') != self.active_match_id
+                or deployment.spec(step['action'], self.knowledge) != step['spec']
+                or not set(step['prior_receipt_ids']).issubset(set(self.economy_receipt_watermark()))):
+            raise ValueError('部署原归属、缓存类型或回执水位改变')
+        # Reuse the existing exact single-hop resume CAS and read-only receipt
+        # fence. It does not settle any economy ledger or infer an effect.
+        checked = copy.deepcopy(step)
+        self.verify_economy_fence(checked)
+        original = await_existing_receipt(self.run, self.c, step['request_id'], 0)
+        if (step.get('receipt') is not None and step['receipt'] != checked['receipt']
+                or manual_receipt_state(original)['state'] != 'completed'
+                or original['result'].get('ok') is not True):
+            raise ValueError('原部署回执仍未知或不精确匹配，禁止重发')
+        # The caller already holds the Entry observation/input lease. Fold a
+        # matching late result before any new capture replaces result.json.
+        path = self.run / 'request-ledger' / (hashlib.sha256(step['request_id'].encode()).hexdigest() + '.json')
+        stored = entry.read_json(path)
+        if stored.get('request') != original['request']:
+            raise ValueError('部署补证期间原请求改变，不覆盖')
+        if stored.get('result') is None:
+            self.c.write_json(path, original)
+        elif stored != original:
+            raise ValueError('部署原终态冲突，不覆盖')
+        if step.get('receipt') is None:
+            step['receipt'] = checked['receipt']
+            self.save_deployment_step(step)
+        return original
+
+    def verify_deployment_result(self, step, observed):
+        original = self.deployment_receipt_fence(step)
+        capture_id = observed.get('capture_request_id')
+        captured = await_existing_receipt(self.run, self.c, capture_id, 0)
+        if (captured['result'] != redact(self.frame_result)
+                or capture_id in step['prior_receipt_ids'] or observed.get('frame_id') == step['before_frame_id']
+                or capture_id != step['request_id'] and (
+                    captured['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                    or captured['request'].get('handoff') is not False
+                    or manual_receipt_state(captured)['state'] != 'zero_input')):
+            raise ValueError('部署后读须原动作帧或独立纯观察，不用旧帧/混合动作归因')
+        self.archive_deployment_frame(step, observed, 'after')
+        step['after_read'] = deployment.project(observed, step['spec'])
+        step.pop('after_result', None)
+        try:
+            from currency_wars_visual_guards import _frames, _shape_equal
+            frames = _frames(dict(observation={'snapshot_id': step['before_snapshot_id']},
+                snapshot_id=step['before_snapshot_id'], original_png=step['before_png']), observed, self.frame_path)
+            if frames is None or not all(_shape_equal(frames, bounds) for bounds in
+                                         ([900, 285, 1050, 325], [900, 555, 1050, 598])):
+                raise deployment.DeploymentRejected('部署后行布局锚点改变，不能用人口或回执覆盖')
+            step['after_result'] = deployment.after(observed, step['spec'], step['before'])
+        finally:
+            self.save_deployment_step(step)
+        candidate = {**step, 'status': 'verified', 'outcome': 'deployed'}
+        if not manual_stage._deployment_result([candidate],
+                dict(request_id=step['request_id'], stage=step['stage']),
+                redact(original), manual_receipt_state(original),
+                run=self.run, control=self.c, records=self.records):
+            raise ValueError('部署原前后帧/来源闭合失败；原生后读不能覆盖缺失证据')
+        step.update(status='verified', outcome='deployed', verified_at=now())
+        self.save_deployment_step(step)
+        self.invalidate_preparation('deployment')
+        self.node_progress = getattr(self, 'node_progress', 0) + 1
+        self.log({'event': 'deployment_result', 'business_step': 'deployment',
+            'request_id': step['request_id'], 'step_id': step['step_id'],
+            'snapshot_id': observed['snapshot_id'], 'status': 'verified',
+            'equipment_verified': False, 'battle_ready': False, 'input_resent': False})
+
+    def execute_deployment_action(self, action, request):
+        """One reviewed named deployment, then bounded observation, then ROOT.
+
+        There is one input at most. Unknown results never re-enter publication.
+        No equipment ownership reader exists, so this slice cannot close gear.
+        """
+        with self.observation_input_lease():
+            return self._execute_deployment_action(action, request)
+
+    def _execute_deployment_action(self, action, request):
+        step, error = None, None
+        try:
+            if (self.manual_input_blocked() or self.epoch() != request['resume_epoch']
+                    or self.active_match_id != request['match_id'] or time.monotonic() >= self.deadline):
+                raise ValueError('部署请求接管/代次/局/期限已改变')
+            pending = self.pending_deployment_step()
+            if action['type'] == 'check_deployment':
+                if not pending or pending['step_id'] != action['step_id']:
+                    raise ValueError('只能补读原未决部署步骤，不指定新角色或坐标')
+                step, plan = pending, pending['spec']
+                # Fold the original late receipt before any observe can replace
+                # the broker's shared result alias. A missing result stays pending.
+                self.deployment_receipt_fence(step)
+            else:
+                if pending:
+                    raise ValueError('原部署仍待验，不能重发或换目标')
+                plan = deployment.spec(action, self.knowledge)
+                deployment.intent(request['observation'], plan)
+            self.deployment_read_slots = [dict(row=plan[key]['row'], slot=plan[key]['slot'])
+                                          for key in ('source', 'target')]
+            if step is None:
+                prior = None
+                for unused in range(3):
+                    observed = self.observe(scope='deployment')
+                    try:
+                        self.stable_deployment_intent(request, observed, plan)
+                        self.guard_preparation_action(action, observed)
+                        with self.profile_span('deployment_capacity', operation='rules', business_step='deployment'):
+                            prior = deployment.before(observed, plan)
+                        break
+                    except deployment.DeploymentUnreadable as exc:
+                        error = str(exc)
+                if prior is None:
+                    raise deployment.DeploymentUnreadable(error or '部署当前容量未知')
+                step = dict(schema='currency-wars-deployment-step/v1', step_id=uuid.uuid4().hex,
+                    run_id=self.owner['run_id'], match_id=self.active_match_id, stage=prior['stage'],
+                    resume_epoch=self.epoch(), kind='deploy_unit', status='unverified', outcome='unknown',
+                    publication_attempted=False, action=copy.deepcopy(action), spec=plan, before=prior,
+                    prior_receipt_ids=self.economy_receipt_watermark(), created_at=now())
+                self.archive_deployment_frame(step, observed, 'before')
+                points = plan['source']['point'] + plan['target']['point']
+                step['tokens'] = ['drag:' + ':'.join(map(str, points)), 'wait:0.7']
+                self.deployment_inflight = step
+                try:
+                    observed = self.command(step['tokens'], action['reason'], 'preparation',
+                        '核原席清空、同名目标归属与人口加一；completed不代表部署完成',
+                        action=action, read_scope='deployment')
+                finally:
+                    self.deployment_inflight = None
+                self.invalidate_preparation('deployment')
+            else:
+                observed = self.observe(scope='deployment')
+            for attempt in range(3):
+                try:
+                    with self.profile_span('deployment_result', operation='rules', business_step='deployment'):
+                        self.verify_deployment_result(step, observed)
+                    error = None
+                    break
+                except deployment.DeploymentUnreadable as exc:
+                    error = str(exc)
+                    if attempt < 2:
+                        observed = self.observe(scope='deployment')
+        except (OSError, ValueError, RuntimeError, TimeoutError) as exc:
+            error = str(exc)
+        finally:
+            self.deployment_inflight = None
+            self.deployment_read_slots = None
+        if step and step.get('publication_attempted'):
+            if step.get('status') != 'verified':
+                step['error'] = error or '部署效果待验，只补原请求，不重发'
+                self.save_deployment_step(step)
+                self.invalidate_preparation('deployment')
+        self.log({'event': 'deployment_boundary', 'business_step': 'deployment', 'error': error,
+            'step_id': step.get('step_id') if step else None,
+            'published': bool(step and step.get('publication_attempted')), 'input_resent': False})
+        self.state['decision_request'] = None
+        observed = self.last_observation or request['observation']
+        self.ask(observed, 'preparation_strategy' if observed['page'] == 'preparation' else 'unknown_page',
+            ('指定角色部署已核实；穿戴归属缺原生读源仍待ROOT复核，之后保留本次出战鲜帧验收。'
+             if step and step.get('status') == 'verified' else '指定部署未闭合：' + str(error)),
+            category='capability' if step and step.get('status') == 'verified' else 'exception',
+            business_step='deployment')
+        return self.deployment_summary()
 
     def _advance_rewards(self, observed):
         if self.preparation_checklist(observed)['phase'] != 'rewards':
@@ -5110,6 +5462,15 @@ class Worker:
             return
         status = self.preparation_checklist(actual)
         reviews = self.preparation_reviews
+        if action.get('type') == 'deploy_unit':
+            if status['phase'] != 'lineup_equipment' or not all(
+                    reviews.get(key, {}).get('completed') is True for key in coaching.PHASES[:4]):
+                raise ValueError('指定部署须在奖励、指南、清库存和经济全部关闭之后')
+            scan = actual.get('semantic', {}).get('rewards') or {}
+            if scan.get('snapshot_id') == actual.get('snapshot_id') and (
+                    scan.get('targets') or scan.get('uncertain') or scan.get('interaction_required')):
+                raise ValueError('当前仍有奖励或待选，先处理奖励，不部署')
+            return
         if action.get('type') == 'key' and action.get('args') == [69]:
             raise ValueError('当前备战经验键为F70，拒绝旧E69绕过经济守卫')
         if verified_navigation:
@@ -5343,6 +5704,7 @@ class Worker:
                    'evidence_file': evidence, 'original_png': str(original_png), 'created_at': now(),
                    'deadline_at': (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
                    'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll',
+                                            'deploy_unit', 'check_deployment',
                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
@@ -5351,6 +5713,7 @@ class Worker:
         if kind == 'business_resume':
             request['business_receipt_watermark'] = self.economy_receipt_watermark()
         request['reward_capacity_pending'] = self.pending_reward_capacity()
+        request['deployment_result'] = self.deployment_summary()
         task_context, observation_scope = self.reviewed_task_context(observed)
         request['progression_plan'] = progression_plan(self.knowledge, observed,
             guide_candidates=choices if kind == 'guide_strategy' and isinstance(choices, list)
@@ -5373,6 +5736,10 @@ class Worker:
     def execute_plan(self, reply):
         request = self.state['decision_request']
         validate_plan(reply, request, self.epoch())
+        if reply['actions'][0]['type'] in ('deploy_unit', 'check_deployment'):
+            # This action has fresh typed source/target guards of its own;
+            # unrelated full-frame animation is not a deployment predicate.
+            return self.execute_deployment_action(reply['actions'][0], request)
         policy = coaching_policy()
         if policy['require_battle_confirmation']:
             battle_actions = [action for action in reply['actions'] if battle_input(request['observation'], action)]

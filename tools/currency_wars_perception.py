@@ -42,8 +42,8 @@ DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 PLAYER_LEVEL_ROI = [240, 880, 358, 936]
 # Current parsing support, not a claim about the game's permanent maximum.
 MAX_SUPPORTED_POPULATION = 12
-READ_CONTRACT_VERSION = 2
-READ_SCOPES = ('full', 'rewards', 'economy')
+READ_CONTRACT_VERSION = 3
+READ_SCOPES = ('full', 'rewards', 'economy', 'deployment')
 # Raw full-frame OCR only: 1920x1080 RGB, Pillow RGB default resize to
 # 1280x720, RapidOCR with use_cls=False. Bump when that pipeline changes.
 # The same engine object binds its loaded models; runtime defaults and the
@@ -819,17 +819,24 @@ class Perception:
                 getattr(self.engine, 'use_rec', None), getattr(self.engine, 'text_score', None),
                 getattr(postprocess, 'box_thresh', None), getattr(postprocess, 'unclip_ratio', None))
 
-    def read(self, path, force=False, *, scope='full', reuse_primary=False):
+    def read(self, path, force=False, *, scope='full', reuse_primary=False, deployment_slots=None):
         if scope not in READ_SCOPES:
             raise ValueError('unsupported perception read scope: ' + str(scope))
         if reuse_primary and scope != 'full':
             raise ValueError('primary OCR reuse requires a full semantic read')
+        selection = None
+        if scope == 'deployment':
+            from currency_wars_state_reader import deployment_selection
+            selection = deployment_selection(deployment_slots)
+            deployment_slots = [dict(row=row, slot=slot) for row, slot in selection]
+        elif deployment_slots is not None:
+            raise ValueError('deployment slots require deployment read scope')
         started = time.perf_counter()
         path = Path(path)
         data = path.read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         timing = _ReadTiming(digest)
-        cache_key = (digest, scope, READ_CONTRACT_VERSION, self._ocr_contract())
+        cache_key = (digest, scope, selection, READ_CONTRACT_VERSION, self._ocr_contract())
         if (self.cache and self.cache[0] == cache_key and self.cache[2] is self.engine
                 and not force and not reuse_primary):
             # Worker adds the current request/frame identity. Neither that
@@ -869,7 +876,7 @@ class Perception:
             raw = tuple((tuple(tuple(point) for point in box), text, float(confidence))
                         for box, text, confidence in raw or [])
             self._primary_cache = (primary_key, raw, self.engine)
-        cache_key = (digest, scope, READ_CONTRACT_VERSION, ocr_contract)
+        cache_key = (digest, scope, selection, READ_CONTRACT_VERSION, ocr_contract)
         rows = []
         for box, text, confidence in raw or []:
             xs, ys = [p[0] * 1.5 for p in box], [p[1] * 1.5 for p in box]
@@ -948,6 +955,7 @@ class Perception:
         # omitted central modal text could otherwise leave preparation anchors
         # visible and prevent an "unknown" fallback from ever being reached.
         effective_scope = scope if page in ('preparation', 'shop') else 'full'
+        deployment_read = effective_scope == 'deployment'
         narrow = effective_scope != 'full'
         def unread(field):
             return {'status': 'not_read', 'reason': 'outside_requested_read_scope',
@@ -955,7 +963,7 @@ class Perception:
                     'field': field, 'checked': False, 'fully_read': False}
 
         shop = None
-        if page == 'shop' and effective_scope == 'rewards':
+        if page == 'shop' and effective_scope in ('rewards', 'deployment'):
             shop = {**unread('shop'), 'ok': False, 'slots': [], 'input': {'sha256': digest}}
         elif page == "shop":
             if self.shop_reader is None:
@@ -968,7 +976,7 @@ class Perception:
         joined = "|".join(clean(r["text"]) for r in rows)
         matched = re.search(r"(?:备战|战斗中).*?(\d[-－]\d)", joined)
         player = ({**unread('player_hud'), 'actor': 'player', 'level': None, 'xp': None,
-                   'evidence': {}} if effective_scope == 'rewards' else
+                   'evidence': {}} if effective_scope in ('rewards', 'deployment') else
                   native_player_hud(rows, image, page, engine, digest))
         fields = {'stage': matched.group(1) if matched else None,
                   'level': str(player['level']) if player['level'] is not None else None,
@@ -1022,7 +1030,7 @@ class Perception:
                                          ("出战", (1760, 710, 1875, 790)),
                                          ("商店", (1575, 950, 1675, 1020))))
             count = re.fullmatch(r"([0-9]{1,2})/([0-9]{1,2})", fields["deployed"] or "")
-            if (native_hp_layout and count and valid_population_counts(int(count[1]), int(count[2]))
+            if (not deployment_read and native_hp_layout and count and valid_population_counts(int(count[1]), int(count[2]))
                     and not any(row["confidence"] >= .90 for row in hp_rows)):
                 try:
                     result, unused = engine(np.array(image.crop(hp_bounds)), use_det=False, use_cls=False)
@@ -1046,16 +1054,22 @@ class Perception:
             fields['deployed'] = None
         elif page == "battle":
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
-        semantic = semantic_facts(rows, image, page, engine=engine, snapshot_id=digest)
+        semantic = semantic_facts(rows, image, page, engine=None if deployment_read else engine, snapshot_id=digest)
         semantic['player_hud'] = player
         from currency_wars_refresh_offer import read_offer, unread_offer
-        semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope == 'rewards' else
+        semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope in ('rewards', 'deployment') else
                                      read_offer(rows, image, page, engine, digest))
         option_read = supply_read_details(rows, page, semantic.get('options', []))
         if option_read:
             semantic['option_read'] = {**option_read, 'snapshot_id': digest}
         state_read = None
-        if narrow:
+        if deployment_read:
+            from currency_wars_state_reader import StateReader
+            if self.state_reader is None:
+                self.state_reader = StateReader()
+            state_read = self.state_reader.read(path, rows=rows, page=page, selection=deployment_slots)
+            semantic['team'], semantic['inventory'] = state_read['team'], state_read['inventory']
+        elif narrow:
             semantic['team'] = {**unread('team'), 'units': []}
             semantic['inventory'] = {**unread('inventory'), 'items': []}
             state_read = {**unread('state_read'), 'team': copy.deepcopy(semantic['team']),
@@ -1088,10 +1102,12 @@ class Perception:
                 for item in inventory['items']]}
         contract = {'version': READ_CONTRACT_VERSION, 'requested_scope': scope,
                     'effective_scope': effective_scope, 'page_ocr': 'full_frame',
-                    'unread': (['team', 'inventory'] +
+                    'unread': ['inventory', 'shop', 'player_hud', 'hp', 'refresh_offer'] if deployment_read else (['team', 'inventory'] +
                         (['shop', 'player_hud', 'deployed', 'hp', 'refresh_offer'] if effective_scope == 'rewards' else []))
                         if narrow else [],
                     'fallback_reason': 'page_requires_full_read' if effective_scope != scope else None}
+        if scope == 'deployment':
+            contract['deployment_slots'] = deployment_slots
         result = {"snapshot_id": digest, "page": page, "rows": rows, "fields": fields,
                   "fingerprint": fingerprint(image), "shop": shop,
                   "semantic": semantic, "state_read": state_read,
