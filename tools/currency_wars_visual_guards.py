@@ -32,44 +32,196 @@ _PREPARATION_GUIDE_MASK = (
 )
 
 
-def _guide_icon_location(image):
-    """One native template candidate in the complete prep navigation strip."""
-    hsv = cv2.cvtColor(image[38:96, 1570:1918], cv2.COLOR_RGB2HSV)
-    ink = ((hsv[:, :, 1] < 70) & (hsv[:, :, 2] > 200)).astype(np.uint8)
-    template = np.unpackbits(np.frombuffer(base64.b64decode(_PREPARATION_GUIDE_MASK), dtype=np.uint8))[:41*42].reshape(41, 42)
-    scores = cv2.matchTemplate(ink, template, cv2.TM_CCOEFF_NORMED)
-    unused, best, unused_location, location = cv2.minMaxLoc(scores)
-    if not np.isfinite(best) or best < .95:
-        return None
-    x, y = location
-    # Adjacent response pixels describe one candidate; an independent peak
-    # anywhere else among the four navigation controls is ambiguous.
-    others = scores.copy()
-    others[max(0, y-5):y+6, max(0, x-5):x+6] = -1
-    if np.any(others >= .90):
-        return None
-    native = [x+1570, y+38]
-    return native if abs(native[0]-1666) <= 2 and abs(native[1]-46) <= 2 else None
+# Native PNG calibration, evidence 99809b924393ca4540bfa4ced5c17cb89452ad73:
+# ROOT_PR28_STARTUP_GUIDE/source-navigation.png (sha256 a7f73d61...972fb2),
+# [1666,46,1708,87]. The old retained JPEG mask scores .940568 on this
+# appearance; keep its threshold and add the actual PNG silhouette instead.
+_PREPARATION_GUIDE_NATIVE_MASK = (
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAA/AAAAAB/wAAAAH/8AAAAf//AAAB/7/gAAD/z/4AAP/x/+AAP/g/+AAH/A/8AAH/Af4AAD+Af4AAB8AHwAABwEBgAAAAOAAAAAA/AAAAAAfAAAAAgOAgAABwEDgAAB8APwAAD+Af4AAH/Af4AAH/g/8AAP/h/+AAP/x/8AAD/z/4AAA/7/gAAAP/+AAAAH/4AAAAB/wAAAAAfAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+)
+_GUIDE_STRIP_BOUNDS = [1570, 38, 1918, 96]
+_GUIDE_GLYPH_BOUNDS = [1666, 46, 1708, 87]
 
 
-def _exposed_navigation_equal(images, bounds):
-    # Compute both edges on the same crop: expanding only one crop introduces
-    # artificial Canny boundary differences along the native strip border.
-    old, fresh = (_edges(image, bounds) for image in images)
-    if min(np.count_nonzero(old), np.count_nonzero(fresh)) < 100:
+def _guide_ink(crop):
+    hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+    return (hsv[:, :, 1] < 70) & (hsv[:, :, 2] > 200)
+
+
+def _guide_strip_location(strip, diagnostic=None, *, reviewed_template=None):
+    """One exposed candidate across the complete native navigation strip.
+
+    A reviewed template is extracted from the source PNG by this module, never
+    supplied by a caller. Its identity is the supervisor's separate assertion.
+    """
+    result = {'location': None, 'reason': 'invalid_navigation_crop'}
+    try:
+        if strip.shape != (58, 348, 3) or strip.dtype != np.uint8:
+            return None
+        ink = _guide_ink(strip).astype(np.uint8)
+        if reviewed_template is None:
+            templates = [(name, np.unpackbits(np.frombuffer(base64.b64decode(value), dtype=np.uint8))
+                          [:41*42].reshape(41, 42))
+                         for name, value in (('retained_jpeg', _PREPARATION_GUIDE_MASK),
+                                             ('native_png_99809b92', _PREPARATION_GUIDE_NATIVE_MASK))]
+        else:
+            if (reviewed_template.shape != (41, 42)
+                    or not 100 <= np.count_nonzero(reviewed_template) <= 900):
+                result['reason'] = 'reviewed_target_has_no_bounded_ink'
+                return None
+            templates = [('supervisor_source_png', reviewed_template.astype(np.uint8))]
+        matches = [(name, cv2.matchTemplate(ink, template, cv2.TM_CCOEFF_NORMED))
+                   for name, template in templates]
+        scores = np.maximum.reduce([score for unused_name, score in matches])
+        unused, best, unused_location, location = cv2.minMaxLoc(scores)
+        x, y = location
+        result.update(score=float(best), template=max(matches, key=lambda item: item[1][y, x])[0])
+        if not np.isfinite(best) or best < (.985 if reviewed_template is not None else .95):
+            result['reason'] = 'target_shape_unknown'
+            return None
+        # Across both native appearances, adjacent response pixels still
+        # describe one target. An independent candidate is ambiguous.
+        others = scores.copy()
+        others[max(0, y-5):y+6, max(0, x-5):x+6] = -1
+        result['other_peak'] = float(np.max(others))
+        if np.any(others >= .90):
+            result['reason'] = 'target_not_unique'
+            return None
+        native = [x+1570, y+38]
+        if abs(native[0]-1666) > 2 or abs(native[1]-46) > 2:
+            result['reason'] = 'target_outside_supported_control'
+            return None
+        result.update(location=native, reason='unique_source_shape')
+        return native
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def _guide_icon_location(image, diagnostic=None):
+    """Backward-compatible full-frame native detector; no supervisor inference."""
+    return _guide_strip_location(image[38:96, 1570:1918], diagnostic)
+
+
+def _preparation_header_crops_equal(crops, diagnostic=None):
+    """Only the fixed preparation label's light or calibrated gray glyphs.
+
+    Native gray label union [428,31,515,62]: 560/560 pixels at S<40 and
+    V=100..190, IoU 1, support and two-pixel halo RGB max delta 1. Full OCR
+    still has to identify the unique label; background colors are not glyphs.
+    """
+    result = {'allowed': False, 'reason': 'header_ink_changed_or_unknown'}
+    try:
+        if len(crops) != 2 or crops[0].shape != crops[1].shape:
+            return False
+        hsv = [cv2.cvtColor(crop, cv2.COLOR_RGB2HSV) for crop in crops]
+        delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
+        for kind in ('light', 'prep_gray'):
+            masks = [((item[:, :, 1] < 70) & (item[:, :, 2] > 190)) if kind == 'light'
+                     else ((item[:, :, 1] < 40) & (item[:, :, 2] >= 100) & (item[:, :, 2] <= 190))
+                     for item in hsv]
+            counts = [int(np.count_nonzero(mask)) for mask in masks]
+            if any(count < 24 or not .015 <= count / masks[0].size <= .60 for count in counts):
+                continue
+            union = masks[0] | masks[1]
+            iou = np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union)
+            halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+            if iou < .985 or np.mean(delta[halo] > 16) > .005:
+                continue
+            result.update(allowed=True, reason='stable_exposed_header', ink_kind=kind,
+                          ink_pixels=counts, ink_iou=float(iou), halo_max_delta=int(np.max(delta[halo])))
+            return True
         return False
-    score = cv2.matchTemplate(fresh, old, cv2.TM_CCOEFF_NORMED)[0, 0]
-    return bool(np.isfinite(score) and score >= .985)
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def _preparation_header_equal(images, bounds):
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    return _preparation_header_crops_equal([image[y:bottom, x:right] for image in images])
+
+
+def _guide_navigation_pair(strips, diagnostic=None, *, supervising=False):
+    """Local actionability shared by production and native-crop diagnosis.
+
+    This does not classify a whole frame or issue input. Unknown native shape
+    may be separately reviewed by ROOT, but current exposure and uniqueness
+    cannot be asserted past changed pixels. No moving background equality.
+    """
+    result = {'allowed': False, 'source': 'supervising_agent' if supervising else 'native',
+              'native_locations': [], 'reviewed_locations': [], 'reason': 'invalid_navigation_pair'}
+    try:
+        if len(strips) != 2 or any(strip.shape != (58, 348, 3) or strip.dtype != np.uint8 for strip in strips):
+            return False
+        native = [{}, {}]
+        native_locations = [_guide_strip_location(strip, details) for strip, details in zip(strips, native)]
+        result.update(native_locations=native_locations, native_detection=native)
+        if supervising:
+            # Fixed, current source glyph; no caller-supplied pixels/template.
+            template = _guide_ink(strips[0][8:49, 96:138])
+            reviewed = [{}, {}]
+            locations = [_guide_strip_location(strip, details, reviewed_template=template)
+                         for strip, details in zip(strips, reviewed)]
+            result.update(reviewed_locations=locations, reviewed_detection=reviewed)
+        else:
+            locations = native_locations
+        if any(location is None for location in locations) or locations[0] != locations[1]:
+            result['reason'] = 'target_identity_or_location_changed'
+            return False
+        for label, bounds in (('target', [80, 1, 157, 56]), ('navigation', [2, 2, 315, 55])):
+            x, y, right, bottom = bounds
+            crops = [strip[y:bottom, x:right] for strip in strips]
+            masks = [_guide_ink(crop) for crop in crops]
+            union = masks[0] | masks[1]
+            if np.count_nonzero(union) < 100:
+                result['reason'] = label + '_not_exposed'
+                return False
+            iou = np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union)
+            halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+            delta = np.max(np.abs(crops[0].astype(np.int16)-crops[1].astype(np.int16)), axis=2)
+            result[label] = {'ink_pixels': [int(np.count_nonzero(mask)) for mask in masks],
+                             'ink_iou': float(iou), 'halo_max_delta': int(np.max(delta[halo]))}
+            if iou < .99 or np.mean(delta[halo] > 16) > .005:
+                result['reason'] = label + '_exposure_changed'
+                return False
+        # A cover over the click center must not hide inside negative space.
+        centers = [strip[23:32, 113:122] for strip in strips]
+        if (any(np.count_nonzero(_guide_ink(crop)) < 4 for crop in centers)
+                or np.max(np.abs(centers[0].astype(np.int16)-centers[1].astype(np.int16))) > 16):
+            result['reason'] = 'click_center_not_exposed'
+            return False
+        result.update(allowed=True, reason='stable_unique_exposed_target')
+        return True
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def _preparation_modal_row(observation):
+    # Veto only: preparation anchors can remain behind a confirmation panel.
+    # Do not require unrelated board/quest OCR to stay byte-for-byte equal.
+    for row in observation.get('rows', []):
+        score = row.get('confidence')
+        if (type(score) in (int, float) and .72 <= score <= 1.
+                and _inside(row.get('box'), [300, 120, 1650, 1000])
+                and re.fullmatch(r'(?:确认|确定|取消|关闭|继续|下一步|是否.+|请选择.*)',
+                                 clean(row.get('text', '')))):
+            return row
+    return None
 
 
 def stable_preparation_icon_target(action, request, actual, current_png, diagnostic=None):
-    """Read-only evidence for one fixed icon; caller enforces epoch/deadline/broker.
+    """One fixed navigation action, anchored to current native preparation.
 
-    Page OCR anchors establish preparation but the target itself has no text.
-    Both PNG digests, stage, unique template and exposed navigation outlines
-    must agree. No generic coordinate or caller template exemption is granted.
+    Epoch/deadline/owner/manual-proof validation belongs to the existing caller.
+    This guard checks byte sources, both native pages/anchors, target uniqueness
+    and current local exposure. It never promotes a supervisor label to native.
     """
-    allowed = False
+    result = {'allowed': False, 'guard': 'native_prep_guide_icon_v2', 'input_sent': False,
+              'reason': 'unsupported_guide_action'}
     try:
         if not all(isinstance(value, dict) for value in (action, request, actual)):
             return False
@@ -79,6 +231,7 @@ def stable_preparation_icon_target(action, request, actual, current_png, diagnos
                 or original.get('page') != 'preparation' or actual.get('page') != 'preparation'
                 or action.get('type') != 'click_point' or action.get('expected_page') != 'preparation'
                 or not isinstance(proof, dict) or proof.get('control_id') != PREPARATION_GUIDE_CONTROL
+                or proof.get('source') not in (None, 'native', 'supervising_agent')
                 or proof.get('snapshot_id') != request.get('snapshot_id')
                 or proof.get('bounds') != PREPARATION_GUIDE_BOUNDS
                 or action.get('args') != PREPARATION_GUIDE_POINT
@@ -86,45 +239,38 @@ def stable_preparation_icon_target(action, request, actual, current_png, diagnos
             return False
         images = _frames(request, actual, current_png)
         if images is None:
+            result['reason'] = 'frame_source_mismatch'
             return False
         stage = original.get('fields', {}).get('stage')
         if (not isinstance(stage, str) or not re.fullmatch(r'[1-3]-[1-9]', stage)
-                or actual.get('fields', {}).get('stage') != stage):
+                or actual.get('fields', {}).get('stage') != stage
+                or any(classify(obs.get('rows', [])) != 'preparation' for obs in (original, actual))):
+            result['reason'] = 'preparation_page_or_stage_changed'
             return False
-        for pattern, bounds in (
-                ('备战阶段', [410, 20, 540, 65]),
-                (re.escape(stage), [420, 50, 520, 105]),
-                ('出战', [1760, 710, 1875, 790]),
-                ('商店', [1575, 950, 1675, 1020]),
-                ('前台区域', [895, 285, 1030, 330])):
-            if _paired_row(original, actual, pattern, bounds, images) is None:
+        if any(_preparation_modal_row(obs) is not None for obs in (original, actual)):
+            result['reason'] = 'preparation_modal_control_visible'
+            return False
+        for pattern, bounds, ink_guard in (
+                ('备战阶段', [410, 20, 540, 65], _preparation_header_equal),
+                (re.escape(stage), [420, 50, 520, 105], None),
+                ('出战', [1760, 710, 1875, 790], None),
+                ('商店', [1575, 950, 1675, 1020], None)):
+            if _paired_row(original, actual, pattern, bounds, images, ink_guard=ink_guard) is None:
+                result.update(reason='preparation_anchor_changed_or_unknown', anchor=pattern)
                 return False
-        locations = [_guide_icon_location(image) for image in images]
-        if any(location is None for location in locations) or locations[0] != locations[1]:
-            return False
-        # An otherwise exposed icon is not an exemption for a newly opened
-        # page/panel. Ignore only the bottom latency/UID footer. Whole-screen
-        # comparison can veto here, but never establishes target evidence.
-        visible = [sorted(clean(row.get('text', '')) for row in obs.get('rows', [])
-                          if .90 <= row.get('confidence', 0) <= 1.
-                          and _inside(row.get('box'), [0, 0, 1920, 1020]))
-                   for obs in (original, actual)]
-        if visible[0] != visible[1]:
-            return False
-        delta = np.max(np.abs(images[0][:1020].astype(np.int16)
-                              - images[1][:1020].astype(np.int16)), axis=2)
-        if np.mean(delta > 40) > .035:
-            return False
-        # Full local control boundaries reject changed/occluded strip state;
-        # equality of the white target silhouette alone is insufficient.
-        allowed = (_exposed_navigation_equal(images, PREPARATION_GUIDE_BOUNDS)
-                   and _exposed_navigation_equal(images, [1572, 40, 1885, 93]))
+        # The front-caption OCR is not a navigation precondition. Nor are
+        # unrelated animated background pixels / unchanged whole-page OCR.
+        local = {}
+        allowed = _guide_navigation_pair([image[38:96, 1570:1918] for image in images], local,
+                                         supervising=proof.get('source') == 'supervising_agent')
+        result.update(local)
+        return allowed
     except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
-        allowed = False
+        result['reason'] = 'guide_evidence_unreadable'
+        return False
     finally:
         if diagnostic is not None:
-            diagnostic.update(allowed=bool(allowed), guard='native_prep_guide_icon_v1', input_sent=False)
-    return bool(allowed)
+            diagnostic.update(result)
 
 
 def _frames(request, actual, current_png):

@@ -1,0 +1,307 @@
+{
+  "schema": "currency-wars-guide-actionability/v1",
+  "basis_commit": "b7f3965d6e75a8aac094b457b13d5163eb6839a4",
+  "tested_checkout_head": "b7f3965d6e75a8aac094b457b13d5163eb6839a4",
+  "evidence_commit": "99809b924393ca4540bfa4ced5c17cb89452ad73",
+  "source_binding_authority": "Exact tested bytes; HEAD may precede uncommitted changes or be null in an archive.",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "12.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "1f0ac7cf85896b5e8c92b625de494ca5de5269e8aa8d0574e4b79641c6ede5ef",
+    "tools/currency_wars_manual_steps.py": "f30d50f9693f19f002dbfc0f58adfc9aba0f05bb3eacd9ea5e845a7789377752",
+    "tools/currency_wars_perception.py": "ae5daa4ca2e0bfdef4abfbc0dcee2df8c7da4c2a992657c1256c3ccde452fff9",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "3e0d7c5185ee3c40b68b9852299010d1abd2d9cd32eaf024496eed1fd16e718c",
+    "tools/currency_wars_runner.py": "15e4a38199e79767a29b51dc73653dd941a5141a4c159873c5560b71b95a4b5d",
+    "tools/currency_wars_runtime_sources.json": "1c90624daed8f1a3ff58656238685b901174a7ad7fc927427f511cedae0b0668",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "9d635615d4a1c5ca86dd40c38790422cf1624f32543496bc943adfbc011f8305",
+    "tools/replay_currency_wars_guide_actionability.py": "76b10681cfe29ac1eac5ee16491183baeff6bed1173c2a1b0561c2589a88351c",
+    "tools/replay_currency_wars_preparation.py": "778805b12814a4a28f36677842d7f0d4c81b1cd1be29360134c761cf89774a4d",
+    "tools/replay_currency_wars_reward_recovery.py": "c8e21ef0d01820c30a44733a10b7e643142832aebaa881ddf7c4b3a153b49c7f",
+    "tools/replay_currency_wars_rewards.py": "b7914699511186e10419c1556209fef4f1360d866f7069ea7b760a1a10690d64",
+    "tools/test_currency_wars_guide_actionability.py": "a3b0bfea5dfa538f18947fef48b0cba43b951c01de079ec33af0809b969a1ac7",
+    "tools/test_currency_wars_native_reward_detector.py": "55e11063f099b0967af38c8c468a0ab9889fa4e211ab4dc9bab63db714f00f3b",
+    "tools/test_currency_wars_reward_hud_flow.py": "d4abc99a5ba9c9790ec5b6bc130452310673cdc9e45e8caf776ee032d2373780",
+    "tools/test_currency_wars_reward_recovery.py": "51f58c3738bd650ad758b2f741b8be00b64fc3976923ace8f0410ba0811de6ab",
+    "tools/test_currency_wars_reward_roi_flow.py": "4774bf50bfa233b5db10ac270e6146973243c689b186c3e1fadf2af85ada0846",
+    "tools/test_currency_wars_submission_queue.py": "058c39657468d61f51e2a7a819a4d5448c2ddf88a1dd13ebc352370bf42dda76",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "source_file_count": 35,
+  "runtime_source_files": [
+    "gui/launch.py",
+    "gui/processes.py",
+    "requirements.txt",
+    "tools/currency_wars_artifacts.py",
+    "tools/currency_wars_bridge_task.py",
+    "tools/currency_wars_broker_entry.py",
+    "tools/currency_wars_coaching.py",
+    "tools/currency_wars_control.py",
+    "tools/currency_wars_economy.py",
+    "tools/currency_wars_input_bridge.py",
+    "tools/currency_wars_manual_stage.py",
+    "tools/currency_wars_manual_steps.py",
+    "tools/currency_wars_perception.py",
+    "tools/currency_wars_profile.py",
+    "tools/currency_wars_progression.py",
+    "tools/currency_wars_refresh_offer.py",
+    "tools/currency_wars_rewards.py",
+    "tools/currency_wars_runner.py",
+    "tools/currency_wars_runtime_sources.json",
+    "tools/currency_wars_shop_reader.py",
+    "tools/currency_wars_source_guard.py",
+    "tools/currency_wars_state_reader.py",
+    "tools/currency_wars_update.py",
+    "tools/currency_wars_visual_guards.py"
+  ],
+  "runtime_source_count": 24,
+  "artifact_sha256": {
+    "handoff/2026-10-07/reward-sequence/manifest.json": "2c66fad7b2cd5a5b74a2317c1e368df0470de64dee9664a00abcc934de1a1906",
+    "handoff/2026-10-07/reward-sequence/q00.png": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+    "handoff/2026-10-07/reward-sequence/q01.png": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/diagnosis.json": "e1347f3f15cc7a992caaa47f9d5145fe05740d4ee0cf96a950a659a1e05baab9",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/fresh_worker-scan.png": "a17366ab16cbe9248f2d2da223a3a6122c7b8676f39cb8a5f0e917b5293381f4",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-scan.png": "8e93e3d3967bf4bd86ccdf2ab9f6f3db5d7b8ca0ec06f9b47f8796d64233d708",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/manual_before-scan.png": "d3e9905b2a37bdcdcf2f4d345222d2180c6808348d90c50cb29d4f413a8f82ac",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-front-caption.png": "07ac39e4d508b97e8f12b960901ca551205586e3fe94204ffed055478fb7a909",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-header.png": "c8bc8ef99a4d812c732114c3bcb5f818b164bb4b5bef108928280e71f1a397a3",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-navigation.png": "31ddefa3977827895f2f98e2797e21c4bf4a8275a7408746e0356a1cad0c2c84",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/diagnosis.json": "7338de3a98a77a4b97396dafa39387d6f90e3de301a4143b7f5890c7b26d187b",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-front-caption.png": "20de06c09c40c6bece307ee4f2f60a8344b959da00acb9cc61e428b8dd544b2c",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-header.png": "37eb97f265196f5a8ad37fe9b4db235596761f02b9e9b78c823494a476cdf8ad",
+    "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-navigation.png": "a7f73d617093db65d51f5b4a65c58ec049a09990404b4ed255b3833849972fb2",
+    "tools/reward_resources/blue-orb-q01.png": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+    "tools/reward_resources/initial-blue.png": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+    "tools/reward_resources/initial-gray.png": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+    "tools/reward_resources/manifest.json": "0b2d5da751483150a0194d52a43dcb6d1b5dd6970309c3e7efe192541d03e635",
+    "tools/reward_resources/native-orbs-sources.json": "165705869c47b56cdda51c4f697ce09f34fb16a5b9dd042112094bfb221be87c"
+  },
+  "artifact_file_count": 19,
+  "manifest_unchanged_from_pr29": true,
+  "game_inputs": 0,
+  "controllers_started": 0,
+  "new_game_captures": 0,
+  "native_ocr_calls": 0,
+  "online_model_called": false,
+  "candidate_installed": false,
+  "ready_changed": false,
+  "native_scope": "Six unedited crops calibrate local appearance only; complete consumer frames and successors are declared protocols.",
+  "public_checkout_original_full_game_pngs_available": false,
+  "historical_qualification": false,
+  "natural_navigation_success_verified": false,
+  "whole_game_speedup": null,
+  "parent_frozen_eight_rerun": false,
+  "current_focused_selection_run": true,
+  "parent_affected_selection_rerun": false,
+  "focused_checks": {
+    "selection": [
+      "test_currency_wars_guide_actionability.GuideCropTests",
+      "test_currency_wars_guide_actionability.GuideVisualProtocolTests",
+      "test_currency_wars_guide_actionability.GuideConsumerTests"
+    ],
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "seconds": 10.727697729998908,
+    "results": [
+      {
+        "test": "test_currency_wars_guide_actionability.GuideCropTests.test_native_crops_bind_original_sources_and_calibrate_local_glyph_and_icon",
+        "status": "passed",
+        "seconds": 0.011247467999055516
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideCropTests.test_native_derived_white_blank_cover_move_and_duplicate_remain_rejected",
+        "status": "passed",
+        "seconds": 0.011172505001013633
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideVisualProtocolTests.test_changed_relevant_pixels_semantics_scope_and_sources_refuse",
+        "status": "passed",
+        "seconds": 1.736692075002793
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideVisualProtocolTests.test_current_guide_allows_native_crops_and_ignores_irrelevant_background_front_caption",
+        "status": "passed",
+        "seconds": 0.4284608979978657
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideConsumerTests.test_current_stage_source_foreground_epoch_and_publish_time_change_refuse",
+        "status": "passed",
+        "seconds": 2.6272906410013093
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideConsumerTests.test_manual_proof_domains_deadline_and_existing_pending_input_refuse_without_publication",
+        "status": "passed",
+        "seconds": 0.827041193999321
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideConsumerTests.test_native_and_separate_supervisor_unknown_shape_each_send_once_and_verify_current_title",
+        "status": "passed",
+        "seconds": 1.7156927860014548
+      },
+      {
+        "test": "test_currency_wars_guide_actionability.GuideConsumerTests.test_unknown_successor_exhausts_two_readonly_checks_and_same_intent_never_replays",
+        "status": "passed",
+        "seconds": 3.36980731299991
+      }
+    ],
+    "failure_details": []
+  },
+  "native_and_consumer_evidence": [
+    {
+      "contract": "native_cropped_calibration",
+      "evidence": {
+        "allowed": true,
+        "navigation": {
+          "allowed": true,
+          "source": "native",
+          "native_locations": [
+            [
+              1666,
+              46
+            ],
+            [
+              1666,
+              46
+            ]
+          ],
+          "reviewed_locations": [],
+          "reason": "stable_unique_exposed_target",
+          "native_detection": [
+            {
+              "location": [
+                1666,
+                46
+              ],
+              "reason": "unique_source_shape",
+              "score": 0.9999998211860657,
+              "template": "native_png_99809b92",
+              "other_peak": 0.5572102069854736
+            },
+            {
+              "location": [
+                1666,
+                46
+              ],
+              "reason": "unique_source_shape",
+              "score": 0.9999998211860657,
+              "template": "native_png_99809b92",
+              "other_peak": 0.5578919053077698
+            }
+          ],
+          "target": {
+            "ink_pixels": [
+              418,
+              418
+            ],
+            "ink_iou": 1.0,
+            "halo_max_delta": 2
+          },
+          "navigation": {
+            "ink_pixels": [
+              1658,
+              1660
+            ],
+            "ink_iou": 0.9987951807228915,
+            "halo_max_delta": 7
+          }
+        },
+        "header": {
+          "allowed": true,
+          "reason": "stable_exposed_header",
+          "ink_kind": "prep_gray",
+          "ink_pixels": [
+            560,
+            560
+          ],
+          "ink_iou": 1.0,
+          "halo_max_delta": 1
+        }
+      },
+      "native_crop_count": 6,
+      "original_full_frames_available": false,
+      "historical_actual_observation_reconstructed": false,
+      "historical_qualification": false,
+      "real_input": false,
+      "independent_generalization_positive": false
+    },
+    {
+      "contract": "declared_current_navigation_consumer",
+      "source": "native_visual_guard",
+      "native_shape_unknown": false,
+      "native_facts_overwritten": false,
+      "input_count": 1,
+      "verification_reads": 0,
+      "outcome": "expected_title_observed",
+      "actual_page": "unknown",
+      "automatic_phase_completion": false,
+      "real_navigation": false
+    },
+    {
+      "contract": "declared_current_navigation_consumer",
+      "source": "supervising_agent",
+      "native_shape_unknown": true,
+      "native_facts_overwritten": false,
+      "input_count": 1,
+      "verification_reads": 1,
+      "outcome": "expected_title_observed",
+      "actual_page": "unknown",
+      "automatic_phase_completion": false,
+      "real_navigation": false
+    },
+    {
+      "contract": "declared_unknown_successor",
+      "input_count": 1,
+      "receipt_completed": true,
+      "outcome": "unknown",
+      "verification_reads": 2,
+      "same_intent_replayed": false,
+      "automatic_phase_completion": false,
+      "real_game_effect": false
+    },
+    {
+      "contract": "declared_new_current_manual_intent_after_known_delivery",
+      "identical_source_png_sha256": true,
+      "new_capture_and_frame_ids": true,
+      "previous_record_unchanged": true,
+      "previous_outcome": "unknown",
+      "original_input_count": 1,
+      "new_explicit_input_count": 1,
+      "automatic_retry": false,
+      "actual_new_outcome": "expected_title_observed",
+      "real_game_effect": false
+    }
+  ],
+  "retained_pairs": [],
+  "source_set_sha256_before": "495f5810972d758570624ec143a7d73b406a465f870ab4f5e0db69bbe3c4bf48",
+  "source_set_sha256_after": "495f5810972d758570624ec143a7d73b406a465f870ab4f5e0db69bbe3c4bf48",
+  "source_unchanged": true,
+  "artifacts_unchanged": true,
+  "loaded_source_closure_missing": [],
+  "ok": true
+}

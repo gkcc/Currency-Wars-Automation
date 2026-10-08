@@ -47,6 +47,91 @@ def _reward_roi(operation, reply):
     return None
 
 
+def _guide_roi(operation, reply):
+    """Recognize an explicit annotation, never grant its visual authority."""
+    if operation != 'reviewed_plan' or not isinstance(reply, dict):
+        return None
+    actions = reply.get('actions')
+    if not isinstance(actions, list):
+        return None
+    annotated = [action for action in actions if isinstance(action, dict)
+                 and isinstance(action.get('target_evidence'), dict)
+                 and action['target_evidence'].get('control_id') == 'prep_startup_guide_2'
+                 and 'source' in action['target_evidence']]
+    if annotated:
+        if len(actions) != 1 or len(annotated) != 1 or reply.get('context_update'):
+            raise ValueError('supervised guide ROI requires one reviewed action without context updates')
+        return annotated[0]
+    return None
+
+
+def validate_guide_roi(action, request, binding, checkpoint_id):
+    """Bind a current supervisor target without changing native recognition.
+
+    The Worker separately checks native page anchors, local exposure and the
+    original immutable receipt. This annotation cannot authorize another ROI
+    or serve as a guide-page result.
+    """
+    from currency_wars_visual_guards import (PREPARATION_GUIDE_BOUNDS,
+        PREPARATION_GUIDE_CONTROL, PREPARATION_GUIDE_POINT)
+    evidence = action.get('target_evidence') if isinstance(action, dict) else None
+    keys = {'source', 'control_id', 'bounds', 'request_id', 'snapshot_id',
+            'capture_request_id', 'frame_id', 'page', 'match_id', 'stage',
+            'resume_epoch', 'checkpoint_id', 'deadline_at', 'target_unique',
+            'target_exposed', 'expected_successor', 'findings'}
+    if (not isinstance(evidence, dict) or set(evidence) != keys
+            or not isinstance(request, dict) or not isinstance(binding, dict)
+            or evidence.get('source') != 'supervising_agent'
+            or evidence.get('control_id') != PREPARATION_GUIDE_CONTROL
+            or evidence.get('target_unique') is not True or evidence.get('target_exposed') is not True
+            or evidence.get('expected_successor') != '创业指南'
+            or not isinstance(evidence.get('findings'), str)
+            or not 1 <= len(evidence['findings'].strip()) <= 1000
+            or action.get('type') != 'click_point' or action.get('expected_page') != 'preparation'
+            or evidence.get('bounds') != PREPARATION_GUIDE_BOUNDS
+            or not isinstance(evidence['bounds'], list) or any(type(v) is not int for v in evidence['bounds'])
+            or action.get('args') != PREPARATION_GUIDE_POINT
+            or not isinstance(action['args'], list) or any(type(v) is not int for v in action['args'])):
+        raise ValueError('guide ROI requires one explicit current supervisor annotation for the second icon')
+    original = request.get('observation')
+    if not isinstance(original, dict):
+        raise ValueError('guide ROI lacks its original Worker observation')
+    for key in ('request_id', 'snapshot_id', 'match_id', 'resume_epoch', 'deadline_at'):
+        if not isinstance(evidence[key], str) or not evidence[key] or evidence[key] != request.get(key):
+            raise ValueError('guide ROI differs from the outstanding request: ' + key)
+    if (request.get('kind') != 'preparation_strategy'
+            or request.get('preparation_checklist', {}).get('phase') != 'startup_guide'
+            or evidence['page'] != 'preparation' or original.get('page') != 'preparation'
+            or original.get('snapshot_id') != evidence['snapshot_id']
+            or evidence['match_id'] != binding.get('match_id')
+            or evidence['resume_epoch'] != binding.get('old_epoch')
+            or evidence['stage'] != binding.get('stage')
+            or evidence['stage'] != original.get('fields', {}).get('stage')
+            or not isinstance(evidence['stage'], str) or not evidence['stage']
+            or _runner().canonical_stage(evidence['stage']) != evidence['stage']
+            or evidence['checkpoint_id'] != checkpoint_id
+            or not isinstance(checkpoint_id, str) or not re.fullmatch(r'[0-9a-f]{32}', checkpoint_id)):
+        raise ValueError('guide ROI is not this match/stage/epoch startup-guide checkpoint')
+    for key in ('capture_request_id', 'frame_id'):
+        if not isinstance(evidence[key], str) or not evidence[key] or evidence[key] != original.get(key):
+            raise ValueError('guide ROI lacks its original immutable frame identity')
+    try:
+        deadline = datetime.fromisoformat(evidence['deadline_at'])
+        if deadline.tzinfo is None or datetime.now(timezone.utc) >= deadline:
+            raise ValueError('guide ROI request expired')
+    except (TypeError, ValueError) as error:
+        raise ValueError('guide ROI request deadline is invalid or expired') from error
+    try:
+        path = Path(request['original_png'])
+        if (not path.is_file() or path.stat().st_size > 25_000_000
+                or hashlib.sha256(path.read_bytes()).hexdigest() != evidence['snapshot_id']):
+            raise ValueError('guide ROI original PNG bytes changed or are missing')
+    except (KeyError, OSError, TypeError) as error:
+        raise ValueError('guide ROI original PNG bytes are unavailable') from error
+    # Editing prose or extending a deadline does not permit another step.
+    return _digest({key: evidence[key] for key in sorted(keys - {'findings', 'deadline_at'})})
+
+
 def validate_reward_roi(evidence, request, binding, checkpoint_id):
     """Authenticate one supervisor target; never replace native reader facts.
 
@@ -294,6 +379,7 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
         raise ValueError('unsupported or unbounded manual step')
     annotation = _reward_roi(operation, reply)
     recovery = _recovery_reply(operation, reply)
+    guide = _guide_roi(operation, reply)
     if (operation == 'reviewed_plan' and not isinstance(reply, dict)
             or operation not in ('reviewed_plan', 'collect_rewards', 'recover_reward') and reply is not None):
         raise ValueError('only reviewed_plan, annotated collect_rewards or recover_reward accepts a reply')
@@ -309,6 +395,8 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
                 checkpoint = _checkpoint(run, binding, checkpoint_id)
                 if operation in ('collect_rewards', 'recover_reward') and checkpoint.get('phase') != 'rewards':
                     raise ValueError('native reward loop belongs only to the rewards checkpoint')
+                if guide is not None and checkpoint.get('phase') != 'startup_guide':
+                    raise ValueError('supervised guide ROI belongs only to the startup-guide checkpoint')
             path.parent.mkdir(exist_ok=True)
             existing = list(path.parent.glob('*.json'))
             if len(existing) >= 128:
@@ -328,6 +416,12 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
                 pending = r.entry.read_json(run / 'reward-step.json')
                 intent = validate_reward_recovery(recovery, request, binding, checkpoint_id, pending)
                 _prepare_recovery_record(run, control, records, pending, recovery)
+            if guide is not None:
+                unused_records, state = r._manual_records(run, owner)
+                request = state.get('decision_request')
+                intent = validate_guide_roi(guide, request, binding, checkpoint_id)
+                if any(r.entry.read_json(p).get('guide_roi_intent') == intent for p in existing):
+                    raise ValueError('guide ROI was already submitted; read its original step, never replay')
             expires = datetime.now(timezone.utc) + timedelta(seconds=60)
             if request is not None:
                 expires = min(expires, datetime.fromisoformat(request['deadline_at']))
@@ -336,7 +430,8 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
                         expires_at=expires.isoformat(),
                         input_resent=False)
             if intent is not None:
-                item['reward_recovery_intent' if recovery is not None else 'reward_roi_intent'] = intent
+                item['guide_roi_intent' if guide is not None else
+                     'reward_recovery_intent' if recovery is not None else 'reward_roi_intent'] = intent
             control.write_json(path, item)
     end = time.monotonic() + wait_seconds
     while True:
@@ -356,6 +451,7 @@ def summary(item):
                     or result.get('receipt_delivery_verified') is False
                     or ((result.get('reward_step') or {}).get('pending') is True
                         and (result.get('reward_recovery') or {}).get('continuation_allowed') is not True)
+                    or (result.get('startup_navigation') or {}).get('pending') is True
                     or bool(result.get('prior_unknown_receipt_ids'))
                     or bool(item.get('finalization_errors'))
                     or any(value.get('unknown_input') for value in result.get('receipt_states', [])),
@@ -375,6 +471,9 @@ def active(worker):
         if item['payload']['operation'] != 'inspect':
             checkpoint = _checkpoint(worker.run, binding, item['payload']['checkpoint_id'])
             if item['payload']['operation'] in ('collect_rewards', 'recover_reward') and checkpoint.get('phase') != 'rewards':
+                return False
+            if (_guide_roi(item['payload']['operation'], item['payload'].get('reply')) is not None
+                    and checkpoint.get('phase') != 'startup_guide'):
                 return False
         return (current.get('status') == 'running' and current.get('binding') == item['binding'] == binding
                 and current.get('payload') == item['payload']
@@ -484,6 +583,12 @@ def _finish_result(worker, item, before_ids, evidence_errors):
         decision_request_id=request.get('request_id'), decision_kind=request.get('kind'),
         all_rewards_cleared=None, automatic_phase_completion=False, input_resent=False,
         reward_step=reward_step, prior_unknown_receipt_ids=item.get('prior_unknown_receipt_ids', []))
+    navigation = getattr(worker, 'startup_navigation_result', None)
+    if isinstance(navigation, dict) and navigation.get('manual_step_id') == item['step_id']:
+        item['result']['startup_navigation'] = {key: copy.deepcopy(navigation.get(key)) for key in
+            ('request_id', 'input_request_id', 'manual_step_id', 'status', 'outcome', 'pending',
+             'source', 'verification_reads', 'expected_title', 'record_file', 'input_resent',
+             'automatic_phase_completion')}
     if item['payload']['operation'] == 'recover_reward':
         try:
             evidence = item['payload']['reply']['reward_recovery']
@@ -606,6 +711,15 @@ def process(worker):
                     raise ValueError('original input outcome is unknown; only inspect or emergency controls may continue')
                 if not worker.state.get('decision_request'):
                     raise ValueError('manual plan has no current Worker request; inspect first')
+                guide = _guide_roi(operation, reply)
+                if guide is not None:
+                    checkpoint = _checkpoint(worker.run, binding, item['payload']['checkpoint_id'])
+                    if checkpoint.get('phase') != 'startup_guide':
+                        raise ValueError('supervised guide ROI requires its current startup-guide checkpoint')
+                    intent = validate_guide_roi(guide, worker.state['decision_request'], binding,
+                                                item['payload']['checkpoint_id'])
+                    if intent != item.get('guide_roi_intent'):
+                        raise ValueError('guide ROI intent changed before execution')
                 worker.execute_plan(reply)
                 _ask_current(worker)
             elif operation == 'recover_reward':

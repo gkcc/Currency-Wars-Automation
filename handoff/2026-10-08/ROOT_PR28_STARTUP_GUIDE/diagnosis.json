@@ -1,0 +1,263 @@
+{
+  "schema": "root-native-prep-guide-guard-diagnosis/v1",
+  "production": "e9e6ca7f4e4d943612d85ed3d28bd483b8224958",
+  "origin": "independent_read_only_diagnosis_on_original_worker_pngs_and_rows",
+  "native_icon_locations": [
+    null,
+    null
+  ],
+  "label_checks": [
+    {
+      "label": "备战阶段",
+      "bounds": [
+        410,
+        20,
+        540,
+        65
+      ],
+      "original_rows": [
+        {
+          "text": "备战阶段",
+          "confidence": 0.9992,
+          "box": [
+            430,
+            33,
+            513,
+            60
+          ]
+        }
+      ],
+      "fresh_rows": [
+        {
+          "text": "备战阶段",
+          "confidence": 0.9992,
+          "box": [
+            430,
+            33,
+            513,
+            60
+          ]
+        }
+      ],
+      "paired_row_pass": false
+    },
+    {
+      "label": "1-1",
+      "bounds": [
+        420,
+        50,
+        520,
+        105
+      ],
+      "original_rows": [
+        {
+          "text": "1-1",
+          "confidence": 0.9945,
+          "box": [
+            441,
+            58,
+            500,
+            98
+          ]
+        }
+      ],
+      "fresh_rows": [
+        {
+          "text": "1-1",
+          "confidence": 0.9944,
+          "box": [
+            441,
+            58,
+            500,
+            98
+          ]
+        }
+      ],
+      "paired_row_pass": true
+    },
+    {
+      "label": "出战",
+      "bounds": [
+        1760,
+        710,
+        1875,
+        790
+      ],
+      "original_rows": [
+        {
+          "text": "出战",
+          "confidence": 0.9993,
+          "box": [
+            1784,
+            730,
+            1852,
+            770
+          ]
+        }
+      ],
+      "fresh_rows": [
+        {
+          "text": "出战",
+          "confidence": 0.9993,
+          "box": [
+            1784,
+            730,
+            1852,
+            770
+          ]
+        }
+      ],
+      "paired_row_pass": true
+    },
+    {
+      "label": "商店",
+      "bounds": [
+        1575,
+        950,
+        1675,
+        1020
+      ],
+      "original_rows": [
+        {
+          "text": "商店",
+          "confidence": 0.9999,
+          "box": [
+            1596,
+            966,
+            1650,
+            998
+          ]
+        }
+      ],
+      "fresh_rows": [
+        {
+          "text": "商店",
+          "confidence": 0.9999,
+          "box": [
+            1596,
+            966,
+            1650,
+            998
+          ]
+        }
+      ],
+      "paired_row_pass": true
+    },
+    {
+      "label": "前台区域",
+      "bounds": [
+        895,
+        285,
+        1030,
+        330
+      ],
+      "original_rows": [
+        {
+          "text": "昌前台区域",
+          "confidence": 0.9096,
+          "box": [
+            908,
+            291,
+            1014,
+            321
+          ]
+        }
+      ],
+      "fresh_rows": [
+        {
+          "text": "昌前台区域",
+          "confidence": 0.9086,
+          "box": [
+            908,
+            291,
+            1014,
+            321
+          ]
+        }
+      ],
+      "paired_row_pass": false
+    }
+  ],
+  "guard_allowed": false,
+  "no_game_input": true,
+  "historical_actual_observation_not_reconstructed": true,
+  "previous_guard_refusal_not_reclassified": true,
+  "source_frames": {
+    "old_request": {
+      "request_id": "f25a9bb0eb7547c9911838f602d60a32",
+      "snapshot_id": "9ef0af49d1e5947a3779cd4a73e3dfa6781dfee0fe31a6501d58c66faf107ae9"
+    },
+    "fresh_request": {
+      "request_id": "aa58222d342248f6a35dee2192fb1589",
+      "snapshot_id": "eadba8f0879b712bdc0c5bdaf9b08a54d35c7e307d150521f01531e511a8d598"
+    }
+  },
+  "crops": [
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-navigation.png",
+      "source_png_sha256": "9ef0af49d1e5947a3779cd4a73e3dfa6781dfee0fe31a6501d58c66faf107ae9",
+      "source_roi": [
+        1570,
+        38,
+        1918,
+        96
+      ],
+      "sha256": "a7f73d617093db65d51f5b4a65c58ec049a09990404b4ed255b3833849972fb2"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-header.png",
+      "source_png_sha256": "9ef0af49d1e5947a3779cd4a73e3dfa6781dfee0fe31a6501d58c66faf107ae9",
+      "source_roi": [
+        410,
+        20,
+        540,
+        65
+      ],
+      "sha256": "37eb97f265196f5a8ad37fe9b4db235596761f02b9e9b78c823494a476cdf8ad"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/source-front-caption.png",
+      "source_png_sha256": "9ef0af49d1e5947a3779cd4a73e3dfa6781dfee0fe31a6501d58c66faf107ae9",
+      "source_roi": [
+        895,
+        285,
+        1030,
+        330
+      ],
+      "sha256": "20de06c09c40c6bece307ee4f2f60a8344b959da00acb9cc61e428b8dd544b2c"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-navigation.png",
+      "source_png_sha256": "eadba8f0879b712bdc0c5bdaf9b08a54d35c7e307d150521f01531e511a8d598",
+      "source_roi": [
+        1570,
+        38,
+        1918,
+        96
+      ],
+      "sha256": "31ddefa3977827895f2f98e2797e21c4bf4a8275a7408746e0356a1cad0c2c84"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-header.png",
+      "source_png_sha256": "eadba8f0879b712bdc0c5bdaf9b08a54d35c7e307d150521f01531e511a8d598",
+      "source_roi": [
+        410,
+        20,
+        540,
+        65
+      ],
+      "sha256": "c8bc8ef99a4d812c732114c3bcb5f818b164bb4b5bef108928280e71f1a397a3"
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR28_STARTUP_GUIDE/current-front-caption.png",
+      "source_png_sha256": "eadba8f0879b712bdc0c5bdaf9b08a54d35c7e307d150521f01531e511a8d598",
+      "source_roi": [
+        895,
+        285,
+        1030,
+        330
+      ],
+      "sha256": "07ac39e4d508b97e8f12b960901ca551205586e3fe94204ffed055478fb7a909"
+    }
+  ]
+}
