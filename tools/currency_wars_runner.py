@@ -5791,19 +5791,65 @@ class Worker:
         if path.exists():
             raise ValueError('本次创业指南请求已有原尝试；读取原记录，不重发')
         previous = optional(self.run / 'startup-navigation.json') or {}
-        if (previous.get('match_id') == self.active_match_id and previous.get('status') == 'pending'
-                and previous.get('publication_attempted') is True):
-            if (previous.get('run_id') != self.owner['run_id'] or optional(self.records /
-                    ('guide-navigation-' + previous['request_id'] + '.json')) != previous):
-                raise ValueError('原导航记录归属/归档不符；不绕过pending')
-            self.startup_navigation_delivery(previous)
-            # A later explicitly reviewed current target is a new manual
-            # intent. The prior navigation's historical unknown is retained.
-            if (action.get('target_evidence', {}).get('source') != 'supervising_agent'
-                    or any(request.get('observation', {}).get(key) == previous.get('source_frame', {}).get(key)
-                           for key in ('capture_request_id', 'frame_id'))):
-                raise ValueError('原导航后继未知；只读/当前ManualPhase复核，不能自动再点原图标')
-            return previous['request_id']
+        visited, sources = set(), []
+        while previous and previous.get('match_id') == self.active_match_id:
+            rid = previous.get('request_id')
+            if (not isinstance(rid, str) or not re.fullmatch(r'[0-9a-f]{32}', rid)
+                    or rid in visited or len(visited) >= 128
+                    or previous.get('schema') != 'startup-guide-navigation/v1'
+                    or previous.get('run_id') != self.owner['run_id']
+                    or previous.get('record_file') != str(self.records / ('guide-navigation-' + rid + '.json'))
+                    or optional(self.records / ('guide-navigation-' + rid + '.json')) != previous):
+                raise ValueError('原导航未决链的归属/归档/边界不符；不绕过pending')
+            visited.add(rid)
+            source = previous.get('source_frame') or {}
+            if any(not isinstance(source.get(key), str) or not source[key]
+                   for key in ('snapshot_id', 'capture_request_id', 'frame_id')):
+                raise ValueError('原导航未决链缺少原帧身份')
+            source_png = Path(previous.get('source_png', ''))
+            source_receipt = await_existing_receipt(self.run, self.c, source['capture_request_id'], 0)
+            result = source_receipt.get('result') or {}
+            frame = result.get('observation') or {}
+            if (source_png.resolve().parent != self.records.resolve()
+                    or hashlib.sha256(source_png.read_bytes()).hexdigest() != source['snapshot_id']
+                    or result.get('ok') is not True or manual_receipt_state(source_receipt)['unknown_input']
+                    or frame.get('frame_protocol') != 1
+                    or frame.get('request_id') != source_receipt.get('id')
+                    or source_receipt.get('id') != source['capture_request_id']
+                    or frame.get('frame_id') != source['frame_id']
+                    or frame.get('snapshot_sha256') != source['snapshot_id']):
+                raise ValueError('原导航未决链的不可变源帧/原回执不符')
+            sources.append(source)
+            if previous.get('status') == 'pending':
+                # This also refuses missing/unknown original delivery. Never
+                # turn an unfinished prepublication attempt into a retry.
+                self.startup_navigation_delivery(previous)
+                if (action.get('target_evidence', {}).get('source') != 'supervising_agent'
+                        or any(request.get('observation', {}).get(key) == old[key]
+                               for old in sources for key in ('capture_request_id', 'frame_id'))):
+                    raise ValueError('原导航后继未知；只读/当前ManualPhase复核，不能自动再点原图标')
+                return rid
+            if previous.get('status') == 'observed' and previous.get('outcome') == 'expected_title_observed':
+                return None  # Current title evidence, not completion of startup_guide.
+            if (previous.get('status') != 'refused' or previous.get('outcome') != 'zero_input'
+                    or previous.get('publication_attempted') is not False):
+                raise ValueError('原导航尝试终态不明；保留未决，不再点击')
+            # A refused successor did not discharge the older obligation.
+            # Validate its zero-input receipt when an Entry ID was allocated.
+            input_id = previous.get('input_request_id')
+            if input_id is not None:
+                refused = await_existing_receipt(self.run, self.c, input_id, 0)
+                state = manual_receipt_state(refused)
+                if state['state'] != 'zero_input' or state['unknown_input']:
+                    raise ValueError('导航拒绝的原交付仍未确定；不能跳过未决链')
+            prior = previous.get('prior_unknown_navigation_request_id')
+            if prior is None:
+                return None
+            if not isinstance(prior, str) or not re.fullmatch(r'[0-9a-f]{32}', prior):
+                raise ValueError('原导航未决链接无效')
+            previous = optional(self.records / ('guide-navigation-' + prior + '.json'))
+            if not previous or previous.get('request_id') != prior or previous.get('match_id') != self.active_match_id:
+                raise ValueError('原导航未决归档缺失或跨局；不能清除主管要求')
         return None
 
     def retain_startup_frame(self, request_id, label, observed):

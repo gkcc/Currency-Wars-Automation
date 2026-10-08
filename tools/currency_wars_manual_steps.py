@@ -290,6 +290,96 @@ def _recovery_original(run, control, records, pending):
     return receipt
 
 
+def _check_recovery_retry(run, owner, control, records, pending, evidence, request, binding, existing):
+    """Under manual-checkpoint.lock, retain attempts even without continuation.
+
+    A mailbox job records accepted intent before its first read. A new job ID,
+    prose change or extended deadline cannot renew that source. PNG bytes may
+    repeat: freshness is an authenticated later inspect/capture/frame instead.
+    This function performs no capture, input or history write.
+    """
+    r = _runner()
+    if len(existing) > 128:
+        raise ValueError('recovery mailbox exceeds its existing bound')
+    jobs, previous = [], []
+    for path in existing:
+        job = r.entry.read_json(path)
+        jobs.append(job)
+        if job.get('payload', {}).get('operation') != 'recover_reward':
+            continue
+        old = job.get('payload', {}).get('reply', {}).get('reward_recovery')
+        if not isinstance(old, dict):
+            raise ValueError('prior recovery intent is incomplete; no new recovery read')
+        if (old.get('reward_step_id') != pending.get('step_id')
+                and old.get('input_request_id') != pending.get('request_id')):
+            continue
+        old_binding, result = job.get('binding') or {}, job.get('result') or {}
+        if (job.get('schema') != SCHEMA or job.get('run_id') != owner['run_id']
+                or Path(path) != _path(run, job.get('step_id'))
+                or old_binding.get('run_id') != owner['run_id']
+                or old_binding.get('match_id') != pending.get('match_id')
+                or old_binding.get('stage') != pending.get('before', {}).get('stage')
+                or old.get('match_id') != pending.get('match_id')
+                or old.get('reward_step_id') != pending.get('step_id')
+                or old.get('input_request_id') != pending.get('request_id')
+                or job.get('status') != 'refused'
+                or result.get('receipt_watermark_verified') is not True
+                or result.get('receipt_delivery_verified') is not True
+                or result.get('input_receipt_ids') != []
+                or result.get('evidence_errors') or result.get('prior_unknown_receipt_ids')
+                or job.get('finalization_errors')
+                or not isinstance(result.get('receipt_states'), list)
+                or any(state.get('state') != 'zero_input'
+                       or state.get('unknown_input') is not False for state in result['receipt_states'])
+                or r.entry.read_json(Path(records) / ('manual-step-' + job['step_id'] + '.json')) != r.redact(job)):
+            raise ValueError('prior recovery is not a retained, terminal zero-input refusal')
+        # Compare against every accepted attempt, not just a persisted result.
+        if any(not isinstance(old.get(key), str) or not old[key]
+               or evidence.get(key) == old[key]
+               for key in ('request_id', 'capture_request_id', 'frame_id')):
+            raise ValueError('recovery source already used; a new inspect/request/capture/frame is required')
+        previous.append(job)
+    if not previous:
+        return
+    if unknown_receipts(run, control):
+        raise ValueError('original receipt is unknown; no recovery retry')
+    # Do not accept IDs merely changed by a caller. The current proof must be
+    # the result of a later, completed, read-only inspect in this manual lease.
+    completed = [datetime.fromisoformat(job['finished_at']) for job in previous]
+    if any(value.tzinfo is None for value in completed):
+        raise ValueError('prior recovery has no authenticated terminal time')
+    inspected = []
+    for job in jobs:
+        result = job.get('result') or {}
+        if (job.get('payload', {}).get('operation') != 'inspect'
+                or result.get('decision_request_id') != evidence['request_id']):
+            continue
+        if (job.get('schema') != SCHEMA or job.get('run_id') != owner['run_id']
+                or job.get('binding') != binding or job.get('status') != 'returned'
+                or result.get('receipt_watermark_verified') is not True
+                or result.get('receipt_delivery_verified') is not True
+                or result.get('input_receipt_ids') != []
+                or result.get('evidence_errors') or result.get('prior_unknown_receipt_ids')
+                or job.get('finalization_errors')
+                or any(result.get(key) != evidence[key]
+                       for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'page', 'stage'))
+                or not isinstance(result.get('receipt_states'), list)
+                or not result['receipt_states']
+                or any(state.get('state') != 'zero_input'
+                       or state.get('unknown_input') is not False for state in result['receipt_states'])
+                or r.entry.read_json(Path(records) / ('manual-step-' + job['step_id'] + '.json')) != r.redact(job)):
+            raise ValueError('recovery retry lacks its retained read-only inspect result')
+        started = datetime.fromisoformat(job['started_at'])
+        ended = datetime.fromisoformat(job['finished_at'])
+        if (started.tzinfo is None or ended.tzinfo is None or started > ended
+                or any(started < value for value in completed)):
+            raise ValueError('recovery retry inspect predates the prior terminal refusal')
+        inspected.append(job)
+    if len(inspected) != 1:
+        raise ValueError('recovery retry needs one genuinely new inspect before submission')
+    _bound_reward_frame(run, control, request['observation'], request['original_png'], read_only=True)
+
+
 def _prepare_recovery_record(run, control, records, pending, evidence):
     """Retain a failed read-only report before an explicit NEW current review.
 
@@ -415,6 +505,8 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
                 request = state.get('decision_request')
                 pending = r.entry.read_json(run / 'reward-step.json')
                 intent = validate_reward_recovery(recovery, request, binding, checkpoint_id, pending)
+                _check_recovery_retry(run, owner, control, records, pending, recovery,
+                                      request, binding, existing)
                 _prepare_recovery_record(run, control, records, pending, recovery)
             if guide is not None:
                 unused_records, state = r._manual_records(run, owner)
