@@ -16,7 +16,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from currency_wars_perception import OPTION_LAYOUTS, SUPPLY_FIVE_CARD_LAYOUT, classify, clean
+from currency_wars_perception import (ENVIRONMENT_CONFIRM_BOUNDS, OPTION_LAYOUTS,
+                                      SUPPLY_FIVE_CARD_LAYOUT, classify, clean)
 from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
 
 
@@ -396,6 +397,31 @@ def _card_outline_equal(images, bounds):
     return True
 
 
+def _environment_structure_labels(original, actual, labels, bounds, images):
+    """Account for native section headings, without rewriting effect_lines.
+
+    ROOT's retained environment card has 角色 at [420,598,462,626] and
+    装备 at [422,744,459,766]. The latter is below the effect reader's y=690
+    limit. Only these centered, paired native headings may extend coverage;
+    other rows remain unaccounted for and fail the complete-card check.
+    """
+    center = (bounds[0] + bounds[2]) // 2
+    extra = []
+    for label, top, bottom in (('角色', 575, 645), ('装备', 720, 785)):
+        found = [[row for row in observation.get('rows', [])
+                  if clean(row.get('text', '')) == label and _inside(row.get('box'), bounds)]
+                 for observation in (original, actual)]
+        if not any(found):
+            continue
+        if (any(len(rows) != 1 for rows in found)
+                or _paired_row(original, actual, re.escape(label),
+                               [center-60, top, center+60, bottom], images) is None):
+            return None
+        if label not in [clean(text) for text in labels]:
+            extra.append(label)
+    return extra
+
+
 def _cards(action, request, actual, images):
     original = request['observation']
     page = original.get('page')
@@ -410,7 +436,7 @@ def _cards(action, request, actual, images):
         return False
     header, header_roi, confirm_roi = {
         'investment': ('请选择投资策略', [820, 60, 1100, 145], [880, 935, 1040, 1030]),
-        'environment': ('投资环境', [850, 55, 1070, 145], [880, 935, 1040, 1030]),
+        'environment': ('投资环境', [850, 55, 1070, 145], ENVIRONMENT_CONFIRM_BOUNDS),
         'supply': ('补给阶段', [800, 120, 1120, 190], [1580, 950, 1810, 1025]),
     }[page]
     if any(_paired_row(original, actual, re.escape(label), bounds, images) is None
@@ -434,6 +460,11 @@ def _cards(action, request, actual, images):
         labels = [option.get('title'), *option['effect_lines']]
         if any(not isinstance(label, str) or not clean(label) for label in labels):
             return False
+        if page == 'environment':
+            structural = _environment_structure_labels(original, actual, labels, bounds, images)
+            if structural is None:
+                return False
+            labels = [*labels, *structural]
         # Every visible row in the full card text area must be accounted for;
         # a shortened effect list or a newly overlaid label cannot qualify.
         text_top = 360 if page == 'environment' else 460 if page == 'investment' else 320
