@@ -1,0 +1,211 @@
+{
+  "schema": "currency-wars-native-roi-pair/v1",
+  "purpose": "Native gray structural captions: original and independent offline reread actual PNG; no live authority",
+  "encoding": "zlib_base64_rgb_uint8_row_major",
+  "rois": [
+    {
+      "label": "角色",
+      "bounds": [
+        418,
+        596,
+        464,
+        628
+      ],
+      "array_shape": [
+        32,
+        46,
+        3
+      ],
+      "original": {
+        "full_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+        "roi_rgb_sha256": "80f66a625f3d17af33f0f5ea9909da4cc38246dabf174a26e46480fcf292d2b5",
+        "pixels": "eNrtlWdTIlkUhr/MKjkYyRkEVMQcERDHUQQkKCo5SWxAkmF0dv76vnQrKiCDU7u1W1tWPdV1+3DPue8Jt2FxlKxPPvldmGwFkz3MTkUXTLYc9No/GOpFBoenZnPbiw8pgQYOT0U69hXzMRAEob4dBj3e6LTQSGNIGCwZBZ2Jp3yAI56OrwFfIC4QzfY4yj6qhMaQLq84rmsPmWxtdn5HrVlVa5/QaNckMtMAx/mF3er19yvKUfvGUaYwI8HhZdCZUhydzTWua49E+a5E3OJJLYqlm0r1wX0Sec8RZ2WuarVnxxJxR3JbgGPl+9l5Go0bsmuIJpaYYgmiev1gs3vn5i0msxUg09X1g1y+Afvy6j62dQWERSSei8aKlOMsHBesYM5kWVzaSyTLtfoPi9U9vAyheC4cydfrPw4Ozyj9FFi73KH2KXteLl/N5avAG/1SUzhawIZty/EITfRlRPBlRIgnZsOx7y+X7232E4zNKF2MzQPGDGCDQrWEpNCUcuU+mapEooVorARLKJxHlZAUJieeICLRIoxOV4i6IECrW0+kKtiQylR3bR6I2dl1gc1tJ1qJgOi11X6yveOEUW/c6iTYFwg2L9kq1XuijLa2/IGE1x/z+eP+QByv6LXXF8NVwtN/msAYQCcKxWBJkfW3oyBEFkstonJXKLYwFQBDVas/ImA2VwewI0iz9dPpuoAXky17Rv5q3Qa/srkKnX4jeJ5OX1WxHqWLAH66DGWTqTKLK6csKEU8UUITOTwlqUQqEBoXFm3nlxlsE0vnp4UGIFMsQEzgLCkQGQEsGt1auXJ35Ay+VdIHKqzPH0N2WztHaxsHYHPrEDXP5eub20+Wre0j5BgK5yglcKQzJQy2LHiRhkIWR0YJ5vKViOPxRmgMMRihCacEBhR8SCUsjhxKUGpUtQMSAa8t+GJchrMdJVQ9oQQ1EYqNE1MzAMWBErRycloPxid1Ks0yMXRNoCRwmsRt1Rs31doVjXZFp19Dppmr6oxhHRa1dllv3EhnKuFIrkvJaTBVvb5H9ajBQJBavZ1RFhbSmC80m60/nceYE8kvlbC5cqSWylQmprRcvgKMT2hwaDJNdCwTU7pEskQqUZAx0VMJHM/Ok/lC3bHvte957I4TYLO7bc/rDvOmHRpDRDm+B35F8FAki9RQ2GKpSUGUb8qV284rqFTvLsNXXUqCF6lYvMDkSDES1Kj08seoYGHRurfv44+ryHr2h84UT07P5PP1VLrs8oTcJJ6TMApeKDYxezACLCAm1J6TbiXxRJHDw6dJDEtfRulCx74PmU5O6waUBdtMZguaa7Eeo4AvVQrjFhPcMeUoA3kJcShO7OoOrkzgNA7NmFhY8NoL7HDx+aNoIn9c/Z4S2HljKnxM0AuFytyrhDemlClMGFqoLRQbl6GX7lD1tNrcjeYP1BOS+uIPxMKRLDI9v0gjnfeUIBS+Ia2bnweHp2QlXyaHnNgyb1yFaI3mI0LVGw9WuwcuTLaEBDvFGOmvB36MSjJV6oGgwDWEHrVmeUBr8JNKvXTsuhCIDK+OQNmlM4Y1w+wGFsa5zV0b/lOc5qVdlAind7YBvAJcLv6YktdG1Re0iYzfV8ZTKDpTxCSjdTKlQKeoZuE5QhNQV2NAl3/J+/dX8sl/FmrSGG8m5N/X878p6WD+xlD/NH8B9eNeVg=="
+      },
+      "actual": {
+        "full_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+        "roi_rgb_sha256": "80f66a625f3d17af33f0f5ea9909da4cc38246dabf174a26e46480fcf292d2b5",
+        "pixels": "eNrtlWdTIlkUhr/MKjkYyRkEVMQcERDHUQQkKCo5SWxAkmF0dv76vnQrKiCDU7u1W1tWPdV1+3DPue8Jt2FxlKxPPvldmGwFkz3MTkUXTLYc9No/GOpFBoenZnPbiw8pgQYOT0U69hXzMRAEob4dBj3e6LTQSGNIGCwZBZ2Jp3yAI56OrwFfIC4QzfY4yj6qhMaQLq84rmsPmWxtdn5HrVlVa5/QaNckMtMAx/mF3er19yvKUfvGUaYwI8HhZdCZUhydzTWua49E+a5E3OJJLYqlm0r1wX0Sec8RZ2WuarVnxxJxR3JbgGPl+9l5Go0bsmuIJpaYYgmiev1gs3vn5i0msxUg09X1g1y+Afvy6j62dQWERSSei8aKlOMsHBesYM5kWVzaSyTLtfoPi9U9vAyheC4cydfrPw4Ozyj9FFi73KH2KXteLl/N5avAG/1SUzhawIZty/EITfRlRPBlRIgnZsOx7y+X7232E4zNKF2MzQPGDGCDQrWEpNCUcuU+mapEooVorARLKJxHlZAUJieeICLRIoxOV4i6IECrW0+kKtiQylR3bR6I2dl1gc1tJ1qJgOi11X6yveOEUW/c6iTYFwg2L9kq1XuijLa2/IGE1x/z+eP+QByv6LXXF8NVwtN/msAYQCcKxWBJkfW3oyBEFkstonJXKLYwFQBDVas/ImA2VwewI0iz9dPpuoAXky17Rv5q3Qa/srkKnX4jeJ5OX1WxHqWLAH66DGWTqTKLK6csKEU8UUITOTwlqUQqEBoXFm3nlxlsE0vnp4UGIFMsQEzgLCkQGQEsGt1auXJ35Ay+VdIHKqzPH0N2WztHaxsHYHPrEDXP5eub20+Wre0j5BgK5yglcKQzJQy2LHiRhkIWR0YJ5vKViOPxRmgMMRihCacEBhR8SCUsjhxKUGpUtQMSAa8t+GJchrMdJVQ9oQQ1EYqNE1MzAMWBErRycloPxid1Ks0yMXRNoCRwmsRt1Rs31doVjXZFp19Dppmr6oxhHRa1dllv3EhnKuFIrkvJaTBVvb5H9ajBQJBavZ1RFhbSmC80m60/nceYE8kvlbC5cqSWylQmprRcvgKMT2hwaDJNdCwTU7pEskQqUZAx0VMJHM/Ok/lC3bHvte957I4TYLO7bc/rDvOmHRpDRDm+B35F8FAki9RQ2GKpSUGUb8qV284rqFTvLsNXXUqCF6lYvMDkSDES1Kj08seoYGHRurfv44+ryHr2h84UT07P5PP1VLrs8oTcJJ6TMApeKDYxezACLCAm1J6TbiXxRJHDw6dJDEtfRulCx74PmU5O6waUBdtMZguaa7Eeo4AvVQrjFhPcMeUoA3kJcShO7OoOrkzgNA7NmFhY8NoL7HDx+aNoIn9c/Z4S2HljKnxM0AuFytyrhDemlClMGFqoLRQbl6GX7lD1tNrcjeYP1BOS+uIPxMKRLDI9v0gjnfeUIBS+Ia2bnweHp2QlXyaHnNgyb1yFaI3mI0LVGw9WuwcuTLaEBDvFGOmvB36MSjJV6oGgwDWEHrVmeUBr8JNKvXTsuhCIDK+OQNmlM4Y1w+wGFsa5zV0b/lOc5qVdlAind7YBvAJcLv6YktdG1Re0iYzfV8ZTKDpTxCSjdTKlQKeoZuE5QhNQV2NAl3/J+/dX8sl/FmrSGG8m5N/X878p6WD+xlD/NH8B9eNeVg=="
+      }
+    },
+    {
+      "label": "装备",
+      "bounds": [
+        420,
+        742,
+        461,
+        768
+      ],
+      "array_shape": [
+        26,
+        41,
+        3
+      ],
+      "original": {
+        "full_png_sha256": "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+        "roi_rgb_sha256": "f5e777bd43f703abc20de9adde38ef6747cc38fc0c88977041bacfe965da8805",
+        "pixels": "eNrdlfdPolkUhum9KGJBBx3Fgoqj0hQd10KvikQcUaT34szs/v/ZB74sYWBiZrPJ/LDJmy+Xc+857ynvvcjlOvkYZHLtL0L+o+M7+MUIv5n61+neT0Mm0w7wH2KKJSqJVP2+ZRpSmUah1AMW/4qO8wTnq9HOut0+26ZdiMBXqzOdnHze3Np7JyZbcoXe74+kbjNzZotIrCTbCUy7C9l6vGd7+0e4zMwuNhodfyAsEilEYpVIJDfOLLTafcKyHlgGYdXTjXK5fd3et0KxurW9b121WVc3x2D7YLVptDMT7AJ1MBRvtnp2+wFElWrTH4hQ5r7jeHfvkJiNZjedzrImPceBc31jR67QjfPu7R3WGx2O1ertegN0BPCzWmthZ/3BujGdM+wqtTEWvy2V62sft4rFaigczz4+C461Wpus8GUtxIkn0sJMAbykVGu0+29/5nIF++6nDZudwsmcxcEnZ+65wNZLvjRrWpRIp0Ym09BGtcbodJ54vecQXd+E9Ia5mdkFg9FMr6ALhROssQC9wSwkrFQZ6Annyfn+/rHdeYvGbumbSCRDOVA/POQwIgDz/IpUpp7mlUrVRqP58ND99JRvtXrd7terqwDlsEsE05ylXm/f+CMjkQsj48D2joP5UtHKh3X6cHZ+RRqvhcrFH/5kKkPCrA8OXWQoRJtUiFi1vr5dLtchTSTSBwfOSqVxcXHD3DP3j+n0Qzab63TeyoO6spnMwLK4aJUMFYtySBhl8pORra/v5J6Lvf73r9/+6r99Z0Yul0+lMgxKkKBYBVxUOgJGi2U1Gk3ZbHbWBsNcs9m5ugru7DgKhWo8fhsIRG5uwig8GIwGgzEWZrOFk/jqdKbV1U2uHsfy+VK73Ws0O/eZLNeTDLkplFMoVFKpe9p4dOSxWjfIhCaP2MVi5eDiiKR85XIthVssa8TE1+M5G9plP0IpOIbDcabTbvdrtVYqlSH48vJHpVJPHIVCt7Ly8fjYi51dzvR63+jn7LBFo6rX1jZRF6l6PD6+RAA+3wUur68V2N3uU+wCvN4zGiIf9hBHTlIyGguF4kJzAoHo6IslHE5wMXO516Mjt8NxTErjJZ+efq5Wm6VSFXCzXl/L6IpyWq0+djo2shcK5UqlTrFQ0zdhgpFIAjF8+fLy+PiMMGDhZ6lUYy1YKBbQag6Pzxpg1GpngVpt0GhmEBhTpmTOo/m5OYtKpWfLZtu9vAyYTEsD5Yy5oxNOMnf58L4sLKw0m10EQGJCjdRONOKPT3nU84H8JKr5+ZXr61Cj0aZA5Lq9vd9p90OhGFfP5TqhFdiXlqw06gfqSLLV7EYiSUQI4vE7qKmXnjMFLM/PxXK5MU3NTecx4ZXj8eQNRKXd7ttQXRKJVOXz/dHp9MvlGvkgdePMPEZcxkHDW61uMpmOxVPg9i7DHXnK5aOxJDLAkn8tcTe5iRO+WNL3WeITPBSOIW8cna4TEQ+cSm9ZXuNlY7dWa346dGl1M2KJUiRWjEeIRpM0XK02ClumuSUi8H/E1YALy/V1EPdpaoVSFwhGb/zhxSUrx+YHk+r4/WFUncvlEdX8wjIvcz5fpBvI7PIqwN+HSm0YxYGaqmOxFPIDlE+qiIRJ0RAsLy/FSqU2TS2wC+mRtu/sotdD211I0/cPLvcp42BLbzC5Pb4vTy+dbp8EeOFHcSAlq7u7TDKV5vXgS5MTyTvWwk8uyE+rBiML1MdObyJxZ9894G9CrtBCKuwKzaTY1bXNza3dcfd9x9HZ+SXTGf5BaCaAccfuOP/nwDuAjvM8R3D9NEkSmJi1RKoUDv8UQtrgfd6JJvxPoRritxFN4m/uQZH0"
+      },
+      "actual": {
+        "full_png_sha256": "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2",
+        "roi_rgb_sha256": "f5e777bd43f703abc20de9adde38ef6747cc38fc0c88977041bacfe965da8805",
+        "pixels": "eNrdlfdPolkUhum9KGJBBx3Fgoqj0hQd10KvikQcUaT34szs/v/ZB74sYWBiZrPJ/LDJmy+Xc+857ynvvcjlOvkYZHLtL0L+o+M7+MUIv5n61+neT0Mm0w7wH2KKJSqJVP2+ZRpSmUah1AMW/4qO8wTnq9HOut0+26ZdiMBXqzOdnHze3Np7JyZbcoXe74+kbjNzZotIrCTbCUy7C9l6vGd7+0e4zMwuNhodfyAsEilEYpVIJDfOLLTafcKyHlgGYdXTjXK5fd3et0KxurW9b121WVc3x2D7YLVptDMT7AJ1MBRvtnp2+wFElWrTH4hQ5r7jeHfvkJiNZjedzrImPceBc31jR67QjfPu7R3WGx2O1ertegN0BPCzWmthZ/3BujGdM+wqtTEWvy2V62sft4rFaigczz4+C461Wpus8GUtxIkn0sJMAbykVGu0+29/5nIF++6nDZudwsmcxcEnZ+65wNZLvjRrWpRIp0Ym09BGtcbodJ54vecQXd+E9Ia5mdkFg9FMr6ALhROssQC9wSwkrFQZ6Annyfn+/rHdeYvGbumbSCRDOVA/POQwIgDz/IpUpp7mlUrVRqP58ND99JRvtXrd7terqwDlsEsE05ylXm/f+CMjkQsj48D2joP5UtHKh3X6cHZ+RRqvhcrFH/5kKkPCrA8OXWQoRJtUiFi1vr5dLtchTSTSBwfOSqVxcXHD3DP3j+n0Qzab63TeyoO6spnMwLK4aJUMFYtySBhl8pORra/v5J6Lvf73r9/+6r99Z0Yul0+lMgxKkKBYBVxUOgJGi2U1Gk3ZbHbWBsNcs9m5ugru7DgKhWo8fhsIRG5uwig8GIwGgzEWZrOFk/jqdKbV1U2uHsfy+VK73Ws0O/eZLNeTDLkplFMoVFKpe9p4dOSxWjfIhCaP2MVi5eDiiKR85XIthVssa8TE1+M5G9plP0IpOIbDcabTbvdrtVYqlSH48vJHpVJPHIVCt7Ly8fjYi51dzvR63+jn7LBFo6rX1jZRF6l6PD6+RAA+3wUur68V2N3uU+wCvN4zGiIf9hBHTlIyGguF4kJzAoHo6IslHE5wMXO516Mjt8NxTErjJZ+efq5Wm6VSFXCzXl/L6IpyWq0+djo2shcK5UqlTrFQ0zdhgpFIAjF8+fLy+PiMMGDhZ6lUYy1YKBbQag6Pzxpg1GpngVpt0GhmEBhTpmTOo/m5OYtKpWfLZtu9vAyYTEsD5Yy5oxNOMnf58L4sLKw0m10EQGJCjdRONOKPT3nU84H8JKr5+ZXr61Cj0aZA5Lq9vd9p90OhGFfP5TqhFdiXlqw06gfqSLLV7EYiSUQI4vE7qKmXnjMFLM/PxXK5MU3NTecx4ZXj8eQNRKXd7ttQXRKJVOXz/dHp9MvlGvkgdePMPEZcxkHDW61uMpmOxVPg9i7DHXnK5aOxJDLAkn8tcTe5iRO+WNL3WeITPBSOIW8cna4TEQ+cSm9ZXuNlY7dWa346dGl1M2KJUiRWjEeIRpM0XK02ClumuSUi8H/E1YALy/V1EPdpaoVSFwhGb/zhxSUrx+YHk+r4/WFUncvlEdX8wjIvcz5fpBvI7PIqwN+HSm0YxYGaqmOxFPIDlE+qiIRJ0RAsLy/FSqU2TS2wC+mRtu/sotdD211I0/cPLvcp42BLbzC5Pb4vTy+dbp8EeOFHcSAlq7u7TDKV5vXgS5MTyTvWwk8uyE+rBiML1MdObyJxZ9894G9CrtBCKuwKzaTY1bXNza3dcfd9x9HZ+SXTGf5BaCaAccfuOP/nwDuAjvM8R3D9NEkSmJi1RKoUDv8UQtrgfd6JJvxPoRritxFN4m/uQZH0"
+      }
+    }
+  ],
+  "text_checks": [
+    {
+      "label": "夜之半神概念股",
+      "bounds": [
+        343,
+        372,
+        539,
+        414
+      ],
+      "white_ink_counts": [
+        1531,
+        1531
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "开局时获得【夜之半神】角色和初始简易",
+      "bounds": [
+        235,
+        416,
+        632,
+        449
+      ],
+      "white_ink_counts": [
+        2058,
+        2058
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "装备，【夜之半神】角色的刷新概率提",
+      "bounds": [
+        234,
+        442,
+        610,
+        476
+      ],
+      "white_ink_counts": [
+        1867,
+        1867
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "高。",
+      "bounds": [
+        236,
+        472,
+        281,
+        504
+      ],
+      "white_ink_counts": [
+        108,
+        108
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "角色",
+      "bounds": [
+        418,
+        596,
+        464,
+        628
+      ],
+      "white_ink_counts": [
+        0,
+        0
+      ],
+      "native_text_guard_pass": false
+    },
+    {
+      "label": "装备",
+      "bounds": [
+        420,
+        742,
+        461,
+        768
+      ],
+      "white_ink_counts": [
+        0,
+        0
+      ],
+      "native_text_guard_pass": false
+    },
+    {
+      "label": "成功经验",
+      "bounds": [
+        906,
+        376,
+        1018,
+        412
+      ],
+      "white_ink_counts": [
+        919,
+        919
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "在你升到8级后，进入接下来3个节点时，",
+      "bounds": [
+        754,
+        415,
+        1142,
+        448
+      ],
+      "white_ink_counts": [
+        1789,
+        1789
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "获得12经验。",
+      "bounds": [
+        754,
+        444,
+        890,
+        478
+      ],
+      "white_ink_counts": [
+        623,
+        623
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "人才引进",
+      "bounds": [
+        1424,
+        374,
+        1540,
+        414
+      ],
+      "white_ink_counts": [
+        715,
+        716
+      ],
+      "native_text_guard_pass": true
+    },
+    {
+      "label": "开局拥有1个随机4费角色。",
+      "bounds": [
+        1346,
+        418,
+        1607,
+        450
+      ],
+      "white_ink_counts": [
+        952,
+        952
+      ],
+      "native_text_guard_pass": true
+    }
+  ]
+}
