@@ -16,6 +16,7 @@
 /tools/currency_wars_help_capture.py
 /tools/currency_wars_loot.py
 /.venv/
+/.mcp-venv/
 **/__pycache__/
 *.py[cod]
 *.log

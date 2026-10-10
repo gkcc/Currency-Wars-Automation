@@ -4,6 +4,10 @@
 
 **当前发布是源码版。战略决策仍需要 Codex 在本机监督并回答请求，没有配置独立 AI 服务，也没有验证另一台电脑可无人值守完成整局。** 界面名称中的“一条龙”是目标，不是当前自动通关保证。
 
+可选的 [stdio MCP 适配与 D 盘注册说明](mcp/README.md)提供结构化状态、原 `decide` 计划提交和暂停。它使用独立 SDK 环境，不启动控制器；main 尚无原生经济计划契约，该能力会明确返回 unsupported。
+
+2026-10-11 [本地求解器目标与跨电脑交接](handoff/2026-10-11/SOLVER_HANDOFF.md)：用户要求本地程序承担决策和持续执行，GPT 负责监督与改进求解器。当前 MCP 适配尚未实现该决策层；交接列出尖塔实测、公开实现核查与货币战争下一阶段验收条件。
+
 ## 在另一台电脑安装
 
 要自动同步，请安装 Git 并运行 `git clone https://github.com/gkcc/Currency-Wars-Automation.git`。也可下载 ZIP 解压，但 ZIP 安装只会提示改用 Git clone，不会替换你的目录。路径可自行选择，不要求特定盘符，也不要求安装 Codex Agent Workflow 技能。
