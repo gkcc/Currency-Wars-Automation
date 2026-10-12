@@ -1585,8 +1585,10 @@ def _start_cli(args, lease):
         runtime_location = input_bridge.runtime_location(entry.PINNED,
             inherited=json.loads(inherited) if inherited is not None else None)
         launch = uuid.uuid4().hex
+        lease.bind_launch(args.chat_id, launch)
         command = [sys.executable, '-B', '-X', 'utf8', str(SELF), '_worker',
                    '--chat-id', args.chat_id, '--launch-id', launch,
+                   '--source-start-lease', lease.path.name,
                    '--runtime-location-json', json.dumps(runtime_location),
                    '--max-seconds', str(args.max_seconds), '--max-matches', str(args.max_matches)]
         if continuation:
@@ -1606,7 +1608,17 @@ def _start_cli(args, lease):
             raise RuntimeError('worker创建身份未知；保留原始启动归属')
         lease.children([{'pid': child.pid, 'process_identity': child_identity}], complete=False)
         deadline = time.monotonic() + 10
+        lifecycle_transferred = False
         while time.monotonic() < deadline:
+            # Registration precedes slow source/resource validation and Worker
+            # construction. Never infer this edge from nearby timestamps.
+            if not lifecycle_transferred:
+                registered = lease.registered_launch_child()
+                if registered is not None:
+                    worker_pid, worker_identity = registered_worker_identity(
+                        registered, launch, args.chat_id, child.pid, child_identity, control)
+                    lease.transfer_to_registered_child(worker_pid, worker_identity, 'runner')
+                    lifecycle_transferred = True
             value = optional(CURRENT)
             if value and value.get('launch_id') == launch:
                 worker_pid, worker_identity = registered_worker_identity(
@@ -1619,7 +1631,7 @@ def _start_cli(args, lease):
         # Popen is the exact newly-owned process handle, not an inferred PID.
         child.terminate()
         child.wait(timeout=5)
-        raise TimeoutError('worker未发布可绑定身份；已终止本次owned启动进程')
+        raise TimeoutError('worker未及时发布CURRENT；仅本次Popen进程退出已确认，真实worker及broker仍由原登记守卫核验')
     finally:
         control.k.ReleaseMutex(mutex)
         control.k.CloseHandle(mutex)
@@ -8931,7 +8943,8 @@ class Worker:
 
 
 def worker_cli(args):
-    with activity(PROJECT, 'runner'):
+    with activity(PROJECT, 'runner') as lease:
+        lease.bind_launch(args.chat_id, args.launch_id, getattr(args, 'source_start_lease', None))
         reviewed_runtime_sources(args.chat_id)
         return _worker_cli(args)
 
@@ -9250,6 +9263,7 @@ def main():
     parser.add_argument('--review-sha256', help='publish-ready专用：不可变独立审批文件SHA256')
     parser.add_argument('--reason', default='')
     parser.add_argument('--launch-id')
+    parser.add_argument('--source-start-lease', help=argparse.SUPPRESS)
     parser.add_argument('--runtime-location-json', help=argparse.SUPPRESS)
     parser.add_argument('--request-id')
     parser.add_argument('--snapshot-id')
