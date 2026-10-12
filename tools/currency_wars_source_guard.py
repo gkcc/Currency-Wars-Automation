@@ -1,6 +1,7 @@
 """Serialize source updates with registration of GUI/runner lifetimes.
 
-No process enumeration, game-window APIs, input, or historical-run cleanup.
+No machine-wide process census, game-window APIs, input, or historical cleanup.
+Explicit recovery requires a persisted intervening reboot and original guards.
 """
 import ast
 import contextlib
@@ -285,6 +286,9 @@ def activity_reason(project, ignore_lease=None):
                 continue
             try:
                 value = read_object(path)
+                if (value.get('kind') == 'start' and value.get('children_incomplete') is True
+                        and _retired_start(project, path, value)):
+                    continue
                 if value.get('schema') != 1 or value.get('project') != str(Path(project).resolve()) or value.get('children_incomplete') is not False:
                     return 'Incomplete/unknown controller activity; update skipped.'
                 records = [{'pid': value.get('pid'), 'process_identity': value.get('process_identity')}] + value.get('children', [])
@@ -339,6 +343,39 @@ class Activity:
             self.value.update(children=list(records), children_incomplete=not complete)
             self.write()
 
+    def bind_launch(self, chat_id, launch_id, start_lease=None):
+        """Record current launch facts before slow startup; not historical repair."""
+        if (not isinstance(chat_id, str) or not 1 <= len(chat_id) <= 100
+                or not isinstance(launch_id, str) or not re.fullmatch(r'[0-9a-f]{32}', launch_id)
+                or start_lease is not None and not re.fullmatch(r'[0-9a-f]{32}\.json', start_lease)):
+            raise ValueError('Invalid current launch registration')
+        with mutation_lock(self.project):
+            if read_object(self.path) != self.value:
+                raise RuntimeError('Activity ownership changed; original record retained')
+            self.value.update(chat_id=chat_id, launch_id=launch_id, start_lease=start_lease)
+            self.write()
+
+    def registered_launch_child(self):
+        """A candidate only: the caller MUST verify native Popen parentage."""
+        with mutation_lock(self.project):
+            paths = list(self.path.parent.iterdir())
+            if len(paths) > 128:
+                raise RuntimeError('Activity inventory exceeds its bound')
+            matches = []
+            for path in paths:
+                value = read_object(path)
+                if (value.get('schema') == 1 and value.get('project') == str(self.project)
+                        and value.get('kind') == 'runner' and value.get('start_lease') == self.path.name
+                        and value.get('chat_id') == self.value.get('chat_id')
+                        and value.get('launch_id') == self.value.get('launch_id')
+                        and re.fullmatch(r'windows:[0-9]+', str(value.get('process_identity', '')))):
+                    matches.append(dict(chat_id=value['chat_id'], launch_id=value['launch_id'],
+                                        runner_pid=value.get('pid'),
+                                        runner_creation_id=value['process_identity'].split(':', 1)[1]))
+            if len(matches) > 1:
+                raise RuntimeError('Ambiguous launch registration; original activity retained')
+            return matches[0] if matches else None
+
     def close(self):
         with mutation_lock(self.project):
             if self.value['children_incomplete'] or any(identity_state(r['pid'], r['process_identity']) != 'dead' for r in self.value['children']):
@@ -378,3 +415,255 @@ def activity(project, kind):
         yield lease
     finally:
         lease.close()
+
+
+# This is an operator recovery for the cooperative source-activity protocol,
+# not a general process cleaner or proof about arbitrary unregistered software.
+RECOVERY_SCHEMA = 'currency-wars-dead-start-v2'
+
+
+def _plain_directory(path):
+    path = Path(path)
+    for item in (path, *path.parents):
+        if item.exists() or item.is_symlink():
+            info = item.lstat()
+            if item.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400:
+                raise ValueError('Recovery path contains a link or reparse point')
+    return path
+
+
+def windows_uptime_ms():
+    """Documented monotonic boot-relative clock; never infer reboot from UTC."""
+    if os.name != 'nt':
+        raise RuntimeError('Windows uptime is unavailable on this platform')
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.GetTickCount64.argtypes = []
+    kernel.GetTickCount64.restype = ctypes.c_uint64
+    value = kernel.GetTickCount64()
+    if not 0 < value < 2 ** 63:
+        raise RuntimeError('Windows uptime could not be verified')
+    return value
+
+
+def windows_machine_id():
+    """Keep a prepared receipt local to this Windows installation."""
+    if os.name != 'nt':
+        raise RuntimeError('Windows installation identity is unavailable')
+    import winreg
+    with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Cryptography',
+                        0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key:
+        value, kind = winreg.QueryValueEx(key, 'MachineGuid')
+    if kind != winreg.REG_SZ:
+        raise RuntimeError('Windows installation identity is invalid')
+    return uuid.UUID(value).hex
+
+
+def _dead_start(project, path, digest, parent_pid, parent_identity):
+    _plain_directory(path.parent)
+    value = read_object(path)
+    payload = path.read_bytes()
+    if (not re.fullmatch(r'[0-9a-f]{64}', digest)
+            or hashlib.sha256(payload).hexdigest() != digest
+            or json.loads(payload) != value
+            or type(value.get('schema')) is not int or value['schema'] != 1
+            or value.get('kind') != 'start' or value.get('project') != str(project)
+            or value.get('children_incomplete') is not True
+            or value.get('pid') != parent_pid or value.get('process_identity') != parent_identity
+            or not isinstance(value.get('children'), list) or len(value['children']) > 32):
+        raise ValueError('Exact incomplete start lease does not match the operator selection')
+    records = [dict(pid=parent_pid, process_identity=parent_identity)] + value['children']
+    if any(not isinstance(row, dict) or identity_state(row.get('pid'), row.get('process_identity')) != 'dead'
+           for row in records):
+        raise ValueError('Original parent/wrapper is active or unknown; recovery refused')
+    return value, payload
+
+
+def _recovery_path(project, lease_path):
+    return _plain_directory(Path(project) / 'docs/source-activity-recovery') / (lease_path.stem + '.retirement-v2.json')
+
+
+def _retired_start(project, path, value):
+    """Only this unchanged dead start may consume its append-only receipt.
+
+    Other leases and CURRENT_RUNNER (including broker exit) are still checked.
+    A receipt never changes historical parentage, markers, or ready approval.
+    """
+    receipt_path = _recovery_path(project, path)
+    if not receipt_path.exists():
+        return False
+    receipt = read_object(receipt_path, limit=2_000_000)
+    intent_path = receipt_path.with_suffix('.intent.json')
+    intent = read_object(intent_path, limit=300_000)
+    if (receipt.get('schema') != RECOVERY_SCHEMA or receipt.get('lease_name') != path.name
+            or receipt.get('project') != str(Path(project).resolve())
+            or receipt.get('historical_parentage') != 'unknown'
+            or receipt.get('input_sent') is not False
+            or receipt.get('original_lease') != value
+            or receipt.get('assessment') != 'retired_after_boot_boundary'
+            or receipt.get('intent_sha256') != hashlib.sha256(intent_path.read_bytes()).hexdigest()
+            or intent.get('schema') != RECOVERY_SCHEMA or intent.get('lease_sha256') != receipt.get('lease_sha256')
+            or intent.get('original_bytes_hex') != receipt.get('original_bytes_hex')
+            or intent.get('project') != receipt.get('project') or intent.get('lease_name') != path.name
+            or intent.get('machine_id') != receipt.get('machine_id')
+            or receipt.get('machine_id') != windows_machine_id()
+            or type(intent.get('uptime_ms')) is not int or type(receipt.get('uptime_ms')) is not int
+            or not 0 < receipt['uptime_ms'] < intent['uptime_ms'] < 2 ** 63
+            or receipt.get('other_activity_reason') is not None
+            or not isinstance(receipt.get('activity_snapshot'), dict)
+            or not isinstance(receipt.get('source_hashes'), dict) or not receipt['source_hashes']):
+        raise ValueError('Recovery receipt is incomplete or changed')
+    _, payload = _dead_start(Path(project).resolve(), path, receipt.get('lease_sha256', ''),
+                            value.get('pid'), value.get('process_identity'))
+    if receipt.get('original_bytes_hex') != payload.hex():
+        raise ValueError('Original lease bytes changed after recovery')
+    return True
+
+
+def _activity_snapshot(project):
+    """Hash only the existing bounded registry and CURRENT; not unrelated PIDs."""
+    directory = _plain_directory(Path(project) / 'docs/source-activity')
+    paths = sorted(directory.iterdir()) if directory.exists() else []
+    if len(paths) > 128:
+        raise ValueError('Activity inventory exceeds its bound')
+    hashes = {}
+    for path in paths:
+        read_object(path)  # Original size, object and no-link contract.
+        hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    current = Path(project) / 'docs/CURRENT_RUNNER.json'
+    current_hash = None
+    if current.exists():
+        _plain_directory(current.parent)
+        read_object(current, limit=2_000_000)
+        current_hash = hashlib.sha256(current.read_bytes()).hexdigest()
+    return dict(leases=hashes, current_runner_sha256=current_hash)
+
+
+def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity, *, apply=False, prepare=False, preflight=False):
+    """One selected lease, no deletion/move/marker write, no game or READY write.
+
+    The same mutation lock fences all cooperating new activity registrations.
+    A prior persisted GetTickCount64 MUST exceed the current uptime. This
+    extinguishes the old process lineage without claiming historical parentage
+    or a machine-wide absence of unrelated/new unregistered processes.
+    This API is intentionally not called by normal startup or the updater.
+    """
+    project = _plain_directory(Path(project).absolute()).resolve()
+    if not re.fullmatch(r'[0-9a-f]{32}\.json', lease_name):
+        raise ValueError('Select one exact activity lease basename')
+    path = project / 'docs/source-activity' / lease_name
+    with mutation_lock(project):
+        value, payload = _dead_start(project, path, digest, parent_pid, parent_identity)
+        target = _recovery_path(project, path)
+        if target.exists():
+            if _retired_start(project, path, value):
+                return dict(ok=True, already_retired=True, input_sent=False)
+            raise ValueError('An existing receipt is not a verified retirement')
+        intent_path = target.with_suffix('.intent.json')
+        uptime, machine = windows_uptime_ms(), windows_machine_id()
+        if sum(bool(flag) for flag in (apply, prepare, preflight)) > 1:
+            raise ValueError('Preflight, prepare and apply are separate operations')
+        if preflight:
+            sources = source_hashes(project)
+            reason = activity_reason(project, ignore_lease=path)
+            if reason:
+                raise RuntimeError(reason)
+            _activity_snapshot(project)
+            return dict(ok=True, preflight_only=True, retired=False, input_sent=False,
+                        reboot_proven=False, reviewed_source_count=len(sources))
+        if prepare:
+            if apply:
+                raise ValueError('Prepare and apply are separate operations')
+            intent = dict(schema=RECOVERY_SCHEMA, project=str(project), lease_name=lease_name,
+                          lease_sha256=digest, original_bytes_hex=payload.hex(), uptime_ms=uptime, machine_id=machine)
+            if intent_path.exists():
+                previous = read_object(intent_path, limit=300_000)
+                if any(previous.get(key) != intent[key] for key in intent if key != 'uptime_ms'):
+                    raise ValueError('Existing recovery intent differs; retained without overwrite')
+                return dict(ok=True, prepared=True, retired=False, input_sent=False,
+                            restart_still_required=not (type(previous.get('uptime_ms')) is int and 0 < uptime < previous['uptime_ms']))
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _plain_directory(target.parent)
+            with intent_path.open('xb') as stream:
+                stream.write(json.dumps(intent, sort_keys=True).encode('utf8'))
+                stream.flush()
+                os.fsync(stream.fileno())
+            if read_object(intent_path, limit=300_000) != intent:
+                raise RuntimeError('Recovery intent readback failed')
+            return dict(ok=True, prepared=True, retired=False, input_sent=False,
+                        restart_still_required=True)
+        intent = read_object(intent_path, limit=300_000)
+        if (intent.get('schema') != RECOVERY_SCHEMA or intent.get('project') != str(project)
+                or intent.get('lease_name') != lease_name or intent.get('lease_sha256') != digest
+                or intent.get('original_bytes_hex') != payload.hex()
+                or intent.get('machine_id') != machine
+                or type(intent.get('uptime_ms')) is not int
+                or not 0 < uptime < intent['uptime_ms'] < 2 ** 63):
+            raise RuntimeError('No verified intervening Windows boot; current process absence cannot retire this lease')
+        intent_digest = hashlib.sha256(intent_path.read_bytes()).hexdigest()
+        # No other incomplete, active or unknown actor, including CURRENT's
+        # original broker, is waived. This does not adopt another dead lease.
+        reason = activity_reason(project, ignore_lease=path)
+        if reason:
+            raise RuntimeError(reason)
+        sources = source_hashes(project)
+        activity_snapshot = _activity_snapshot(project)
+        if activity_reason(project, ignore_lease=path) is not None or source_hashes(project) != sources:
+            raise RuntimeError('Source or activity changed during recovery')
+        if _activity_snapshot(project) != activity_snapshot:
+            raise RuntimeError('Registered activity changed; no retirement written')
+        _, final_payload = _dead_start(project, path, digest, parent_pid, parent_identity)
+        if (final_payload != payload or not uptime <= windows_uptime_ms() < intent['uptime_ms']
+                or windows_machine_id() != machine
+                or hashlib.sha256(intent_path.read_bytes()).hexdigest() != intent_digest):
+            raise RuntimeError('Selected lease changed during recovery')
+        receipt = dict(schema=RECOVERY_SCHEMA, project=str(project), lease_name=lease_name,
+                       lease_sha256=digest, original_lease=value, original_bytes_hex=payload.hex(),
+                       historical_parentage='unknown', assessment='retired_after_boot_boundary',
+                       uptime_ms=uptime, machine_id=machine, intent_sha256=intent_digest,
+                       input_sent=False, other_activity_reason=None,
+                       activity_snapshot=activity_snapshot, source_hashes=sources)
+        import datetime
+        receipt['observed_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        encoded = json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2).encode('utf8')
+        if len(encoded) > 2_000_000:
+            raise RuntimeError('Recovery audit exceeds its bound')
+        if apply:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            _plain_directory(target.parent)
+            # Exclusive write: failed/partial receipts remain fail-closed for
+            # inspection. Never overwrite or clean up an uncertain receipt.
+            with target.open('xb') as stream:
+                stream.write(encoded)
+                stream.flush()
+                os.fsync(stream.fileno())
+            if not _retired_start(project, path, value):
+                raise RuntimeError('Recovery receipt readback failed')
+        return dict(ok=True, retired=apply, checked_only=not apply, input_sent=False,
+                    lease_sha256=digest, receipt=str(target) if apply else None)
+
+
+def recovery_cli():
+    import argparse
+    parser = argparse.ArgumentParser(description='Audit one dead start lease; default is read-only.')
+    parser.add_argument('--project', type=Path, required=True)
+    parser.add_argument('--lease', required=True)
+    parser.add_argument('--lease-sha256', required=True)
+    parser.add_argument('--parent-pid', type=int, required=True)
+    parser.add_argument('--parent-identity', required=True)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--preflight', action='store_true', help='Read-only API/lock/registry check before any restart')
+    mode.add_argument('--apply', action='store_true')
+    mode.add_argument('--prepare', action='store_true', help='Seal monotonic uptime and machine identity; does not retire or reboot')
+    args = parser.parse_args()
+    try:
+        result = recover_dead_start(args.project, args.lease, args.lease_sha256,
+                                    args.parent_pid, args.parent_identity, apply=args.apply, prepare=args.prepare, preflight=args.preflight)
+    except (OSError, ValueError, RuntimeError, TypeError, AttributeError) as exc:
+        print(json.dumps(dict(ok=False, retired=False, input_sent=False, error=str(exc)), ensure_ascii=False))
+        return 2
+    print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(recovery_cli())
