@@ -625,5 +625,135 @@ class ReleasedEconomicPrior(unittest.TestCase):
         self.assertEqual(rejected['economic_allocation']['status'], 'incomplete_joint_comparison')
 
 
+    def test_public_value_modifier_changes_joint_scores_without_rewriting_state(self):
+        state = self.state()
+        adapter = Adapter()
+        adapter.state = AsyncMock(return_value=state)
+        policy = {'mode': 'replay', 'economy_model': 'released_prior', 'bond_weight': 0}
+        baseline = asyncio.run(adapter.advice(policy))
+        self.assertIn('observed_entities', baseline, baseline)
+        entity = baseline['observed_entities'][0]
+        modifier = {**state['binding'], 'entity_ref': entity['entity_ref'],
+                    'role_id': entity['catalogue']['role_id'],
+                    'status': 'hypothetical', 'utility_multiplier': 1.5}
+        self.assertTrue(baseline['joint_economy']['portfolios'])
+        original = copy.deepcopy(state)
+        result = asyncio.run(adapter.advice({**policy, 'candidate_value_modifiers': [modifier]}))
+        self.assertEqual(result['candidate_value_modifier_diagnostics'], [])
+        before = {p['id']: p['approximate_score'] for p in baseline['joint_economy']['portfolios']}
+        after = {p['id']: p['approximate_score'] for p in result['joint_economy']['portfolios']}
+        self.assertNotEqual(before, after)
+        self.assertFalse(result['input_sent'])
+        self.assertFalse(result['execution_eligible'])
+        self.assertEqual(state, original)
+
+    def test_public_value_modifier_rejects_incomplete_or_conflicting_current_binding(self):
+        state = self.state()
+        adapter = Adapter()
+        adapter.state = AsyncMock(return_value=state)
+        policy = {'mode': 'replay', 'economy_model': 'released_prior', 'bond_weight': 0}
+        baseline = asyncio.run(adapter.advice(policy))
+        self.assertIn('observed_entities', baseline, baseline)
+        entity = baseline['observed_entities'][0]
+        modifier = {**state['binding'], 'entity_ref': entity['entity_ref'],
+                    'role_id': entity['catalogue']['role_id'],
+                    'status': 'hypothetical', 'utility_multiplier': 1.5}
+        for kind in ('empty_binding', 'state_snapshot', 'binding_snapshot', 'state_match',
+                     'binding_match', 'missing_observation', 'missing_observation_snapshot',
+                     'observation_snapshot', 'observation_match', 'observation_request',
+                     'observation_bool_epoch', 'binding_bool_epoch'):
+            with self.subTest(kind=kind):
+                bad = copy.deepcopy(state)
+                assumption = copy.deepcopy(modifier)
+                if kind == 'empty_binding':
+                    bad['binding'] = {}
+                    assumption.update(request_id=None, match_id=None, resume_epoch=None)
+                elif kind == 'state_snapshot':
+                    bad['snapshot_id'] = 'other-snapshot'
+                elif kind == 'binding_snapshot':
+                    bad['binding']['snapshot_id'] = 'other-snapshot'
+                    assumption['snapshot_id'] = 'other-snapshot'
+                elif kind == 'state_match':
+                    bad['match_id'] = 'other-match'
+                elif kind == 'binding_match':
+                    bad['binding']['match_id'] = 'other-match'
+                    assumption['match_id'] = 'other-match'
+                elif kind == 'missing_observation':
+                    bad.pop('observation')
+                elif kind == 'missing_observation_snapshot':
+                    bad['observation'].pop('snapshot_id')
+                elif kind == 'observation_snapshot':
+                    bad['observation']['snapshot_id'] = 'other-snapshot'
+                elif kind == 'observation_match':
+                    bad['observation']['match_id'] = 'other-match'
+                elif kind == 'observation_request':
+                    bad['observation']['request_id'] = 'other-request'
+                elif kind == 'observation_bool_epoch':
+                    bad['observation']['resume_epoch'] = False
+                elif kind == 'binding_bool_epoch':
+                    bad['binding']['resume_epoch'] = False
+                    assumption['resume_epoch'] = False
+                original = copy.deepcopy(bad)
+                adapter.state = AsyncMock(return_value=bad)
+                unmodified = asyncio.run(adapter.advice(policy))
+                result = asyncio.run(adapter.advice(
+                    {**policy, 'candidate_value_modifiers': [assumption]}))
+                self.assertTrue(result['candidate_value_modifier_diagnostics'])
+                self.assertEqual(result['joint_economy'], unmodified['joint_economy'])
+                self.assertEqual(result['economic_allocation'], unmodified['economic_allocation'])
+                self.assertFalse(result['input_sent'])
+                self.assertFalse(result['execution_eligible'])
+                self.assertEqual(bad, original)
+
+    def test_public_value_modifier_rejects_invalid_assumption_without_score_change(self):
+        state = self.state()
+        adapter = Adapter()
+        adapter.state = AsyncMock(return_value=state)
+        policy = {'mode': 'replay', 'economy_model': 'released_prior', 'bond_weight': 0}
+        baseline = asyncio.run(adapter.advice(policy))
+        self.assertIn('observed_entities', baseline, baseline)
+        entity = baseline['observed_entities'][0]
+        modifier = {**state['binding'], 'entity_ref': entity['entity_ref'],
+                    'role_id': entity['catalogue']['role_id'],
+                    'status': 'hypothetical', 'utility_multiplier': 1.5}
+        original = copy.deepcopy(state)
+        for field, value, diagnostic in (
+                ('resume_epoch', False, '0:invalid_epoch'),
+                ('role_id', 'not-this-character', '0:role_mismatch'),
+                ('utility_multiplier', 10**400, '0:invalid_multiplier')):
+            with self.subTest(field=field):
+                result = asyncio.run(adapter.advice(
+                    {**policy, 'candidate_value_modifiers': [{**modifier, field: value}]}))
+                self.assertIn(diagnostic, result['candidate_value_modifier_diagnostics'])
+                self.assertEqual(result['joint_economy'], baseline['joint_economy'])
+                self.assertEqual(result['economic_allocation'], baseline['economic_allocation'])
+                self.assertFalse(result['input_sent'])
+                self.assertFalse(result['execution_eligible'])
+                self.assertEqual(state, original)
+
+    def test_public_value_modifier_accepts_matching_optional_observation_identity(self):
+        state = self.state()
+        adapter = Adapter()
+        adapter.state = AsyncMock(return_value=state)
+        policy = {'mode': 'replay', 'economy_model': 'released_prior', 'bond_weight': 0}
+        baseline = asyncio.run(adapter.advice(policy))
+        self.assertIn('observed_entities', baseline, baseline)
+        entity = baseline['observed_entities'][0]
+        modifier = {**state['binding'], 'entity_ref': entity['entity_ref'],
+                    'role_id': entity['catalogue']['role_id'],
+                    'status': 'hypothetical', 'utility_multiplier': 1.5}
+        state['observation'].update({key: state['binding'][key]
+                                     for key in ('match_id', 'request_id', 'resume_epoch')})
+        original = copy.deepcopy(state)
+        result = asyncio.run(adapter.advice({**policy, 'candidate_value_modifiers': [modifier]}))
+        self.assertEqual(result['candidate_value_modifier_diagnostics'], [])
+        self.assertNotEqual(
+            [p['approximate_score'] for p in result['joint_economy']['portfolios']],
+            [p['approximate_score'] for p in baseline['joint_economy']['portfolios']])
+        self.assertFalse(result['input_sent'])
+        self.assertFalse(result['execution_eligible'])
+        self.assertEqual(state, original)
+
+
 if __name__ == '__main__':
     unittest.main()
