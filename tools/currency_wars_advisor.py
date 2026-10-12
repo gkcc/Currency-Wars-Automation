@@ -81,7 +81,7 @@ def _policy(value):
             'purchase_star_for_scoring', 'bond_weight', 'bond_reference_power',
             'max_layout_states', 'max_layout_transitions', 'economy_model',
             'released_profile', 'max_xp_purchases', 'max_node_refreshes',
-            'refreshes_used', 'max_refresh_samples', 'max_economy_evaluations'}:
+            'refreshes_used', 'max_refresh_samples', 'max_economy_evaluations', 'candidate_value_modifiers'}:
         raise ValueError('policy: unsupported keys/type')
     result = {'mode': 'current', 'gold_weight': 20., 'bench_weight': .15,
               'purchase_star_for_scoring': 1, 'purchase_budget': None, 'reserve': None, **value}
@@ -89,7 +89,8 @@ def _policy(value):
               'max_layout_states': 1024, 'max_layout_transitions': 250000,
               'economy_model': 'partial', 'released_profile': 'matching',
               'max_xp_purchases': 8, 'max_node_refreshes': 3, 'refreshes_used': 0,
-              'max_refresh_samples': 8, 'max_economy_evaluations': 4096, **result}
+              'max_refresh_samples': 8, 'max_economy_evaluations': 4096,
+              'candidate_value_modifiers': [], **result}
     if result['mode'] not in ('current', 'replay'):
         raise ValueError('policy.mode must be current or replay')
     if result['economy_model'] not in ('partial', 'released_prior'):
@@ -354,13 +355,106 @@ def _candidate(kind, reference, required, observed, assumptions, score=None, **e
             'assumptions': list(assumptions), 'approximate_score': score, **extra}
 
 
-def _score_item(entry, policy, assumed_star=None):
+
+
+def _candidate_value_modifiers(state, policy=None, valid_entities=None):
+    """Read declared comparison assumptions from policy only.
+
+    These are hypothetical comparison modifiers. They never become observed
+    state, native facts, or execution authorization.
+    """
+    policy = _dict(policy)
+    raw = policy.get('candidate_value_modifiers', [])
+    diagnostics = []
+    accepted = {}
+    if raw is None:
+        return accepted, diagnostics
+    if not isinstance(raw, list) or len(raw) > 32:
+        return accepted, ['candidate_value_modifiers_invalid']
+
+    binding = _dict(state.get('binding'))
+    # A modifier must bind to a complete current observation envelope. Do not
+    # allow None==None or bool/int aliasing to satisfy the binding.
+    required_binding = ('request_id', 'match_id', 'snapshot_id')
+    for key in required_binding:
+        if not _text(binding.get(key)):
+            diagnostics.append('binding_invalid:' + key)
+            return accepted, diagnostics
+    binding_epoch = binding.get('resume_epoch')
+    if type(binding_epoch) is not int or binding_epoch < 0:
+        diagnostics.append('binding_invalid:resume_epoch')
+        return accepted, diagnostics
+    if (binding.get('snapshot_id') != state.get('snapshot_id')
+            or binding.get('match_id') != state.get('match_id')):
+        diagnostics.append('binding_invalid:state_mismatch')
+        return accepted, diagnostics
+
+    valid_entities = _dict(valid_entities)
+    for index, item in enumerate(raw):
+        prefix = f'{index}:'
+        if not isinstance(item, dict):
+            diagnostics.append(prefix + 'not_object')
+            continue
+        required = ('request_id', 'match_id', 'resume_epoch', 'snapshot_id',
+                    'entity_ref', 'utility_multiplier')
+        if any(k not in item for k in required):
+            diagnostics.append(prefix + 'missing_required_field')
+            continue
+        if not all(_text(item.get(k)) for k in ('request_id', 'match_id', 'snapshot_id')):
+            diagnostics.append(prefix + 'invalid_binding_text')
+            continue
+        if type(item.get('resume_epoch')) is not int or item.get('resume_epoch') < 0:
+            diagnostics.append(prefix + 'invalid_epoch')
+            continue
+        if (item.get('request_id') != binding.get('request_id')
+                or item.get('match_id') != binding.get('match_id')
+                or item.get('resume_epoch') != binding_epoch
+                or item.get('snapshot_id') != binding.get('snapshot_id')):
+            diagnostics.append(prefix + 'binding_mismatch')
+            continue
+        if item.get('status') != 'hypothetical':
+            diagnostics.append(prefix + 'not_hypothetical')
+            continue
+        entity = valid_entities.get(item.get('entity_ref'))
+        if entity is None:
+            diagnostics.append(prefix + 'entity_not_current')
+            continue
+        if item.get('role_id') != entity.get('role_id'):
+            diagnostics.append(prefix + 'role_mismatch')
+            continue
+        value = item.get('utility_multiplier')
+        if type(value) not in (int, float) or isinstance(value, bool):
+            diagnostics.append(prefix + 'invalid_multiplier_type')
+            continue
+        try:
+            numeric = float(value)
+        except (OverflowError, ValueError, TypeError):
+            diagnostics.append(prefix + 'invalid_multiplier')
+            continue
+        if not math.isfinite(numeric) or numeric <= 0 or numeric > 2:
+            diagnostics.append(prefix + 'invalid_multiplier')
+            continue
+        if item['entity_ref'] in accepted:
+            diagnostics.append(prefix + 'duplicate_entity')
+            continue
+        accepted[item['entity_ref']] = {
+            'utility_multiplier': numeric,
+            'source': 'declared_hypothetical',
+        }
+    return accepted, diagnostics
+
+def _score_item(entry, policy, assumed_star=None, value_modifiers=None):
     resolution = entry['catalogue']
     legal = resolution['legal_positions_guaranteed']
     observed_position = entry['observed'].get('position')
     if isinstance(observed_position, str) and observed_position in POSITIONS:
         legal = [zone for zone in legal if zone in POSITIONS[observed_position]]
     powers = resolution['power_interval']
+    modifier = _dict(value_modifiers).get(entry['entity_ref'])
+    if modifier:
+        factor = modifier['utility_multiplier']
+        powers = {zone: {'minimum': power['minimum'] * factor, 'maximum': power['maximum'] * factor}
+                  for zone, power in powers.items()}
     if (entry.get('source_usable') is not True or entry.get('conflicts')
             or not legal or any(zone not in powers for zone in legal)):
         return None
@@ -767,6 +861,7 @@ def advise(state, catalogue, policy=None):
             else _dict(semantic.get('team')))
     entities, slots = _roster(team)
     cache, scored, unscored, actions = {}, [], [], []
+    value_modifiers, value_modifier_diagnostics = {}, []
     addresses = [_address(slot) for slot in slots]
     usable_slots = [slot for slot in slots if _native_slot(slot, roster_snapshot)
                     and (slot.get('location') == 'bench' or state.get('page') == 'preparation'
@@ -785,7 +880,7 @@ def advise(state, catalogue, policy=None):
         entry['source_scope'] = comparison['scope']
         entry['observed_star'] = star
         entry['observed_physical_uid'] = observed.get('physical_uid')  # Never invented from a slot.
-        score_item = _score_item(entry, policy)
+        score_item = _score_item(entry, policy, value_modifiers=value_modifiers)
         if score_item is None:
             unscored.append(entry['entity_ref'])
         else:
@@ -817,6 +912,21 @@ def advise(state, catalogue, policy=None):
                  'basis': 'static PowerBase gain over modeled bench value; not damage'} if power else None,
                 zone=zone, target=copy.deepcopy(targets[0]) if targets else None,
                 source_snapshot_id=observed.get('snapshot_id')))
+    valid_entities = {}
+    for entry in entities:
+        role_id = _dict(entry.get('catalogue')).get('role_id')
+        valid_entities[entry['entity_ref']] = {'role_id': role_id}
+    value_modifiers, value_modifier_diagnostics = _candidate_value_modifiers(
+        state, policy, valid_entities)
+    # Rebuild scored items once after binding validation.  Declared assumptions
+    # are comparison-only and never become observed facts.
+    rescored = []
+    for entry in entities:
+        item = _score_item(entry, policy, value_modifiers=value_modifiers)
+        if item is not None:
+            rescored.append(item)
+    scored = rescored
+
     shop = _dict(state.get('shop'))
     native_offers = _list(shop.get('slots'), MAX_OFFERS, 'shop.slots')
     offers, comparison_offers = [], []
@@ -846,7 +956,7 @@ def advise(state, catalogue, policy=None):
             satisfied.add('current_empty_bench_or_certified_storage')
         if population['projection_known']:
             satisfied.add('population_for_joint_comparison')
-        score_item = _score_item(entry, policy, policy['purchase_star_for_scoring'])
+        score_item = _score_item(entry, policy, policy['purchase_star_for_scoring'], value_modifiers=value_modifiers)
         enabled = bool(verified is not None and wallet['verified_native'] and empty_bench
                        and verified['cost'] <= wallet['value'] and score_item is not None)
         reasons = [key for key in ('native_current_wallet', 'native_offer_name_price_complete_ROI',
@@ -1033,6 +1143,7 @@ def advise(state, catalogue, policy=None):
         'input_sha256': hashlib.sha256(encoded).hexdigest(), 'snapshot_id': snapshot,
         'policy': {**policy, 'scope': 'explicit heuristic/model assumptions; not an accepted match budget'},
         'observed_entities': entities, 'observed_offers': offers,
+        'candidate_value_modifier_diagnostics': value_modifier_diagnostics,
         'coverage': {'team_checked': team.get('checked'), 'team_fully_read': team.get('fully_read'),
             'unknown_slots': [copy.deepcopy(slot) for slot in slots if slot.get('status') not in ('empty', 'occupied')],
             'observed_capacity': copy.deepcopy(native_cap), 'observed_inventory': copy.deepcopy(semantic.get('inventory')),
