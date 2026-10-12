@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -25,9 +26,39 @@ PROJECT = Path(__file__).resolve().parents[1]
 
 class SourceRuntimeTests(unittest.TestCase):
     def setUp(self):
-        scratch = tempfile.TemporaryDirectory(prefix='currency-wars-source-runtime-test-')
-        self.addCleanup(scratch.cleanup)
-        self.root = Path(scratch.name)
+        scratch = artifacts.scratch_directory('currency-wars-source-runtime-test')
+        self.root = scratch.__enter__()
+        self.addCleanup(scratch.__exit__, None, None, None)
+
+    def test_native_evidence_size_does_not_replace_controller_identity_checks(self):
+        current = self.root / 'docs/CURRENT_RUNNER.json'
+        current.parent.mkdir()
+        # Real owned fixture process: a terminal-looking record must still
+        # block mutation while that exact creation identity is alive.
+        process = subprocess.Popen([sys.executable, '-B', '-c', 'import time; time.sleep(10)'])
+        try:
+            state, identity = guard.process_identity(process.pid)
+            self.assertEqual(state, 'active')
+            creation = identity.split(':', 1)[1]
+            record = {'owner': 'currency-wars-runner', 'run_id': 'inert-native-evidence-fixture',
+                'runner_pid': process.pid, 'runner_creation_id': creation, 'control_mode': 'stopped',
+                'exit_evidence': {'broker': {'pid': process.pid, 'expected_creation_id': creation,
+                                            'state': 'exited'}},
+                'observation': {'retained_native_evidence': 'x' * 80_000}}
+            current.write_text(json.dumps(record), encoding='utf8')
+            self.assertIsNotNone(guard.activity_reason(self.root))
+        finally:
+            process.terminate()
+            process.wait(timeout=10)
+        self.assertIsNone(guard.activity_reason(self.root))
+        record['observation']['retained_native_evidence'] = 'x' * 2_000_000
+        current.write_text(json.dumps(record), encoding='utf8')
+        self.assertIsNotNone(guard.activity_reason(self.root))
+        current.unlink()
+        activity = current.parent / 'source-activity'
+        activity.mkdir()
+        (activity / 'oversize.json').write_text(json.dumps({'padding': 'x' * 80_000}), encoding='utf8')
+        self.assertIsNotNone(guard.activity_reason(self.root))
 
     def source_copy(self):
         project = self.root / 'generated-source-copy'
@@ -54,7 +85,27 @@ class SourceRuntimeTests(unittest.TestCase):
             path.write_bytes(payload)
         for name in ('refresh_offer_resources', 'reward_resources'):
             shutil.copytree(PROJECT / 'tools' / name, project / 'tools' / name)
+        bank = Path('data/currency_wars/native_unit_bank')
+        shutil.copytree(PROJECT / bank, project / bank)
+        for spec in json.loads((project / guard.SOURCE_MANIFEST).read_text(encoding='utf8')).get('data_files', []):
+            path = project / spec['path']
+            path.parent.mkdir(parents=True, exist_ok=True)
+            # Byte binding only; this is never opened as a real catalogue.
+            path.write_bytes(b'inert synthetic data-binding fixture')
         return guard.runtime_source_binding(project)
+
+    def test_changed_or_missing_catalogue_invalidates_reviewed_runtime(self):
+        project = self.source_copy()
+        ready = self.resource_fixture(project)
+        path = project / 'data/currency_wars/catalog.sqlite3'
+        self.assertIn(path.relative_to(project).as_posix(), ready['hashes'])
+        self.assertEqual(guard.verify_runtime_sources(project, ready), ready)
+        path.write_bytes(b'different inert catalogue bytes')
+        with self.assertRaises(ValueError):
+            guard.verify_runtime_sources(project, ready)
+        path.unlink()
+        with self.assertRaises((ValueError, FileNotFoundError)):
+            guard.runtime_source_binding(project)
 
     def ready_fixture(self, project):
         ready = {**self.resource_fixture(project), 'ready': True, 'owner': 'currency-wars-runner',

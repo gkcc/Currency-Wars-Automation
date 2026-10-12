@@ -62,6 +62,559 @@ def numeric_frame(state):
     return image, output.getvalue(), fields
 
 
+class SelectedModelContracts(TestCase):
+    """Production budget/first-action contracts, separate from receipt stubs."""
+    def model(self):
+        worker = runner.Worker.__new__(runner.Worker)
+        worker.active_match_id = 'match'
+        worker.live_mode = {'match_id': 'match', 'value': '标准博弈'}
+        worker.epoch = lambda: 'epoch'
+        actual = {'snapshot_id': 'b' * 64, 'page': 'shop', 'fields': {'stage': '2-3'},
+                  'shop': shop('b' * 64, ('飞霄', 5))}
+        binding = {'request_id': 'root-request', 'snapshot_id': actual['snapshot_id'],
+                   'resume_epoch': 'epoch', 'match_id': 'match'}
+        model = {'schema': 'currency-wars-economic-allocation/v1', 'model': 'released_prior',
+            'snapshot_id': actual['snapshot_id'], 'binding': binding, 'status': 'conditional_joint_decision',
+            'complete_dimensions': dict.fromkeys(('purchase', 'experience', 'refresh'), True),
+            'configured_XP_gain_assumption': 4, 'database_sha256': 'd' * 64,
+            'conditional_best': {'budget': {'purchase': 5, 'experience': 8, 'refresh': 0},
+                'purchase_refs': ['shop.slots[0]'], 'level_assumption': 8, 'profile_assumption': 'matched'},
+            'allocation': {'budget': {'purchase': 5, 'experience': 8, 'refresh': 0},
+                'reserve': 0, 'refresh_count_max': 0, 'future_purchase_budget': 0},
+            'conditional_raw_actions': [{'type': 'buy_xp', 'count': 2}, {'type': 'buy', 'reference': 'shop.slots[0]'}]}
+        review = {'origin': 'local_advisor_recomputation', **binding, 'input_sha256': 'a' * 64,
+                  'source_verified': True, 'allocation': model}
+        return worker, actual, review, economy.new_ledger()
+
+    def test_zero_budget_or_changed_targets_cannot_override_current_selected_model(self):
+        worker, actual, review, ledger = self.model()
+        selected = worker.model_economy_plan(review, actual, ledger)
+        worker.assert_model_budget(selected, review, actual, ledger)
+        for change in ({'budget': dict.fromkeys(('purchase', 'experience', 'refresh'), 0)},
+                       {'targets': []}, {'reserve': {'coins': 50}}, {'experience': {'target_level': 7}}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                worker.assert_model_budget({**selected, **change}, review, actual, ledger)
+
+    def test_selected_xp_precedes_visible_purchase_and_dispatches_only_one(self):
+        worker, actual, review, ledger = self.model()
+        ledger['spent']['experience'] = 4
+        plan_value = worker.model_economy_plan(review, actual, ledger)
+        self.assertEqual(plan_value['budget']['experience'], 12)
+        reading = {'values': {**values(), 'refresh_offer': {'mode': 'paid', 'free_remaining': None, 'paid_cost': 2}},
+                   'snapshot_id': actual['snapshot_id'], 'unknown': ['xp_gain']}
+        reading['values'].pop('xp_gain')
+        chosen = worker.selected_economic_action(review, actual, reading, plan_value, ledger)
+        self.assertEqual(chosen['type'], 'buy_xp')
+        self.assertEqual(chosen['count'], 1)
+        self.assertNotIn('xp_gain', reading['values'])
+        self.assertEqual(plan_value['model_values']['xp_gain_assumption'], 4)
+        ledger['pending'] = {'request_id': 'original-unknown'}
+        with self.assertRaises(ValueError):
+            worker.selected_economic_action(review, actual, reading, plan_value, ledger)
+        self.assertEqual(ledger['pending']['request_id'], 'original-unknown')
+
+    def test_model_xp_gain_is_separate_and_unexpected_transition_stays_unknown(self):
+        before = {'values': {'coins': 66, 'level': 7, 'xp': [40, 52]}}
+        after = {'values': {'coins': 62, 'level': 7, 'xp': [44, 52]}}
+        model = {'xp_gain_assumption': 4, 'source': 'released_database_planning_assumption'}
+        self.assertEqual(economy.classify_effect('experience', before, after, expected_cost=4,
+                         model_values=model)['outcome'], 'success')
+        after['values']['xp'] = [45, 52]
+        self.assertEqual(economy.classify_effect('experience', before, after, expected_cost=4,
+                         model_values=model)['outcome'], 'unknown')
+        self.assertNotIn('xp_gain', before['values'])
+
+    def test_typed_actor_cannot_accept_budget_coordinates_batch_or_wrong_phase(self):
+        from datetime import datetime, timedelta, timezone
+        request = {'request_id': 'root', 'snapshot_id': 'b' * 64, 'resume_epoch': 'epoch', 'match_id': 'match',
+            'deadline_at': (datetime.now(timezone.utc)+timedelta(minutes=1)).isoformat(), 'kind': 'shop_strategy',
+            'observation': {'page': 'shop'}, 'preparation_checklist': {'phase': 'economy'}}
+        action = {'type': 'advance_local_economy', 'expected_page': 'shop', 'reason': '本地联合模型一次'}
+        reply = {k: request[k] for k in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+        reply.update(actions=[action], context_update={})
+        runner.validate_plan(reply, request, 'epoch')
+        for bad in ({**reply, 'actions': [{**action, 'budget': 0}]},
+                    {**reply, 'actions': [{**action, 'args': [490, 500]}]},
+                    {**reply, 'actions': [action, action]},
+                    {**reply, 'context_update': {'economy_plan': {'budget': 0}}}):
+            with self.assertRaises(ValueError):
+                runner.validate_plan(bad, request, 'epoch')
+        request['preparation_checklist']['phase'] = 'inventory_cleanup'
+        with self.assertRaises(ValueError):
+            runner.validate_plan(reply, request, 'epoch')
+
+    def test_actor_real_entry_executes_one_xp_and_publishes_new_source(self):
+        import currency_wars_refresh_offer as refresh_reader
+        changes = [values(coins=62, xp=[44, 52]), values(coins=58, xp=[48, 52])]
+        with EconomyTests().worker(changes, joint_complete=False) as (worker, record, control, frames):
+            worker.owner['run_token'] = control.OWNER['run_token']
+            control.assert_owner = lambda chat, token: self.assertEqual(
+                {'chat_id': chat, 'run_token': token}, control.OWNER)
+            control.write_json(worker.run / 'runner-owner.json', worker.owner)
+            original_read = worker.perception.read
+            states = {hashlib.sha256(f[1]).hexdigest(): s for f, s in zip(frames, [values()]+changes)}
+            def native_read(path, force=False, *, scope='full'):
+                observed = original_read(path, force=force, scope=scope)
+                snapshot = observed['snapshot_id']
+                state = states[snapshot]
+                observed['semantic'].update(
+                    player_hud={'snapshot_id': snapshot, 'origin': 'native_player_hud', 'actor': 'player',
+                                'level': state['level'], 'xp': state['xp']},
+                    experience_offer={'snapshot_id': snapshot, 'origin': 'native_experience_offer',
+                                      'cost_checked': True, 'buy_cost': 4, 'buy_gain': None},
+                    refresh_offer={'snapshot_id': snapshot, 'source': 'declared_protocol_fixture'},
+                    team={'slots': [{'location': 'board', 'status': 'empty'} for unused in range(10)]})
+                return observed
+            worker.perception.read = native_read
+            model_template = self.model()[2]['allocation']
+            model_template['conditional_best']['budget']['purchase'] = 0
+            model_template['allocation']['budget']['purchase'] = 0
+            model_template['conditional_best']['purchase_refs'] = []
+            model_template['conditional_raw_actions'] = [{'type': 'buy_xp', 'count': 2}]
+            def model(request, observed):
+                binding = {k: request[k] for k in ('request_id', 'resume_epoch', 'match_id')}
+                binding['snapshot_id'] = observed['snapshot_id']
+                allocation = {**copy.deepcopy(model_template), 'binding': binding, 'snapshot_id': observed['snapshot_id']}
+                return {'origin': 'local_advisor_recomputation', **binding, 'source_verified': True,
+                        'input_sha256': 'a' * 64, 'allocation': allocation, 'full_observation': True}
+            worker.local_economic_allocation = model
+            with patch.object(refresh_reader, 'consume_offer', return_value={'mode': 'paid', 'free_remaining': None, 'paid_cost': 2}), \
+                    patch.object(runner.entry, 'owned_broker_identity', return_value={'pid': 123, 'creation_id': '456'}):
+                worker.economy_binding = None  # First local budget after a new lease.
+                inherited = worker.economy_ledger('2-3')
+                inherited['requires_current_budget'] = True
+                inherited['prior_run_unknown'] = [{'origin_run_id': 'prior-fixture',
+                                                   'request_id': 'old-unconfirmed'}]
+                worker.observe()
+                worker.state['decision_request'] = None
+                worker.ask(worker.last_observation, 'shop_strategy', '声明协议替身，测试真实单次Entry发布')
+                request = copy.deepcopy(worker.state['decision_request'])
+                reply = {k: request[k] for k in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+                reply.update(actions=[{'type': 'advance_local_economy', 'expected_page': 'shop', 'reason': '仅本地选择一笔'}], context_update={})
+                # Passive capture changes receipt/frame IDs even with the same
+                # PNG. The old authorization must produce only a new source.
+                worker.observe()
+                worker.execute_plan(reply)
+                self.assertEqual(control.action_index, 0)
+                refreshed = worker.state['decision_request']
+                self.assertNotEqual(refreshed['request_id'], request['request_id'])
+                self.assertFalse(refreshed['source_refresh']['input_sent'])
+                self.assertTrue(worker.economy_ledger('2-3')['requires_current_budget'])
+                reply = {k: refreshed[k] for k in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+                reply.update(actions=[{'type': 'advance_local_economy', 'expected_page': 'shop', 'reason': '新原帧只授权一笔'}], context_update={})
+                worker.execute_plan(reply)
+                self.assertEqual(control.action_index, 1)
+                self.assertEqual(worker.economy_ledger('2-3')['spent']['experience'], 4)
+                self.assertFalse(worker.economy_ledger('2-3')['requires_current_budget'])
+                self.assertEqual(worker.economy_ledger('2-3')['prior_run_unknown'],
+                                 [{'origin_run_id': 'prior-fixture', 'request_id': 'old-unconfirmed'}])
+                self.assertEqual(worker.economy_binding['plan']['prior_run_unknown_requests'],
+                                 ['prior-fixture:old-unconfirmed'])
+                self.assertIsNone(worker.economy_ledger('2-3')['pending'])
+                self.assertNotEqual(worker.state['decision_request']['request_id'], request['request_id'])
+                self.assertNotEqual(worker.state['decision_request']['snapshot_id'], request['snapshot_id'])
+                self.assertNotIn('economy', worker.preparation_reviews)
+                self.assertNotIn('xp_gain', worker.economy_observation(worker.last_observation)['values'])
+                # This newly sourced model changes the remaining allocation;
+                # the old cumulative budget cannot silently fund another XP.
+                self.assertFalse(worker.economic_policy(worker.last_observation)['available'])
+                count = control.action_index
+                with self.assertRaises(ValueError):
+                    worker.execute_plan(reply)
+                self.assertEqual(control.action_index, count)
+                current = worker.state['decision_request']
+                new_reply = {k: current[k] for k in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+                new_reply.update(actions=reply['actions'], context_update={})
+                worker.economy_ledger('2-3')['pending'] = {'request_id': 'original-unresolved'}
+                with self.assertRaises(ValueError):
+                    worker.execute_plan(new_reply)
+                self.assertEqual(worker.economy_ledger('2-3')['pending']['request_id'], 'original-unresolved')
+                self.assertEqual(control.action_index, count)
+
+    def test_economic_cache_rechecks_changed_same_png_shop_contract(self):
+        with EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
+            worker.accept_economy_plan(record)
+            actual = worker.last_observation
+            self.assertTrue(worker.economy_observation(actual)['shop_complete'])
+            actual['shop']['slots'][0]['status'] = 'unknown'
+            self.assertFalse(worker.economy_observation(actual)['shop_complete'])
+            self.assertEqual(control.action_index, 0)
+
+    def test_comparison_source_authenticates_navigation_and_every_intervening_receipt(self):
+        import currency_wars_economic_views as views
+        with EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
+            original = worker.last_observation
+            root_request = worker.state['decision_request']
+            scope = {'stage': '2-3', 'match_id': worker.active_match_id, 'resume_epoch': worker.epoch()}
+            worker.economic_roster_view = {'observation': copy.deepcopy(original),
+                'png': root_request['original_png'], 'scope': scope, 'watermark': worker.economy_receipt_watermark()}
+            worker.economic_navigation_receipts = {}
+            runner.entry.request(control, 'actions', ['click:10:10', 'wait:0.7'], 'declared-open-shop', False)
+            nav = runner.await_existing_receipt(worker.run, control, 'declared-open-shop', 0)
+            worker.economic_navigation_receipts['declared-open-shop'] = {'scope': scope,
+                'actions': copy.deepcopy(nav['request']['actions'])}
+            # The fake broker changes any click to a white test frame. Restore
+            # this declared numeric source before the independent observe; only
+            # the receipt authentication layer is under test, not real OCR/UI.
+            control.frame = frames[0][1]
+            actual = worker.observe()
+            with patch.object(views, 'compose_view', return_value={'origin': 'declared-composer-result'}) as compose:
+                self.assertEqual(worker.economic_comparison_view(root_request, actual)['origin'], 'declared-composer-result')
+                self.assertEqual(compose.call_args.args[-1], ['declared-open-shop'])
+                runner.entry.request(control, 'actions', ['key:46'], 'uncovered-sale', False)
+                actual = worker.observe()
+                with self.assertRaises(ValueError):
+                    worker.economic_comparison_view(root_request, actual)
+                self.assertEqual(compose.call_count, 1)
+
+
+class MacroContracts(TestCase):
+    """Authorization/spend regressions through the real Worker and Entry path.
+
+    Numeric/native readings and solver output are declared protocol fixtures;
+    these cases make no claim about live OCR, scoring or game efficacy.
+    """
+    @contextlib.contextmanager
+    def worker(self, *, changes=None, dimensions='xp', hidden_board=False):
+        import currency_wars_refresh_offer as refresh_reader
+        changes = changes if changes is not None else [values(coins=62, xp=[44, 52]), values(coins=58, xp=[48, 52])]
+        initial = values(free_refreshes=2) if dimensions == 'free_refresh' else values()
+        with EconomyTests().worker(changes, initial=initial, joint_complete=False) as (worker, unused, control, frames):
+            worker.owner['run_token'] = control.OWNER['run_token']
+            control.assert_owner = lambda chat, token: self.assertEqual({'chat_id': chat, 'run_token': token}, control.OWNER)
+            control.write_json(worker.run / 'runner-owner.json', worker.owner)
+            original_status = control.status
+            control.status = lambda: {**original_status(), 'game': {'pid': 777, 'creation_id': '888', 'hwnd': 999}}
+            original_read = worker.perception.read
+            navigation_page = ['shop']
+            initial_observation = copy.deepcopy(worker.last_observation)
+            states = {hashlib.sha256(f[1]).hexdigest(): s for f, s in zip(frames, [initial] + changes)}
+            worker.declared_macro_states = states
+            def native_read(path, force=False, *, scope='full'):
+                try:
+                    observed = original_read(path, force=force, scope=scope)
+                except KeyError:
+                    # Declared harmless-animation frame, unchanged native
+                    # digits. Never offered as evidence of actual OCR quality.
+                    snapshot = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                    self.assertIn(snapshot, states)
+                    observed = {**copy.deepcopy(initial_observation), 'snapshot_id': snapshot, 'shop': shop(snapshot)}
+                observed['page'] = navigation_page[0]
+                observed['fields']['deployed'] = '0/7'
+                observed['read_contract'] = {'effective_scope': 'full', 'version': runner.READ_CONTRACT_VERSION, 'unread': []}
+                snapshot = observed['snapshot_id']
+                state = states[snapshot]
+                observed['semantic'].update(
+                    player_hud={'snapshot_id': snapshot, 'origin': 'native_player_hud', 'actor': 'player',
+                                'level': state['level'], 'xp': state['xp']},
+                    experience_offer={'snapshot_id': snapshot, 'origin': 'native_experience_offer',
+                                      'cost_checked': True, 'buy_cost': 4, 'buy_gain': None},
+                    refresh_offer={'snapshot_id': snapshot, 'source': 'declared_protocol_fixture'},
+                    team={'snapshot_id': snapshot, 'slots': [
+                        {'location': location, 'row': row, 'slot': index, 'snapshot_id': snapshot,
+                         'status': 'unknown' if hidden_board and navigation_page[0] == 'shop' and location == 'board' else 'empty'}
+                        for location, row, count in (('board', 'front', 4), ('board', 'back', 6), ('bench', 'bench', 9))
+                        for index in range(1, count + 1)]})
+                observed['semantic']['coins'].update(snapshot_id=snapshot, confidence=.99)
+                header = [250, 50, 325, 80] if observed['page'] == 'shop' else [410, 40, 510, 80]
+                observed['rows'].extend([{'text': '备战阶段', 'confidence': .99, 'box': header},
+                    {'text': '出战', 'confidence': .99, 'box': [1700, 730, 1800, 760]},
+                    {'text': '收起' if observed['page'] == 'shop' else '商店', 'confidence': .99,
+                     'box': [1580, 960, 1630, 980]}])
+                return observed
+            worker.perception.read = native_read
+            original_write = control.write_json
+            def navigate_write(path, value):
+                # Existing broker fixture paints clicks white. For native view
+                # navigation declare unchanged numeric assets and page toggle,
+                # while preserving its original input ID/terminal receipt.
+                if Path(path) == worker.run / 'result.json' and (value.get('completed') or [{}])[0].get('type') == 'click':
+                    navigation_page[0] = 'preparation' if navigation_page[0] == 'shop' else 'shop'
+                    payload = frames[control.action_index][1]
+                    control.frame = payload
+                    frame = value['observation']
+                    for name in ('original', 'snapshot'):
+                        Path(frame[name]).write_bytes(payload)
+                    frame['snapshot_sha256'] = frame['original_sha256'] = hashlib.sha256(payload).hexdigest()
+                original_write(path, value)
+            control.write_json = navigate_write
+            template = SelectedModelContracts().model()[2]['allocation']
+            def model(request, observed):
+                binding = {k: request[k] for k in ('request_id', 'resume_epoch', 'match_id')}
+                binding['snapshot_id'] = observed['snapshot_id']
+                allocation = copy.deepcopy(template)
+                done = observed['semantic']['player_hud']['xp'][0] >= 48
+                allocation.update(binding=binding, snapshot_id=observed['snapshot_id'])
+                budget = {'purchase': 0, 'experience': 0 if done or dimensions != 'xp' else 8, 'refresh': 2 if dimensions == 'refresh' else 0}
+                allocation['conditional_best'].update(budget=budget, purchase_refs=[])
+                allocation['allocation'].update(budget=budget, refresh_count_max=int(dimensions in ('refresh', 'free_refresh')))
+                allocation['bounds'] = {'node_max_refreshes': 3}
+                allocation['conditional_raw_actions'] = [] if done or dimensions == 'none' else [
+                    {'type': 'buy_xp', 'count': 2} if dimensions == 'xp' else {'type': 'refresh', 'price': 0 if dimensions == 'free_refresh' else 2}]
+                return {'origin': 'local_advisor_recomputation', **binding, 'source_verified': True,
+                        'input_sha256': hashlib.sha256(json.dumps(observed, sort_keys=True).encode()).hexdigest(),
+                        'allocation': allocation, 'full_observation': True}
+            worker.local_economic_allocation = model
+            def offer(unused_offer, unused_image, snapshot, unused_page):
+                free = states[snapshot]['free_refreshes']
+                return {'mode': 'free', 'free_remaining': free, 'paid_cost': None} if free else {
+                    'mode': 'paid', 'free_remaining': None, 'paid_cost': 2}
+            with patch.object(refresh_reader, 'consume_offer', side_effect=offer), \
+                    patch.object(runner.entry, 'owned_broker_identity', return_value={'pid': 123, 'creation_id': '456'}):
+                worker.observe()
+                worker.state['decision_request'] = None
+                worker.ask(worker.last_observation, 'shop_strategy', '声明原协议替身，验证有界宏')
+                self.assertEqual(worker.state['decision_request'].get('economic_macro_contract'), economy.MACRO_CONTRACT)
+                yield worker, control, frames
+
+    def reply(self, worker, **limits):
+        request = worker.state['decision_request']
+        caps = {'max_economic_actions': 2, 'max_total_spent': 8, 'max_paid_refreshes': 0,
+                'max_navigation_clicks': 0, 'max_wall_seconds': 30, **limits}
+        return {**{k: request[k] for k in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')},
+            'actions': [{'type': 'advance_local_economy_macro', 'expected_page': 'shop', 'reason': '测试有界逐笔重算', 'limits': caps}],
+            'context_update': {}}
+
+    def test_two_verified_original_effects_one_parent_and_fresh_children(self):
+        with self.worker() as (worker, control, frames):
+            reply = self.reply(worker)
+            parent = copy.deepcopy(worker.state['decision_request'])
+            animation = Image.open(io.BytesIO(frames[0][1]))
+            ImageDraw.Draw(animation).rectangle([5, 5, 8, 8], fill='blue')
+            payload = io.BytesIO()
+            animation.save(payload, format='PNG')
+            animation.close()
+            control.frame = payload.getvalue()
+            worker.declared_macro_states[hashlib.sha256(control.frame).hexdigest()] = values()
+            worker.observe()  # B: original parent plus authenticated pure observe.
+            count = worker.state['statistics']['decisions']
+            result = worker.execute_plan(reply)
+            self.assertEqual(control.action_index, 2, result.get('error'))
+            self.assertEqual(result['effects_verified'], 2)
+            self.assertEqual(result['gross_spent'], 8)
+            self.assertEqual(result['status'], 'consumed')
+            self.assertEqual(worker.economy_ledger('2-3')['spent']['experience'], 8)
+            self.assertIsNone(worker.economy_ledger('2-3')['pending'])
+            self.assertEqual(worker.state['statistics']['decisions'], count + 1)
+            self.assertEqual(result['parent'], parent)
+            self.assertNotEqual(result['children'][0]['request']['snapshot_id'], parent['snapshot_id'])
+            inputs = [p for p in result['publications'] if p['kind'] == 'experience']
+            self.assertEqual(len({p['request_id'] for p in inputs}), 2)
+            self.assertTrue(all(p['status'] == 'effect_verified' and p['receipt']['result']['ok'] for p in inputs))
+            sources = [c for c in result['children'] if c.get('selected_action')]
+            self.assertEqual(len({c['request']['request_id'] for c in sources}), 2)
+            self.assertEqual(len({c['request']['observation']['capture_request_id'] for c in sources}), 2)
+            self.assertEqual(len({c['request']['snapshot_id'] for c in sources}), 2)
+            self.assertEqual(len({c['input_sha256'] for c in sources}), 2)
+            self.assertTrue(all(Path(c['request']['original_png']).read_bytes() for c in sources))
+            with self.assertRaises(ValueError):
+                worker.execute_plan(reply)
+            self.assertEqual(control.action_index, 2)
+
+    def test_global_action_and_gross_caps_never_choose_cheaper_substitute(self):
+        for caps, expected in (({'max_economic_actions': 1}, 1), ({'max_total_spent': 4}, 1),
+                               ({'max_total_spent': 3}, 0)):
+            with self.subTest(caps=caps), self.worker() as (worker, control, frames):
+                result = worker.execute_plan(self.reply(worker, **caps))
+                self.assertEqual(control.action_index, expected, result.get('error'))
+                self.assertEqual(result['gross_spent'], 4 * expected)
+                self.assertNotEqual(result['outcome'], 'economy_complete')
+                self.assertNotIn('economy', worker.preparation_reviews)
+
+    def test_initial_external_and_attempted_observe_successors_are_rejected(self):
+        for mutation in ('physical', 'attempted', 'pending', 'handoff', 'fence_missing'):
+            with self.subTest(mutation=mutation), self.worker() as (worker, control, frames):
+                reply = self.reply(worker)
+                if mutation == 'physical':
+                    worker.observe()
+                    rid = worker.last_observation['capture_request_id']
+                    path = worker.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+                    receipt = runner.entry.read_json(path)
+                    receipt['request']['actions'] = [{'type': 'key', 'args': [46]}]
+                    receipt['result'].update(completed=receipt['request']['actions'], input_attempted=True,
+                                             attempted_actions=receipt['request']['actions'])
+                    control.write_json(path, receipt)
+                    worker.observe()
+                elif mutation == 'fence_missing':
+                    Path(worker.state['decision_request']['economic_macro_source_fence']['file']).unlink()
+                else:
+                    worker.observe()
+                    rid = worker.last_observation['capture_request_id']
+                    path = worker.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+                    receipt = runner.entry.read_json(path)
+                    if mutation == 'attempted':
+                        receipt['result']['input_attempted'] = True
+                    elif mutation == 'pending':
+                        receipt['result'] = None
+                        control.write_json(worker.run / 'result.json', {'id': 'unrelated'})
+                    else:
+                        receipt['request']['handoff'] = True
+                    control.write_json(path, receipt)
+                try:
+                    result = worker.execute_plan(reply)
+                except (ValueError, FileNotFoundError):
+                    result = None
+                self.assertEqual(control.action_index, 0, result)
+
+    def test_unknown_first_effect_keeps_original_pending_and_no_later_input(self):
+        with self.worker(changes=[values(coins=62, xp=[45, 52])]) as (worker, control, frames):
+            result = worker.execute_plan(self.reply(worker))
+            self.assertEqual(control.action_index, 1, result.get('error'))
+            pending = worker.economy_ledger('2-3')['pending']
+            self.assertEqual(pending['request_id'], result['publications'][0]['request_id'])
+            self.assertEqual(worker.state['decision_request']['kind'], 'economy_result')
+            self.assertEqual(result['outcome'], 'original_effect_unresolved')
+            self.assertEqual(result['effects_verified'], 0)
+            self.assertEqual(result['navigation_attempts'], 0)
+
+    def test_unknown_original_delivery_stops_without_later_observe_or_input(self):
+        with self.worker() as (worker, control, frames):
+            original_write = control.write_json
+            def write(path, value):
+                if Path(path) == worker.run / 'result.json' and value.get('input_attempted'):
+                    # Known physical attempt, missing terminal completion.
+                    value.update(ok=False, completed=[], attempted_actions=value['attempted_actions'])
+                original_write(path, value)
+            control.write_json = write
+            result = worker.execute_plan(self.reply(worker))
+            self.assertEqual(control.action_index, 1, result.get('error'))
+            self.assertEqual(result['effects_verified'], 0)
+            self.assertEqual(len(result['publications']), 1)
+            rid = result['publications'][0]['request_id']
+            self.assertEqual(worker.economy_ledger('2-3')['pending']['request_id'], rid)
+            self.assertEqual(worker.state['decision_request']['kind'], 'economy_result')
+            # Last original broker publication is the unknown physical input;
+            # no successor observe/navigation can bury that receipt.
+            self.assertEqual(control.published[-1]['id'], rid)
+
+    def test_stop_and_epoch_race_at_original_last_publication_boundary(self):
+        for race in ('stop', 'epoch', 'deadline'):
+            with self.subTest(race=race), self.worker() as (worker, control, frames):
+                original_write = control.write_json
+                def write(path, value):
+                    original_write(path, value)
+                    if value.get('schema') == economy.MACRO_CONTRACT and value.get('economic_attempts') == 1:
+                        if race == 'stop':
+                            (worker.run / 'runner-stop').touch()
+                        elif race == 'epoch':
+                            worker.epoch = lambda: 'new-epoch'
+                        else:
+                            worker.economy_macro_active['monotonic_deadline'] = 0
+                control.write_json = write
+                result = worker.execute_plan(self.reply(worker))
+                self.assertEqual(control.action_index, 0, result.get('error'))
+                self.assertEqual(result['effects_verified'], 0)
+                self.assertEqual(result['status'], 'consumed')
+                self.assertIsNone(worker.economy_ledger('2-3')['pending'])
+
+    def test_stop_during_publication_profile_io_still_precedes_real_publisher(self):
+        with self.worker() as (worker, control, frames):
+            original = worker.profile_span
+            @contextlib.contextmanager
+            def span(name, **kwargs):
+                with original(name, **kwargs) as value:
+                    if name == 'publish_request':
+                        (worker.run / 'runner-stop').touch()
+                    yield value
+            worker.profile_span = span
+            result = worker.execute_plan(self.reply(worker))
+            self.assertEqual(control.action_index, 0, result.get('error'))
+            self.assertEqual(result['economic_attempts'], 1)
+            self.assertFalse(result['publications'][0]['publication_attempted'])
+            self.assertEqual(result['gross_spent'], 0)
+            self.assertIsNone(worker.economy_ledger('2-3')['pending'])
+
+    def test_paid_refresh_cap_is_independent_of_gross_cap(self):
+        with self.worker(dimensions='refresh') as (worker, control, frames):
+            result = worker.execute_plan(self.reply(worker, max_paid_refreshes=0))
+            self.assertEqual(control.action_index, 0, result.get('error'))
+            self.assertIn('付费刷新', result.get('error', ''))
+            self.assertEqual(result['gross_spent'], 0)
+            self.assertNotIn('economy', worker.preparation_reviews)
+
+    def test_free_refresh_consumes_action_cap_even_without_spend(self):
+        with self.worker(dimensions='free_refresh', changes=[values(free_refreshes=1)]) as (worker, control, frames):
+            result = worker.execute_plan(self.reply(worker, max_economic_actions=1, max_total_spent=0))
+            self.assertEqual(control.action_index, 1, result.get('error'))
+            self.assertEqual(result['economic_attempts'], 1)
+            self.assertEqual(result['effects_verified'], 1)
+            self.assertEqual(result['paid_refresh_attempts'], 0)
+            self.assertEqual(result['gross_spent'], 0)
+            self.assertNotEqual(result['outcome'], 'economy_complete')
+
+    def test_each_asset_effect_requires_new_roster_navigation(self):
+        with self.worker(hidden_board=True) as (worker, control, frames):
+            result = worker.execute_plan(self.reply(worker, max_navigation_clicks=6))
+            self.assertEqual(control.action_index, 2, result.get('error'))
+            self.assertEqual(result['navigation_attempts'], 6)
+            self.assertEqual(result['outcome'], 'economy_complete', result.get('error'))
+            roster_sources = {child['request']['comparison_view']['roster_provenance']['capture_request_id']
+                              for child in result['children'] if child['request'].get('comparison_view')}
+            self.assertEqual(len(roster_sources), 3)
+
+    def test_navigation_cap_blocks_hidden_board_without_faking_completion(self):
+        with self.worker(hidden_board=True) as (worker, control, frames):
+            result = worker.execute_plan(self.reply(worker))
+            self.assertEqual(control.action_index, 0, result.get('error'))
+            self.assertIn('导航上限', result.get('error', ''))
+            self.assertEqual(result['navigation_attempts'], 0)
+            self.assertNotIn('economy', worker.preparation_reviews)
+
+    def test_navigation_pair_can_finish_only_with_fresh_model_completion(self):
+        for dimensions, caps, expected in (('none', 2, 'economy_complete'), ('xp', 1, 'stopped'), ('xp', 2, 'stopped')):
+            with self.subTest(dimensions=dimensions, caps=caps), self.worker(hidden_board=True, dimensions=dimensions) as (worker, control, frames):
+                count = worker.state['statistics']['decisions']
+                result = worker.execute_plan(self.reply(worker, max_total_spent=0, max_navigation_clicks=caps))
+                self.assertEqual(result['navigation_attempts'], caps, result.get('error'))
+                self.assertEqual(result['outcome'], expected, result.get('error'))
+                self.assertEqual(control.action_index, 0)
+                self.assertEqual(result['gross_spent'], 0)
+                self.assertEqual(worker.state['statistics']['decisions'], count + 1)
+                self.assertEqual(worker.preparation_reviews.get('economy', {}).get('completed'), True if dimensions == 'none' else None)
+                self.assertNotIn('battle_acceptance', worker.preparation_reviews)
+
+    def test_solver_expiry_and_active_reentry_produce_no_physical_input(self):
+        for mutation in ('expire', 'reentry'):
+            with self.subTest(mutation=mutation), self.worker() as (worker, control, frames):
+                reply = self.reply(worker)
+                original = worker.local_economic_allocation
+                def model(request, observed):
+                    if mutation == 'expire':
+                        worker.economy_macro_active['monotonic_deadline'] = 0
+                    else:
+                        with self.assertRaises(ValueError):
+                            worker.execute_plan(reply)
+                    return original(request, observed)
+                worker.local_economic_allocation = model
+                result = worker.execute_plan(reply)
+                self.assertEqual(control.action_index, 0 if mutation == 'expire' else 2, result.get('error'))
+
+    def test_new_rewards_options_capacity_or_node_stop_before_later_input(self):
+        for mutation in ('rewards', 'options', 'capacity', 'node', 'manual'):
+            with self.subTest(mutation=mutation), self.worker() as (worker, control, frames):
+                original_read = worker.perception.read
+                def read(path, force=False, *, scope='full'):
+                    observed = original_read(path, force, scope=scope)
+                    if control.action_index:
+                        semantic, snapshot = observed['semantic'], observed['snapshot_id']
+                        if mutation == 'rewards':
+                            semantic['rewards'] = {'snapshot_id': snapshot, 'targets': [{'kind': 'orb'}]}
+                        elif mutation == 'options':
+                            semantic['options'] = [{'title': 'new-choice'}]
+                        elif mutation == 'capacity':
+                            semantic['team']['capacity'] = {'snapshot_id': snapshot, 'overflow_count': 1}
+                        elif mutation == 'node':
+                            observed['fields']['stage'] = '2-4'
+                        else:
+                            (worker.run / 'runner-manual.json').write_text('{}', encoding='utf-8')
+                    return observed
+                worker.perception.read = read
+                result = worker.execute_plan(self.reply(worker))
+                self.assertEqual(control.action_index, 1, result.get('error'))
+                self.assertEqual(result['navigation_attempts'], 0)
+                self.assertNotEqual(result['outcome'], 'economy_complete')
+
+
 class EconomyTests(TestCase):
     def test_f_is_page_specific_and_old_e_is_rejected_by_real_plan_guard(self):
         for page in ('preparation', 'shop'):
@@ -182,7 +735,7 @@ class EconomyTests(TestCase):
             {'values': values(coins=64), 'shop': [], 'shop_complete': True}, expected_cost=2)['outcome'], 'success')
 
     @contextlib.contextmanager
-    def worker(self, transitions=None, initial=None):
+    def worker(self, transitions=None, initial=None, *, joint_complete=True):
         fixture = compatibility.RuntimeCompatibilityTests()
         with fixture.manual_bridge_fixture() as (runtime, records, owner, control, reader):
             (runtime / 'runner-manual.json').unlink()
@@ -218,7 +771,8 @@ class EconomyTests(TestCase):
             worker.epoch = lambda: 'old-epoch'
             worker.context = {name: None for name in ('coins', 'team', 'gear', 'xp', 'bonds', 'economy_plan', 'preparation_review')}
             worker.preparation_scope = ('match', '2-3', 'old-epoch')
-            worker.preparation_reviews = {phase: {'completed': True} for phase in runner.coaching.PHASES[:3]}
+            worker.preparation_reviews = {phase: {'completed': True}
+                for phase in ('rewards', 'startup_guide', 'inventory_cleanup')}
             worker.live_mode = {'match_id': 'match', 'value': '标准博弈'}
             worker.knowledge = {'roles': {}, 'guide': {}, 'progression': {}}
             worker.history, worker.inspections, worker.inspection_attempted = {}, {}, set()
@@ -226,6 +780,24 @@ class EconomyTests(TestCase):
             worker.publish = lambda **changes: worker.state.update(changes)
             worker.log_events = []
             worker.log = worker.log_events.append
+            if joint_complete:
+                # These old synthetic receipt fixtures do not exercise model
+                # budget acceptance. Real selected-model matching has separate
+                # focused checks below, without this compatibility stub.
+                worker.assert_model_budget = lambda *unused: None
+                # These numeric fixtures isolate transaction/receipt invariants.
+                # The default real model remains incomplete; its gate is tested
+                # separately with joint_complete=False, never claimed game evidence.
+                worker.local_economic_allocation = lambda request, observed: {
+                    'origin': 'local_advisor_recomputation', 'request_id': request['request_id'],
+                    'snapshot_id': observed['snapshot_id'], 'match_id': worker.active_match_id,
+                    'resume_epoch': worker.epoch(), 'full_observation': True, 'source_verified': True,
+                    'input_sha256': 'a' * 64,
+                    'allocation': {'schema': 'currency-wars-economic-allocation/v1',
+                        'snapshot_id': observed['snapshot_id'], 'binding': {'request_id': request['request_id'],
+                            'snapshot_id': observed['snapshot_id'], 'match_id': worker.active_match_id, 'resume_epoch': worker.epoch()},
+                        'status': 'conditional_joint_decision',
+                        'complete_dimensions': {'purchase': True, 'experience': True, 'refresh': True}}}
             worker.observe()
             worker.ask(worker.last_observation, 'shop_strategy', '测试当前请求')
             current = worker.state['decision_request']

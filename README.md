@@ -4,6 +4,10 @@
 
 **当前发布是源码版。战略决策仍需要 Codex 在本机监督并回答请求，没有配置独立 AI 服务，也没有验证另一台电脑可无人值守完成整局。** 界面名称中的“一条龙”是目标，不是当前自动通关保证。
 
+## MCP 接口（可选）
+
+本机已接入 Codex 的 `currency-wars` stdio MCP，提供状态读取和原执行器的受检计划提交。安装、会话绑定与当前限制见 [MCP 说明](mcp/README.md)，本机证据见 [当前验证记录](docs/CURRENT_VERIFICATION.json)。这是连接层；独立决策求解器和无人值守整局尚未交付。其他电脑需单独安装及注册。
+
 ## 在另一台电脑安装
 
 要自动同步，请安装 Git 并运行 `git clone https://github.com/gkcc/Currency-Wars-Automation.git`。也可下载 ZIP 解压，但 ZIP 安装只会提示改用 Git clone，不会替换你的目录。路径可自行选择，不要求特定盘符，也不要求安装 Codex Agent Workflow 技能。
@@ -92,6 +96,8 @@ F8 是独立暂停键，需点击状态文字明确继续。F9 切换鼠标穿�
 公开仓库排除了截图、会话、账号配置、运行日志、既有验证记录和从个人游戏截图裁剪的商店、上场及战利品模板。商店识别需要用户在本机自行提供并核验 `tools/shop_reader_resources/` 中的 `SOURCES.json`、`names.json`、价格/空槽/推荐标记模板；缺少模板时返回错误或未知，不能据此自动购买。上场和战利品固定动作还依赖本机 `tools/free_lineup_resources/`、`tools/loot_resources/`；模板缺失或不匹配时不执行对应动作。这些资源尚没有自动校准入口。
 
 开始和恢复还需要本机 Codex 审查当前核心源码，并写入有效的 `docs/RUNNER_READY.json`。该记录必须关联当前会话和源码 SHA256，包含真实独立审查的 PASS 身份和时间。安装脚本不会伪造或复用另一台机器的就绪记录；缺项时界面会显示未就绪，开始/恢复保持禁用。
+
+新会话的正式审批通过执行器 `publish-ready --chat-id <ROOT> --review-file <独立审批JSON> --review-sha256 <文件SHA256>` 发布。ROOT汇总当前用户授权，独立审查者核当前完整运行时来源以及core/Rust审查；先确认所有已登记控制器退出，字段和命令见 [RUNNER_PROTOCOL](docs/RUNNER_PROTOCOL.md)。入口不启动游戏、不沿用旧实机结果，也不放宽Start检查。
 
 需要 Codex 监督时，在该项目内开启 Codex 会话，并使用其实际会话身份启动，例如 `Start.ps1 -ChatId <当前会话ID>`。执行器会把投资、购买、装备和强化等判断转为有时限、与当前画面绑定的战略请求；监督代理通过固定 `decide` CLI 回答。GUI 留言只存入本地队列，没有内置模型连接或自动发送功能。
 

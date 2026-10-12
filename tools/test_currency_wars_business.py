@@ -7,12 +7,110 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
+from PIL import Image
 
 import currency_wars_runner as runner
 import test_currency_wars_economy as economics
 
 
 class BusinessTests(TestCase):
+    def resolved_xp_fixture(self, worker, control):
+        """Declared historical evidence for the input-free projection contract."""
+        self.bind(worker, control)
+        root = worker.records
+        def write(name, value):
+            path = root / name
+            payload = json.dumps(value, ensure_ascii=False, sort_keys=True).encode('utf-8')
+            path.write_bytes(payload)
+            return path, hashlib.sha256(payload).hexdigest()
+        rid, stage = 'historical-xp', '2-3'
+        actions = [{'type': 'key', 'args': [70]}, {'type': 'wait', 'args': [.7]}]
+        before_path, after_path = root / 'historical-before.png', root / 'historical-after.png'
+        # Declared historical facts, not an OCR test or simulated live effect.
+        Image.new('RGB', (8, 8), (10, 20, 30)).save(before_path)
+        Image.new('RGB', (8, 8), (30, 20, 10)).save(after_path)
+        before_hash = hashlib.sha256(before_path.read_bytes()).hexdigest()
+        after_hash = hashlib.sha256(after_path.read_bytes()).hexdigest()
+        pending = {'request_id': rid, 'kind': 'experience', 'cost': 4,
+                   'before': {'stage': stage, 'values': {'coins': 6}, 'snapshot_id': before_hash},
+                   'broker_actions': actions, 'after_png': str(after_path), 'after_snapshot_id': after_hash}
+        ledger = runner.economy.new_ledger()
+        ledger['pending'] = copy.deepcopy(pending)
+        original = {'schema': runner.economy.SCHEMA, 'run_id': worker.owner['run_id'],
+                    'match_id': worker.active_match_id, 'stage': stage, 'ledger': ledger}
+        ledger_path, ledger_hash = write('economy-original-xp.json', original)
+        pending_hash = hashlib.sha256(json.dumps(pending, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
+        receipt = {'id': rid, 'origin': {'run_id': worker.owner['run_id'], 'chat_id': worker.owner['chat_id']},
+                   'request': {'id': rid, 'kind': 'actions', 'chat_id': worker.owner['chat_id'], 'handoff': False, 'actions': actions},
+                   'result': {'id': rid, 'ok': True, 'completed': actions, 'input_attempted': True, 'attempted_actions': actions[:1]}}
+        receipt_path, receipt_hash = write('historical-receipt.json', receipt)
+        ids = {'request_id': rid, 'original_run_id': worker.owner['run_id'], 'match_id': worker.active_match_id}
+        proof = {**ids, 'outcome': {'outcome': 'success', 'observed_spent': 4},
+                 'receipt_path': str(receipt_path), 'receipt_sha256': receipt_hash,
+                 'before': {'png': str(before_path), 'sha256': before_hash, 'native_values': {'coins': 6}},
+                 'after': {'png': str(after_path), 'sha256': after_hash, 'native_values': {'coins': 2}}}
+        proof_path, proof_hash = write('historical-proof.json', proof)
+        verdict = {**ids, 'status': 'verified_original_effect', 'kind': 'experience', 'retry_allowed': False,
+                   'observed_spent': 4, 'original_ledger_sha256': ledger_hash,
+                   'original_pending_sha256': pending_hash, 'original_input_receipt_sha256': receipt_hash}
+        review_path, review_hash = write('historical-review.json', {
+            'status': 'PASS', 'root_chat_id': worker.owner['chat_id'], 'reviewer_chat_id': 'different-reviewer',
+            'archive_xp_effect_verdict': verdict})
+        resolution = {'request_id': rid, 'origin_run_id': worker.owner['run_id'], 'stage': stage,
+                      'kind': 'experience', 'outcome': 'success', 'actual_spent': 4, 'input_resent': False,
+                      'observed_at': '2026-10-12T12:00:00+00:00', 'original_ledger_file': str(ledger_path),
+                      'original_ledger_sha256': ledger_hash, 'original_pending_sha256': pending_hash,
+                      'proof_file': str(proof_path), 'proof_sha256': proof_hash,
+                      'independent_review_file': str(review_path), 'independent_review_sha256': review_hash}
+        stored = {**original, 'record_file': str(ledger_path)}
+        worker.business['economy'][stage] = stored
+        worker.business['economic_resolutions'] = [resolution]
+        worker.save_business()
+        return stored, ledger_path
+
+    def test_committed_resolution_survives_original_start_recovery_without_replay(self):
+        with economics.EconomyTests().worker() as (worker, record, control, frames):
+            stored, original_path = self.resolved_xp_fixture(worker, control)
+            original_bytes = original_path.read_bytes()
+            contract = runner.prepare_business_start(worker.state, control)
+            recovered = runner.entry.read_json(Path(contract['checkpoint']))
+            projected = recovered['economy']['2-3']
+            self.assertEqual(projected['ledger']['spent']['experience'], 4)
+            self.assertIsNone(projected['ledger']['pending'])
+            self.assertEqual(runner.resolved_economic_summary(projected, recovered), projected)
+            # Recovering the same immutable old node snapshot a second time
+            # must derive four spent again, never eight or a resurrected pending.
+            again = runner.prepare_business_start(worker.state, control)
+            recovered_again = runner.entry.read_json(Path(again['checkpoint']))
+            self.assertEqual(recovered_again['economy']['2-3']['ledger']['spent']['experience'], 4)
+            self.assertIsNone(recovered_again['economy']['2-3']['ledger']['pending'])
+            self.assertEqual(original_path.read_bytes(), original_bytes)
+            self.assertEqual(control.action_index, 0)
+
+    def test_resolution_mismatch_does_not_clear_unknown_or_newer_transactions(self):
+        with economics.EconomyTests().worker() as (worker, record, control, frames):
+            stored, original_path = self.resolved_xp_fixture(worker, control)
+            for changed in ('amount', 'pending_hash', 'duplicate', 'newer_ledger'):
+                with self.subTest(changed=changed):
+                    business, candidate = copy.deepcopy(worker.business), copy.deepcopy(stored)
+                    resolution = business['economic_resolutions'][0]
+                    if changed == 'amount':
+                        resolution['actual_spent'] = 5
+                    elif changed == 'pending_hash':
+                        resolution['original_pending_sha256'] = '0' * 64
+                    elif changed == 'duplicate':
+                        business['economic_resolutions'].append(copy.deepcopy(resolution))
+                    else:
+                        candidate['ledger']['spent']['purchase'] = 1
+                    before = copy.deepcopy(candidate)
+                    with self.assertRaises(ValueError):
+                        runner.resolved_economic_summary(candidate, business)
+                    self.assertEqual(candidate, before)
+            unrelated = copy.deepcopy(stored)
+            unrelated['ledger']['pending']['request_id'] = 'different-unresolved-input'
+            self.assertEqual(runner.resolved_economic_summary(unrelated, worker.business), unrelated)
+            self.assertEqual(control.action_index, 0)
+
     def bind(self, worker, control):
         worker.owner.update(runner_pid=41, runner_creation_id='410', launch_id='old-launch',
                             run_token=control.OWNER['run_token'])
@@ -134,7 +232,9 @@ class BusinessTests(TestCase):
     def test_complete_original_receipt_is_redacted_immutable_and_archived_before_launch(self):
         with economics.EconomyTests().worker() as (worker, record, control, frames):
             self.bind(worker, control)
-            receipt = runner.entry.request(control, 'actions', ['key:27'], 'external-original', False)
+            # Receipt preservation also applies to a legitimate read-only
+            # request; raw runner-owned physical input requires business intent.
+            receipt = runner.entry.request(control, 'actions', ['observe'], 'external-original', False)
             discovered = worker.state
             current = runner.PROJECT / 'CURRENT.json'
             control.write_json(current, discovered)
@@ -143,16 +243,17 @@ class BusinessTests(TestCase):
             lease = SimpleNamespace(children=lambda *a, **k: None)
             args = SimpleNamespace(chat_id=worker.owner['chat_id'], max_seconds=60, max_matches=1, continue_matches=False)
             location = {'schema': 1, 'source': 'standalone',
-                        'runtime_root': str(worker.run.parent.resolve()), 'installation_id': None}
+                        'runtime_root': str(runner.entry.artifacts.default_root()), 'installation_id': None}
             class LaunchReached(Exception):
                 pass
             def launch(command, **unused):
                 self.assertIn('--business-resume-json', command)
                 self.assertEqual(json.loads(command[command.index('--runtime-location-json') + 1]), location)
+                self.assertEqual(unused['env']['TEMP'], str(Path(location['runtime_root']).parent))
                 self.assertTrue((worker.records / 'business-archive.json').exists())
                 archived = runner.entry.read_json(worker.records / 'business-receipts' /
                     (hashlib.sha256(b'external-original').hexdigest() + '.json'))
-                self.assertEqual(archived['request']['actions'], [{'type': 'key', 'args': [27.]}])
+                self.assertEqual(archived['request']['actions'], [{'type': 'observe', 'args': []}])
                 self.assertEqual(archived['result'], runner.redact(receipt))
                 self.assertNotIn('run_token', json.dumps(archived))
                 raise LaunchReached()
@@ -162,7 +263,6 @@ class BusinessTests(TestCase):
                     patch.object(runner.subprocess, 'CREATE_NO_WINDOW', 0, create=True):
                 with self.assertRaises(LaunchReached):
                     runner._start_cli(args, lease)
-                select_root.assert_called_once_with(runner.entry.PINNED, inherited=None)
             item = runner.await_existing_receipt(worker.run, control, 'external-original', 0)
             changed = copy.deepcopy(item)
             changed['result']['ok'] = False
@@ -242,6 +342,15 @@ class BusinessTests(TestCase):
                     result['shop']['input']['sha256'] = result['snapshot_id']
                     return result
                 fresh.perception.read, control.frame = changed_reader, changed.getvalue()
+                if extra_input is True:
+                    # Raw runner-owned input is rejected before publication;
+                    # unknown receipts below still exercise the resume fence.
+                    before = control.action_index
+                    with self.assertRaisesRegex(ValueError, 'current business intent'):
+                        runner.entry.request(control, 'actions', ['key:27'], 'intervening', False)
+                    self.assertEqual(control.action_index, before)
+                    self.assertTrue(fresh.business_needs_review)
+                    continue
                 if extra_input:
                     runner.entry.request(control, 'actions', ['observe'] if extra_input == 'unknown_observe' else ['key:27'], 'intervening', False)
                     if extra_input == 'unknown_observe':

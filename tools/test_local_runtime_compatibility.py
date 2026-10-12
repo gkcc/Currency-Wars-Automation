@@ -203,8 +203,11 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             (runtime / 'runner-manual.json').unlink()
             initial = entry.request(control, 'actions', ['observe'], 'initial', False)
             worker.read_frame(initial)
+            worker.preparation_scope = ('match', '2-3', worker.epoch())
+            worker.preparation_reviews = {'rewards': {'completed': True}}
             worker.last_observation['rows'] = [
                 {'text': '备战阶段', 'confidence': .99, 'box': [420, 25, 530, 60]},
+                {'text': '商店', 'confidence': .99, 'box': [570, 25, 680, 60]},
                 {'text': '出战', 'confidence': .99, 'box': [1760, 720, 1860, 770]},
             ]
             actual_request = entry.request
@@ -219,8 +222,10 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                 return result
 
             with patch.object(entry, 'request', side_effect=request):
-                after = worker.command(['click:1:2'], 'fixture input', 'preparation', 'unknown effect')
-            self.assertEqual(calls, [['click:1:2'], ['observe']])
+                after = worker.command(['click:625:42.5'], 'fixture input', 'preparation', 'unknown effect',
+                    action={'type': 'click_text', 'text': '商店', 'exact': True,
+                            'reason': 'fixture navigation', 'expected_page': 'preparation'})
+            self.assertEqual(calls, [['click:625:42.5'], ['observe']])
             self.assertEqual(worker.state['statistics']['local_inputs'], 1)
             self.assertEqual(after['snapshot_id'], hashlib.sha256(control.frame).hexdigest())
             self.assertEqual(after['page'], 'preparation')
@@ -300,7 +305,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             self.assertFalse(worker.consume_manual_results())
             self.assertFalse(getattr(worker, 'manual_results_rejected', set()))
             self.current_manual_review(worker, item['review'])
-            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'shop_inspection')
             self.assertEqual(set(worker.preparation_reviews), {'rewards'})
             self.assertEqual(worker.preparation_reviews['rewards']['proof']['resume_epoch'], 'new-epoch')
             self.assertEqual(item['binding']['old_epoch'], 'old-epoch')
@@ -373,7 +378,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             count = len(control.published)
             self.assertFalse(worker.consume_manual_results())
             status = worker.preparation_checklist(worker.last_observation)
-            self.assertEqual(status['phase'], 'startup_guide')
+            self.assertEqual(status['phase'], 'shop_inspection')
             self.assertEqual(set(worker.preparation_reviews), {'rewards'})
             self.assertFalse(status['battle_ready'])
             self.assertIsNone(runner.manual_state(runtime))
@@ -405,7 +410,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
                       'gear_checked': True, 'investments_checked': True, 'investments': []}
             with self.assertRaises(ValueError):
                 worker.review_preparation({'proof': proof, 'value': lineup}, manual_record=item)
-            self.assertEqual(worker.preparation_checklist(fresh)['phase'], 'lineup_equipment')
+            self.assertEqual(worker.preparation_checklist(fresh)['phase'], 'shop_inspection')
 
     def test_old_completed_reviews_do_not_allow_current_underfilled_battle_input(self):
         worker = object.__new__(runner.Worker)
@@ -418,6 +423,12 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             {'text': '出战', 'box': [1750, 725, 1850, 770], 'confidence': .99}]}
         with self.assertRaises(ValueError):
             worker.guard_preparation_action({'type': 'click_text', 'text': '出战', 'exact': True}, actual)
+        # Explicit synthetic completed-shop premise isolates the arithmetic gate.
+        # This is fixture setup, not evidence of a real native shop inspection.
+        worker.preparation_reviews['shop_inspection'] = {
+            'completed': True, 'origin': 'current_native_shop',
+            'proof': {'source': 'current_native_shop', 'snapshot_id': 'synthetic',
+                      'capture_request_id': 'synthetic', 'frame_id': 'synthetic'}}
         # This isolates the population arithmetic gate, not full lineup proof
         # or a supported 12-slot layout. Player level remains a different field.
         actual['fields']['level'] = '9'
@@ -575,7 +586,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             count = len(control.published)
             self.assertFalse(worker.consume_manual_results())
             self.current_manual_review(worker, review)
-            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'shop_inspection')
             self.assertEqual(len(control.published), count)
 
     def test_manual_unknown_input_does_not_poison_a_new_current_review(self):
@@ -595,7 +606,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             count = len(control.published)
             self.assertFalse(worker.consume_manual_results())
             self.current_manual_review(worker, {**review, 'findings': 'Independent current request: reward area now clear'})
-            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'shop_inspection')
             self.assertFalse(worker.consume_manual_results())
             self.assertEqual(len(control.published), count)
             self.assertEqual(entry.read_json(runtime / 'manual-results' / (item['checkpoint_id'] + '.json'))['outcome'], 'unknown')
@@ -646,7 +657,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             count = len(control.published)
             self.current_manual_review(worker, {**review, 'completed': True, 'outcome': 'success',
                 'all_claimed': True, 'rescanned_after_claim': True, 'findings': 'Current remaining rewards independently reviewed'})
-            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'shop_inspection')
             self.assertEqual(len(control.published), count)
 
     def test_manual_no_effect_coin_check_does_not_exempt_a_later_drag_from_fence(self):
@@ -680,7 +691,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             source = worker.verified_manual_source(item, fresh)
             self.assertEqual(source['preparation_stage'], '2-3')
             self.current_manual_review(worker, item['review'])
-            self.assertEqual(worker.preparation_checklist(fresh)['phase'], 'startup_guide')
+            self.assertEqual(worker.preparation_checklist(fresh)['phase'], 'shop_inspection')
 
     def test_manual_inventory_reconciliation_requires_all_nineteen_unique_native_slots(self):
         from currency_wars_state_reader import native_slots
@@ -691,7 +702,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             reader.frames[digest]['semantic']['team']['snapshot_id'] = digest
             reader.frames[digest]['semantic']['team']['capacity'] = {
                 'snapshot_id': digest, 'overflow_checked': True, 'overflow_count': 0}
-            for phase in runner.coaching.PHASES[:3]:
+            for phase in runner.coaching.PHASES[:4]:
                 checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', phase, reader=reader)
                 review = {'phase': phase, 'stage': '2-3', 'completed': True, 'reviewer': 'supervising_agent',
                           'findings': 'Fixture phase; current proof still required'}
@@ -703,6 +714,8 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             proof = {'source': 'observed_screen', 'resume_epoch': worker.epoch(),
                      'snapshot_id': worker.last_observation['snapshot_id'], 'evidence_file': worker.last_observation['evidence_file']}
             worker.preparation_reviews = {phase: {'completed': True, 'proof': proof} for phase in runner.coaching.PHASES[:2]}
+            worker.preparation_reviews['shop_inspection'] = {'completed': True, 'origin': 'current_native_shop',
+                'proof': {'source': 'current_native_shop', 'snapshot_id': 'synthetic', 'capture_request_id': 'synthetic', 'frame_id': 'synthetic'}}
             worker.last_observation['semantic']['team']['slots'] = slots[:1]
             count = len(control.published)
             self.assertFalse(worker.consume_manual_results())
@@ -773,10 +786,11 @@ class RuntimeCompatibilityTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.current_manual_review(worker, {**item['review'], 'all_claimed': False})
             self.current_manual_review(worker, item['review'])
-            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'inventory_cleanup')
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'shop_inspection')
 
     def test_boss_result_only_advances_once_and_does_not_confirm_a_match(self):
         worker = object.__new__(runner.Worker)
+        worker.run = self.enterContext(artifacts.scratch_directory('currency-wars-compat-owned-fixture'))
         worker.node_guard = lambda observed: True
         worker.wait_page, worker.wait_started, worker.active_match_id = None, 0, 'match'
         worker.panel_index, worker.panel_state = len(runner.PANELS), 'enter'
@@ -813,6 +827,8 @@ class RuntimeCompatibilityTests(unittest.TestCase):
         worker.preparation_scope = ('match', '2-3', 'epoch')
         worker.preparation_reviews = {phase: {'completed': True, 'proof': {'snapshot_id': phase}}
                                       for phase in runner.coaching.PHASES}
+        worker.preparation_reviews['shop_inspection'] = {'completed': True, 'origin': 'current_native_shop',
+            'proof': {'source': 'current_native_shop', 'snapshot_id': 'synthetic', 'capture_request_id': 'synthetic', 'frame_id': 'synthetic'}}
         worker.strategy_reads, worker.context = {}, {}
         worker.log = lambda event: None
         self.assertTrue(worker.preparation_checklist({'page': 'guide', 'fields': {}})['economy_allowed'])
@@ -1142,6 +1158,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
 
     def test_supervised_reviews_require_current_request_and_guide_second_entry(self):
         worker = object.__new__(runner.Worker)
+        worker.run = self.enterContext(artifacts.scratch_directory('currency-wars-compat-owned-fixture'))
         worker.active_match_id, worker.last_preparation_stage = 'match', '2-3'
         worker.epoch = lambda: 'epoch'
         worker.last_observation = {'page': 'preparation', 'fields': {'stage': '2-3'}}
@@ -1209,7 +1226,10 @@ class RuntimeCompatibilityTests(unittest.TestCase):
         worker.active_match_id, worker.last_preparation_stage = 'match', '2-3'
         worker.epoch = lambda: 'epoch'
         worker.preparation_scope = ('match', '2-3', 'epoch')
-        worker.preparation_reviews = {phase: {'completed': True} for phase in runner.coaching.PHASES[:3]}
+        worker.preparation_reviews = {phase: {'completed': True}
+            for phase in ('rewards', 'startup_guide', 'inventory_cleanup')}
+        worker.preparation_reviews['shop_inspection'] = {'completed': True, 'origin': 'current_native_shop',
+            'proof': {'source': 'current_native_shop', 'snapshot_id': 'synthetic', 'capture_request_id': 'synthetic', 'frame_id': 'synthetic'}}
         worker.inspection_attempted, worker.context = set(), {}
         worker.live_mode = {'value': '超频博弈', 'match_id': 'match'}
         worker.cached_guide_binding = None
@@ -1292,6 +1312,7 @@ class RuntimeCompatibilityTests(unittest.TestCase):
 
     def test_recognized_update_notice_only_closes_and_rereads(self):
         worker = object.__new__(runner.Worker)
+        worker.run = self.enterContext(artifacts.scratch_directory('currency-wars-compat-owned-fixture'))
         worker.wait_page, worker.wait_started = None, None
         worker.node_guard = lambda observed: True
         commands = []

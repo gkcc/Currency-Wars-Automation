@@ -309,7 +309,147 @@ def detect(image, page, rows, snapshot_id):
     return result
 
 
-def _context_images(original, actual, original_png, current_png, *, allow_coin_change=False):
+def _shop_probability_visible_semantics(original, actual, images):
+    """Five fixed non-clicked percentages: full glyph pixels, not OCR padding.
+
+    The opaque control ends at y407; the animated border below is not text.
+    Values, unique cell assignment and full control pixels must stay unchanged.
+    Prices, wallet, target and every other row retain the original strict guard.
+    """
+    import cv2
+    from currency_wars_visual_guards import clean, _navigation_visible_semantics
+    if original.get('page') != 'shop' or actual.get('page') != 'shop':
+        return False
+    cells = ((952, 369, 1052, 407), (1068, 369, 1143, 407),
+             (1158, 369, 1233, 407), (1245, 369, 1320, 407), (1332, 369, 1410, 407))
+    selected = []
+    for observed in (original, actual):
+        chosen = []
+        for roi in cells:
+            rows = [row for row in observed.get('rows', []) if _inside(row.get('box'), roi)]
+            if len(rows) != 1:
+                return False
+            row = rows[0]
+            score = row.get('confidence')
+            if (type(score) not in (int, float) or not .95 <= score <= 1.
+                    or not re.fullmatch(r'(?:100|[0-9]{1,2})(?:\.[0-9]+)?%', clean(row.get('text', '')))):
+                return False
+            if float(clean(row['text'])[:-1]) > 100:
+                return False
+            chosen.append(row)
+        selected.append(chosen)
+    for before, after in zip(*selected):
+        if (clean(before['text']) != clean(after['text'])
+                or any(abs(a-b) > 6 for a,b in zip(before['box'], after['box']))):
+            return False
+    # A detector's one-pixel padding can include the animated top border at
+    # y369. Its actual font ink must all remain inside the opaque body.
+    for rgb, rows in zip(images, selected):
+        for roi, row in zip(cells, rows):
+            left, top, right, bottom = row['box']
+            if top < 370:
+                border = cv2.cvtColor(rgb[top:370, left:right], cv2.COLOR_RGB2GRAY)
+                if np.max(border) >= 96:
+                    return False
+            # Each cell must support every digit plus the percent slash.
+            # The colored rarity icon lies left of this fixed text region;
+            # other cells cannot provide evidence for missing local glyphs.
+            glyph_gray = cv2.cvtColor(rgb[370:407, roi[0]+30:roi[2]], cv2.COLOR_RGB2GRAY)
+            mask = (glyph_gray >= 128).astype(np.uint8)
+            _, _, stats, _ = cv2.connectedComponentsWithStats(mask)
+            tall_glyphs = sum(width >= 3 and height >= 12 and area >= 16
+                              for _, _, width, height, area in stats[1:])
+            digit_count = sum(char.isdigit() for char in clean(row['text']))
+            if tall_glyphs < digit_count + 1:
+                return False
+    crops = [rgb[370:407, 936:1428] for rgb in images]
+    gray = cv2.cvtColor(crops[0], cv2.COLOR_RGB2GRAY).astype(np.int16)
+    if (np.ptp(gray) < 64 or np.count_nonzero(np.abs(np.diff(gray, axis=1)) > 16) < 24
+            or np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))) > 2):
+        return False
+    rest = [{**observed, 'rows': [row for row in observed.get('rows', [])
+                                if all(row is not chosen for chosen in picked)]}
+            for observed, picked in zip((original, actual), selected)]
+    return _navigation_visible_semantics(*rest)
+
+
+def _shop_caption_visible_semantics(original, actual, images):
+    """One non-clicked native caption may have a jittered OCR rectangle.
+
+    Receipt-bound shop frames keep this entire glyph/icon ROI within
+    RGB delta 3. Its bottom is above the animated slot border (y=640); no
+    text pixels are masked. Every other row retains the navigation guard.
+    """
+    import cv2
+    from currency_wars_visual_guards import clean, _navigation_visible_semantics
+    if original.get('page') != 'shop' or actual.get('page') != 'shop':
+        return False
+    label, roi = '后台区域', (916, 608, 1012, 639)
+    selected = []
+    for observed in (original, actual):
+        rows = [row for row in observed.get('rows', []) if clean(row.get('text', '')) == label]
+        if len(rows) != 1:
+            return False
+        row = rows[0]
+        box, score = row.get('box'), row.get('confidence')
+        if (not isinstance(box, list) or len(box) != 4 or any(type(x) is not int for x in box)
+                or type(score) not in (int, float) or not .99 <= score <= 1.
+                or not (roi[0] <= box[0] < box[2] <= roi[2] and roi[1] <= box[1] < box[3] <= roi[3])):
+            return False
+        selected.append(row)
+    if any(abs(a-b) > 6 for a, b in zip(selected[0]['box'], selected[1]['box'])):
+        return False
+    x, y, right, bottom = roi
+    crops = [rgb[y:bottom, x:right] for rgb in images]
+    gray = cv2.cvtColor(crops[0], cv2.COLOR_RGB2GRAY).astype(np.int16)
+    if (np.ptp(gray) < 64 or np.count_nonzero(np.abs(np.diff(gray, axis=1)) > 16) < 24
+            or np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))) > 3):
+        return False
+    rest = [{**observed, 'rows': [row for row in observed.get('rows', []) if row is not caption]}
+            for observed, caption in zip((original, actual), selected)]
+    return (_navigation_visible_semantics(*rest)
+            or _shop_probability_visible_semantics(*rest, images))
+
+
+def _reward_visible_semantics(original, actual, images):
+    """Keep global semantics strict except one native, non-clicked caption.
+
+    Three native frames retain this caption's pixels (RGB delta <=1), while
+    its OCR box jitters by five pixels. All other rows use the original guard.
+    """
+    from currency_wars_visual_guards import clean, _navigation_ink_equal, _navigation_visible_semantics
+    if _navigation_visible_semantics(original, actual):
+        return True
+    if original.get('page') == 'shop' and actual.get('page') == 'shop':
+        return _shop_caption_visible_semantics(original, actual, images)
+    if original.get('page') != 'preparation' or actual.get('page') != 'preparation':
+        return False
+    label, roi = '吕后台区域', (900, 550, 1020, 605)
+    selected = []
+    for observed in (original, actual):
+        rows = [row for row in observed.get('rows', []) if clean(row.get('text', '')) == label]
+        if len(rows) != 1:
+            return False
+        row = rows[0]
+        box, score = row.get('box'), row.get('confidence')
+        if (not isinstance(box, list) or len(box) != 4 or any(type(x) is not int for x in box)
+                or type(score) not in (int, float) or not .90 <= score <= 1.
+                or not (roi[0] <= box[0] < box[2] <= roi[2] and roi[1] <= box[1] < box[3] <= roi[3])):
+            return False
+        selected.append(row)
+    if any(abs(a-b) > 5 for a, b in zip(selected[0]['box'], selected[1]['box'])):
+        return False
+    box = [min(row['box'][0] for row in selected)-2, min(row['box'][1] for row in selected)-2,
+           max(row['box'][2] for row in selected)+2, max(row['box'][3] for row in selected)+2]
+    if not _navigation_ink_equal(images, box):
+        return False
+    rest = [{**observed, 'rows': [row for row in observed.get('rows', []) if row is not caption]}
+            for observed, caption in zip((original, actual), selected)]
+    return _navigation_visible_semantics(*rest)
+
+
+def _context_images(original, actual, original_png, current_png, *, allow_coin_change=False,
+                    shop_view_only=False):
     """Authenticate exposed page anchors independently of orb recognition.
 
     A native detector's unknown remains unknown. It is neither evidence of an
@@ -318,9 +458,11 @@ def _context_images(original, actual, original_png, current_png, *, allow_coin_c
     numeric row may change; every other visible semantic row still participates.
     """
     import cv2
-    from currency_wars_visual_guards import _navigation_row, _navigation_visible_semantics
+    from currency_wars_visual_guards import _navigation_row
     try:
         stage = original.get('fields', {}).get('stage')
+        if shop_view_only and (original.get('page') != 'shop' or allow_coin_change):
+            return None
         if (original.get('page') not in ('preparation', 'shop') or actual.get('page') != original['page']
                 or not isinstance(stage, str) or not re.fullmatch(r'[1-3]-[1-9]', stage)
                 or actual.get('fields', {}).get('stage') != stage
@@ -336,8 +478,6 @@ def _context_images(original, actual, original_png, current_png, *, allow_coin_c
                 if not (_inside(row.get('box'), GOLD_HUD)
                         and re.fullmatch(r'\d+', re.sub(r'\s+', '', str(row.get('text', '')))))]}
                 for obs in semantic_pair)
-        if not _navigation_visible_semantics(*semantic_pair):
-            return None
         for obs in (original, actual):
             rows = obs.get('rows', [])
             if (obs['page'] == 'preparation' and (
@@ -355,6 +495,8 @@ def _context_images(original, actual, original_png, current_png, *, allow_coin_c
                     return None
                 image.load()
                 images.append(np.array(image.convert('RGB')))
+        if not shop_view_only and not _reward_visible_semantics(*semantic_pair, images):
+            return None
         shop = original['page'] == 'shop'
         anchors = [('备战阶段', [220, 40, 365, 92] if shop else [410, 20, 540, 65]),
                    (stage, [225, 80, 355, 140] if shop else [420, 50, 520, 105]),
@@ -383,6 +525,18 @@ def _context_images(original, actual, original_png, current_png, *, allow_coin_c
         return images
     except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError):
         return None
+
+
+def stable_shop_view(original, actual, original_png, current_png):
+    """Only expose the board by closing its shop; no economic permission.
+
+    The caller must compare complete current wallet/bench/shop facts first.
+    Authenticate both original PNGs and all native page/close-button anchors;
+    fluctuating card-description OCR is irrelevant to this reversible view.
+    Reward and purchase checks continue using the strict default context.
+    """
+    return _context_images(original, actual, original_png, current_png,
+                           shop_view_only=True) is not None
 
 
 def stable_reward_target(original, actual, original_png, current_png, target):

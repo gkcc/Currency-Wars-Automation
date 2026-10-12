@@ -118,7 +118,7 @@ def validate_guide_roi(action, request, binding, checkpoint_id):
         if not isinstance(evidence[key], str) or not evidence[key] or evidence[key] != request.get(key):
             raise ValueError('guide ROI differs from the outstanding request: ' + key)
     if (request.get('kind') != 'preparation_strategy'
-            or request.get('preparation_checklist', {}).get('phase') != 'startup_guide'
+            or request.get('preparation_checklist', {}).get('phase') not in ('startup_guide', 'inventory_cleanup')
             or evidence['page'] != 'preparation' or original.get('page') != 'preparation'
             or original.get('snapshot_id') != evidence['snapshot_id']
             or evidence['match_id'] != binding.get('match_id')

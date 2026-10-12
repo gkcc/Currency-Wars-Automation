@@ -286,7 +286,7 @@ class RewardManualBoundaryTests(unittest.TestCase):
                     ('2', [1640, 520, 1660, 550]), ('飞霄', [1460, 285, 1520, 325])]]
             for completed in (False, True):
                 worker.preparation_reviews = ({phase: {'completed': True}
-                    for phase in runner.coaching.PHASES[:3]} if completed else {})
+                    for phase in ('rewards', 'startup_guide', 'inventory_cleanup')} if completed else {})
                 actions = [('购买', False, [297, 864]), ('D', True, [1615, 445]),
                            ('2', True, [1650, 535]), ('免费刷新', True, [1620, 490]),
                            ('飞霄', True, [1490, 305])]

@@ -45,6 +45,9 @@ DEPLOYED_COUNT_ROI = [890, 210, 1029, 280]
 # Complete native player Lv label and number, including the taller numeral.
 # This is the lower-left purchase-experience panel, never a card/boss title.
 PLAYER_LEVEL_ROI = [240, 880, 358, 936]
+PLAYER_LEVEL_NUMERAL_ROI = [298, 878, 358, 936]
+EXPERIENCE_PRICE_ROI = [264, 972, 343, 1015]
+EXPERIENCE_COIN_ROI = [273, 978, 309, 1010]
 # Current parsing support, not a claim about the game's permanent maximum.
 MAX_SUPPORTED_POPULATION = 12
 READ_CONTRACT_VERSION = 2
@@ -295,6 +298,18 @@ def classify(rows):
     # Keep actual modals/results above this page-level recognition.
     if _native_advantages_page(rows):
         return "advantages"
+    # Retained native modal: title, chapter selector and completion label must
+    # all occur in their own regions. A lobby menu label alone is insufficient.
+    startup_title = find_text(rows, '创业指南', (270, 185, 1650, 280), exact=True)
+    startup_progress = find_text(rows, '完成进度', (300, 350, 750, 640), exact=True)
+    startup_chapter = any(re.fullmatch(r'第[0-9一二三四五六七八九十]+章', clean(row['text']))
+                          and row.get('confidence', 0) >= .90
+                          and 300 <= row['box'][0] < row['box'][2] <= 750
+                          and 275 <= row['box'][1] < row['box'][3] <= 340 for row in rows)
+    if (startup_title and startup_title.get('confidence', 0) >= .90
+            and startup_progress and startup_progress.get('confidence', 0) >= .90
+            and startup_chapter):
+        return 'startup_guide'
     if "朝露公馆" in joined and "货币战争" in joined:
         return "world_entry"
     if sum(name in joined for name in ("创业指南", "优势布局", "羁绊链路", "预期收益")) >= 3:
@@ -314,6 +329,15 @@ def classify(rows):
         return "battle"
     if "竞争对手" in joined and ("下一步" in joined or "生成" in joined):
         return "opponents"
+    # The completed native opponent grid omits the generation heading.
+    # Retained 2026-10-11 frame: three separate faction labels, boss caption,
+    # and the next button must all match their actual screen regions.
+    opponent_anchors = [find_text(rows, '阵营', bounds, exact=True) for bounds in
+        ([150, 625, 380, 705], [450, 625, 680, 705], [750, 625, 980, 705])]
+    opponent_anchors += [find_text(rows, '本场对局首领', [1330, 700, 1730, 810], exact=True),
+                         find_text(rows, '下一步', [1250, 925, 1760, 1040], exact=True)]
+    if all(anchor and anchor['confidence'] >= .90 for anchor in opponent_anchors):
+        return 'opponents'
     if _native_guide_detail_page(rows):
         return "guide"
     if "投资环境" in joined and ("选择" in joined or "确认" in joined):
@@ -544,28 +568,42 @@ def guide_targets(body_lines):
                                 'use_transition_equipment': any('有就合' in line for line in body_lines)}}
 
 
+def _gold_digit_palette(hsv):
+    """Only the observed pale/dark neutral panels, with opposite ink polarity."""
+    pale = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 180)
+    dark = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] <= 110)
+    evidence = {'pale_fraction': round(float(np.mean(pale)), 6),
+                'dark_fraction': round(float(np.mean(dark)), 6)}
+    if float(np.mean(pale)) >= .65:
+        return pale, hsv[:, :, 2] < 160, {**evidence, 'polarity': 'dark_on_pale'}
+    if float(np.mean(dark)) >= .65:
+        return dark, (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 160), {
+            **evidence, 'polarity': 'light_on_dark'}
+    return None, None, {**evidence, 'polarity': None}
+
+
 def _gold_digit_crop(crop):
-    """Bounded fallback for the native light panel's complete dark digits.
+    """Bounded fallback for both observed native panels' complete digits.
 
     The two retained 1-1 crops have an uncut 18x26 glyph in a 49x40 ROI;
     its large trailing background is not another numeral. Locate all dark
     components, retain their original RGB/antialiasing, and add fixed padding.
-    No component is discarded, no digit is classified by this geometry, and
-    an unsupported dark panel keeps the original OCR path only.
+    The saved open-shop frame also has a complete white 16x25 glyph on a dark
+    panel. Invert its original RGB after locating all light components, then
+    use the same padding. No component is discarded or interpreted as a digit.
     """
     import cv2
     if crop.mode != 'RGB' or crop.size != (49, 40):
         return None, {'reason': 'unexpected_digit_crop'}
     pixels = np.array(crop)
     hsv = cv2.cvtColor(pixels, cv2.COLOR_RGB2HSV)
-    pale = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 180)
-    evidence = {'pale_fraction': round(float(np.mean(pale)), 6),
-                'source_rgb_sha256': hashlib.sha256(pixels.tobytes()).hexdigest()}
+    background, ink, evidence = _gold_digit_palette(hsv)
+    evidence['source_rgb_sha256'] = hashlib.sha256(pixels.tobytes()).hexdigest()
     if int(hsv[:, :, 2].max()) - int(hsv[:, :, 2].min()) < 40:
         return None, {**evidence, 'reason': 'missing_digit_contrast'}
-    if float(np.mean(pale)) < .65:
+    if background is None:
         return None, {**evidence, 'reason': 'unsupported_digit_background'}
-    mask = (hsv[:, :, 2] < 160).astype(np.uint8)
+    mask = ink.astype(np.uint8)
     count, unused_labels, stats, unused_centers = cv2.connectedComponentsWithStats(mask, 8)
     components = stats[1:]
     evidence['components'] = components.tolist()
@@ -579,7 +617,7 @@ def _gold_digit_crop(crop):
     border[:2] = border[-2:] = True
     border[:, :2] = border[:, -2:] = True
     if (left < 2 or top < 2 or right > 47 or bottom > 38
-            or not np.all(pale[border])):
+            or not np.all(background[border])):
         return None, {**evidence, 'reason': 'digit_crop_not_complete'}
     if (any(not (3 <= width <= 24 and 18 <= height <= 32 and area >= 28)
             for x, y, width, height, area in components)
@@ -591,10 +629,14 @@ def _gold_digit_crop(crop):
         return None, {**evidence, 'reason': 'ambiguous_digit_spacing'}
     bounds = [left-2, top-2, right+2, bottom+2]
     original = crop.crop(bounds)
+    preprocessing = 'complete_dark_digits_rgb_padding4_2x'
+    if evidence['polarity'] == 'light_on_dark':
+        original = Image.fromarray(255 - np.array(original))
+        preprocessing = 'complete_light_digits_rgb_invert_padding4_2x'
     padded = Image.new('RGB', (original.width+8, original.height+8), 'white')
     padded.paste(original, (4, 4))
     evidence.update(reason=None, tight_bounds=bounds, padding=4,
-                    component_count=count-1, preprocessing='complete_dark_digits_rgb_padding4_2x')
+                    component_count=count-1, preprocessing=preprocessing)
     return padded.resize((padded.width*2, padded.height*2)), evidence
 
 
@@ -603,7 +645,8 @@ def _gold_digit_boundary(context, crop):
 
     The retained one-digit panel and old two-digit panels move the coin icon
     horizontally. The complete unique colored icon locates its outside edge;
-    every dark component after it must also exist in the fixed numeric ROI.
+    Every ink component after it must also exist in the fixed numeric ROI,
+    using the same observed foreground polarity as the complete-glyph path.
     This does not introduce OCR of a wider, uncalibrated number rectangle.
     """
     import cv2
@@ -631,8 +674,14 @@ def _gold_digit_boundary(context, crop):
     evidence['digit_band_bounds'] = [start+1558, 900, 1687, 940]
     if start > offset[0]:
         return {**evidence, 'reason': 'currency_icon_overlaps_digit_roi'}
-    whole = hsv[15:55, start:, 2] < 160
-    fixed = hsv[15:55, offset[0]:offset[0]+49, 2] < 160
+    _, _, palette = _gold_digit_palette(hsv[15:55, offset[0]:offset[0]+49])
+    evidence['polarity'] = palette['polarity']
+    if palette['polarity'] is None:
+        return {**evidence, 'reason': 'unsupported_digit_background'}
+    ink = (hsv[:, :, 2] < 160 if palette['polarity'] == 'dark_on_pale' else
+           (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 160))
+    whole = ink[15:55, start:]
+    fixed = ink[15:55, offset[0]:offset[0]+49]
     represented = np.zeros(whole.shape, bool)
     represented[:, offset[0]-start:] = fixed
     if not np.array_equal(whole, represented):
@@ -649,7 +698,7 @@ def read_gold_hud_digits(crop, engine, *, context=None):
     focused, geometry = _gold_digit_crop(crop)
     evidence = {'ocr_bounds': list(GOLD_DIGIT_ROI), 'attempts': [], 'geometry': geometry,
                 'boundary': boundary}
-    if geometry['reason'] not in (None, 'unsupported_digit_background'):
+    if geometry['reason'] is not None:
         return None, {**evidence, 'reason': geometry['reason']}
     if engine is None:
         return None, {**evidence, 'reason': 'digit_engine_unavailable'}
@@ -915,7 +964,7 @@ def native_player_hud(rows, image, page, engine, snapshot_id):
     result = {'actor': 'player', 'origin': 'native_player_hud', 'snapshot_id': snapshot_id,
               'layout': 'native_purchase_experience_1920x1080/v1',
               'level': None, 'xp': None, 'evidence': {}, 'reason': 'player_hud_not_visible'}
-    if page not in ('preparation', 'shop'):
+    if page not in ('preparation', 'shop') or image.size != (1920, 1080):
         return result
 
     def inside(row, bounds):
@@ -926,9 +975,12 @@ def native_player_hud(rows, image, page, engine, snapshot_id):
 
     labels = [row for row in rows if clean(row.get('raw_text', row.get('text'))) == '购买经验'
               and .90 <= row.get('confidence', 0) <= 1. and inside(row, [235, 835, 360, 883])]
+    # Native OCR boxes can extend a few pixels above the XP glyph baseline.
+    # Keep the complete row inside this bounded panel, with the same unique
+    # full-text and confidence gates; no focused read or inferred XP is needed.
     progress = [(row, re.fullmatch(r'([0-9]{1,4})/([0-9]{1,4})', clean(row.get('raw_text', row.get('text')))))
                 for row in rows if .90 <= row.get('confidence', 0) <= 1.
-                and inside(row, [250, 933, 346, 969])]
+                and inside(row, [250, 930, 346, 969])]
     progress = [(row, match) for row, match in progress if match and 0 <= int(match[1]) < int(match[2])]
     if len(labels) != 1 or len(progress) != 1:
         return result
@@ -961,6 +1013,98 @@ def native_player_hud(rows, image, page, engine, snapshot_id):
                 result.update(level=int(match[1]), reason=None)
     except Exception:
         pass  # A failed focused read is unknown; no fabricated OCR row.
+    if result['level'] is not None:
+        return result
+    # One complete-numeral read resolves the mixed-size native Lv font. It
+    # never lowers confidence or votes away a contradictory plausible read.
+    previous = result['evidence'].get('level') or {}
+    focused_text = clean(previous.get('raw_text', ''))
+    focused = re.fullmatch(r'Lv\.?([0-9]+)', focused_text, re.I)
+    focused_number = (focused[1] if focused else focused_text
+                      if re.fullmatch(r'[0-9]+', focused_text) else None)
+    if focused_number is not None and not re.fullmatch(r'([1-9]|10)', focused_number):
+        return result
+    try:
+        import cv2
+        patch = np.array(image.crop(PLAYER_LEVEL_ROI))
+        unused, unused_labels, stats, unused_centroids = cv2.connectedComponentsWithStats(
+            (patch.max(axis=2) < 100).astype('uint8'))
+        glyphs = [(int(x + PLAYER_LEVEL_ROI[0]), int(y + PLAYER_LEVEL_ROI[1]), int(w), int(h))
+                  for x, y, w, h, area in stats[1:] if h >= 28 and w >= 6 and area >= 70]
+        x1, y1, x2, y2 = PLAYER_LEVEL_NUMERAL_ROI
+        if not (1 <= len(glyphs) <= 2 and all(x1 + 2 <= x and x + w <= x2 - 2
+                and y1 + 2 <= y and y + h <= y2 - 2 for x, y, w, h in glyphs)):
+            return result
+        recognized, unused = engine(np.array(image.crop(PLAYER_LEVEL_NUMERAL_ROI)),
+                                    use_det=False, use_cls=False)
+        if recognized is None or len(recognized) != 1:
+            return result
+        raw, confidence = recognized[0][-2:]
+        raw, confidence = str(raw), float(confidence)
+        match = re.fullmatch(r'([1-9]|10)', clean(raw))
+        result['evidence']['level_attempts'] = [previous, {
+            'source': 'complete_native_player_level_numeral', 'raw_text': raw,
+            'confidence': confidence, 'bounds': list(PLAYER_LEVEL_NUMERAL_ROI),
+            'glyph_bounds': [list(g) for g in glyphs]}]
+        if (match and len(glyphs) == len(match[1]) and .90 <= confidence <= 1.
+                and all(value == int(match[1]) for unused, value in candidates)
+                and (focused_number is None or int(focused_number) == int(match[1]))):
+            result.update(level=int(match[1]), reason=None)
+            result['evidence']['level'] = result['evidence']['level_attempts'][-1]
+    except Exception:
+        pass
+    return result
+
+
+def native_experience_offer(rows, image, page, snapshot_id, player):
+    """Read the visible XP price only. Gain and upgrade rules stay unknown."""
+    result = {'actor': 'player', 'origin': 'native_experience_offer',
+              'snapshot_id': snapshot_id, 'cost_checked': False,
+              'buy_cost': None, 'buy_gain': None, 'evidence': {},
+              'reason': 'experience_price_not_verified'}
+    if (page not in ('preparation', 'shop') or image.size != (1920, 1080)
+            or not snapshot_id or player.get('actor') != 'player'
+            or player.get('origin') != 'native_player_hud'
+            or player.get('snapshot_id') != snapshot_id
+            or not player.get('evidence', {}).get('purchase_experience')
+            or not player.get('evidence', {}).get('experience_progress')):
+        return result
+    import cv2
+    icon = cv2.cvtColor(np.array(image.crop(EXPERIENCE_COIN_ROI)), cv2.COLOR_RGB2HSV)
+    gold = float(np.mean((icon[:, :, 0] >= 15) & (icon[:, :, 0] <= 40)
+                        & (icon[:, :, 1] > 90) & (icon[:, :, 2] > 160)))
+    result['evidence'] = {'currency_icon_gold_fraction': gold,
+                          'icon_bounds': list(EXPERIENCE_COIN_ROI),
+                          'bounds': list(EXPERIENCE_PRICE_ROI)}
+    if gold < .15:
+        result['reason'] = 'experience_currency_icon_unconfirmed'
+        return result
+    x1, y1, x2, y2 = EXPERIENCE_PRICE_ROI
+    candidates = []
+    for row in rows:
+        box = row.get('box')
+        if not (isinstance(box, list) and len(box) == 4
+                and max(x1, box[0]) < min(x2, box[2])
+                and max(y1, box[1]) < min(y2, box[3])):
+            continue
+        text = clean(row.get('raw_text', row.get('text', '')))
+        if not re.fullmatch(r'[0-9]{1,5}', text):
+            return result
+        # A clipped/crossing numeric row cannot be voted away by another row.
+        if not (x1 <= box[0] < box[2] <= x2 and y1 <= box[1] < box[3] <= y2):
+            result['reason'] = 'experience_price_crosses_native_bounds'
+            return result
+        candidates.append((row, int(text)))
+    if len(candidates) != 1:
+        result['reason'] = 'experience_price_missing_or_conflicting'
+        return result
+    row, value = candidates[0]
+    if not (0 <= value <= 10000 and .90 <= row.get('confidence', 0) <= 1.):
+        return result
+    result.update(buy_cost=value, cost_checked=True, reason=None)
+    result['evidence']['cost'] = {'source': 'current_native_experience_price',
+        'snapshot_id': snapshot_id, 'value': value, 'row': copy.deepcopy(row),
+        'bounds': list(EXPERIENCE_PRICE_ROI)}
     return result
 
 
@@ -1230,6 +1374,8 @@ class Perception:
             fields["stage"] = _native_battle_stage(rows) or fields["stage"]
         semantic = semantic_facts(rows, image, page, engine=engine, snapshot_id=digest)
         semantic['player_hud'] = player
+        semantic['experience_offer'] = (unread('experience_offer') if effective_scope == 'rewards' else
+            native_experience_offer(rows, image, page, digest, player))
         from currency_wars_refresh_offer import read_offer, unread_offer
         semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope == 'rewards' else
                                      read_offer(rows, image, page, engine, digest))
@@ -1246,7 +1392,8 @@ class Perception:
             from currency_wars_state_reader import StateReader, native_slots
             if self.state_reader is None:
                 self.state_reader = StateReader()
-            state_read = self.state_reader.read(path, rows=rows, page=page)
+            state_read = self.state_reader.read(path, rows=rows, page=page,
+                                                shop_observation=shop)
             team = state_read['team']
             population = re.fullmatch(r'([0-9]{1,2})/([0-9]{1,2})', native_deployed_count(rows) or '')
             board = [unit for unit in team['units'] if unit['location'] == 'board']

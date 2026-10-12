@@ -73,11 +73,50 @@ def native_capacity(slots, snapshot_id):
             'origin': 'native_visual_state_reader'}
 
 
+def _shop_bench_geometry(rgb, observation, snapshot_id):
+    """Same native PNG's measured open-shop geometry can qualify only bench.
+
+    Perception supplies its actual ShopReader result. Recheck the digest, five
+    measured frames and native layout against these decoded pixels; a page hint
+    or reliable_open_shop flag by itself never enables the separate scope.
+    Shop names, prices and recommendation flags are irrelevant to this gate.
+    """
+    evidence = {'source': 'same_frame_native_shop_geometry', 'snapshot_id': snapshot_id,
+                'checked': False, 'reason': 'same_frame_shop_observation_missing'}
+    if not isinstance(observation, dict):
+        return evidence
+    source, page = observation.get('input'), observation.get('page')
+    if (observation.get('schema') != 'currency-wars-shop-observation/v1'
+            or not isinstance(source, dict) or source.get('sha256') != snapshot_id
+            or source.get('format') != 'PNG' or source.get('size') != [1920, 1080]
+            or not isinstance(page, dict) or page.get('reliable_open_shop') is not True
+            or page.get('reasons') != [] or page.get('controls_raw') != ['刷新', '收起']):
+        return {**evidence, 'reason': 'shop_source_or_controls_unverified'}
+    from currency_wars_shop_reader import ShopReader, CENTERS
+    rectangles, geometry = ShopReader._rectangles(rgb)
+    slots = observation.get('slots')
+    if (geometry != page.get('geometry') or geometry['detected_rectangles'] != 5
+            or geometry['overlays'] or min(geometry['frame_scores']) < .90
+            or not isinstance(slots, list) or len(slots) != 5
+            or any(not isinstance(slot, dict) or slot.get('slot') != index + 1
+                   or slot.get('bounds') != list(rectangles[index])
+                   for index, slot in enumerate(slots))):
+        return {**evidence, 'reason': 'five_current_shop_frames_unverified'}
+    if any(abs(x + width / 2 - center) > 3 or abs(y - 59) > 3
+           or abs(width - 244) > 3 or abs(height - 273) > 3
+           for (x, y, width, height), center in zip(rectangles, CENTERS)):
+        return {**evidence, 'reason': 'unsupported_shop_animation_or_layout'}
+    return {**evidence, 'checked': True, 'reason': None, 'geometry': geometry,
+            'shop_card_bounds': [list(rect) for rect in rectangles],
+            'scope': 'bench_only_board_and_population_unverified'}
+
+
 class StateReader:
-    def __init__(self, resources=RESOURCE_DIR):
+    def __init__(self, resources=RESOURCE_DIR, *, unit_bank=None):
         self.resources = Path(resources)
         self._version = None
         self.templates = []
+        self._unit_bank = unit_bank
 
     def _load(self):
         try:
@@ -252,7 +291,7 @@ class StateReader:
                 and abs(r['box'][0] - box[0]) <= 75 and isinstance(r.get('text'), str)]
             if len(candidates) == 1:
                 title = candidates[0]
-                name = title['text'].split('Lv.')[0].split('LV.')[0].strip()
+                name = title['text'].strip()
                 if 1 <= len(name) <= 32:
                     found.append({'kind': kind, 'name': name, 'snapshot_id': snapshot_id,
                         'origin': 'readable_native_tooltip', 'owned': None,
@@ -261,11 +300,11 @@ class StateReader:
                         'evidence': {'title': title, 'type_anchor': row}})
         return found
 
-    def read(self, path, *, rows=None, page=None):
+    def read(self, path, *, rows=None, page=None, client_version=None, shop_observation=None):
         data = Path(path).read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         with Image.open(io.BytesIO(data)) as image:
-            fmt, size = image.format, image.size
+            fmt, size, mode = image.format, image.size, image.mode
             rgb = np.array(image.convert('RGB'))
         native = fmt == 'PNG' and size == EXPECTED_SIZE and self._load()
         anchors = {}
@@ -276,11 +315,32 @@ class StateReader:
         # A supplied classified page can only narrow the pixel evidence.
         if page is not None and page not in ('preparation', 'shop', 'investment_summary'):
             usable = False
+        bench_geometry = {'source': 'native_preparation_anchors', 'snapshot_id': digest,
+                          'checked': bool(usable), 'reason': None if usable else 'native_roster_anchors_missing'}
+        if page == 'shop':
+            # The expanded shop moves the board and masks its old anchors.
+            # It cannot prove board positions, population or equipment scope.
+            usable = False
+            bench_geometry = (_shop_bench_geometry(rgb, shop_observation, digest)
+                              if native and mode == 'RGB' else
+                              {**bench_geometry, 'checked': False, 'reason': 'native_rgb_png_required'})
+        bench_usable = bool(bench_geometry['checked'])
         overlays = self._overlays(rgb) if native else []
-        slots = [self._slot(rgb, slot, usable, overlays) for slot in native_slots()] if native else [
-            {**slot, 'status': 'unknown', 'name': None, 'star': None, 'position': None,
-             'confidence': None, 'evidence': {}, 'reasons': ['unsupported_or_missing_resources']}
-            for slot in native_slots()]
+        slots = None
+        bank_metadata = {'status': 'unknown', 'reason': 'unsupported_or_missing_resources'}
+        if native:
+            if self._unit_bank is None:
+                from currency_wars_native_unit_bank import NativeUnitBank
+                self._unit_bank = NativeUnitBank()
+            slots, bank_metadata = self._unit_bank.augment(
+                rgb, native_slots(), self, usable and mode == 'RGB', overlays,
+                client_version=client_version, bench_usable=bench_usable and mode == 'RGB')
+        if slots is None:
+            slots = [self._slot(rgb, slot, bench_usable if slot['row'] == 'bench' else usable, overlays)
+                     for slot in native_slots()] if native else [
+                {**slot, 'status': 'unknown', 'name': None, 'star': None, 'position': None,
+                 'confidence': None, 'evidence': {}, 'reasons': ['unsupported_or_missing_resources']}
+                for slot in native_slots()]
         for slot in slots:
             slot.update(snapshot_id=digest, origin='native_visual_state_reader')
         units = [slot for slot in slots if slot['status'] == 'occupied']
@@ -304,6 +364,8 @@ class StateReader:
             'origin': 'native_visual_state_reader', 'resource_version': self._version,
             'anchors': {k: round(v, 4) for k, v in anchors.items()}, 'overlays': overlays,
             'team': {'checked': False, 'fully_read': bool(fully_read), 'slots': slots,
+                     'native_unit_bank': bank_metadata,
+                     'bench_geometry': bench_geometry,
                      'units': units, 'unknown_slots': unknown, 'snapshot_id': digest,
                      'capacity': native_capacity(slots, digest)},
             'inventory': {**inventory, 'snapshot_id': digest},

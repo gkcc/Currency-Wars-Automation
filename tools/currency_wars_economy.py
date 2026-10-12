@@ -15,6 +15,20 @@ PREPARATION_PAGES = ('preparation', 'shop')
 POLICY_FIELDS = ('mode', 'targets', 'budget', 'paid_search', 'experience', 'reserve')
 LEGACY_REFRESH_FIELDS = ('free_refreshes', 'refresh_cost')
 
+MACRO_CONTRACT = 'currency-wars-economic-macro/v1'
+MACRO_LIMITS = {'max_economic_actions': (1, 32), 'max_total_spent': (0, 1000000),
+                'max_paid_refreshes': (0, 32), 'max_navigation_clicks': (0, 64),
+                'max_wall_seconds': (1, 300)}
+
+
+def validate_macro_limits(limits):
+    """Explicit invocation bounds; booleans, omitted caps and extensions fail closed."""
+    if (not isinstance(limits, dict) or set(limits) != set(MACRO_LIMITS)
+            or any(type(limits[key]) is not int or not low <= limits[key] <= high
+                   for key, (low, high) in MACRO_LIMITS.items())):
+        raise ValueError('经济宏须显式整数动作/总花费/付费刷新/导航/时间上限')
+    return dict(limits)
+
 
 def economic_action(action, page):
     if page not in PREPARATION_PAGES:
@@ -118,9 +132,9 @@ def new_ledger():
             'revision': 0, 'budget': None, 'shop_complete': False, 'purchased': {}}
 
 
-def validate_budget(plan, observed, ledger):
+def validate_budget(plan, observed, ledger, *, trusted_local=False):
     if (not isinstance(plan, dict) or plan.get('schema') != SCHEMA
-            or plan.get('reviewer') != 'supervising_agent'
+            or plan.get('reviewer') != ('local_joint_solver' if trusted_local else 'supervising_agent')
             or not _integer(plan.get('revision'), 1) or not isinstance(plan.get('reason'), str) or not plan['reason'].strip()
             or plan.get('mode') not in ('标准博弈', '超频博弈')):
         raise ValueError('经济计划须为本节点主管明确读取与决策的版本化预算')
@@ -143,7 +157,7 @@ def validate_budget(plan, observed, ledger):
             or not isinstance(experience, dict) or not _integer(experience.get('target_level'), 1, 10)
             or not isinstance(experience.get('reason'), str) or not experience['reason'].strip()):
         raise ValueError('购买/搜牌/经验须共享明确金额上限，搜牌须有次数、目标、购牌留资和停止条件')
-    if budget['refresh'] and (search['max_refreshes'] < 1 or search['purchase_reserve'] < 1 or not search['targets']):
+    if budget['refresh'] and (search['max_refreshes'] < 1 or (not trusted_local and (search['purchase_reserve'] < 1 or not search['targets']))):
         raise ValueError('付费搜牌须预留搜出目标后的购买资金，并明确目标及次数')
     if search['purchase_reserve'] > budget['purchase']:
         raise ValueError('搜牌购牌留资不能超过同一预算中的购买额度')
@@ -157,7 +171,7 @@ def validate_budget(plan, observed, ledger):
         raise ValueError('利息储备与关键缺口例外须有明确金额、理由和真实剩余结息回合来源')
     if plan['mode'] == '超频博弈' and amount != 0:
         raise ValueError('超频无利息，不套用标准50金币储备')
-    if plan['mode'] == '标准博弈' and amount < 50:
+    if plan['mode'] == '标准博弈' and amount < 50 and not trusted_local:
         if rounds is None or not isinstance(reserve.get('rounds_evidence'), dict):
             raise ValueError('降低常规50储备须当前结息读数或有来源的末关确认及原帧proof，不能用节点字符串猜终盘')
         if rounds == 0 and amount != 0:
@@ -296,14 +310,14 @@ def require_spending(kind, cost, plan, observation, ledger, *, critical=False):
     return below
 
 
-def classify_effect(kind, before, after, *, expected_cost, target_level=None, slot=None):
+def classify_effect(kind, before, after, *, expected_cost, target_level=None, slot=None, model_values=None):
     """One published transaction. Unknown/partial never authorizes a replay."""
     a, b = before.get('values', {}), after.get('values', {})
     if 'coins' not in a or 'coins' not in b:
         return {'outcome': 'unknown', 'reason': '前后金币未实读'}
     spent = a['coins'] - b['coins']
     if kind == 'experience':
-        required = ('level', 'xp', 'xp_gain')
+        required = ('level', 'xp')
         if any(key not in a for key in required) or any(key not in b for key in ('level', 'xp')):
             return {'outcome': 'unknown', 'reason': '前后等级/经验未实读', 'observed_spent': spent}
         same = a['level'] == b['level'] and a['xp'] == b['xp']
@@ -313,7 +327,12 @@ def classify_effect(kind, before, after, *, expected_cost, target_level=None, sl
             gain = a['xp'][1] - a['xp'][0] + b['xp'][0]
         else:
             gain = None
-        changed, expected = not same, gain == a['xp_gain']
+        model_gain = (model_values or {}).get('xp_gain_assumption')
+        expected_gain = model_gain if _integer(model_gain, 1) else a.get('xp_gain')
+        changed, expected = not same, _integer(expected_gain, 1) and gain == expected_gain
+        if changed and model_values and not expected:
+            return {'outcome': 'unknown', 'reason': '实际经验转换与单次数据库规划假设不符；保持原请求待验',
+                    'observed_spent': spent, 'model_values': dict(model_values)}
     elif kind == 'refresh':
         previous, current = refresh_offer(a), refresh_offer(b)
         native = 'refresh_offer' in a or 'refresh_offer' in b

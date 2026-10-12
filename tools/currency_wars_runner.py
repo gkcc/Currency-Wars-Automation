@@ -24,7 +24,7 @@ import currency_wars_broker_entry as entry
 import currency_wars_input_bridge as input_bridge
 import currency_wars_manual_steps as manual_steps
 import currency_wars_manual_stage as manual_stage
-from currency_wars_source_guard import activity, verify_runtime_sources
+from currency_wars_source_guard import activity, activity_reason, mutation_lock, verify_runtime_sources
 from currency_wars_perception import (Perception, clean, find_text, hash_distance, GOLD_HUD,
                                      valid_population_counts, READ_CONTRACT_VERSION)
 from currency_wars_shop_reader import purchase_slot
@@ -46,7 +46,8 @@ SELF = Path(__file__).resolve()
 TERMINAL = {'stopped', 'completed', 'failed'}
 UAC_READY_TIMEOUT_SECONDS = 15 * 60
 PANELS = [('bonds', '羁绊链路'), ('income', '预期收益'),
-          ('promotion', '晋升等级'), ('advantages', '优势布局')]
+          ('promotion', '晋升等级'), ('advantages', '优势布局'),
+          ('startup_guide', '创业指南')]
 
 
 def now():
@@ -249,6 +250,130 @@ def pending_business_requests(business):
     return [pending[key] for key in sorted(pending)]
 
 
+def resolved_economic_summary(stored, business):
+    """Project a committed original XP resolution without rewriting its ledger.
+
+    An archived node may legitimately retain the original pending transaction.
+    Only its exact independently reviewed, already committed resolution can
+    overlay that snapshot. Newer/other transactions stay untouched.
+    """
+    pending = stored.get('ledger', {}).get('pending')
+    if not pending:
+        return stored
+    matches = [item for item in business.get('economic_resolutions', [])
+               if isinstance(item, dict) and item.get('request_id') == pending.get('request_id')
+               and item.get('origin_run_id') == stored.get('run_id')
+               and item.get('stage') == stored.get('stage')]
+    if not matches:
+        return stored
+    if len(matches) != 1:
+        raise ValueError('原经济核效记录重复；不推导续局摘要')
+    resolution = matches[0]
+    amount = resolution.get('actual_spent')
+    if (resolution.get('outcome') != 'success' or resolution.get('kind') != 'experience'
+            or pending.get('kind') != 'experience' or type(amount) is not int or amount < 0
+            or resolution.get('input_resent') is not False):
+        raise ValueError('原经济核效不支持本次经验摘要；保持原交易未决')
+
+    def verified_payload(path, expected):
+        if not isinstance(expected, str) or not re.fullmatch(r'[0-9a-f]{64}', expected):
+            raise ValueError('原经济核效缺不可变证据hash')
+        candidate = Path(path)
+        if not candidate.is_file() or candidate.stat().st_size > 8 * 1024 * 1024:
+            raise ValueError('原经济核效证据缺失或超出大小边界')
+        payload = candidate.read_bytes()
+        if hashlib.sha256(payload).hexdigest() != expected:
+            raise ValueError('原经济核效证据字节已改变')
+        return payload
+
+    ledger_path = resolution.get('original_ledger_file')
+    if not ledger_path or Path(ledger_path).resolve() != Path(stored['record_file']).resolve():
+        raise ValueError('原经济核效不是当前摘要的原台账')
+    original = json.loads(verified_payload(ledger_path, resolution.get('original_ledger_sha256')))
+    if (original.get('schema') != economy.SCHEMA
+            or any(original.get(k) != stored.get(k) for k in ('run_id', 'match_id', 'stage'))
+            or original.get('match_id') != business.get('match_id')
+            or original.get('ledger') != stored.get('ledger')
+            or hashlib.sha256(json.dumps(pending, ensure_ascii=False, sort_keys=True).encode('utf-8')).hexdigest()
+                != resolution.get('original_pending_sha256')):
+        raise ValueError('原经济核效台账/pending身份不符或已有更新；不重复记花费')
+    proof = json.loads(verified_payload(resolution.get('proof_file'), resolution.get('proof_sha256')))
+    review_hash = resolution.get('independent_review_sha256')
+    if not isinstance(review_hash, str) or not re.fullmatch(r'[0-9a-f]{64}', review_hash):
+        raise ValueError('原经济核效缺独立审查hash')
+    # Older committed records predate an explicit archive path. Their dated
+    # immutable rollback is retained before replacing the current report.
+    dated = datetime.fromisoformat(resolution['observed_at']).date().isoformat()
+    review_paths = ([Path(resolution['independent_review_file'])]
+                    if resolution.get('independent_review_file') else [
+                        PROJECT / 'docs' / 'ECONOMIC_NATIVE_RUNTIME_REVIEW.json',
+                        PROJECT / 'handoff' / dated / ('XP_RECOVERY_BASELINE_REVIEW_' + review_hash[:8] + '.json')])
+    review = None
+    for path in review_paths:
+        if path.is_file() and path.stat().st_size <= 8 * 1024 * 1024:
+            payload = path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() == review_hash:
+                review = json.loads(payload)
+                break
+    verdict = (review or {}).get('archive_xp_effect_verdict') or {}
+    ids = {'request_id': pending['request_id'], 'original_run_id': stored['run_id'],
+           'match_id': business['match_id']}
+    if (any(proof.get(k) != v or verdict.get(k) != v for k, v in ids.items())
+            or (review or {}).get('status') != 'PASS'
+            or (review or {}).get('root_chat_id') != business.get('chat_id')
+            or not (review or {}).get('reviewer_chat_id')
+            or review['reviewer_chat_id'] == business.get('chat_id')
+            or verdict.get('status') != 'verified_original_effect'
+            or verdict.get('kind') != 'experience' or verdict.get('retry_allowed') is not False
+            or verdict.get('observed_spent') != amount
+            or proof.get('outcome', {}).get('outcome') != 'success'
+            or proof.get('outcome', {}).get('observed_spent') != amount
+            or any(verdict.get(k) != resolution.get(k)
+                   for k in ('original_ledger_sha256', 'original_pending_sha256'))):
+        raise ValueError('原经济核效缺同原ID的独立历史结论；保持未知')
+    receipt_hash = proof.get('receipt_sha256')
+    receipt = json.loads(verified_payload(proof.get('receipt_path'), receipt_hash))
+    delivery = manual_receipt_state(receipt)
+    if (receipt_hash != verdict.get('original_input_receipt_sha256')
+            or receipt.get('id') != pending['request_id']
+            or receipt.get('origin', {}).get('run_id') != stored['run_id']
+            or receipt.get('origin', {}).get('chat_id') != business['chat_id']
+            or receipt.get('request', {}).get('chat_id') != business['chat_id']
+            or receipt.get('request', {}).get('actions') != pending.get('broker_actions')
+            or receipt.get('result', {}).get('ok') is not True
+            or receipt.get('result', {}).get('completed') != pending.get('broker_actions')
+            or delivery['unknown_input'] or delivery['state'] != 'completed'):
+        raise ValueError('原经验输入收据不是已核同一请求；不解除pending')
+    for side in ('before', 'after'):
+        image = proof.get(side) or {}
+        verified_payload(image.get('png'), image.get('sha256'))
+    if (proof['before']['sha256'] != pending['before'].get('snapshot_id')
+            or proof['after']['sha256'] != pending.get('after_snapshot_id')
+            or proof['before']['sha256'] == proof['after']['sha256']
+            or not pending.get('after_png')
+            or Path(proof['after']['png']).resolve() != Path(pending['after_png']).resolve()):
+        raise ValueError('原核效前后图不是该原pending的两个原始来源')
+    before = proof['before']['native_values']
+    after = proof['after']['native_values']
+    if (type(before.get('coins')) is not int or type(after.get('coins')) is not int
+            or before['coins'] - after['coins'] != amount
+            or not 0 <= amount <= pending['before']['values']['coins']
+            or before['coins'] != pending['before']['values']['coins']):
+        raise ValueError('原经验实花与原生前后图/原pending不符')
+    projected = copy.deepcopy(stored)
+    ledger = projected['ledger']
+    if type(ledger['spent'].get('experience')) is not int:
+        raise ValueError('原经验累计花费无效')
+    ledger['spent']['experience'] += amount
+    ledger['pending'] = None
+    projected['economic_resolution_projection'] = {
+        'request_id': pending['request_id'], 'actual_spent': amount,
+        'original_ledger_sha256': resolution['original_ledger_sha256'],
+        'proof_sha256': resolution['proof_sha256'], 'independent_review_sha256': review_hash,
+        'input_resent': False, 'original_ledger_unchanged': True}
+    return projected
+
+
 def prepare_business_start(state, control, target_chat_id=None):
     pointer = state.get('business', {}).get('checkpoint')
     if pointer:
@@ -283,6 +408,11 @@ def prepare_business_start(state, control, target_chat_id=None):
             if value.get('schema') != economy.SCHEMA or not canonical_stage(value.get('stage')) or not isinstance(value.get('ledger'), dict):
                 raise ValueError('原节点经济台账无效，不将已有花费清零')
             business['economy'][value['stage']] = {**value, 'record_file': str(candidate)}
+    # A per-node crash snapshot remains immutable even after ROOT has committed
+    # its independently verified outcome. Reapply that exact projection after
+    # snapshot recovery; unrelated/new pending requests are never cleared.
+    for stage, stored in list(business.get('economy', {}).items()):
+        business['economy'][stage] = resolved_economic_summary(stored, business)
     with file_lock(path.parent, 'business.lock'):
         if pointer and entry.read_json(path)['revision'] != business['revision']:
             raise ValueError('业务检查点CAS已变化')
@@ -358,8 +488,9 @@ class RewardEffectPending(ValueError):
 
 class GuardedSubmission:
     """Delegate unchanged Entry semantics; guard only its locked publication."""
-    def __init__(self, control, guard, publication_span=None):
+    def __init__(self, control, guard, publication_span=None, final_guard=None):
         self.control, self.guard, self.publication_span = control, guard, publication_span
+        self.final_guard = final_guard
         self.publication_attempted = False
         self.business_guarded_submission = True
 
@@ -378,6 +509,22 @@ class GuardedSubmission:
             if recorded.get('id') == value['id'] and recorded.get('request') == value and recorded.get('result') is None:
                 receipt.unlink()
             raise
+        if self.final_guard is not None:
+            # Macro-only: profiling may itself do IO. Recheck after entering
+            # that span and before the sole real publisher, without reserving
+            # caps twice. Preserve zero-publication cleanup on this refusal.
+            try:
+                with self.publication_span() if self.publication_span else contextlib.nullcontext():
+                    self.final_guard(value)
+                    self.publication_attempted = True
+                    return self.control.publish_request(value)
+            except Exception:
+                if not self.publication_attempted:
+                    receipt = Path(self.control.ROOT, 'request-ledger', hashlib.sha256(value['id'].encode()).hexdigest() + '.json')
+                    recorded = entry.read_json(receipt)
+                    if recorded.get('id') == value['id'] and recorded.get('request') == value and recorded.get('result') is None:
+                        receipt.unlink()
+                raise
         self.publication_attempted = True
         with self.publication_span() if self.publication_span else contextlib.nullcontext():
             return self.control.publish_request(value)
@@ -965,8 +1112,9 @@ def _begin_manual_phase(run, owner, control, manual_id, phase, *, reader=None):
     directory.mkdir(exist_ok=True)
     existing = [entry.read_json(path) for path in directory.glob('*.json')]
     completed = {item['phase'] for item in existing if item.get('binding') == binding and item.get('status') == 'completed'}
-    expected = next((key for key in coaching.PHASES if key not in completed), None)
-    if phase != expected or any(item.get('binding') == binding and item.get('status') == 'pending' for item in existing):
+    expected = next((key for key in coaching.PREPARATION_PHASES if key not in completed), None)
+    optional_guide = phase == 'startup_guide' and expected in ('shop_inspection', 'inventory_cleanup')
+    if (phase != expected and not optional_guide) or any(item.get('binding') == binding and item.get('status') == 'pending' for item in existing):
         raise ValueError('人工阶段须按准备顺序且只有一个在途checkpoint')
     reconciled = _drain_manual_receipts(run, control)
     checkpoint_id = uuid.uuid4().hex
@@ -1297,6 +1445,88 @@ def reviewed_runtime_sources(chat_id):
     return verify_runtime_sources(PROJECT, ready)
 
 
+def publish_ready_cli(args):
+    """Publish software readiness only, without starting a controller or input."""
+    chat = args.chat_id
+    if not isinstance(chat, str) or not 1 <= len(chat) <= 100 or chat != chat.strip():
+        raise ValueError('真实root chat必须明确传入')
+    digest = getattr(args, 'review_sha256', None)
+    if not isinstance(digest, str) or not re.fullmatch(r'[0-9a-fA-F]{64}', digest):
+        raise ValueError('须指定独立审查文件的完整SHA256')
+    if not getattr(args, 'review_file', None):
+        raise ValueError('须指定独立审查JSON路径')
+    path = Path(args.review_file).absolute()
+    with activity(PROJECT, 'publish-ready') as lease:
+        with mutation_lock(PROJECT):
+            reason = activity_reason(PROJECT, ignore_lease=lease.path)
+            if reason:
+                raise ValueError(reason)
+            for item in (path, *path.parents):
+                info = item.lstat()
+                if item.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400:
+                    raise ValueError('独立审查路径不得包含链接')
+            if not path.is_file() or not 0 < path.stat().st_size <= 200_000:
+                raise ValueError('独立审查文件缺失或大小超限')
+            payload = path.read_bytes()
+            if len(payload) > 200_000 or hashlib.sha256(payload).hexdigest().upper() != digest.upper():
+                raise ValueError('独立审查文件SHA256不匹配；未发布READY')
+            review = json.loads(payload)
+            if (not isinstance(review, dict)
+                    or review.get('schema') != 'currency-wars-runner-readiness-review/v1'
+                    or review.get('scope') != 'full_runtime' or review.get('status') != 'PASS'
+                    or review.get('root_chat_id') != chat
+                    or not isinstance(review.get('reviewer_chat_id'), str)
+                    or not 1 <= len(review['reviewer_chat_id']) <= 100
+                    or review['reviewer_chat_id'].strip() != review['reviewer_chat_id']
+                    or review['reviewer_chat_id'] == chat
+                    or not isinstance(review.get('reviewer_task'), str) or not review['reviewer_task'].strip()
+                    or review.get('checks') != {'core': 'PASS', 'rust_gui': 'PASS'}):
+                raise ValueError('须有本root的真实独立完整运行时/core/Rust PASS；MCP专项或旧审查无效')
+            authorization = review.get('root_authorization')
+            if (not isinstance(authorization, dict) or authorization.get('chat_id') != chat
+                    or not isinstance(authorization.get('statement'), str)
+                    or not 1 <= len(authorization['statement'].strip()) <= 4000):
+                raise ValueError('须明确记录本root当前用户授权')
+            checked = datetime.now(timezone.utc)
+            for value in (review.get('reviewed_at'), authorization.get('authorized_at')):
+                if not isinstance(value, str) or not 1 <= len(value) <= 100:
+                    raise ValueError('独立审查和授权须有新鲜带时区时间')
+                stamp = datetime.fromisoformat(value)
+                if stamp.tzinfo is None or not timedelta(0) <= checked - stamp <= timedelta(hours=24):
+                    raise ValueError('独立审查或授权已过期/时间未知；须在24小时内')
+            binding = verify_runtime_sources(PROJECT, review.get('runtime_binding'))
+            ready = {**binding, 'owner': 'currency-wars-runner', 'chat_id': chat, 'ready': True,
+                'published_at': checked.isoformat(),
+                'user_authorization': authorization['statement'],
+                'authorization_renewed_at': authorization['authorized_at'],
+                'independent_review': {key: review[key] for key in
+                    ('status', 'reviewer_chat_id', 'reviewer_task', 'reviewed_at', 'scope', 'checks')}}
+            ready['independent_review'].update(record=str(path), record_sha256=digest.lower())
+            target = PROJECT / 'docs/RUNNER_READY.json'
+            for item in (target, *target.parents):
+                if item.exists() or item.is_symlink():
+                    info = item.lstat()
+                    if item.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400:
+                        raise ValueError('READY路径不得包含链接')
+            # Same-volume exclusive transaction file permits one atomic replace.
+            # Only this invocation's own unpublished transaction is removed.
+            temporary = target.with_name('.RUNNER_READY-' + uuid.uuid4().hex + '.tmp')
+            created = False
+            try:
+                with temporary.open('x', encoding='utf8') as stream:
+                    created = True
+                    json.dump(ready, stream, ensure_ascii=False, indent=2)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                os.replace(temporary, target)
+            finally:
+                if created:
+                    temporary.unlink(missing_ok=True)
+            return {'ok': True, 'published': True, 'input_sent': False,
+                    'chat_id': chat, 'review_sha256': digest.lower(),
+                    'ready_sha256': hashlib.sha256(target.read_bytes()).hexdigest()}
+
+
 def registered_worker_identity(value, launch, chat_id, child_pid, child_identity, control):
     """Bind the published worker to our exact Popen, including one venv hop."""
     if value.get('launch_id') != launch or value.get('chat_id') != chat_id:
@@ -1405,10 +1635,63 @@ def validate_plan(reply, request, epoch):
     actions = reply.get('actions')
     if not isinstance(actions, list) or not 1 <= len(actions) <= 8:
         raise ValueError('计划须含1–8个有限语义动作')
+    if any(isinstance(a, dict) and a.get('type') == 'advance_local_economy_macro' for a in actions):
+        if (len(actions) != 1 or set(actions[0]) != {'type', 'reason', 'expected_page', 'limits'}
+                or actions[0]['expected_page'] != request.get('observation', {}).get('page')
+                or actions[0]['expected_page'] not in ('preparation', 'shop')
+                or request.get('kind') not in ('preparation_strategy', 'shop_strategy')
+                or request.get('preparation_checklist', {}).get('phase') != 'economy'
+                or reply.get('match_id') != request.get('match_id')
+                or reply.get('context_update', {}) != {}
+                or set(reply) - {'request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'actions', 'context_update'}
+                or not isinstance(actions[0]['reason'], str) or not 1 <= len(actions[0]['reason'].strip()) <= 1000
+                or request.get('economic_macro_contract') != economy.MACRO_CONTRACT):
+            raise ValueError('经济宏只接受当前已声明支持的独立typed父授权与显式上限')
+        economy.validate_macro_limits(actions[0]['limits'])
+        return reply
+    if any(isinstance(a, dict) and a.get('type') == 'advance_local_economy' for a in actions):
+        if (len(actions) != 1 or set(actions[0]) != {'type', 'reason', 'expected_page'}
+                or actions[0]['expected_page'] != request.get('observation', {}).get('page')
+                or actions[0]['expected_page'] not in ('preparation', 'shop')
+                or request.get('kind') not in ('preparation_strategy', 'shop_strategy')
+                or request.get('preparation_checklist', {}).get('phase') != 'economy'
+                or reply.get('match_id') != request.get('match_id')
+                or reply.get('context_update', {}) != {}
+                or set(reply) - {'request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'actions', 'context_update'}
+                or not isinstance(actions[0]['reason'], str) or not 1 <= len(actions[0]['reason'].strip()) <= 1000):
+            raise ValueError('本地经济只接受ROOT当前经济阶段的独立单步授权、理由和页面，不接受坐标或预算')
+        return reply
+    if any(isinstance(action, dict) and action.get('type') == 'refresh_observation' for action in actions):
+        if (len(actions) != 1 or set(actions[0]) != {'type', 'reason'}
+                or not isinstance(actions[0]['reason'], str) or not 1 <= len(actions[0]['reason'].strip()) <= 1000
+                or reply.get('context_update', {}) != {}
+                or set(reply) - {'request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'actions', 'context_update'}
+                or 'match_id' in reply and reply['match_id'] != request.get('match_id')):
+            raise ValueError('只读来源刷新须独立单动作，仅含理由，不附带输入、预算或阶段完成项')
+        return reply
+    if any(isinstance(action, dict) and action.get('type') == 'close_shop_for_observation' for action in actions):
+        if (request.get('kind') != 'business_resume' or request.get('observation', {}).get('page') != 'shop'
+                or len(actions) != 1 or set(actions[0]) != {'type', 'reason', 'expected_page'}
+                or actions[0]['expected_page'] != 'shop'
+                or not isinstance(actions[0]['reason'], str) or not 1 <= len(actions[0]['reason'].strip()) <= 1000
+                or reply.get('context_update', {}) != {}
+                or set(reply) - {'request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'actions', 'context_update'}
+                or 'match_id' in reply and reply['match_id'] != request.get('match_id')):
+            raise ValueError('业务曝光只允许当前承接商店的独立收店动作，不附带经济或完成项')
+        return reply
     if request.get('kind') == 'business_resume' and (len(actions) != 1
             or actions[0].get('type') != 'finish_preparation_review'
             or set(reply.get('context_update', {})) != {'business_resume'}):
         raise ValueError('跨租期承接只允许独立当前业务复核，禁止附带旧阶段或游戏输入')
+    if any(action.get('type') == 'deploy_unit' for action in actions):
+        from currency_wars_deployment import deployment_facts
+        if (len(actions) != 1 or reply.get('context_update', {})
+                or reply.get('match_id') != request.get('match_id')
+                or request.get('kind') != 'preparation_strategy'
+                or request.get('preparation_checklist', {}).get('phase') != 'lineup_equipment'):
+            raise ValueError('实名部署只允许当前上场阶段独立单动作，不附带预算/交易/完成项')
+        deployment_facts(request['observation'], actions[0])
+        return reply
     if 'reward_capacity' in reply.get('context_update', {}) and (
             len(actions) != 1 or actions[0].get('type') != 'finish_preparation_review'):
         raise ValueError('腾位后回读必须独立无输入复核，之后重新规划领奖')
@@ -1425,6 +1708,11 @@ def validate_plan(reply, request, epoch):
             if len(actions) != 1 or reply.get('context_update'):
                 raise ValueError('任务列表滚动须独立单动作，不附带预算或阶段完成项')
             validate_task_list_scroll(action, request)
+        if isinstance(action.get('target_evidence'), dict) and action['target_evidence'].get('control_id') == 'owned_unit_details':
+            if len(actions) != 1 or reply.get('context_update'):
+                raise ValueError('备选角色详情只允许独立单次检查，不附带购买或阶段完成项')
+            from currency_wars_unit_inspection import validate_action
+            validate_action(action, request)
         if action['type'] == 'click_text' and (not isinstance(action.get('text'), str)
                 or not clean(action['text']) or type(action.get('exact', True)) is not bool):
             raise ValueError('文字点击须有非空目标及布尔exact，不能用空子串或隐式类型匹配')
@@ -3143,6 +3431,12 @@ class Worker:
             self.manual_stage_business_pending = retained_effects
         if retained_effects and not (page == 'reward_overlay' and physical == ['key:27']):
             raise ValueError('原节点业务效果仍pending；完整completed不能清费用/领奖效果，只核原来源')
+        deployment_record = getattr(self, 'business', {}).get('deployment_pending')
+        if deployment_record and (not action or action.get('type') != 'deploy_unit'
+                or not getattr(self, 'deployment_inflight', None)
+                or deployment_record.get('origin_run_id') != self.owner['run_id']
+                or deployment_record.get('request_id') != self.deployment_inflight.get('request_id')):
+            raise ValueError('原实名部署效果仍pending；只核原ID，不能后续输入洗掉未知')
         if isinstance(action, dict) and action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
             pending = getattr(self, 'task_scroll_inflight', None)
             if (physical != ['scroll:' + ':'.join(map(str, action.get('args', [])))]
@@ -3161,6 +3455,16 @@ class Worker:
                              and old.get('request_id') == request_id
                              and old.get('publication_attempted') is False)):
                 raise ValueError('原经济业务效果仍pending；不因阶段变化开始另一笔输入')
+        if action.get('type') == 'close_shop_for_observation':
+            pending = self.guard_business_view(action, observed, request_id=request_id)
+            if tokens != pending['tokens']:
+                raise ValueError('业务曝光仅允许实际已核收起中心的一次点击')
+            return
+        if action.get('type') == 'deploy_unit':
+            pending = self.guard_deployment(action, observed, request_id=request_id)
+            if tokens != pending['tokens']:
+                raise ValueError('实名部署只能使用原生源槽和空目标槽计算的一次拖动')
+            return
         reward = getattr(self, 'reward_inflight', None)
         if action.get('purpose') == 'local_reward':
             if (not reward or action.get('type') != 'click_point'
@@ -3260,10 +3564,22 @@ class Worker:
         if action.get('type') == 'click_point' and not (guide_navigation or loot_pickup
                 or action.get('purpose') == 'reward_capacity'):
             self.check_target_roi(action, self.state.get('decision_request') or {}, observed)
+        if action.get('target_evidence', {}).get('control_id') == 'owned_unit_details':
+            if physical != ['click:' + ':'.join(map(str, action['args']))] or not request_id:
+                raise ValueError('备选详情实际发布必须是原意图的单次固定头像点击')
+            request = self.state.get('decision_request') or {}
+            attempted = getattr(self, 'owned_unit_details_attempted', {})
+            attempted[request['request_id']] = request_id
+            self.owned_unit_details_attempted = attempted
+            self.log({'event': 'owned_unit_details_attempted', 'request_id': request['request_id'],
+                      'input_request_id': request_id, 'slot': action['target_evidence']['slot'],
+                      'input_sent': False, 'input_resent': False})
 
     def command(self, tokens, reason, expected_page=None, postcondition=None, action=None, *, read_scope='full'):
         if getattr(self, 'business_needs_review', False):
-            raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
+            if not action or action.get('type') != 'close_shop_for_observation':
+                raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
+            self.guard_business_view(action, self.last_observation or {})
         page = (self.last_observation or {}).get('page')
         if (expected_page is not None and page != expected_page
                 or action and action.get('expected_page') not in (None, page)):
@@ -3291,6 +3607,13 @@ class Worker:
         captured_stage = battle_stage(request)
         approval = None
         submit_deadline = self.deadline
+        macro = getattr(self, 'economy_macro_active', None)
+        if macro:
+            submit_deadline = min(submit_deadline, macro['monotonic_deadline'])
+        if action and (action.get('type') in ('close_shop_for_observation', 'deploy_unit')
+                or action.get('target_evidence', {}).get('control_id') == 'owned_unit_details'):
+            remaining = (datetime.fromisoformat(request['deadline_at']) - datetime.now(timezone.utc)).total_seconds()
+            submit_deadline = min(submit_deadline, time.monotonic() + remaining)
         if action and action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
             context = self.task_scroll_binding(action, request)
             for expires in (request['deadline_at'], context['expires_at']):
@@ -3368,6 +3691,9 @@ class Worker:
                         raise BattleConfirmationRequired('needs_user_confirmation：发布前无本请求有效战斗批准，未提交')
                 if time.monotonic() >= submit_deadline:
                     raise entry.SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
+                if planned_inputs and not self.economic_view_navigation(action, observed):
+                    self.economic_roster_view = None
+                    self.economic_navigation_receipts = {}
                 if transaction is not None:
                     transaction['publication_attempted'] = True
                     transaction['broker_actions'] = value['actions']
@@ -3382,12 +3708,22 @@ class Worker:
                 if task_scroll is not None:
                     task_scroll.update(publication_attempted=True, broker_actions=value['actions'])
                     self.save_task_scroll(task_scroll)
+                if business_view is not None:
+                    business_view['publication_attempted'] = True
+                    self.save_business_view(business_view)
+                if deployment is not None:
+                    deployment['publication_attempted'] = True
+                    deployment['broker_actions'] = value['actions']
+                    self.save_deployment(deployment)
                 if hasattr(self, 'business'):
                     self.save_business()  # Original lease CAS still owns this publication.
                     # This is an intent before the actual publisher. A crash
                     # here is unknown, never proof of input or zero effect.
                     archive_business_receipt(self.records, self.owner,
                         {'id': value['id'], 'request': value, 'result': None}, self.c)
+                if business_view is not None:
+                    # Account for intent/archive IO before the sole publisher.
+                    self.source_refresh_guard(request, tuple(business_view['broker_identity']), pending_input_id=rid)
                 if task_scroll is not None:
                     # Local PNG/receipt checks can themselves cross the short
                     # request/manual deadline. Recheck after their IO, before
@@ -3395,6 +3731,9 @@ class Worker:
                     self.task_scroll_binding(action, current_request)
                     if time.monotonic() >= submit_deadline:
                         raise entry.SubmissionDeadlineExpired('任务列表滚动在发布前已到原请求/手操期限')
+                if macro:
+                    # Last guard under Entry's original lock, after archive IO.
+                    self.guard_economy_macro_publication(value, action, transaction)
 
         rid = uuid.uuid4().hex
         if action and action.get('purpose') == 'reward_capacity':
@@ -3404,6 +3743,14 @@ class Worker:
             pending.update(input_request_id=rid, tokens=tokens)
             self.c.write_json(self.run / 'reward-capacity.json', pending)
             self.c.write_json(self.records / (rid + '-reward-capacity.json'), pending)
+        business_view = getattr(self, 'business_view_inflight', None)
+        if business_view is not None:
+            business_view['input_request_id'] = rid
+            self.save_business_view(business_view)
+        deployment = getattr(self, 'deployment_inflight', None)
+        if deployment is not None:
+            deployment['input_request_id'] = rid
+            self.save_deployment(deployment)
         transaction = getattr(self, 'economy_inflight', None)
         if transaction is not None:
             transaction['request_id'] = rid
@@ -3428,13 +3775,23 @@ class Worker:
                   'observation': self.last_observation, 'before_evidence': before})
         started = time.perf_counter()
         guarded = GuardedSubmission(self.c, publication_guard,
-            lambda: self.profile_span('publish_request', operation='publication', request_id=rid))
+            lambda: self.profile_span('publish_request', operation='publication', request_id=rid),
+            (lambda value: self.guard_economic_macro(macro, pending_input_id=value['id'], publication=True)) if macro else None)
+        def retain_macro_delivery():
+            if macro:
+                publication = next((item for item in macro['record']['publications'] if item['request_id'] == rid), None)
+                if publication:
+                    publication['publication_attempted'] = guarded.publication_attempted
+                    original = optional(self.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json'))
+                    if original:
+                        publication['receipt'] = redact(original)
         try:
             with self.profile_span('broker_roundtrip', operation='tool_roundtrip', request_id=rid) as timing:
                 result = entry.request(guarded, 'actions', tokens, rid, False, submit_deadline=submit_deadline,
                                        queue_wait=self.profile_queue_wait)
                 self.profile_broker_result(result, timing)
         except Exception as exc:
+            retain_macro_delivery()
             if action and action.get('purpose') == 'reward_capacity' and not guarded.publication_attempted:
                 pending = self.pending_reward_capacity()
                 if pending and pending.get('input_request_id') == rid:
@@ -3471,6 +3828,7 @@ class Worker:
                 original = optional(path)
                 if original:
                     archive_business_receipt(self.records, self.owner, original, self.c)
+        retain_macro_delivery()
         # Persist the input receipt even if its subsequent observation failed.
         # A new read-only observation must never resubmit these input tokens.
         if transaction is not None:
@@ -3504,7 +3862,14 @@ class Worker:
             raise RuntimeError(result.get('error', 'broker拒绝动作'))
         try:
             observed = self.read_frame(result, scope=read_scope)
-        except entry.ObservationUnavailable:
+        except entry.ObservationUnavailable as exc:
+            if business_view is not None:
+                # The typed caller first authenticates this input receipt, then
+                # obtains a separate, bounded observe. Never replay the click.
+                return None
+            if deployment is not None:
+                deployment.update(publication_attempted=guarded.publication_attempted, error=str(exc))
+                self.save_deployment(deployment)
             # This fallback is part of the SAME reward's two-read budget.
             # Original input delivery must be known before a successor frame
             # replaces the broker notification; observe never repeats input.
@@ -3521,6 +3886,19 @@ class Worker:
                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
                   'after_evidence': after, 'expected_change': postcondition,
                   'classification': 'observed_after_input', 'outcome_confirmed': False})
+        if self.economic_view_navigation(action, {'page': page}):
+            expected_navigation = self.c.validate_actions([
+                {'type': parts[0], 'args': parts[1:]} for parts in (token.split(':') for token in tokens)])
+            if (result.get('completed') == expected_navigation
+                    and len(expected_navigation) == 2
+                    and [a['type'] for a in expected_navigation] == ['click', 'wait']
+                    and result.get('attempted_actions') == expected_navigation[:1]
+                    and result.get('input_attempted') is True
+                    and result.get('ok') is True):
+                self.economic_navigation_receipts = getattr(self, 'economic_navigation_receipts', {})
+                self.economic_navigation_receipts[rid] = {
+                    'actions': copy.deepcopy(result['completed']), 'scope': {
+                        'match_id': captured_match, 'stage': captured_stage, 'resume_epoch': captured_epoch}}
         return observed
 
     def read_frame(self, result, *, scope='full', force=False, reuse_primary=False):
@@ -3567,6 +3945,7 @@ class Worker:
                 self.strategy_reads[key] = {'value': copy.deepcopy(fact), 'snapshot_id': observed['snapshot_id'],
                     'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'observed_at': now(),
                     'read_contract': copy.deepcopy(observed.get('read_contract'))}
+        self.remember_economic_roster(observed)
         self.profile_context()
         return observed
 
@@ -3597,22 +3976,95 @@ class Worker:
         if scope != getattr(self, 'preparation_scope', None):
             self.preparation_scope, self.preparation_reviews = scope, {}
         reviews = getattr(self, 'preparation_reviews', {})
+        inspection = reviews.get('shop_inspection') or {}
+        if (observed is getattr(self, 'last_observation', None) and observed.get('page') == 'shop'
+                and inspection.get('completed') is True
+                and inspection.get('proof', {}).get('snapshot_id') != observed.get('snapshot_id')):
+            # A newly exposed store is read afresh. Closed-store navigation and
+            # explicit sales retain the read; new/unknown offers cannot inherit it.
+            reviews.pop('shop_inspection', None)
+        if (reviews.get('rewards', {}).get('completed') is True
+                and coaching.preparation_status(reviews)['phase'] == 'shop_inspection'):
+            self.inspect_current_shop(observed)
         return coaching.preparation_status(reviews)
 
+    def inspect_current_shop(self, observed):
+        """Complete the read phase from this worker's full native frame only."""
+        shop = observed.get('shop') or {}
+        geometry = shop.get('page', {}).get('geometry') or {}
+        scores, slots = geometry.get('frame_scores') or [], shop.get('slots') or []
+        if (observed is not getattr(self, 'last_observation', None) or observed.get('page') != 'shop'
+                or not full_observation(observed) or not self.preparation_scope[1]
+                or canonical_stage(observed.get('fields', {}).get('stage')) != self.preparation_scope[1]
+                or shop.get('schema') != 'currency-wars-shop-observation/v1'
+                or shop.get('ok') is not True or shop.get('status') != 'ok'
+                or shop.get('input', {}).get('sha256') != observed.get('snapshot_id')
+                or shop.get('input', {}).get('size') != [1920, 1080]
+                or shop.get('input', {}).get('format') != 'PNG'
+                or shop.get('page', {}).get('reliable_open_shop') is not True
+                or len(scores) != 5 or any(type(value) not in (int, float) or not .60 <= value <= 1. for value in scores)
+                or geometry.get('overlays') != [] or len(slots) != 5
+                or any(not isinstance(slot, dict) or type(slot.get('slot')) is not int for slot in slots)
+                or {slot['slot'] for slot in slots} != set(range(1, 6))):
+            return False
+        offers = []
+        for slot in sorted(slots, key=lambda value: value['slot']):
+            if slot.get('status') == 'empty':
+                offers.append({'slot': slot['slot'], 'status': 'empty', 'name': None, 'cost': None})
+            else:
+                priced = purchase_slot(shop, slot['slot'], observed['snapshot_id'])
+                if not priced:
+                    return False
+                offers.append({key: priced[key] for key in ('slot', 'name', 'cost')} | {'status': 'recognized'})
+        # A copied marker or saved old screenshot cannot close this phase.
+        # Authenticate its original terminal receipt and immutable PNG without input.
+        with self.c.submission_lock():
+            if (optional(self.run / 'result.json') or {}).get('id') != observed.get('capture_request_id'):
+                return False
+            for rid in self.economy_receipt_watermark():
+                if optional(self.run / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')).get('result') is None:
+                    return False
+            try:
+                receipt = manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path)
+            except (ValueError, OSError, entry.ObservationUnavailable):
+                return False
+            path = self.records / ('shop-inspection-' + observed['snapshot_id'] + '.png')
+            payload = self.frame_path.read_bytes()
+            if path.exists():
+                if path.read_bytes() != payload:
+                    raise ValueError('完整读店原帧已改变，不覆盖')
+            else:
+                with path.open('xb') as stream:
+                    stream.write(payload)
+            proof = {'source': 'current_native_shop', 'snapshot_id': observed['snapshot_id'],
+                'capture_request_id': observed['capture_request_id'], 'frame_id': observed['frame_id'],
+                'evidence_file': str(path), 'match_id': self.preparation_scope[0],
+                'stage': self.preparation_scope[1], 'resume_epoch': self.preparation_scope[2]}
+            self.preparation_reviews['shop_inspection'] = {'phase': 'shop_inspection', 'completed': True,
+                'origin': 'current_native_shop', 'stage': self.preparation_scope[1], 'proof': proof,
+                'offers': offers, 'completion_receipt': redact(receipt), 'observed_at': now()}
+            self.log({'event': 'preparation_phase_verified', 'phase': 'shop_inspection', 'proof': proof})
+            return True
+
     def invalidate_preparation(self, effect):
+        if effect in ('inventory', 'unknown_inventory', 'economy', 'shop_change'):
+            self.economic_roster_view = None
+            self.economic_navigation_receipts = {}
         reviews = getattr(self, 'preparation_reviews', {})
-        keys = ('inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'inventory' else (
-            'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'economy' else ()
+        keys = ('lineup_equipment', 'battle_acceptance') if effect == 'deployment' else (
+            'shop_inspection', 'inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'unknown_inventory' else (
+            'inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance') if effect == 'inventory' else (
+            'shop_inspection', 'economy', 'lineup_equipment', 'battle_acceptance') if effect in ('economy', 'shop_change') else ()
         for key in keys:
             reviews.pop(key, None)
         if keys:
             self.economy_read_cache = None
-            if effect == 'inventory':
+            if effect in ('inventory', 'unknown_inventory'):
                 self.economy_binding = None
                 self.context['economy_plan'] = None
                 for ledger in getattr(self, 'economy_ledgers', {}).values():
                     ledger['shop_complete'] = False
-            for key in ('team', 'gear', 'bonds', 'xp'):
+            for key in (('team', 'gear', 'bonds') if effect == 'deployment' else ('team', 'gear', 'bonds', 'xp')):
                 self.strategy_reads.pop(key, None)
                 self.context[key] = None
             self.log({'event': 'preparation_reviews_invalidated', 'effect': effect, 'phases': list(keys)})
@@ -3631,6 +4083,8 @@ class Worker:
         if not isinstance(value, dict):
             raise ValueError('准备复核缺少结构化value')
         phase = value.get('phase')
+        if phase == 'shop_inspection':
+            raise ValueError('完整读店仅由当前原生五槽全读完成，不接受监督标记或人工继承')
         if manual_record is not None and (phase != manual_record.get('phase') or value != manual_record.get('review')):
             raise ValueError('人工阶段与原监督复核内容不符；新复核须绑定当前请求单独提交')
         unverified = ManualReviewDeferred if manual_record is not None else ValueError
@@ -3649,7 +4103,8 @@ class Worker:
                 or phase not in coaching.PHASES or value.get('stage') != stage or not stage
                 or source.get('preparation_stage') != stage
                 or record['proof'].get('snapshot_id') != request.get('snapshot_id')
-                or phase != status['phase'] or not isinstance(value.get('findings'), str) or not value['findings'].strip()):
+                or not (phase == status['phase'] or phase == 'startup_guide' and status['phase'] in ('shop_inspection', 'inventory_cleanup'))
+                or not isinstance(value.get('findings'), str) or not value['findings'].strip()):
             raise ValueError('复核须按当前节点准备顺序、当前请求鲜帧，由监督助手写明实际检查结果')
         if phase == 'rewards':
             if self.pending_reward_step(self.last_observation) or self.pending_reward_capacity():
@@ -3953,6 +4408,11 @@ class Worker:
         changed = False
         for phase in coaching.PHASES:
             current = self.preparation_reviews.get(phase) or {}
+            if phase == 'shop_inspection':
+                if next(step['completed'] for step in coaching.preparation_status(self.preparation_reviews)['steps']
+                        if step['id'] == phase):
+                    continue  # Current native read is never replaced by an old manual marker.
+                break
             if (current.get('completed') is True
                     and current.get('proof', {}).get('source') == 'observed_screen'
                     and current.get('proof', {}).get('resume_epoch') == self.epoch()):
@@ -3961,6 +4421,8 @@ class Worker:
                 continue
             candidates = [item for item in items if item.get('phase') == phase
                 and item.get('status') == 'completed' and item.get('binding', {}).get('manual_id') == epoch.get('consumed_manual_id')]
+            if not candidates and phase == 'startup_guide':
+                continue  # Optional inspection cannot block the required node phases.
             if not candidates:
                 break
             if len(candidates) != 1:
@@ -3975,7 +4437,8 @@ class Worker:
                 request.get('observation', {}).get('capture_request_id'))
             if deferred.get(identity) == request_key:
                 break  # No repeated OCR of the same immutable decision frame.
-            if self.preparation_checklist(self.last_observation)['phase'] != phase:
+            expected = self.preparation_checklist(self.last_observation)['phase']
+            if not (expected == phase or phase == 'startup_guide' and expected in ('shop_inspection', 'inventory_cleanup')):
                 break
             proof = {'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
                      'evidence_file': request['evidence_file'], 'resume_epoch': self.epoch()}
@@ -4409,7 +4872,9 @@ class Worker:
     @contextlib.contextmanager
     def observation_input_lease(self):
         original = self.c
-        with entry.submission_lease(original, submit_deadline=self.deadline,
+        macro = getattr(self, 'economy_macro_active', None)
+        lease_deadline = min(self.deadline, macro['monotonic_deadline']) if macro else self.deadline
+        with entry.submission_lease(original, submit_deadline=lease_deadline,
                                     queue_wait=self.profile_queue_wait) as leased:
             self.c = leased
             try:
@@ -4791,8 +5256,9 @@ class Worker:
                 prior = getattr(self, 'business', {}).get('economy', {}).get(stage)
                 if prior and prior['run_id'] != self.owner['run_id']:
                     old = prior['ledger']
-                    for field in ('spent', 'paid_refreshes', 'critical_spent', 'purchased', 'revision'):
-                        inherited[field] = copy.deepcopy(old[field])
+                    for field in ('spent', 'paid_refreshes', 'critical_spent', 'purchased', 'revision', 'free_refreshes_used'):
+                        if field in old:
+                            inherited[field] = copy.deepcopy(old[field])
                     inherited['carried_from'] = {'run_id': prior['run_id'], 'record_file': prior['record_file']}
                 if getattr(self, 'business_previous_run', None):
                     inherited['prior_run_unknown'] = copy.deepcopy(getattr(self, 'business_unknown', []))
@@ -4926,7 +5392,11 @@ class Worker:
                                 allow_nan=False) if has_native else None
         cache_key = (actual['snapshot_id'], binding['snapshot_id'], contract.get('version'),
                      contract.get('requested_scope'), contract.get('effective_scope'), actual.get('page'),
-                     binding.get('native_refresh_offer', False), has_native, native_key)
+                     binding.get('native_refresh_offer', False), has_native, native_key,
+                     json.dumps({key: semantic.get(key) for key in ('coins', 'player_hud', 'experience_offer')},
+                                sort_keys=True, ensure_ascii=False, allow_nan=False),
+                     json.dumps(actual.get('shop'), sort_keys=True, ensure_ascii=False, allow_nan=False),
+                     json.dumps(binding.get('fields'), sort_keys=True, ensure_ascii=False, allow_nan=False))
         data = self.frame_path.read_bytes()
         if hashlib.sha256(data).hexdigest() != actual['snapshot_id']:
             raise ValueError('经济回读不属于本请求不可变原帧')
@@ -4950,6 +5420,26 @@ class Worker:
                 reading['values']['coins'] = native['value']
                 reading['unknown'] = [key for key in reading['unknown'] if key != 'coins']
                 reading['evidence']['coins'] = {'source': 'current_native_gold_hud', 'bounds': GOLD_HUD}
+        hud, xp_offer = semantic.get('player_hud') or {}, semantic.get('experience_offer') or {}
+        if (hud.get('snapshot_id') == actual['snapshot_id'] and hud.get('origin') == 'native_player_hud'
+                and hud.get('actor') == 'player'):
+            for name in ('level', 'xp'):
+                value = hud.get(name)
+                if economy.valid_field(name, value):
+                    reading['values'][name] = copy.deepcopy(value)
+                    reading['unknown'] = [key for key in reading['unknown'] if key != name]
+                    reading['evidence'][name] = {'source': 'current_native_player_hud', 'snapshot_id': actual['snapshot_id']}
+        if (xp_offer.get('snapshot_id') == actual['snapshot_id']
+                and xp_offer.get('origin') == 'native_experience_offer'):
+            # Gain is never available as a native reading in this contract.
+            reading['values'].pop('xp_gain', None)
+            reading['evidence'].pop('xp_gain', None)
+            if 'xp_gain' not in reading['unknown']:
+                reading['unknown'].append('xp_gain')
+            if xp_offer.get('cost_checked') is True and economy.valid_field('xp_cost', xp_offer.get('buy_cost')):
+                reading['values']['xp_cost'] = xp_offer['buy_cost']
+                reading['unknown'] = [key for key in reading['unknown'] if key != 'xp_cost']
+                reading['evidence']['xp_cost'] = {'source': 'current_native_experience_offer', 'snapshot_id': actual['snapshot_id']}
         shop, complete = [], actual.get('page') == 'shop'
         native_shop = actual.get('shop') or {}
         if actual.get('page') == 'shop':
@@ -4992,6 +5482,669 @@ class Worker:
         # under the same existing input submission fence.
         with self.c.submission_lock():
             return self._accept_economy_plan(record)
+
+    @staticmethod
+    def economic_view_navigation(action, observed):
+        return bool(isinstance(action, dict) and observed.get('page') in ('preparation', 'shop')
+            and (action.get('type') == 'click_text' and action.get('text') in ('商店', '收起')
+                 or action.get('type') == 'close_shop_for_observation'))
+
+    def remember_economic_roster(self, observed):
+        """Keep this original closed-shop source; do not copy it into native facts."""
+        if observed is not self.last_observation or observed.get('page') != 'preparation' or not full_observation(observed):
+            return
+        from currency_wars_economic_views import _slots, _wallet, _player
+        try:
+            slots = _slots(observed)
+            _wallet(observed)
+            _player(observed)
+            if any(s.get('status') not in ('empty', 'occupied') for s in slots):
+                return
+            stage = canonical_stage(observed.get('fields', {}).get('stage'))
+            if not stage or not re.fullmatch(r'\d+/\d+', observed.get('fields', {}).get('deployed') or ''):
+                return
+            with self.c.submission_lock():
+                manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path)
+                payload = self.frame_path.read_bytes()
+                if hashlib.sha256(payload).hexdigest() != observed['snapshot_id']:
+                    return
+                path = self.records / ('economic-roster-' + observed['snapshot_id'] + '.png')
+                if path.exists():
+                    if path.read_bytes() != payload:
+                        raise ValueError('经济阵容原帧已变，不覆盖')
+                else:
+                    with path.open('xb') as stream:
+                        stream.write(payload)
+                self.economic_roster_view = {'observation': copy.deepcopy(observed), 'png': str(path),
+                    'scope': {'stage': stage, 'match_id': self.active_match_id, 'resume_epoch': self.epoch()},
+                    'watermark': self.economy_receipt_watermark()}
+                self.economic_navigation_receipts = {}
+        except (ValueError, OSError, KeyError, TypeError, entry.ObservationUnavailable):
+            return  # Missing native evidence remains unavailable, not inferred.
+
+    def economic_comparison_view(self, request, observed):
+        from currency_wars_economic_views import compose_view
+        cached = getattr(self, 'economic_roster_view', None)
+        if not cached or observed.get('page') != 'shop':
+            return None
+        scope = {'stage': canonical_stage(observed.get('fields', {}).get('stage')),
+                 'match_id': self.active_match_id, 'resume_epoch': self.epoch()}
+        if cached['scope'] != scope or observed is not self.last_observation:
+            return None
+        with self.c.submission_lock():
+            manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path)
+            if hashlib.sha256(Path(cached['png']).read_bytes()).hexdigest() != cached['observation']['snapshot_id']:
+                raise ValueError('两视图原阵容PNG摘要已变')
+            new_ids = set(self.economy_receipt_watermark()) - set(cached['watermark'])
+            navigation, allowed = [], getattr(self, 'economic_navigation_receipts', {})
+            for rid in sorted(new_ids):
+                item = await_existing_receipt(self.run, self.c, rid, 0)
+                delivery, actions = manual_receipt_state(item), item['request'].get('actions')
+                if (item['request'].get('chat_id') != self.owner['chat_id']
+                        or item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                        or delivery['unknown_input']
+                        or item.get('result', {}).get('ok') is not True
+                        or item['result'].get('completed') != actions):
+                    raise ValueError('两视图夹有未定/外部收据，保留未知')
+                if actions == [{'type': 'observe', 'args': []}]:
+                    if (delivery['state'] != 'zero_input' or item['result'].get('input_attempted') is not False
+                            or item['result'].get('attempted_actions') != []):
+                        raise ValueError('两视图observe收据夹有输入')
+                elif (delivery['state'] == 'completed' and rid in allowed
+                        and allowed[rid]['scope'] == scope and allowed[rid]['actions'] == actions):
+                    navigation.append(rid)
+                else:
+                    raise ValueError('两视图夹有非开关商店的输入，不复用阵容')
+            if observed['capture_request_id'] not in new_ids:
+                raise ValueError('两视图缺当前原捕获水位')
+            binding = {key: request.get(key) for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+            return compose_view(cached['observation'], observed, binding, scope, navigation)
+
+    def local_economic_allocation(self, request, observed):
+        """Recompute the model contract locally; no caller assertion grants completion."""
+        from currency_wars_advisor import advise
+        from currency_wars_decision import Catalogue
+        from currency_wars_mcp import Adapter
+        if (observed is not self.last_observation or not full_observation(observed)
+                or canonical_stage(observed.get('fields', {}).get('stage')) != request.get('observation', {}).get('fields', {}).get('stage')
+                or (optional(self.run / 'result.json') or {}).get('id') != observed.get('capture_request_id')):
+            raise ValueError('统一经济重算须当前同节点完整原帧，不复制旧模型结论')
+        manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path)
+        state = copy.deepcopy(self.state)
+        state['decision_request'] = {**copy.deepcopy(request), 'snapshot_id': observed['snapshot_id'],
+            'observation': copy.deepcopy(observed), 'match_id': self.active_match_id, 'resume_epoch': self.epoch()}
+        state['decision_request']['comparison_view'] = self.economic_comparison_view(state['decision_request'], observed)
+        projected = Adapter(project=PROJECT).project_state(state)
+        input_sha256 = hashlib.sha256(json.dumps(projected, ensure_ascii=False, allow_nan=False).encode('utf-8')).hexdigest()
+        ledger = self.economy_ledger(canonical_stage(observed.get('fields', {}).get('stage')))
+        advice = advise(projected, Catalogue(PROJECT / 'data/currency_wars/catalog.sqlite3'),
+            {'economy_model': 'released_prior', 'max_node_refreshes': 3,
+             'refreshes_used': min(8, ledger.get('paid_refreshes', 0) + ledger.get('free_refreshes_used', 0))})
+        allocation = advice.get('economic_allocation')
+        if not isinstance(allocation, dict):
+            allocation = {'status': 'incomplete_joint_comparison', 'complete_dimensions': {},
+                          'blocked_reasons': ['local_advisor_joint_allocation_contract_missing']}
+        return {'origin': 'local_advisor_recomputation', 'request_id': request.get('request_id'),
+                'snapshot_id': observed.get('snapshot_id'), 'match_id': self.active_match_id,
+                'resume_epoch': self.epoch(), 'full_observation': True, 'input_sha256': input_sha256,
+                'source_verified': (advice.get('input_sha256') == input_sha256
+                    and advice.get('snapshot_id') == observed['snapshot_id']
+                    and (advice.get('source') or {}).get('projection_binding_consistent_and_fresh') is True),
+                'allocation': copy.deepcopy(allocation)}
+
+    def model_economy_plan(self, review, actual, ledger):
+        """Cumulative ledger ceilings from this exact selected conditional model."""
+        if not self.joint_allocation_complete({'allocation_review': review,
+                'observation': {'snapshot_id': actual['snapshot_id']}}):
+            raise ValueError('当前本地联合模型来源或三维比较未完成')
+        model = review['allocation']
+        selected, allocation = model['conditional_best'], model['allocation']
+        if allocation.get('budget') != selected.get('budget'):
+            raise ValueError('本地selected预算与allocation不一致')
+        targets = {}
+        for ref in selected.get('purchase_refs', []):
+            match = re.fullmatch(r'shop\.slots\[(\d+)\]', ref)
+            slots = (actual.get('shop') or {}).get('slots', [])
+            if not match or int(match[1]) >= len(slots):
+                raise ValueError('本地购买引用不属于当前原商店')
+            item = slots[int(match[1])]
+            slot = purchase_slot(actual['shop'], item.get('slot'), actual['snapshot_id'])
+            if not slot:
+                raise ValueError('本地购买引用没有当前原生实名实价')
+            name = slot['name']
+            targets.setdefault(name, {'name': name, 'copies': ledger['purchased'].get(name, 0),
+                'critical': False, 'reason': '当前本地三维联合模型选择的原生商店购买'})
+            targets[name]['copies'] += 1
+        mode = getattr(self, 'live_mode', None)
+        if not mode or mode.get('match_id') != self.active_match_id:
+            raise ValueError('本局模式未现场确认，不从模型或历史猜测')
+        return {'schema': economy.SCHEMA, 'reviewer': 'local_joint_solver', 'revision': ledger['revision'] + 1,
+            'stage': canonical_stage(actual['fields']['stage']), 'mode': mode['value'],
+            'reason': '当前原帧本地released_prior联合求解；每一笔之后回读并重新分配',
+            'shop_reviewed': True, 'purchase_only_targets': True, 'targets': list(targets.values()),
+            'budget': {key: ledger['spent'][key] + allocation['budget'][key] for key in ('purchase', 'refresh', 'experience')},
+            'paid_search': {'max_refreshes': ledger['paid_refreshes'] + allocation['refresh_count_max'],
+                'purchase_reserve': allocation['future_purchase_budget'], 'targets': [],
+                'reason': '未来购买仅留资，不发布假想目标；一次刷新即完整读店再求解',
+                'stop_conditions': ['budget_exhausted', 'max_refreshes', 'purchase_reserve', 'target_acquired']},
+            'experience': {'target_level': selected['level_assumption'], 'critical': False,
+                'reason': '联合比较当前购买、数据库经验模型与单次刷新后的最佳条件人口'},
+            'reserve': {'coins': allocation['reserve'], 'critical_allowance': ledger['critical_spent'],
+                'reason': '本地条件模型选择留资，不把留资假设当作屏幕结息事实'},
+            'model_values': {'xp_gain_assumption': model.get('configured_XP_gain_assumption'),
+                'database_sha256': model.get('database_sha256'),
+                'profile_assumption': selected.get('profile_assumption'), 'source': 'released_database_planning_assumption'},
+            'prior_run_unknown_requests': sorted(item['origin_run_id'] + ':' + item['request_id']
+                for item in ledger.get('prior_run_unknown', [])),
+            'prior_run_budget_policy': 'current_balance_after_unknown_inputs',
+            'allocation_input_sha256': review['input_sha256']}
+
+    def assert_model_budget(self, plan, review, actual, ledger):
+        """An external zero budget cannot turn a selected XP/buy into hold."""
+        if self.joint_allocation_complete({'allocation_review': review,
+                'observation': {'snapshot_id': actual['snapshot_id']}}):
+            expected = self.model_economy_plan(review, actual, ledger)
+            target_keys = lambda p: sorted((t['name'], t['copies'], t['critical']) for t in p['targets'])
+            if (plan.get('budget') != expected['budget'] or target_keys(plan) != target_keys(expected)
+                    or plan.get('reserve', {}).get('coins') != expected['reserve']['coins']
+                    or plan.get('reserve', {}).get('critical_allowance') != expected['reserve']['critical_allowance']
+                    or plan.get('paid_search', {}).get('purchase_reserve') != expected['paid_search']['purchase_reserve']
+                    or plan.get('paid_search', {}).get('max_refreshes') != expected['paid_search']['max_refreshes']
+                    or plan.get('experience', {}).get('critical') != expected['experience']['critical']
+                    or plan.get('experience', {}).get('target_level') != expected['experience']['target_level']):
+                raise ValueError('提交预算/目标/留资不等于当前本地selected三维决策；请使用advance_local_economy')
+
+    def archive_economic_macro_fence(self, request, observed):
+        """Capture the original receipt set at ask time, never infer it later."""
+        with self.c.submission_lock():
+            if ((optional(self.run / 'result.json') or {}).get('id') != observed.get('capture_request_id')
+                    or observed is not self.last_observation or not full_observation(observed)):
+                raise ValueError('经济宏原来源不是当前完整回帧')
+            manual_steps._bound_reward_frame(self.run, self.c, observed, request['original_png'])
+            identity, status = entry.owned_broker_identity(self.c, self.run), self.c.status()
+            broker = (status.get('broker_pid'), str(status.get('broker_creation_time')))
+            game = {key: (status.get('game') or {}).get(key) for key in ('pid', 'creation_id', 'hwnd')}
+            if (not identity or broker != (identity['pid'], str(identity['creation_id']))
+                    or any(value is None for value in game.values())
+                    or manual_steps.unknown_receipts(self.run, self.c)):
+                raise ValueError('经济宏原broker/game或完整收据水位不可确认')
+            receipts = {rid: manual_steps._digest(redact(await_existing_receipt(self.run, self.c, rid, 0)))
+                        for rid in self.economy_receipt_watermark()}
+            if observed['capture_request_id'] not in receipts:
+                raise ValueError('经济宏原回帧不在原水位')
+            fence = {'schema': 'currency-wars-economic-macro-source-fence/v1',
+                'parent_request_id': request['request_id'], 'owner': redact(self.owner),
+                'binding': {key: request[key] for key in ('snapshot_id', 'resume_epoch', 'match_id', 'deadline_at')},
+                'stage': canonical_stage(observed['fields']['stage']), 'page': observed['page'],
+                'broker_identity': list(broker), 'game_identity': game, 'receipts': receipts,
+                'source': {key: observed.get(key) for key in ('capture_request_id', 'frame_id', 'captured_at')}}
+            path = self.records / ('economy-source-fence-' + request['request_id'] + '.json')
+            with path.open('x', encoding='utf-8') as stream:
+                json.dump(fence, stream, ensure_ascii=False)
+            return {'file': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+
+    def economic_macro_fence(self, request):
+        reference = request.get('economic_macro_source_fence') or {}
+        path = self.records / ('economy-source-fence-' + request['request_id'] + '.json')
+        if (reference.get('file') != str(path)
+                or hashlib.sha256(path.read_bytes()).hexdigest() != reference.get('sha256')):
+            raise ValueError('经济宏缺少原请求创建时的不可变水位')
+        fence = entry.read_json(path)
+        if (fence.get('schema') != 'currency-wars-economic-macro-source-fence/v1'
+                or fence.get('parent_request_id') != request['request_id'] or fence.get('owner') != redact(self.owner)
+                or fence.get('binding') != {key: request[key] for key in ('snapshot_id', 'resume_epoch', 'match_id', 'deadline_at')}
+                or fence.get('source') != {key: request['observation'].get(key) for key in ('capture_request_id', 'frame_id', 'captured_at')}
+                or not isinstance(fence.get('receipts'), dict) or not 1 <= len(fence['receipts']) <= 4096):
+            raise ValueError('经济宏原水位归属/来源不符')
+        manual_steps._bound_reward_frame(self.run, self.c, request['observation'], request['original_png'])
+        return fence
+
+    def guard_economic_macro(self, macro, *, pending_input_id=None, publication=False):
+        parent = macro['parent']
+        self.source_refresh_guard(parent, tuple(macro['fence']['broker_identity']), pending_input_id=pending_input_id)
+        if (macro['record']['status'] != 'active'
+                or manual_steps._digest(entry.read_json(Path(macro['record']['record_file']))) != manual_steps._digest(macro['record'])
+                or self.state.get('decision_request') != parent
+                or manual_steps._digest(optional(self.run / 'decision-request.json')) != manual_steps._digest(parent)
+                or time.monotonic() >= macro['monotonic_deadline']):
+            raise ValueError('经济宏父授权已消费/改变或整体时间到限')
+        actual, fence = self.last_observation, macro['fence']
+        game = {key: (self.c.status().get('game') or {}).get(key) for key in ('pid', 'creation_id', 'hwnd')}
+        if (game != fence['game_identity'] or not actual or not full_observation(actual)
+                or canonical_stage(actual.get('fields', {}).get('stage')) != fence['stage']
+                or actual.get('page') not in ('preparation', 'shop')
+                or not macro['record']['children'] and actual.get('page') != fence['page']
+                or (optional(self.run / 'result.json') or {}).get('id') != actual.get('capture_request_id')
+                or getattr(self, 'business_needs_review', False)
+                or self.preparation_checklist(actual)['phase'] != 'economy'
+                or getattr(self, 'deployment_pending', None) or self.pending_reward_capacity()
+                or self.pending_reward_step(actual)):
+            raise ValueError('经济宏节点/页面/前序/奖励或原来源已失效')
+        ledger = self.economy_ledger(fence['stage'])
+        semantic = actual.get('semantic') or {}
+        scan = semantic.get('rewards') or {}
+        capacity = (semantic.get('team') or {}).get('capacity') or {}
+        if ((scan.get('snapshot_id') == actual['snapshot_id']
+                and (scan.get('targets') or scan.get('uncertain') or scan.get('interaction_required')))
+                or semantic.get('options')
+                or capacity.get('snapshot_id') == actual['snapshot_id'] and capacity.get('overflow_count', 0) != 0):
+            raise ValueError('经济宏当前奖励/选项/腾位要求出现，返回ROOT')
+        pending = ledger.get('pending')
+        if pending and (not publication or pending is not getattr(self, 'economy_inflight', None)
+                        or pending.get('request_id') != pending_input_id or pending.get('publication_attempted') is not True):
+            raise ValueError('经济宏原经济效果仍未决，不自动核销/重发')
+        manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
+        current_ids = set(self.economy_receipt_watermark())
+        known = {**fence['receipts'], **macro['record']['accepted_receipts']}
+        if not set(known) <= current_ids:
+            raise ValueError('经济宏原收据水位丢失')
+        for rid in current_ids - {pending_input_id}:
+            item = await_existing_receipt(self.run, self.c, rid, 0)
+            if rid in known:
+                if manual_steps._digest(redact(item)) != known[rid]:
+                    raise ValueError('经济宏原收据被替换')
+                continue
+            req, result = item['request'], item['result']
+            delivery = manual_receipt_state(item)
+            if (req.get('kind') != 'actions' or req.get('handoff') is not False
+                    or req.get('actions') != [{'type': 'observe', 'args': []}]
+                    or result.get('ok') is not True or result.get('completed') != req['actions']
+                    or result.get('input_attempted') is not False or result.get('attempted_actions') != []
+                    or delivery['unknown_input'] or delivery['state'] != 'zero_input'):
+                raise ValueError('经济宏后继不是已核零输入纯observe，不扩权继续')
+        if time.monotonic() >= macro['monotonic_deadline']:
+            raise ValueError('经济宏归档核验后时间到限')
+        return actual
+
+    def save_economic_macro(self, macro):
+        record = macro['record']
+        record['elapsed_seconds'] = round(time.monotonic() - macro['started'], 3)
+        record['latest_source'] = {key: (self.last_observation or {}).get(key)
+                                  for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'page')}
+        self.c.write_json(Path(record['record_file']), record)
+        # Public status carries progress, not all archived parents/children or
+        # thousands of receipt hashes. The immutable journal remains linked.
+        self.publish(economy_macro={key: copy.deepcopy(record[key]) for key in (
+            'schema', 'record_file', 'request_id', 'status', 'limits', 'economic_attempts', 'navigation_attempts',
+            'paid_refresh_attempts', 'gross_spent', 'gross_spent_reserved', 'effects_verified', 'elapsed_seconds',
+            'local_model_calls', 'local_solve_seconds', 'root_authorizations',
+            'latest_source', 'input_resent', 'outcome', 'error') if key in record})
+
+    def economic_macro_child(self, macro):
+        with self.c.submission_lock():
+            actual = self.guard_economic_macro(macro)
+            rid = uuid.uuid4().hex
+            path = self.records / ('economy-child-' + rid + '.png')
+            payload = self.frame_path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() != actual['snapshot_id']:
+                raise ValueError('经济宏child原PNG已变')
+            with path.open('xb') as stream:
+                stream.write(payload)
+            child = {'request_id': rid, 'parent_authority_id': macro['parent']['request_id'],
+                'snapshot_id': actual['snapshot_id'], 'match_id': self.active_match_id, 'resume_epoch': self.epoch(),
+                'deadline_at': macro['parent']['deadline_at'], 'observation': copy.deepcopy(actual), 'original_png': str(path),
+                'kind': 'local_economic_macro_child', 'internal_source_only': True,
+                'comparison_view': None}
+            try:
+                child['comparison_view'] = self.economic_comparison_view(child, actual)
+            except (ValueError, OSError, KeyError, TypeError):
+                # A stale pair can only be reacquired through bounded original
+                # navigation. Receipt admission above still rejects unknowns.
+                pass
+            capture = await_existing_receipt(self.run, self.c, actual['capture_request_id'], 0)
+            source = {'request': copy.deepcopy(child), 'capture_receipt': redact(capture),
+                      'sequence': len(macro['record']['children']) + 1}
+            macro['record']['children'].append(source)
+            macro['child'] = child
+            self.save_economic_macro(macro)
+            self.guard_economic_macro(macro)
+            return child
+
+    def guard_economy_macro_publication(self, value, action, transaction):
+        macro = self.economy_macro_active
+        actual = self.guard_economic_macro(macro, pending_input_id=value['id'], publication=True)
+        child = macro.get('child')
+        if not child or child['observation'] != actual:
+            raise ValueError('经济宏发布前child来源已改变')
+        manual_steps._bound_reward_frame(self.run, self.c, actual, child['original_png'])
+        record, limits = macro['record'], macro['record']['limits']
+        if transaction is not None:
+            if (transaction['authorization'].get('parent_authority_id') != record['request_id']
+                    or transaction['authorization'].get('child_request_id') != child['request_id']):
+                raise ValueError('经济宏交易缺少当前父/child授权')
+            cost, kind = transaction['cost'], transaction['kind']
+            if (record['economic_attempts'] >= limits['max_economic_actions']
+                    or record['gross_spent_reserved'] + cost > limits['max_total_spent']
+                    or kind == 'refresh' and cost > 0 and record['paid_refresh_attempts'] >= limits['max_paid_refreshes']):
+                raise ValueError('经济宏经济动作/总花费/付费刷新上限到达')
+            record['economic_attempts'] += 1
+            record['gross_spent_reserved'] += cost
+            record['paid_refresh_attempts'] += int(kind == 'refresh' and cost > 0)
+        else:
+            if not self.economic_view_navigation(action, actual):
+                raise ValueError('经济宏不授权其他物理输入')
+            if record['navigation_attempts'] >= limits['max_navigation_clicks']:
+                raise ValueError('经济宏导航上限到达')
+            record['navigation_attempts'] += 1
+            kind, cost = 'navigation', 0
+        record['publications'].append({'request_id': value['id'], 'child_request_id': child['request_id'],
+            'kind': kind, 'reserved_cost': cost, 'status': 'reserved', 'broker_actions': copy.deepcopy(value['actions'])})
+        self.save_economic_macro(macro)
+        # Persisted reservations are deliberately never refunded/replayed, even
+        # if the final check refuses. The original Entry proves zero publication.
+        self.guard_economic_macro(macro, pending_input_id=value['id'], publication=True)
+
+    def acknowledge_economic_macro(self, macro, *, economic):
+        publication = macro['record']['publications'][-1]
+        item = await_existing_receipt(self.run, self.c, publication['request_id'], 0)
+        delivery = manual_receipt_state(item)
+        if (delivery['unknown_input'] or delivery['state'] != 'completed' or item['result'].get('ok') is not True
+                or item['request'].get('actions') != publication['broker_actions']):
+            raise ValueError('经济宏原输入收据仍未决；停止全部后续输入')
+        publication.update(status='receipt_confirmed', receipt=redact(item))
+        if economic:
+            ledger = self.economy_ledger(macro['fence']['stage'])
+            if ledger['pending']:
+                raise ValueError('经济宏原经济效果未核，不继续')
+            gross = sum(ledger['spent'].values()) - macro['record']['initial_gross_spent']
+            if gross != macro['record']['gross_spent'] + publication['reserved_cost']:
+                raise ValueError('经济宏实花与原核效不符，不净额抵消其他收益')
+            macro['record']['gross_spent'] = gross
+            macro['record']['effects_verified'] += 1
+        publication.update(status='effect_verified' if economic else 'navigation_verified', receipt=redact(item))
+        macro['record']['accepted_receipts'][item['id']] = manual_steps._digest(redact(item))
+        self.save_economic_macro(macro)
+
+    def advance_local_economy_macro(self, reply):
+        """One ROOT authority, fresh local sources and bounded original inputs."""
+        started = time.monotonic()
+        with self.c.submission_lock(), file_lock(self.run, 'decision-submit.lock'):
+            parent = copy.deepcopy(self.state.get('decision_request') or {})
+            validate_plan(reply, parent, self.epoch())
+            if getattr(self, 'economy_macro_active', None):
+                raise ValueError('经济宏正在执行，禁止重入')
+            path = self.records / ('economy-macro-' + parent['request_id'] + '.json')
+            if path.exists():
+                raise ValueError('经济宏父授权已尝试/消费，不自动重启')
+            limits = economy.validate_macro_limits(reply['actions'][0]['limits'])
+            fence = self.economic_macro_fence(parent)
+            ledger = self.economy_ledger(fence['stage'])
+            record = {'schema': economy.MACRO_CONTRACT, 'record_file': str(path), 'request_id': parent['request_id'],
+                'owner': redact(self.owner), 'match_id': self.active_match_id, 'stage': fence['stage'], 'resume_epoch': self.epoch(),
+                'parent': copy.deepcopy(parent), 'root_action': copy.deepcopy(reply['actions'][0]), 'status': 'active',
+                'limits': limits, 'economic_attempts': 0, 'navigation_attempts': 0, 'paid_refresh_attempts': 0,
+                'initial_gross_spent': sum(ledger['spent'].values()), 'gross_spent': 0, 'gross_spent_reserved': 0,
+                'effects_verified': 0, 'accepted_receipts': {}, 'children': [], 'publications': [], 'input_resent': False,
+                'root_authorizations': 1, 'local_model_calls': 0, 'local_solve_seconds': 0.0}
+            remaining = (datetime.fromisoformat(parent['deadline_at']) - datetime.now(timezone.utc)).total_seconds()
+            macro = {'parent': parent, 'fence': fence, 'record': record, 'started': started,
+                'monotonic_deadline': min(self.deadline, started + limits['max_wall_seconds'], time.monotonic() + remaining)}
+            # Claim once before any navigation; the durable active record also
+            # rejects crash/restart replay. Validation failures consume no input.
+            with path.open('x', encoding='utf-8') as stream:
+                json.dump(record, stream, ensure_ascii=False)
+            # ask's context is otherwise shared with self.context. Detach that
+            # original value before installing any locally derived budget.
+            self.state['decision_request'] = copy.deepcopy(parent)
+            self.economy_macro_active = macro
+        outcome = 'stopped'
+        try:
+            self.save_economic_macro(macro)
+            with self.observation_input_lease():
+                while True:
+                    actual = self.guard_economic_macro(macro)
+                    child = self.economic_macro_child(macro)
+                    board = [s for s in (actual.get('semantic', {}).get('team') or {}).get('slots', []) if s.get('location') == 'board']
+                    needs_pair = actual['page'] == 'shop' and (not re.fullmatch(r'\d+/\d+', actual.get('fields', {}).get('deployed') or '')
+                        or len(board) != 10 or any(s.get('status') not in ('empty', 'occupied') for s in board))
+                    pair = child.get('comparison_view')
+                    if actual['page'] == 'preparation' or needs_pair and pair is None:
+                        label = '收起' if actual['page'] == 'shop' else '商店'
+                        bounds = (1554, 943, 1694, 1020) if label == '收起' else None
+                        target = find_text(actual['rows'], label, bounds, exact=True)
+                        if not target or target.get('confidence', 0) < .90:
+                            raise ValueError('经济宏当前原生导航控件未知，不点击')
+                        self.guard_economic_macro(macro)
+                        after = self.click_text(actual, label, reply['actions'][0]['reason'], bounds=bounds)
+                        expected = 'preparation' if label == '收起' else 'shop'
+                        if after.get('page') != expected or label == '收起' and not getattr(self, 'economic_roster_view', None):
+                            raise ValueError('经济宏导航后页/阵容未知，不重点击')
+                        self.acknowledge_economic_macro(macro, economic=False)
+                        continue
+                    solve_started = time.perf_counter()
+                    record['local_model_calls'] += 1
+                    try:
+                        review = self.local_economic_allocation(child, actual)
+                    finally:
+                        record['local_solve_seconds'] += time.perf_counter() - solve_started
+                    self.save_economic_macro(macro)
+                    self.guard_economic_macro(macro)
+                    policy = self.install_local_economy_allocation(child, actual, ledger, review)
+                    macro['record']['children'][-1].update(input_sha256=review['input_sha256'],
+                        model_values=copy.deepcopy(self.economy_binding['plan']['model_values']), selected_action=copy.deepcopy(policy['actions'][0] if policy['actions'] else None))
+                    self.save_economic_macro(macro)
+                    self.guard_economic_macro(macro)
+                    if not policy['actions']:
+                        outcome = 'economy_complete' if self.finish_local_economy(actual, policy) else 'completion_unproven'
+                        break
+                    selected = policy['actions'][0]
+                    self.guard_preparation_action(selected, actual)
+                    if not self.execute_economic_action(selected, actual, child):
+                        outcome = 'original_effect_unresolved'
+                        break  # Preserve the original economy_result and pending.
+                    self.acknowledge_economic_macro(macro, economic=True)
+                    self.guard_economic_macro(macro)
+                    self.observe(max_attempts=1)
+        except (ValueError, RuntimeError, OSError, KeyError, TypeError, TimeoutError) as exc:
+            record['error'] = str(exc)
+        finally:
+            record.update(status='consumed', outcome=outcome)
+            try:
+                self.save_economic_macro(macro)
+            finally:
+                self.economy_macro_active = None
+        # Unknown effect asks its own original result. Never overwrite it.
+        if self.state.get('decision_request') == parent:
+            self.state['decision_request'] = None
+            pending = ledger.get('pending')
+            self.ask(self.last_observation, 'economy_result' if pending else 'preparation_strategy',
+                     '经济宏已退出：' + outcome + '；核当前结果及原ID后独立继续', choices={'pending': pending} if pending else None,
+                     category='exception' if pending else 'economy', business_step='lineup_equipment' if outcome == 'economy_complete' else 'economy')
+        return copy.deepcopy(record)
+
+    def install_local_economy_allocation(self, request, actual, ledger, review):
+        """Install this current solver budget; cumulative node spend is retained."""
+        stage = canonical_stage(actual['fields']['stage'])
+        plan = self.model_economy_plan(review, actual, ledger)
+        binding = {'scope': (self.active_match_id, stage, self.epoch()), 'snapshot_id': actual['snapshot_id'],
+            'fields': {}, 'plan': plan, 'proof': {'source': 'local_joint_solver', 'request_id': request['request_id'],
+                'snapshot_id': actual['snapshot_id'], 'parent_authority_id': request.get('parent_authority_id')},
+            'allocation_request': copy.deepcopy(request), 'native_refresh_offer': True,
+            'ignored_legacy_refresh_fields': [], 'allocation_review': review}
+        observed = self.economy_observation(actual, binding)
+        if not observed['shop_complete']:
+            raise ValueError('经济前当前五槽未完整读取')
+        economy.validate_budget(plan, observed, ledger, trusted_local=True)
+        self.economy_binding = binding
+        ledger.update(revision=plan['revision'], budget=copy.deepcopy(plan['budget']),
+                      policy={key: copy.deepcopy(plan[key]) for key in economy.POLICY_FIELDS})
+        if ledger.get('requires_current_budget'):
+            ledger['requires_current_budget'] = False
+            ledger['current_balance_budget_proof'] = copy.deepcopy(binding['proof'])
+        self.save_economy_ledger(stage, ledger)
+        self.context['economy_plan'] = {'value': plan, 'proof': binding['proof'], 'origin': 'local_joint_solver', 'scope': binding['scope']}
+        policy = self.economic_policy(actual)
+        if not policy['available']:
+            raise ValueError(policy['reason'])
+        return policy
+
+    def advance_local_economy(self, reply):
+        """ROOT authorizes one physical economy action, or <=2 view-only clicks."""
+        request = copy.deepcopy(self.state.get('decision_request') or {})
+        validate_plan(reply, request, self.epoch())
+        action, original = reply['actions'][0], request['observation']
+        if action.get('type') != 'advance_local_economy':
+            raise ValueError('本地经济入口须使用独立typed动作')
+        broker = self.source_refresh_guard(request)
+        actual = self.last_observation
+        if (getattr(self, 'business_needs_review', False) or not actual or not full_observation(actual)
+                or self.preparation_checklist(actual)['phase'] != 'economy'):
+            raise ValueError('本地经济须当前同请求完整原帧，且领奖、完整读店、卖无用牌均已完成')
+        if any(actual.get(k) != original.get(k)
+               for k in ('snapshot_id', 'page', 'capture_request_id', 'frame_id')):
+            # The waiting loop may have made a passive capture. Retire this
+            # spending authorization through the original read-only refresh;
+            # never attach old bindings to that newer frame or send old input.
+            refresh = {key: reply[key] for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+            refresh.update(actions=[{'type': 'refresh_observation',
+                                    'reason': '被动观察已更换原帧；只刷新当前请求，下一请求重新授权经济动作。'}],
+                           context_update={})
+            self.refresh_request_source(refresh)
+            self.log({'event': 'local_economy_source_refreshed',
+                      'previous_request_id': request['request_id'], 'input_sent': False})
+            return
+        # This entry creates the first budget from native state. The legacy
+        # spending-context helper requires an existing budget and cannot run
+        # before the local model has derived and validated that budget.
+        stage = canonical_stage(actual['fields']['stage'])
+        ledger = self.economy_ledger(stage)
+        if (ledger.get('pending')
+                or getattr(self, 'deployment_pending', None) or self.pending_reward_capacity()):
+            raise ValueError('原业务或经济效果仍未决；先核原ID，不自动清pending/重发')
+        manual_steps._bound_reward_frame(self.run, self.c, actual, request['original_png'])
+        attempt_path = self.records / ('local-economy-' + request['request_id'] + '.json')
+        if attempt_path.exists():
+            raise ValueError('本请求本地经济已尝试；核原记录，新请求重算，不重发')
+        attempt = {'schema': 'currency-wars-local-economy-step/v1', 'request_id': request['request_id'],
+            'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'snapshot_id': actual['snapshot_id'],
+            'root_action': copy.deepcopy(action), 'outcome': 'pending', 'navigation_inputs': 0,
+            'economic_inputs_max': 1, 'input_resent': False}
+        with attempt_path.open('x', encoding='utf-8') as stream:
+            json.dump(attempt, stream, ensure_ascii=False)
+        try:
+            with self.observation_input_lease():
+                # Shop hides the board/population on the actual client. Closing
+                # and reopening uses existing native text/Entry guards only.
+                native_board = [s for s in (actual.get('semantic', {}).get('team') or {}).get('slots', [])
+                                if s.get('location') == 'board']
+                needs_pair = (actual['page'] == 'shop' and (
+                    not re.fullmatch(r'\d+/\d+', actual.get('fields', {}).get('deployed') or '')
+                    or len(native_board) != 10 or any(s.get('status') not in ('empty', 'occupied') for s in native_board)))
+                try:
+                    pair = self.economic_comparison_view(request, actual) if needs_pair else None
+                except (ValueError, OSError, KeyError, TypeError):
+                    # Missing/stale pairs may be replaced only through the same
+                    # bounded original navigation; unknown broker receipts were
+                    # already rejected by source_refresh_guard before input.
+                    pair = None
+                if actual['page'] == 'preparation' or needs_pair and pair is None:
+                    if actual['page'] == 'shop':
+                        self.source_refresh_guard(request, broker)
+                        target = find_text(actual['rows'], '收起', (1554, 943, 1694, 1020), exact=True)
+                        if not target or target.get('confidence', 0) < .90:
+                            raise ValueError('当前原生收起控件未知；不点击')
+                        actual = self.click_text(actual, '收起', action['reason'], bounds=(1554, 943, 1694, 1020))
+                        attempt['navigation_inputs'] += 1
+                        self.source_refresh_guard(request, broker)
+                        if actual.get('page') != 'preparation' or not getattr(self, 'economic_roster_view', None):
+                            raise ValueError('收店后阵容/人口未知；停止导航，不重点击')
+                    self.source_refresh_guard(request, broker)
+                    target = find_text(actual['rows'], '商店', exact=True)
+                    if not target or target.get('confidence', 0) < .90:
+                        raise ValueError('当前原生商店控件未知；不点击')
+                    actual = self.click_text(actual, '商店', action['reason'])
+                    attempt['navigation_inputs'] += 1
+                    self.source_refresh_guard(request, broker)
+                    if actual.get('page') != 'shop':
+                        raise ValueError('开店后页面未知；停止导航，不重点击')
+                    attempt['outcome'] = 'views_read_requires_new_root_request'
+                    self.state['decision_request'] = None
+                    self.ask(actual, 'preparation_strategy', '已按本步授权核两视图；新请求本地三维求解后仅执行一笔',
+                             category='economy', business_step='economy')
+                    return
+                review = self.local_economic_allocation(request, actual)
+                plan = self.model_economy_plan(review, actual, ledger)
+                binding = {'scope': (self.active_match_id, stage, self.epoch()), 'snapshot_id': actual['snapshot_id'],
+                    'fields': {}, 'plan': plan, 'proof': {'source': 'local_joint_solver', 'request_id': request['request_id'],
+                        'snapshot_id': actual['snapshot_id']}, 'allocation_request': copy.deepcopy(request),
+                    'native_refresh_offer': True, 'ignored_legacy_refresh_fields': [], 'allocation_review': review}
+                observed = self.economy_observation(actual, binding)
+                if not observed['shop_complete']:
+                    raise ValueError('经济前当前五槽未完整读取')
+                economy.validate_budget(plan, observed, ledger, trusted_local=True)
+                self.economy_binding = binding
+                ledger.update(revision=plan['revision'], budget=copy.deepcopy(plan['budget']),
+                              policy={key: copy.deepcopy(plan[key]) for key in economy.POLICY_FIELDS})
+                if ledger.get('requires_current_budget'):
+                    # Renew only after validating the current local allocation.
+                    # Historical unknown receipt identities remain unchanged.
+                    ledger['requires_current_budget'] = False
+                    ledger['current_balance_budget_proof'] = copy.deepcopy(binding['proof'])
+                self.save_economy_ledger(stage, ledger)
+                self.context['economy_plan'] = {'value': plan, 'proof': binding['proof'],
+                    'origin': 'local_joint_solver', 'scope': binding['scope']}
+                policy = self.economic_policy(actual)
+                if not policy['available']:
+                    raise ValueError(policy['reason'])
+                selected = policy['actions'][0] if policy['actions'] else None
+                attempt.update(selected_action=copy.deepcopy(selected), model_values=copy.deepcopy(plan['model_values']),
+                               input_sha256=review['input_sha256'], budget=copy.deepcopy(plan['budget']))
+                if selected is None:
+                    attempt['outcome'] = 'economy_complete' if self.finish_local_economy(actual, policy) else 'completion_unproven'
+                    if attempt['outcome'] == 'economy_complete':
+                        self.state['decision_request'] = None
+                        self.ask(actual, 'preparation_strategy', '新鲜三维模型选择无经济动作且原交易均已解决；独立布局验收',
+                                 category='preparation', business_step='lineup_equipment')
+                    return
+                self.source_refresh_guard(request, broker)
+                self.guard_preparation_action(selected, actual)
+                if not self.execute_economic_action(selected, actual, request):
+                    attempt['outcome'] = 'original_effect_unresolved'
+                    return
+                # Distinct observe transport and distinct ROOT request. No
+                # second economic action is permitted by the old authorization.
+                actual = self.observe(max_attempts=1)
+                self.source_refresh_guard(request, broker)
+                self.state['decision_request'] = None
+                self.ask(actual, 'preparation_strategy', '本地经济已执行一笔并核原收据/真实差额；新帧重新联合分配',
+                         category='economy', business_step='economy')
+                attempt['outcome'] = 'one_effect_verified_requires_new_root_request'
+        except BaseException as exc:
+            attempt.update(outcome='stopped', error=str(exc))
+            raise
+        finally:
+            self.c.write_json(attempt_path, attempt)
+
+    def selected_economic_action(self, review, actual, observation, plan, ledger):
+        raw = review['allocation'].get('conditional_raw_actions', [])
+        if not raw:
+            return None
+        step = raw[0]
+        if step['type'] == 'buy_xp':
+            action = {'type': 'buy_xp', 'count': 1, 'expected_page': actual['page'], 'reason': plan['experience']['reason']}
+            kind, cost = 'experience', observation['values'].get('xp_cost')
+        elif step['type'] == 'buy':
+            match = re.fullmatch(r'shop\.slots\[(\d+)\]', step.get('reference', ''))
+            slots = (actual.get('shop') or {}).get('slots', [])
+            if not match or int(match[1]) >= len(slots):
+                raise ValueError('selected购买引用错误')
+            slot = purchase_slot(actual['shop'], slots[int(match[1])]['slot'], actual['snapshot_id'])
+            if not slot:
+                raise ValueError('selected购买缺原生实价')
+            action = {'type': 'buy_shop', **{k: slot[k] for k in ('slot', 'name', 'cost')},
+                'expected_page': 'shop', 'reason': '按当前原帧本地联合模型购买一次，然后回读重新求解'}
+            kind, cost = 'purchase', slot['cost']
+        elif step['type'] == 'refresh':
+            kind, cost = 'refresh', economy.refresh_cost(observation['values'])
+            if (step.get('price') != cost or ledger['paid_refreshes'] + ledger.get('free_refreshes_used', 0)
+                    >= review['allocation']['bounds']['node_max_refreshes']):
+                raise ValueError('当前刷新实价或节点实际次数不符合selected模型')
+            action = {'type': 'key', 'args': [economy.REFRESH_KEY], 'guard_texts': ['刷新'],
+                'expected_page': 'shop', 'reason': '按当前联合模型仅刷新一次，再完整读五槽重新求解'}
+        else:
+            raise ValueError('未知本地经济首动作')
+        economy.require_spending(kind, cost, plan, observation, ledger)
+        return action
 
     def _accept_economy_plan(self, record):
         from io import BytesIO
@@ -5038,10 +6191,17 @@ class Worker:
                 supplied_fields = {key: value for key, value in supplied_fields.items() if key not in economy.LEGACY_REFRESH_FIELDS}
             fields = economy.bind_fields(supplied_fields, image, gold_bounds=GOLD_HUD)
         binding = {'scope': (self.active_match_id, stage, self.epoch()), 'snapshot_id': request['snapshot_id'],
-                   'fields': fields, 'plan': plan, 'proof': record['proof'],
+                   'fields': fields, 'plan': plan, 'proof': record['proof'], 'allocation_request': copy.deepcopy(request),
                    'native_refresh_offer': native_refresh_offer, 'ignored_legacy_refresh_fields': ignored_refresh_fields}
         self.economy_read_cache = None
         observed = self.economy_observation(actual, binding)
+        try:
+            binding['allocation_review'] = self.local_economic_allocation(request, actual)
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            binding['allocation_review'] = {'origin': 'local_advisor_recomputation',
+                'snapshot_id': request['snapshot_id'], 'allocation': {
+                    'status': 'incomplete_joint_comparison', 'complete_dimensions': {},
+                    'blocked_reasons': ['local_recomputation_failed:' + str(exc)]}}
         ledger = self.economy_ledger(stage)
         if ledger.get('requires_current_budget'):
             unknown = sorted(item['origin_run_id'] + ':' + item['request_id']
@@ -5121,11 +6281,13 @@ class Worker:
                     after['evidence']['refresh_offer'] = copy.deepcopy(observed['evidence']['refresh_offer'])
             after.update(shop=pending.get('after_shop', []), shop_complete=pending.get('after_shop_complete', False))
             outcome = economy.classify_effect(pending['kind'], pending['before'], after,
-                expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'))
+                expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'),
+                model_values=pending.get('model_values'))
             if outcome['outcome'] != 'success' and actual['snapshot_id'] != pending['after_snapshot_id']:
                 self.verify_economy_fence(pending)
                 outcome = economy.classify_effect(pending['kind'], pending['before'], observed,
-                    expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'))
+                    expected_cost=pending['cost'], target_level=plan.get('experience', {}).get('target_level'), slot=pending.get('slot'),
+                    model_values=pending.get('model_values'))
                 if outcome['outcome'] != 'unknown':
                     self.archive_economy_after(pending, actual, persist=False)
                     pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
@@ -5133,6 +6295,7 @@ class Worker:
                 raise ValueError('该笔原始后帧仍不能证明实际经济效果；不重发已发布输入')
             self._apply_economy_result(proposed, pending, outcome, acknowledged=True, persist=False)
         details = economy.validate_budget(plan, observed, proposed)
+        self.assert_model_budget(plan, binding['allocation_review'], actual, proposed)
         if plan['budget']['refresh']:
             # Existing role costs help reserve enough for a found card; the
             # actual purchase still requires its new-frame native slot price.
@@ -5158,7 +6321,27 @@ class Worker:
         try:
             observation = self.economy_observation(actual)
             binding = self.economy_binding
+            review = binding.get('allocation_review') or {}
+            if (review.get('snapshot_id') != actual.get('snapshot_id')
+                    or full_observation(actual) and review.get('full_observation') is not True):
+                try:
+                    binding['allocation_review'] = self.local_economic_allocation(binding['allocation_request'], actual)
+                except (ValueError, OSError, KeyError, TypeError) as exc:
+                    binding['allocation_review'] = {'origin': 'local_advisor_recomputation',
+                        'snapshot_id': actual['snapshot_id'], 'allocation': {'status': 'incomplete_joint_comparison',
+                        'complete_dimensions': {}, 'blocked_reasons': ['current_model_recomputation_failed:' + str(exc)]}}
             plan, ledger = binding['plan'], self.economy_ledger(observation['stage'])
+            if ((binding.get('allocation_review') or {}).get('allocation', {}).get('model') == 'released_prior'
+                    and self.joint_allocation_complete({'allocation_review': binding.get('allocation_review'),
+                    'observation': observation})):
+                self.assert_model_budget(plan, binding['allocation_review'], actual, ledger)
+                action = None if ledger['pending'] else self.selected_economic_action(
+                    binding['allocation_review'], actual, observation, plan, ledger)
+                return {'available': True, 'dependencies': {'phase': 'joint_selected',
+                        'reason': '当前三维模型首动作；一次后回读重算', 'experience_allowed': True},
+                    'observation': observation, 'actions': [action] if action else [], 'pending': ledger['pending'],
+                    'budget': plan['budget'], 'spent': dict(ledger['spent']), 'experience_resolved': not action,
+                    'allocation_review': copy.deepcopy(binding['allocation_review'])}
             targets = {item['name']: item for item in plan['targets']}
             gaps = [slot for slot in observation['shop'] if slot.get('name') in targets
                     and ledger['purchased'].get(slot['name'], 0) < targets[slot['name']]['copies']]
@@ -5199,7 +6382,8 @@ class Worker:
                 or values.get('xp_cost') is not None and xp_remaining < values['xp_cost'])
             return {'available': True, 'dependencies': status, 'observation': observation,
                     'actions': actions, 'pending': ledger['pending'], 'budget': plan['budget'], 'spent': dict(ledger['spent']),
-                    'experience_resolved': experience_resolved, 'guide_permission': permission}
+                    'experience_resolved': experience_resolved, 'guide_permission': permission,
+                    'allocation_review': copy.deepcopy(binding.get('allocation_review'))}
         except (ValueError, OSError, KeyError, TypeError) as exc:
             return {'available': False, 'actions': [], 'reason': str(exc)}
 
@@ -5210,9 +6394,13 @@ class Worker:
         policy = self.economic_policy(actual)
         if not policy['available']:
             raise ValueError('经济动作缺少当前可核预算：' + policy['reason'])
+        if not self.joint_allocation_complete(policy):
+            raise ValueError('统一经济模型尚未按当前原帧完成购买/经验/刷新三维比较；仅可只读补证及重算预算，不执行花费')
         observation, plan = policy['observation'], self.economy_binding['plan']
         ledger = self.economy_ledger(observation['stage'])
         missing = set(observation['unknown']) & economy.required_fields(kind, observation['values'])
+        if kind == 'experience' and plan.get('reviewer') == 'local_joint_solver':
+            missing.discard('xp_gain')  # Separate database planning assumption, never native HUD.
         if missing:
             raise ValueError('本动作必要经济数字区当前未可靠回读：' + '、'.join(sorted(missing)))
         candidates = policy['actions']
@@ -5247,6 +6435,8 @@ class Worker:
             ledger['critical_spent'] += max(0, min(spent, floor - (pending['before']['values']['coins'] - spent)))
             if pending['kind'] == 'refresh' and spent:
                 ledger['paid_refreshes'] += 1
+            elif pending['kind'] == 'refresh' and outcome == 'success':
+                ledger['free_refreshes_used'] = ledger.get('free_refreshes_used', 0) + 1
             if outcome == 'success' and pending['kind'] == 'purchase':
                 ledger['purchased'][pending['name']] = ledger['purchased'].get(pending['name'], 0) + 1
             ledger['pending'] = None
@@ -5280,6 +6470,7 @@ class Worker:
         pending = {'kind': kind, 'cost': info['cost'], 'before': info['observation'], 'name': action.get('name'),
                    'slot': action.get('slot'), 'request_id': None, 'publication_attempted': False,
                    'reserve_coins': info['plan']['reserve']['coins'], 'resume_epoch': self.epoch(),
+                   'model_values': copy.deepcopy(info['plan'].get('model_values')),
                    'prior_receipt_ids': self.economy_receipt_watermark(),
                    'authorization': {'action': copy.deepcopy(action), 'page': actual['page'],
                        **{key: actual.get(key) for key in ('snapshot_id', 'capture_request_id', 'frame_id')},
@@ -5287,10 +6478,12 @@ class Worker:
                        'spent': copy.deepcopy(ledger['spent'])},
                    'broker_actions': self.c.validate_actions([
                        {'type': parts[0], 'args': parts[1:]} for parts in (token.split(':') for token in tokens)])}
+        if getattr(self, 'economy_macro_active', None):
+            pending['authorization'].update(parent_authority_id=request['parent_authority_id'], child_request_id=request['request_id'])
         ledger['pending'], self.economy_inflight = pending, pending
         try:
             after = self.command(tokens, action['reason'], actual['page'], '按同请求后帧核实际资源差额', action=action,
-                                 read_scope='full' if kind == 'purchase' else 'economy')
+                                 read_scope='full')
         except Exception:
             if pending['publication_attempted'] is False:
                 ledger['pending'] = None
@@ -5303,7 +6496,8 @@ class Worker:
         observed = self.economy_observation(after)
         pending.update(after_shop=observed['shop'], after_shop_complete=observed['shop_complete'])
         outcome = economy.classify_effect(kind, info['observation'], observed, expected_cost=info['cost'],
-            target_level=info['plan']['experience']['target_level'], slot=action.get('slot'))
+            target_level=info['plan']['experience']['target_level'], slot=action.get('slot'),
+            model_values=pending.get('model_values'))
         try:
             self.apply_economy_result(ledger, pending, outcome)
         except ValueError as exc:
@@ -5322,9 +6516,26 @@ class Worker:
         return True
 
     @staticmethod
+    def joint_allocation_complete(policy):
+        review = policy.get('allocation_review') or {}
+        allocation = review.get('allocation') or {}
+        dimensions = allocation.get('complete_dimensions') or {}
+        return bool(review.get('origin') == 'local_advisor_recomputation'
+            and review.get('request_id') and review.get('match_id') and review.get('resume_epoch')
+            and review.get('source_verified') is True
+            and re.fullmatch(r'[0-9a-f]{64}', review.get('input_sha256') or '')
+            and review.get('snapshot_id') == (policy.get('observation') or {}).get('snapshot_id')
+            and allocation.get('snapshot_id') == review.get('snapshot_id')
+            and allocation.get('binding') == {key: review[key] for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
+            and allocation.get('schema') == 'currency-wars-economic-allocation/v1'
+            and allocation.get('status') == 'conditional_joint_decision'
+            and all(dimensions.get(key) is True for key in ('purchase', 'experience', 'refresh')))
+
+    @staticmethod
     def economy_complete(policy):
         """The same completion conditions for local execution and ROOT review."""
         return bool(policy['available'] and not policy.get('pending') and not policy.get('actions')
+            and Worker.joint_allocation_complete(policy)
             and policy.get('experience_resolved')
             and not set(policy['observation']['unknown']) & economy.required_fields('review', policy['observation']['values'])
             and policy['dependencies']['experience_allowed'])
@@ -5341,6 +6552,11 @@ class Worker:
                 if optional(path).get('result') is None:
                     return False
             if self.preparation_checklist(observed)['phase'] != 'economy' or not self.economy_complete(policy):
+                return False
+            if (getattr(self, 'deployment_pending', None) or self.pending_reward_capacity()
+                    or self.pending_reward_step(observed)
+                    or any(key[0] == self.active_match_id and value.get('pending')
+                           for key, value in getattr(self, 'economy_ledgers', {}).items())):
                 return False
             scope = (self.active_match_id, canonical_stage(observed.get('fields', {}).get('stage')), self.epoch())
             binding = getattr(self, 'economy_binding', None)
@@ -5512,6 +6728,12 @@ class Worker:
                             policy=policy, policy_observed=policy_observed,
                             completed_actions=completed_actions, returned=True)
                     return True
+                if (policy.get('allocation_review') or {}).get('allocation', {}).get('model') == 'released_prior':
+                    observed = self.observe(max_attempts=1)
+                    self.state['decision_request'] = None
+                    self.ask(observed, 'preparation_strategy', '本地经济一笔已核；新帧新请求重新联合求解预算',
+                             category='economy', business_step='economy')
+                    return True
                 if flow_id:
                     completed_actions += 1
                 observed = self.last_observation
@@ -5542,7 +6764,7 @@ class Worker:
         if action.get('type') == 'key' and action.get('args') == [69]:
             raise ValueError('当前备战经验键为F70，拒绝旧E69绕过经济守卫')
         if verified_navigation:
-            if status['phase'] != 'startup_guide' or reviews.get('rewards', {}).get('completed') is not True:
+            if status['phase'] not in ('startup_guide', 'inventory_cleanup') or reviews.get('rewards', {}).get('completed') is not True:
                 raise ValueError('须先领奖领空，再进入第二创业指南；固定图标不跳过准备顺序')
             return
         if battle_input(actual, action):
@@ -5553,14 +6775,31 @@ class Worker:
                     or int(population[1]) != int(population[2])):
                 raise ValueError('当前出战鲜帧人口未满/未知；旧验收不能批准变化后的阵容')
             return
+        if status['phase'] == 'shop_inspection':
+            if (action.get('type') == 'click_text' and action.get('text') in ('商店', '关闭', '返回')
+                    or action.get('type') == 'key' and action.get('args') == [27]
+                    or action.get('type') == 'close_shop_for_observation'):
+                return
+            raise ValueError('先完整读取当前五槽商店；仅允许商店只读导航，不出售/购买/升级/刷新/部署')
         effect = coaching.action_effect(action, actual['page'])
         if effect == 'economy' or action.get('type') == 'buy_shop':
             if not status['economy_allowed']:
-                raise ValueError('奖励/创业指南/清库存未核，不执行购买、刷新或升级')
+                raise ValueError('奖励/清库存未核，不执行购买、刷新或升级')
             self.require_economic_action(action, actual)
         elif effect == 'inventory':
-            if not all(reviews.get(key, {}).get('completed') is True for key in ('rewards', 'startup_guide')):
-                raise ValueError('奖励未领空或第二入口创业指南未核，禁止出售/装备等库存改变')
+            if (reviews.get('rewards', {}).get('completed') is not True
+                    or not next(step['completed'] for step in coaching.preparation_status(reviews)['steps']
+                                if step['id'] == 'shop_inspection')):
+                raise ValueError('奖励/完整读店未核，禁止出售/装备等库存改变')
+            sale = (action.get('type') == 'click_text' and action.get('text') == '出售'
+                    or action.get('type') == 'key' and action.get('args') == [46])
+            if action.get('type') == 'drag':
+                target, args = find_text(actual.get('rows', []), '出售', exact=True), action.get('args') or []
+                sale = bool(target and target.get('confidence', 0) >= .90 and len(args) == 4
+                    and target['box'][0] <= args[2] <= target['box'][2]
+                    and target['box'][1] <= args[3] <= target['box'][3])
+            if not sale and reviews.get('economy', {}).get('completed') is not True:
+                raise ValueError('统一经济尚未完成；当前仅可已核出售，不部署/配装/复制或其他库存变化')
         elif action.get('type') == 'click_point' and not loot_pickup:
             if reviews.get('rewards', {}).get('completed') is not True:
                 raise ValueError('奖励未确认领空；未知备战坐标动作须先回传，不能花钱')
@@ -5687,7 +6926,7 @@ class Worker:
             if (self.active_match_id, stage, action.get('text'), inspection_unit) not in self.inspection_attempted]
         decision['recommended_actions'] = (decision['economic_actions'][:1] if checklist['phase'] == 'economy'
                                            else decision['inspection_actions'][:1])
-        if checklist['phase'] in ('rewards', 'startup_guide', 'inventory_cleanup'):
+        if checklist['phase'] in ('rewards', 'startup_guide', 'shop_inspection', 'inventory_cleanup'):
             decision['recommended_actions'] = []
         if checklist['phase'] == 'startup_guide' and observed.get('page') == 'preparation':
             decision['recommended_actions'] = [{'type': 'click_point',
@@ -5702,11 +6941,15 @@ class Worker:
         if type(max_attempts) is not int or not 1 <= max_attempts <= 2:
             raise ValueError('observation retry count must be bounded to one or two')
         for attempt in range(max_attempts):
+            macro = getattr(self, 'economy_macro_active', None)
+            if macro:
+                self.guard_economic_macro(macro)
             rid = uuid.uuid4().hex
             self.worker_request_ids = getattr(self, 'worker_request_ids', set())
             self.worker_request_ids.add(rid)
             with self.profile_span('observe_roundtrip', operation='tool_roundtrip', request_id=rid) as timing:
-                result = entry.request(self.c, 'actions', ['observe'], rid, False, queue_wait=self.profile_queue_wait)
+                result = entry.request(self.c, 'actions', ['observe'], rid, False, queue_wait=self.profile_queue_wait,
+                                       submit_deadline=macro['monotonic_deadline'] if macro else None)
                 self.profile_broker_result(result, timing)
             self.state['statistics']['local_observations'] += 1
             try:
@@ -5773,8 +7016,9 @@ class Worker:
                    'resume_epoch': self.epoch(), 'match_id': self.active_match_id,
                    'evidence_file': evidence, 'original_png': str(original_png), 'created_at': now(),
                    'deadline_at': (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
-                   'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll',
-                                            'finish_inspection', 'confirm_match_result', 'finish_preparation_review'],
+                   'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'deploy_unit',
+                                             'finish_inspection', 'confirm_match_result', 'finish_preparation_review',
+                                             'refresh_observation', 'close_shop_for_observation', 'advance_local_economy'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
         request['return_reason'] = {'category': category, 'business_step': business_step or request['preparation_checklist']['phase'],
@@ -5789,8 +7033,21 @@ class Worker:
             reviewed_task_context=task_context, observation_scope=observation_scope)
         if kind in ('preparation_strategy', 'shop_strategy', 'guide_strategy', 'unit_gear_strategy'):
             request['preparation_decision'] = self.preparation_policy(observed)
+        if (kind in ('preparation_strategy', 'shop_strategy')
+                and request['preparation_checklist']['phase'] == 'economy'):
+            try:
+                request['economic_macro_source_fence'] = self.archive_economic_macro_fence(request, observed)
+                request['economic_macro_contract'] = economy.MACRO_CONTRACT
+                request['allowed_action_types'].append('advance_local_economy_macro')
+            except (ValueError, OSError, KeyError, TypeError, RuntimeError) as exc:
+                request['economic_macro_unavailable'] = str(exc)
         request['battle_stage'] = canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage
         request['coaching'] = coaching_policy()
+        try:
+            request['comparison_view'] = self.economic_comparison_view(request, observed)
+        except (ValueError, OSError, KeyError, TypeError, entry.ObservationUnavailable) as exc:
+            request['comparison_view'] = None
+            request['comparison_view_unavailable'] = str(exc)
         self.c.write_json(self.run / 'decision-request.json', request)
         self.state['statistics']['decisions'] += 1
         profile = getattr(self, 'profile', None)
@@ -5813,7 +7070,7 @@ class Worker:
         binding = context['binding']
         checkpoint = manual_steps._checkpoint(self.run, binding, context['payload']['checkpoint_id'])
         if (checkpoint.get('phase') != 'startup_guide' or binding.get('stage') != battle_stage(request)
-                or self.preparation_checklist(self.last_observation)['phase'] != 'startup_guide'):
+                or self.preparation_checklist(self.last_observation)['phase'] not in ('startup_guide', 'inventory_cleanup')):
             raise ValueError('当前创业指南phase/章节复核归属已失效，未批准滚动')
         return context
 
@@ -6107,6 +7364,25 @@ class Worker:
 
     def execute_plan(self, reply):
         actions = reply.get('actions', []) if isinstance(reply, dict) else []
+        request_id = (self.state.get('decision_request') or {}).get('request_id')
+        if request_id and getattr(self, 'records', None) is not None and (self.records / ('economy-macro-' + request_id + '.json')).exists():
+            raise ValueError('当前父经济宏已执行/消费，禁止并发或重放计划')
+        if any(isinstance(action, dict) and action.get('type') == 'advance_local_economy_macro' for action in actions):
+            return self.advance_local_economy_macro(reply)
+        if any(isinstance(action, dict) and action.get('type') == 'advance_local_economy' for action in actions):
+            return self.advance_local_economy(reply)
+        if any(isinstance(action, dict) and action.get('type') == 'close_shop_for_observation' for action in actions):
+            return self.close_shop_for_observation(reply)
+        if any(isinstance(action, dict) and action.get('type') == 'refresh_observation' for action in actions):
+            return self.refresh_request_source(reply)
+        if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
+               == 'owned_unit_details' for action in actions):
+            request = self.state.get('decision_request') or {}
+            validate_plan(reply, request, self.epoch())
+            if manual_steps.unknown_receipts(self.run, self.c):
+                raise ValueError('原输入交付未知；先核原收据，不以角色详情覆盖结果')
+            with self.observation_input_lease():
+                return self._execute_plan(reply)
         if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
                == TASK_LIST_SCROLL_CONTROL for action in actions):
             request = self.state.get('decision_request') or {}
@@ -6127,6 +7403,433 @@ class Worker:
                 return self._execute_plan(reply)
         return self._execute_plan(reply)
 
+    @staticmethod
+    def business_view_facts(observed):
+        """Visible continuity only; never supplies hidden population or overflow."""
+        semantic = observed.get('semantic', {})
+        coins = semantic.get('coins', {})
+        team = semantic.get('team', {})
+        stage = canonical_stage(observed.get('fields', {}).get('stage'))
+        level = str(observed.get('fields', {}).get('level') or '')
+        bench = [s for s in team.get('slots', []) if s.get('row') == 'bench']
+        if (not full_observation(observed) or not stage or not level.isdecimal() or not 1 <= int(level) <= 10
+                or Worker.reward_coins(observed) is None
+                or coins.get('snapshot_id') != observed.get('snapshot_id')
+                or not .90 <= coins.get('confidence', 0) <= 1.
+                or team.get('snapshot_id') != observed.get('snapshot_id')
+                or len(bench) != 9 or {s.get('slot') for s in bench} != set(range(1, 10))
+                or any(s.get('snapshot_id') != observed['snapshot_id'] or s.get('location') != 'bench'
+                    or s.get('status') not in ('empty', 'occupied')
+                    or s['status'] == 'occupied' and (not isinstance(s.get('name'), str) or not s['name'].strip()
+                        or type(s.get('star')) is not int or not 1 <= s['star'] <= 5
+                        or s.get('position') not in ('前台', '后台', '前后台')) for s in bench)):
+            raise ValueError('业务曝光缺当前同帧金币/等级/节点/完整可读备选身份，不猜隐藏人口或overflow')
+        return {'stage': stage, 'level': int(level), 'coins': coins['value'],
+                'bench': [{k: s.get(k) for k in ('slot', 'status', 'name', 'star', 'position')}
+                          for s in sorted(bench, key=lambda s: s['slot'])]}
+
+    @staticmethod
+    def business_view_shop(observed):
+        shop = observed.get('shop') or {}
+        slots = shop.get('slots') or []
+        if (shop.get('input', {}).get('sha256') != observed.get('snapshot_id')
+                or shop.get('page', {}).get('reliable_open_shop') is not True
+                or len(slots) != 5 or {s.get('slot') for s in slots} != set(range(1, 6))
+                or any(s.get('status') not in ('empty', 'recognized')
+                    or s['status'] == 'recognized' and (not isinstance(s.get('name'), str) or not s['name'].strip()
+                        or type(s.get('cost')) is not int or s['cost'] < 0) for s in slots)):
+            raise ValueError('业务曝光缺当前完整商店，未知不当空位')
+        return [{k: s.get(k) for k in ('slot', 'status', 'name', 'cost')}
+                for s in sorted(slots, key=lambda s: s['slot'])]
+
+    def save_business_view(self, value):
+        self.c.write_json(self.records / ('business-view-' + value['request_id'] + '.json'), redact(value))
+
+    def save_deployment(self, value):
+        previous = self.business.get('deployment_pending')
+        if previous and (previous.get('origin_run_id') != self.owner['run_id']
+                or previous.get('request_id') != value['request_id']):
+            raise ValueError('持久化原部署pending不能被另一归属或新请求覆盖')
+        self.c.write_json(self.records / ('deployment-' + value['request_id'] + '.json'), redact(value))
+        if value.get('outcome') in ('confirmed', 'refused'):
+            if self.business.get('deployment_pending', {}).get('request_id') == value['request_id']:
+                self.business.pop('deployment_pending', None)
+        else:
+            self.business['deployment_pending'] = {'origin_run_id': self.owner['run_id'],
+                'request_id': value['request_id'], 'input_request_id': value.get('input_request_id'),
+                'record': str(self.records / ('deployment-' + value['request_id'] + '.json')),
+                'publication_attempted': value.get('publication_attempted'), 'outcome': value.get('outcome')}
+        self.save_business()
+
+    def guard_deployment(self, action, observed, *, request_id=None):
+        from currency_wars_deployment import same_deployment_preconditions
+        pending = getattr(self, 'deployment_inflight', None)
+        request = self.state.get('decision_request') or {}
+        if (not pending or pending.get('action') != action or pending.get('request_id') != request.get('request_id')
+                or pending.get('input_request_id') != request_id or pending.get('publication_attempted') is not False
+                or getattr(self, 'business_needs_review', False)
+                or self.preparation_checklist(observed)['phase'] != 'lineup_equipment'
+                or observed.get('snapshot_id') != pending['before']['snapshot_id']
+                or observed.get('capture_request_id') != pending['before']['capture_request_id']
+                or any(getattr(self, field, None) for field in ('economy_inflight', 'reward_inflight',
+                    'startup_navigation_inflight', 'task_scroll_inflight', 'business_view_inflight'))
+                or self.pending_reward_capacity() or self.pending_reward_step(observed)):
+            raise ValueError('实名部署意图/阶段/原来源已变或仍有其他原效果待验')
+        same_deployment_preconditions(request['observation'], observed, action)
+        self.source_refresh_guard(request, tuple(pending['broker_identity']), pending_input_id=request_id)
+        manual_steps._bound_reward_frame(self.run, self.c, observed, pending['before_png'], read_only=True)
+        if request_id is not None:
+            item = optional(self.run / 'request-ledger' / (hashlib.sha256(request_id.encode()).hexdigest() + '.json'))
+            expected = self.c.validate_actions([{'type': t[0], 'args': t[1:]}
+                                               for t in (token.split(':') for token in pending['tokens'])])
+            if (not item or item.get('result') is not None or item.get('id') != request_id
+                    or item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                    or item['request'].get('actions') != expected):
+                raise ValueError('实名部署只许可尚未发布的原Entry单次拖动ID')
+        return pending
+
+    def execute_deployment(self, reply, request, actual):
+        from currency_wars_deployment import same_deployment_preconditions, verify_deployment_effect
+        from currency_wars_state_reader import native_slots
+        action = reply['actions'][0]
+        if self.preparation_checklist(actual)['phase'] != 'lineup_equipment':
+            raise ValueError('当前上场阶段未就绪，不部署')
+        if self.business.get('deployment_pending'):
+            raise ValueError('持久化原部署效果仍pending，先核原ID，不创建新意图')
+        intent = self.records / ('deployment-' + request['request_id'] + '.json')
+        if intent.exists():
+            raise ValueError('本请求已有部署意图，核原ID，不重发')
+        if getattr(self, 'deployment_pending', None):
+            raise ValueError('原部署效果待验，保留原ID，不发送下一动作')
+        if hashlib.sha256(Path(request['original_png']).read_bytes()).hexdigest() != request['snapshot_id']:
+            raise ValueError('部署原PNG字节身份已变')
+        facts = same_deployment_preconditions(request['observation'], actual, action)
+        broker = self.source_refresh_guard(request)
+        definitions = {(s['location'], s['row'], s['slot']): s for s in native_slots()}
+        src = definitions[('bench', 'bench', action['unit']['slot'])]
+        dst = definitions[('board', action['destination']['row'], action['destination']['slot'])]
+        for read, definition in ((facts['source'], src), (facts['destination'], dst)):
+            if read.get('bounds') != definition['bounds'] or read.get('point') != definition['point']:
+                raise ValueError('部署几何须等于原生源槽和目标槽，拒绝调用者坐标')
+        pending = {'schema': 'currency-wars-deployment-intent/v1', 'request_id': request['request_id'],
+            'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'action': copy.deepcopy(action),
+            'before': copy.deepcopy(actual), 'before_png': str(intent.with_suffix('.png')),
+            'broker_identity': broker, 'prior_receipt_ids': self.economy_receipt_watermark(),
+            'tokens': ['drag:' + ':'.join(map(str, src['point'] + dst['point'])), 'wait:0.7'],
+            'input_request_id': None, 'publication_attempted': False, 'outcome': 'pending'}
+        with Path(pending['before_png']).open('xb') as stream:
+            stream.write(self.frame_path.read_bytes())
+        self.deployment_inflight = pending
+        self.deployment_pending = pending
+        self.save_deployment(pending)
+        try:
+            self.command(pending['tokens'], action['reason'], 'preparation',
+                         '单次实名上场后核源空/目标满/人口+1/钱包与其他槽不变', action=action)
+            item = await_existing_receipt(self.run, self.c, pending['input_request_id'], 0)
+            delivery = manual_receipt_state(item)
+            expected = self.c.validate_actions([{'type': t[0], 'args': t[1:]}
+                                               for t in (token.split(':') for token in pending['tokens'])])
+            if (delivery['unknown_input'] or delivery['state'] != 'completed'
+                    or item['request'].get('actions') != expected or item['request'].get('handoff') is not False
+                    or item['result'].get('completed') != expected or item['result'].get('ok') is not True):
+                raise ValueError('原部署交付未证实，不重拖或复制身份')
+            # A different observe request supplies the after frame, rather than
+            # mistaking input ACK or its notification for a verified outcome.
+            after = self.observe(max_attempts=1)
+            after_payload = self.frame_path.read_bytes()
+            if hashlib.sha256(after_payload).hexdigest() != after['snapshot_id']:
+                raise ValueError('独立部署后原PNG身份变化，保留pending')
+            after_png = self.records / ('deployment-' + request['request_id'] + '-after.png')
+            if after_png.exists():
+                if after_png.read_bytes() != after_payload:
+                    raise ValueError('独立部署后原PNG已存在且内容不同，不覆盖')
+            else:
+                with after_png.open('xb') as stream:
+                    stream.write(after_payload)
+            pending.update(after_png=str(after_png), after_observation=copy.deepcopy(after),
+                           after={key: after[key] for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at')})
+            self.save_deployment(pending)
+            self.source_refresh_guard(request, tuple(pending['broker_identity']))
+            new_ids = set(self.economy_receipt_watermark()) - set(pending['prior_receipt_ids'])
+            for rid in new_ids:
+                receipt = await_existing_receipt(self.run, self.c, rid, 0)
+                if rid == pending['input_request_id']:
+                    continue
+                if (receipt['request'].get('actions') != [{'type': 'observe', 'args': []}]
+                        or receipt['request'].get('kind') != 'actions'
+                        or receipt['request'].get('handoff') is not False
+                        or manual_receipt_state(receipt)['unknown_input']
+                        or receipt.get('result', {}).get('ok') is not True):
+                    raise ValueError('部署期间夹有其他输入/未知收据，因果身份不成立')
+            if not {pending['input_request_id'], after['capture_request_id']} <= new_ids:
+                raise ValueError('部署缺原输入及独立后帧水位')
+            effect = verify_deployment_effect(pending['before'], after, action)
+            if effect['outcome'] != 'observed_transition':
+                raise ValueError('部署效果未核：' + effect.get('reason', 'unknown'))
+            pending.update(outcome='confirmed', effect=effect,
+                           after={key: after[key] for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at')})
+            self.deployment_pending = None
+            self.invalidate_preparation('deployment')
+            self.log({'event': 'deployment_effect_confirmed', 'input_request_id': pending['input_request_id'],
+                      'effect': effect, 'after_snapshot_id': after['snapshot_id'], 'input_resent': False})
+            self.save_deployment(pending)
+            # Publish a distinct current request after the confirmed move.
+            # Leaving the old immutable request would make MCP propose the
+            # same now-empty bench unit again; never resend that old action.
+            refresh = {key: request[key] for key in ('request_id', 'snapshot_id', 'resume_epoch')}
+            refresh.update(actions=[{'type': 'refresh_observation',
+                            'reason': '原部署已确认，原只读后帧创建下一笔工具提案新请求'}], context_update={})
+            self.refresh_request_source(refresh)
+        finally:
+            if not pending.get('publication_attempted'):
+                pending['outcome'] = 'refused'
+                self.deployment_pending = None
+            self.save_deployment(pending)
+            self.deployment_inflight = None
+
+    def guard_business_view(self, action, observed, *, request_id=None):
+        pending = getattr(self, 'business_view_inflight', None)
+        request = self.state.get('decision_request') or {}
+        if (not pending or not getattr(self, 'business_needs_review', False)
+                or request.get('kind') != 'business_resume' or pending.get('request_id') != request.get('request_id')
+                or pending.get('action') != action or pending.get('publication_attempted') is not False
+                or pending.get('input_request_id') != request_id or observed.get('page') != 'shop'
+                or observed.get('capture_request_id') != pending['before']['capture_request_id']
+                or observed.get('snapshot_id') != pending['before']['snapshot_id']
+                or self.business_view_facts(observed) != pending['facts']
+                or any(getattr(self, field, None) for field in ('economy_inflight', 'reward_inflight',
+                    'startup_navigation_inflight', 'task_scroll_inflight'))
+                or self.pending_reward_capacity() or self.pending_reward_step(observed)):
+            raise ValueError('业务曝光意图/来源已变或原效果待验，不开放其他输入')
+        if request_id is not None:
+            item = optional(self.run / 'request-ledger' / (hashlib.sha256(request_id.encode()).hexdigest() + '.json'))
+            expected = self.c.validate_actions([{'type': p[0], 'args': p[1:]}
+                         for p in (token.split(':') for token in pending['tokens'])])
+            if (not item or item.get('result') is not None or item.get('id') != request_id
+                    or item.get('request', {}).get('actions') != expected
+                    or item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False):
+                raise ValueError('业务曝光只许可本次尚未发布的原Entry点击ID')
+        self.source_refresh_guard(request, tuple(pending['broker_identity']), pending_input_id=request_id)
+        manual_steps._bound_reward_frame(self.run, self.c, observed, pending['before_png'], read_only=True)
+        close = find_text(observed.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
+        if (not close or close.get('confidence', 0) < .90 or close['box'] != pending['bounds']
+                or [(close['box'][0]+close['box'][2])/2, (close['box'][1]+close['box'][3])/2] != pending['point']):
+            raise ValueError('当前唯一完整收起控件不再匹配')
+        return pending
+
+    def verify_business_view(self, pending, observed, receipt):
+        if pending is not getattr(self, 'business_view_inflight', None) or pending.get('publication_attempted') is not True:
+            raise ValueError('业务曝光缺本次原意图')
+        item = await_existing_receipt(self.run, self.c, pending.get('input_request_id'), 0)
+        delivery = manual_receipt_state(item)
+        actions = self.c.validate_actions([{'type': p[0], 'args': p[1:]}
+                   for p in (token.split(':') for token in pending['tokens'])])
+        if (delivery['unknown_input'] or delivery['state'] != 'completed'
+                or item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                or item['request'].get('actions') != actions or item['result'].get('completed') != actions
+                or item['result'].get('ok') is not True
+                or observed['capture_request_id'] == item['id']
+                or set(self.economy_receipt_watermark()) - set(pending['prior_receipt_ids'])
+                    != {item['id'], observed['capture_request_id']}):
+            raise ValueError('收店输入/只读后图收据不完整或夹有其他请求，不创建承接新水位')
+        scan = observed.get('semantic', {}).get('rewards', {})
+        if (observed.get('page') != 'preparation' or self.business_view_facts(observed) != pending['facts']
+                or not find_text(observed.get('rows', []), '商店', (1554, 943, 1694, 1020), exact=True)
+                or find_text(observed.get('rows', []), '收起', exact=True)
+                or scan.get('snapshot_id') != observed['snapshot_id'] or scan.get('scanned') is not True
+                or scan.get('area_fully_visible') is not True or scan.get('uncertain')
+                or scan.get('interaction_required')):
+            raise ValueError('关闭后的原独立全帧/金币/备选连续性未核，业务门禁保持')
+        pending['verified_transition'] = {'schema': 'currency-wars-business-view/v1',
+            'operation': 'close_shop_for_observation', 'previous_request_id': pending['request_id'],
+            'before': {k: pending['before'][k] for k in ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at')},
+            'input_request_id': item['id'],
+            'after': {k: observed[k] for k in ('snapshot_id', 'capture_request_id', 'frame_id', 'captured_at')},
+            'original_deadline_at': pending['deadline_at'], 'same_visible_facts': pending['facts'],
+            'shop_offers_after': 'not_visible_not_inherited', 'population': 'read_from_after_only',
+            'business_resume_accepted': False}
+        pending['status'] = 'closed_observed'
+        self.save_business_view(pending)
+
+    def close_shop_for_observation(self, reply):
+        """One known UI close; it neither establishes match continuity nor spends."""
+        request = copy.deepcopy(self.state.get('decision_request') or {})
+        validate_plan(reply, request, self.epoch())
+        if not getattr(self, 'business_needs_review', False) or request.get('kind') != 'business_resume':
+            raise ValueError('只允许未承接当前业务的收店曝光')
+        attempted = self.records / ('business-view-' + request['request_id'] + '.json')
+        if attempted.exists():
+            raise ValueError('本请求已有收店原意图，核原ID，不重发')
+        broker = self.source_refresh_guard(request)
+        original = request['observation']
+        manual_steps._bound_reward_frame(self.run, self.c, original, request['original_png'], read_only=True)
+        self.verified_source({'source': 'observed_screen', 'snapshot_id': request['snapshot_id'],
+            'evidence_file': request['evidence_file'], 'resume_epoch': request['resume_epoch']}, 180)
+        facts = self.business_view_facts(original)
+        stage = self.last_preparation_stage
+        try:
+            with self.observation_input_lease():
+                fresh = self.observe(max_attempts=1)
+                self.last_preparation_stage = stage
+                self.source_refresh_guard(request, broker)
+                manual_steps._bound_reward_frame(self.run, self.c, fresh, self.frame_path, read_only=True)
+                from currency_wars_rewards import stable_shop_view
+                if (self.business_view_facts(fresh) != facts or self.business_view_shop(fresh) != self.business_view_shop(original)
+                        or not stable_shop_view(original, fresh, Path(request['original_png']).read_bytes(),
+                                             self.frame_path.read_bytes())):
+                    raise ValueError('当前商店/收起目标/全页锚点不稳定，只返回原观察')
+                close = find_text(fresh.get('rows', []), '收起', (1554, 943, 1694, 1020), exact=True)
+                if not close or close.get('confidence', 0) < .90:
+                    raise ValueError('缺少当前唯一完整收起控件')
+                bounds = close['box']
+                point = [(bounds[0]+bounds[2])/2, (bounds[1]+bounds[3])/2]
+                before_png = self.records / ('business-view-' + request['request_id'] + '-before.png')
+                with before_png.open('xb') as stream:
+                    stream.write(self.frame_path.read_bytes())
+                pending = {'request_id': request['request_id'], 'deadline_at': request['deadline_at'],
+                    'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'broker_identity': broker,
+                    'action': copy.deepcopy(reply['actions'][0]), 'bounds': bounds, 'point': point,
+                    'tokens': [f'click:{point[0]}:{point[1]}', 'wait:0.7'], 'before': copy.deepcopy(fresh),
+                    'before_png': str(before_png), 'facts': facts, 'prior_receipt_ids': self.economy_receipt_watermark(),
+                    'input_request_id': None, 'publication_attempted': False, 'status': 'pending'}
+                self.business_view_inflight = pending
+                self.save_business_view(pending)
+                try:
+                    self.command(pending['tokens'], reply['actions'][0]['reason'], 'shop',
+                                 '仅关闭商店暴露画面，业务承接仍待独立复核', action=pending['action'])
+                    self.last_preparation_stage = stage
+                    self.source_refresh_guard(request, broker)
+                    # This helper performs a distinct only-observe receipt and
+                    # validates the transition before issuing its new request.
+                    refresh = {key: request[key] for key in ('request_id', 'snapshot_id', 'resume_epoch')}
+                    refresh['actions'] = [{'type': 'refresh_observation', 'reason': '收店后原只读观察发新承接请求'}]
+                    self.refresh_request_source(refresh, business_view=pending)
+                finally:
+                    self.save_business_view(pending)
+                    self.business_view_inflight = None
+        finally:
+            self.last_preparation_stage = stage
+
+    def source_refresh_guard(self, request, broker_identity=None, *, pending_input_id=None):
+        current = self.state.get('decision_request') or {}
+        published = optional(self.run / 'decision-request.json') or {}
+        keys = ('request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'deadline_at')
+        if (any(request.get(key) != current.get(key) or request.get(key) != published.get(key) for key in keys)
+                or request.get('resume_epoch') != self.epoch() or request.get('match_id') != self.active_match_id
+                or self.state.get('control_mode') != 'waiting_decision' or manual_state(self.run)
+                or getattr(self, 'manual_step_context', None)
+                or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()
+                or time.monotonic() >= self.deadline
+                or datetime.now(timezone.utc) >= datetime.fromisoformat(request['deadline_at'])):
+            raise ValueError('只读刷新请求、同局、epoch、暂停/停止或原期限已失效')
+        if entry.read_json(self.run / 'runner-owner.json') != self.owner:
+            raise ValueError('只读刷新worker归属已变')
+        self.c.assert_owner(self.owner['chat_id'], self.owner['run_token'])
+        status = self.c.status()
+        identity = entry.owned_broker_identity(self.c, self.run)
+        actual = (status.get('broker_pid'), str(status.get('broker_creation_time')))
+        if (not identity or actual != (identity['pid'], str(identity['creation_id']))
+                or broker_identity is not None and actual != broker_identity
+                or status.get('ready') is not True or status.get('paused') is not False
+                or status.get('input_halted') is not False or status.get('game_foreground') is not True):
+            raise ValueError('只读刷新broker身份、前台或暂停状态不可确认；不恢复控制')
+        if set(manual_steps.unknown_receipts(self.run, self.c)) - {pending_input_id}:
+            raise ValueError('原请求仍PENDING/UNKNOWN；保留原ID，不以新来源覆盖')
+        return actual
+
+    def refresh_request_source(self, reply, *, business_view=None):
+        """Replace only an awaiting request's source through one original observe.
+
+        Keep the first waiting deadline and all business progress/budgets. This
+        path never calls tick, apply_context or observation_input_lease.
+        """
+        with file_lock(self.run, 'decision-submit.lock'):
+            old = copy.deepcopy(self.state.get('decision_request') or {})
+            if business_view is None and (self.records / ('business-view-' + old['request_id'] + '.json')).exists():
+                raise ValueError('原收店曝光尚待其专属收据/后图核验，不用普通刷新掩盖结果')
+            validate_plan(reply, old, self.epoch())
+            broker = self.source_refresh_guard(old)
+            manual_steps._bound_reward_frame(self.run, self.c, old['observation'], old['original_png'])
+            started = datetime.now(timezone.utc)
+            stage = self.last_preparation_stage
+            try:
+                observed = self.observe(max_attempts=1)
+            finally:
+                # read_frame normally tracks the latest stage for automatic tick.
+                # A source refresh cannot advance the waiting business node.
+                self.last_preparation_stage = stage
+            receipt = manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path, read_only=True)
+            result = receipt['result']
+            if (result.get('completed') != [{'type': 'observe', 'args': []}]
+                    or result.get('input_attempted') is not False or result.get('attempted_actions') != []
+                    or not full_observation(observed)
+                    or observed.get('capture_request_id') == old['observation'].get('capture_request_id')
+                    or observed.get('frame_id') == old['observation'].get('frame_id')
+                    or not started <= datetime.fromisoformat(observed['captured_at']) <= datetime.now(timezone.utc)):
+                raise ValueError('只读刷新缺少本次完整新帧/零输入原收据')
+            self.source_refresh_guard(old, broker)
+            if business_view is not None:
+                self.verify_business_view(business_view, observed, receipt)
+            rid = uuid.uuid4().hex
+            evidence = self.save_frame(rid, 'strategy')
+            original_png = self.records / (rid + '-strategy-original.png')
+            payload = self.frame_path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() != observed['snapshot_id']:
+                raise entry.ObservationUnavailable('只读刷新原帧摘要不符')
+            with original_png.open('xb') as stream:
+                stream.write(payload)
+            request = copy.deepcopy(old)
+            request.update(request_id=rid, snapshot_id=observed['snapshot_id'], observation=copy.deepcopy(observed),
+                           evidence_file=evidence, original_png=str(original_png), created_at=now(), choices=None)
+            request.pop('preparation_decision', None)
+            request.pop('progression_plan', None)
+            request['battle_stage'] = canonical_stage(observed.get('fields', {}).get('stage'))
+            if (observed.get('page') != old['observation'].get('page')
+                    or request['battle_stage'] != canonical_stage(old['observation'].get('fields', {}).get('stage'))):
+                page = observed.get('page')
+                request['kind'] = ('business_resume' if old['kind'] == 'business_resume' else
+                    page + '_strategy' if page in ('shop', 'guide', 'unit_gear', 'investment', 'environment', 'supply', 'opponents') else
+                    'preparation_strategy' if page == 'preparation' else 'unknown_page')
+                request['preparation_checklist'] = coaching.preparation_status({})
+            if business_view is not None:
+                request['business_view_transition'] = copy.deepcopy(business_view['verified_transition'])
+            if request['kind'] == 'business_resume':
+                request['business_receipt_watermark'] = self.economy_receipt_watermark()
+            previous = old.get('source_refresh') or {}
+            request['source_refresh'] = {'first_request_id': previous.get('first_request_id', old['request_id']),
+                'first_created_at': previous.get('first_created_at', old['created_at']),
+                'deadline_at': old['deadline_at'], 'previous_request_id': old['request_id'],
+                'previous_capture_request_id': old['observation'].get('capture_request_id'),
+                'capture_request_id': observed['capture_request_id'], 'input_sent': False,
+                'business_progress_unchanged': True}
+            request['reason'] = old['reason']
+            request['allowed_action_types'] = list(dict.fromkeys([*old.get('allowed_action_types', []), 'refresh_observation']))
+            self.source_refresh_guard(old, broker)
+            pending = optional(self.run / 'decision-reply.json')
+            if pending:
+                self.log({'event': 'source_refresh_reply_retired', 'request_id': old['request_id'],
+                          'reply': redact(pending), 'input_sent': False})
+                (self.run / 'decision-reply.json').unlink()
+            self.history[observed['snapshot_id']] = {'snapshot_id': observed['snapshot_id'], 'evidence_file': evidence,
+                'observed_at': now(), 'page': observed['page'], 'rows': copy.deepcopy(observed['rows']),
+                'match_id': self.active_match_id, 'resume_epoch': self.epoch(),
+                'semantic': copy.deepcopy(observed.get('semantic', {})), 'fields': copy.deepcopy(observed.get('fields', {})),
+                'read_contract': copy.deepcopy(observed.get('read_contract')), 'capture_request_id': observed['capture_request_id'],
+                'frame_id': observed['frame_id'], 'captured_at': observed['captured_at'],
+                'preparation_stage': request['battle_stage']}
+            if len(self.history) > 256:
+                self.history.pop(next(iter(self.history)))
+            try:
+                request['comparison_view'] = self.economic_comparison_view(request, observed)
+            except (ValueError, OSError, KeyError, TypeError, entry.ObservationUnavailable) as exc:
+                request['comparison_view'] = None
+                request['comparison_view_unavailable'] = str(exc)
+            self.c.write_json(self.run / 'decision-request.json', request)
+            self.state['statistics']['decisions'] += 1
+            self.log({'event': 'strategy_source_refreshed', 'previous_request_id': old['request_id'],
+                      'request': request, 'input_sent': False, 'original_deadline_at': old['deadline_at']})
+            self.publish(decision_request=request, phase=request['kind'], reason=request['reason'])
+
     def _execute_plan(self, reply):
         request = self.state['decision_request']
         validate_plan(reply, request, self.epoch())
@@ -6142,6 +7845,8 @@ class Worker:
         original = request['observation']
         if actual['page'] != original['page']:
             raise ValueError('战略回答到达时页面已变，拒绝旧计划')
+        if len(reply['actions']) == 1 and reply['actions'][0].get('type') == 'deploy_unit':
+            return self.execute_deployment(reply, request, actual)
         guide_navigation_verified = False
         if (len(reply['actions']) == 1 and reply['actions'][0].get('target_evidence', {}).get('control_id')
                 == PREPARATION_GUIDE_CONTROL):
@@ -6318,7 +8023,11 @@ class Worker:
                 self.require_strategy_context(actual)
                 if not self.execute_economic_action(action, actual, request):
                     return
-                continue
+                actual = self.observe(max_attempts=1)
+                self.state['decision_request'] = None
+                self.ask(actual, 'preparation_strategy', '原经济单笔效果已核；停止旧动作列表，新请求重新分配',
+                         category='economy', business_step='economy')
+                return
             if kind == 'click_text':
                 plan = self.preparation_policy(actual)
                 if any(candidate.get('text') == action['text'] for candidate in plan['inspection_actions']):
@@ -6416,10 +8125,10 @@ class Worker:
                               'stage': loot_key[1], 'control_id': loot_key[2],
                               'snapshot_id': self.last_observation['snapshot_id'], 'retry_allowed': False})
             effect = coaching.action_effect(action, actual['page'])
-            if guide_navigation:
+            if guide_navigation or action.get('target_evidence', {}).get('control_id') == 'owned_unit_details':
                 effect = 'navigation'
             elif kind == 'click_point' and not loot_pickup and actual['page'] in ('preparation', 'shop'):
-                effect = 'inventory'  # Unknown point effects cannot preserve old inventory/lineup proof.
+                effect = 'unknown_inventory'  # Unknown point effects cannot preserve shop/inventory proof.
             self.invalidate_preparation(effect)
             if loot_pickup or actual['page'] in ('investment', 'environment', 'supply'):
                 self.preparation_reviews.clear()
@@ -6448,6 +8157,29 @@ class Worker:
         self.log({'event': 'plan_consumed', 'request_id': request['request_id'], 'actions': len(reply['actions'])})
         self.publish(control_mode='auto', decision_request=None, reason=None, needs_user_confirmation=False)
 
+    def guard_owned_unit_details(self, action, request, actual):
+        from currency_wars_unit_inspection import check_target
+        current = self.state.get('decision_request') or {}
+        if (not request or any(request.get(key) != current.get(key) for key in
+                              ('request_id', 'snapshot_id', 'match_id', 'resume_epoch'))
+                or request.get('match_id') != self.active_match_id or request.get('resume_epoch') != self.epoch()
+                or self.manual_input_blocked()):
+            raise ValueError('备选详情请求、同局或交接代次已变')
+        self.preparation_checklist(actual)
+        reward = self.preparation_reviews.get('rewards') or {}
+        proof = reward.get('proof') or {}
+        if (reward.get('completed') is not True or proof.get('source') != 'observed_screen'
+                or proof.get('resume_epoch') != self.epoch()):
+            raise ValueError('备选详情须先按当前节点原帧证据领奖领空')
+        if request['request_id'] in getattr(self, 'owned_unit_details_attempted', {}):
+            raise ValueError('本请求的备选详情点击已尝试；保留原收据，不重发')
+        manual_steps._bound_reward_frame(self.run, self.c, request['observation'], request['original_png'])
+        manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
+        result = check_target(action, request, actual, self.frame_path)
+        if self.epoch() != request['resume_epoch'] or self.manual_input_blocked():
+            raise ValueError('备选详情检查期间发生新的暂停或交接')
+        return result
+
     def check_target_roi(self, action, request, actual):
         proof = action.get('target_evidence', {})
         if proof.get('snapshot_id') != request['snapshot_id'] or self.epoch() != request['resume_epoch']:
@@ -6463,6 +8195,9 @@ class Worker:
             return
         if proof.get('control_id') == PREPARATION_GUIDE_CONTROL:
             self.guard_startup_navigation(action, request, actual)
+            return
+        if proof.get('control_id') == 'owned_unit_details':
+            self.guard_owned_unit_details(action, request, actual)
             return
         if proof.get('control_id') in tuple(_NATIVE_LOOT_PICKUP_PROFILES):
             if (request.get('match_id') != self.active_match_id
@@ -6773,6 +8508,14 @@ class Worker:
         if datetime.now(timezone.utc) > datetime.fromisoformat(request['deadline_at']):
             self.pause_internal('战略等待15分钟期限已到；没有无限未知循环')
             return False
+        readonly_reply = optional(self.run / 'decision-reply.json')
+        readonly_actions = readonly_reply.get('actions') if isinstance(readonly_reply, dict) else None
+        if isinstance(readonly_actions, list) and any(isinstance(action, dict)
+                and action.get('type') in ('refresh_observation', 'close_shop_for_observation') for action in readonly_actions):
+            # Empty/unknown-page waits and manual-result consumption must not
+            # turn an explicit source refresh into a business transition.
+            self.execute_plan(readonly_reply)
+            return True
         if self.consume_manual_results():
             return False
         if (request['kind'] == 'business_resume' and not (self.run / 'decision-reply.json').exists()
@@ -6965,7 +8708,7 @@ class Worker:
                 return
             observed = self.last_observation or observed
             self.ask(observed, 'shop_strategy',
-                     '当前先完成：' + checklist['next_step'] + '；第二入口创业指南优先，动态复核须当前帧proof。'
+                     '当前先完成：' + checklist['next_step'] + '；动态复核须当前帧proof，创业指南在整局结算后检查。'
                      if not checklist['economy_allowed'] else
                      '先当前缺口、免费刷新与付费搜牌停止条件，再分人口经验；当前请求可提交economy_plan，一份预算逐笔新帧回验。'
                      if (observed.get('shop') or {}).get('ok') is True
@@ -6974,6 +8717,14 @@ class Worker:
             if self.preparation_checklist(observed)['phase'] == 'rewards':
                 self.advance_rewards(observed)
                 return
+            if self.preparation_checklist(observed)['phase'] == 'shop_inspection':
+                button = find_text(observed['rows'], '商店')
+                if button and shop_key is not None and shop_key not in self.shop_stages:
+                    self.shop_stages.add(shop_key)
+                    self.click_text(observed, '商店', '奖励已领空；先读取当前完整五槽商店，再清库存和统一经济')
+                else:
+                    self.ask(observed, 'preparation_strategy', '须当前原生完整五槽商店；只读导航已有未定结果时核原收据，不重复开店。')
+                return
             policy = self.preparation_policy(observed)
             checklist = policy['preparation_checklist']
             if checklist['phase'] == 'economy' and self.advance_economy(observed, origin='tick_preparation'):
@@ -6981,7 +8732,7 @@ class Worker:
             observed = self.last_observation or observed
             if not checklist['economy_allowed']:
                 self.ask(observed, 'preparation_strategy',
-                         '按顺序处理当前待办：' + checklist['next_step'] + '。领奖后重新扫全场；第二入口创业指南读当前目标并领奖；清库存后再统一经济。'
+                         '按顺序处理当前待办：' + checklist['next_step'] + '。领奖后重新扫全场；清库存后再统一经济；创业指南留到整局结算后检查。'
                          '可用当前帧proof提交supervising_agent复核，未知项回传，缓存不代替进度。')
             elif checklist['phase'] != 'economy' and policy['inspection_actions']:
                 self.ask(observed, 'preparation_strategy', '先按已选攻略检查追踪、可用装备与场上阵容；攻略推荐不是库存，也不默认装备已生效。')
@@ -7370,6 +9121,18 @@ def command_cli(args):
                     or (run / 'runner-stop').exists() or (run / 'broker-stop').exists()):
                 raise ValueError('战略请求已失效/暂停/停止；未提交旧回答')
             validate_plan(reply, state['decision_request'], (optional(run / 'runner-resume-epoch.json') or {}).get('id'))
+            records = Path(state['journal_file']).parent
+            if (records / ('economy-macro-' + reply['request_id'] + '.json')).exists():
+                raise ValueError('当前父经济宏已执行/消费；不能提交并发或重放回答')
+            if reply['actions'][0]['type'] in ('refresh_observation', 'close_shop_for_observation'):
+                broker = state['broker']
+                identity = entry.owned_broker_identity(control, run)
+                if (not identity or (broker.get('broker_pid'), str(broker.get('broker_creation_time')))
+                        != (identity['pid'], str(identity['creation_id']))
+                        or broker.get('ready') is not True or broker.get('paused') is not False
+                        or broker.get('input_halted') is not False or broker.get('game_foreground') is not True
+                        or manual_steps.unknown_receipts(run, control)):
+                    raise ValueError('只读刷新须当前健康原broker且无暂停或未定收据；未提交')
             policy = coaching_policy()
             if policy['require_battle_confirmation']:
                 battle_actions = [action for action in reply['actions'] if battle_input(state['decision_request']['observation'], action)]
@@ -7470,7 +9233,7 @@ def command_cli(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', 'manual-stage', 'manual-step', '_worker'])
+    parser.add_argument('command', choices=['publish-ready', 'start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', 'manual-stage', 'manual-step', '_worker'])
     parser.add_argument('--chat-id', required=True)
     parser.add_argument('--run-dir')
     parser.add_argument('--run-token')
@@ -7483,6 +9246,8 @@ def main():
     parser.add_argument('--handoff', action='store_true')
     parser.add_argument('--resume-guard-json')
     parser.add_argument('--reply-file')
+    parser.add_argument('--review-file', help='publish-ready专用：独立完整运行时审批JSON')
+    parser.add_argument('--review-sha256', help='publish-ready专用：不可变独立审批文件SHA256')
     parser.add_argument('--reason', default='')
     parser.add_argument('--launch-id')
     parser.add_argument('--runtime-location-json', help=argparse.SUPPRESS)
@@ -7499,7 +9264,9 @@ def main():
     if args.command == '_worker':
         worker_cli(args)
         return
-    if args.command == 'start':
+    if args.command == 'publish-ready':
+        result = publish_ready_cli(args)
+    elif args.command == 'start':
         result = start_cli(args)
     else:
         if not args.run_dir or not args.run_token:

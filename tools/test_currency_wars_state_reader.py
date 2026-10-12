@@ -21,7 +21,8 @@ except ImportError:
     scratch_directory = None
 from currency_wars_state_reader import StateReader, RESOURCE_DIR, native_slots, native_capacity
 from currency_wars_perception import (DEPLOYED_COUNT_ROI, PLAYER_LEVEL_ROI, Perception,
-    native_deployed_count, native_player_hud, valid_population_counts)
+    native_deployed_count, native_player_hud, native_experience_offer,
+    EXPERIENCE_COIN_ROI, valid_population_counts)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -92,8 +93,53 @@ class NativePlayerHUDTests(unittest.TestCase):
         self.assertEqual(native_deployed_count([population]),'7/12')
         value,unused=self.read(self.anchors()+[self.row('Lv.12',[261,902,339,933])])
         self.assertIsNone(value['level'])
-        # Existing observed front/back/bench layout stays 4+6+9, not 12 invented board slots.
+        # Native board geometry remains independent of population bonuses.
         self.assertEqual(len([s for s in native_slots() if s['location']=='board']),10)
+
+    def test_experience_price_is_scoped_to_player_panel_and_never_invents_gain(self):
+        image = Image.new('RGB', (1920, 1080))
+        image.paste((240, 190, 40), tuple(EXPERIENCE_COIN_ROI))
+        rows = self.anchors() + [self.row('4', [273, 981, 324, 1008])]
+        player = {'actor': 'player', 'origin': 'native_player_hud', 'snapshot_id': 'frame',
+                  'evidence': {'purchase_experience': rows[0], 'experience_progress': rows[1]}}
+        offer = native_experience_offer(rows, image, 'shop', 'frame', player)
+        self.assertEqual(offer['buy_cost'], 4)
+        self.assertTrue(offer['cost_checked'])
+        self.assertIsNone(offer['buy_gain'])
+        self.assertEqual(offer['evidence']['cost']['snapshot_id'], 'frame')
+        for wrong in ({**player, 'actor': 'enemy'}, {**player, 'snapshot_id': 'old'},
+                      {**player, 'evidence': {}}):
+            self.assertIsNone(native_experience_offer(rows, image, 'shop', 'frame', wrong)['buy_cost'])
+        for bad_rows in (rows[:-1], rows + [rows[-1]],
+                         rows[:-1] + [self.row('4', [250, 981, 324, 1008])],
+                         rows[:-1] + [self.row('4', [273, 981, 324, 1008], .89)],
+                         rows[:-1] + [self.row('4金币', [273, 981, 324, 1008])]):
+            self.assertIsNone(native_experience_offer(bad_rows, image, 'shop', 'frame', player)['buy_cost'])
+        self.assertIsNone(native_experience_offer(rows, Image.new('RGB', image.size),
+                                                 'shop', 'frame', player)['buy_cost'])
+        self.assertIsNone(native_experience_offer(rows, image, 'battle', 'frame', player)['buy_cost'])
+
+    def test_large_native_level_numeral_resolves_font_but_not_conflicting_or_clipped_reads(self):
+        image = Image.new('RGB', (1920, 1080), (100, 100, 220))
+        image.paste((0, 0, 0), (302, 887, 328, 931))
+        def read(sequence, rows=None, frame=image):
+            engine = Mock(side_effect=[(value, None) for value in sequence])
+            return native_player_hud(rows or self.anchors(), frame, 'preparation', engine, 'frame')
+        value = read([[['Lv.3', .83]], [['3', .99]]])
+        self.assertEqual(value['level'], 3)
+        self.assertEqual(value['evidence']['level']['source'], 'complete_native_player_level_numeral')
+        self.assertEqual(len(value['evidence']['level_attempts']), 2)
+        self.assertIsNone(read([[['Lv.3', .83]], [['8', .99]]])['level'])
+        self.assertIsNone(read([[['Lv.99', .83]], [['3', .99]]])['level'])
+        self.assertIsNone(read([[['Lv.03', .83]], [['3', .99]]])['level'])
+        self.assertIsNone(read([[['Lv.003', .83]], [['3', .99]]])['level'])
+        self.assertIsNone(read([[['99', .83]], [['3', .99]]])['level'])
+        self.assertIsNone(read([[['8', .83]], [['3', .99]]])['level'])
+        self.assertIsNone(read([[['Lv.3', .83]], [['10', .99]]])['level'])
+        self.assertIsNone(read([[['Lv.3', .83]], [['3', .89]]])['level'])
+        clipped = Image.new('RGB', image.size, (100, 100, 220))
+        clipped.paste((0, 0, 0), (298, 887, 328, 931))
+        self.assertIsNone(read([[['Lv.3', .83]], [['3', .99]]], frame=clipped)['level'])
 
 
 @unittest.skipUnless((PUBLIC_FIXTURES / 'manifest.json').is_file(), 'public real PNG fixtures unavailable')

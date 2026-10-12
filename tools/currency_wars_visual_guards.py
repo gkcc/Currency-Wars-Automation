@@ -529,6 +529,8 @@ def _environment_gray_confirmation_equal(images, bounds):
 
     Native pair: evidence commit 6ef3793a, ROOT_ENVIRONMENT_CONFIRM_RGB.json;
     glyph [1052,966,1112,1002] has 368/361 gray pixels, IoU .980978,
+    Current native pair has 359/367 pixels, IoU .978202; eight antialiased
+    border pixels cross V=100. Minimum IoU .975 retains displacement rejection.
     support RGB delta <=8, two-pixel halo delta <=15. Background animation
     is not text. White/enabled, blank, shifted or covered ink fails here.
     This does not authorize clicking the disabled confirmation itself.
@@ -548,7 +550,7 @@ def _environment_gray_confirmation_equal(images, bounds):
             return False
         masks.append(mask)
     union = masks[0] | masks[1]
-    if np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .98:
+    if np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .975:
         return False
     delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
     halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
@@ -584,10 +586,16 @@ def _environment_confirmation_equal(images, bounds):
 
 def _environment_caption_row(original, actual, label, bounds, images):
     center = (bounds[0] + bounds[2]) // 2
-    top, bottom = {'角色': (575, 645), '装备': (720, 785)}[clean(label)]
-    return _paired_row(original, actual, re.escape(clean(label)),
-                       [center-60, top, center+60, bottom], images,
-                       ink_guard=_environment_caption_equal)
+    # Native 战技点契约 places its role caption at y712..740. The full
+    # card still requires exactly one caption; neither ROI tolerates movement.
+    regions = {'角色': ((575, 645), (695, 760)), '装备': ((720, 785),)}[clean(label)]
+    for top, bottom in regions:
+        row = _paired_row(original, actual, re.escape(clean(label)),
+                          [center-60, top, center+60, bottom], images,
+                          ink_guard=_environment_caption_equal)
+        if row is not None:
+            return row
+    return None
 
 
 def navigation_target(action, request):
@@ -642,8 +650,23 @@ def _navigation_ink_equal(images, bounds):
     return False
 
 
-def _navigation_row(original, actual, label, images, bounds=None, *, target=False):
-    rows = [_unique_row(obs, re.escape(label), [0, 0, 1920, 1020])
+def _opponent_faction_caption_equal(images, bounds):
+    # Three native 2026-10-12 frames: these gray captions differ by at most
+    # two RGB levels. No moving boss background or click target uses this.
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    return (np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))) <= 2
+            and all(np.count_nonzero(_edges(image, bounds)) >= 24 for image in images))
+
+
+def _navigation_row(original, actual, label, images, bounds=None, *, target=False, local_unique=False,
+                    ink_guard=_navigation_ink_equal):
+    # Only the completed opponent grid repeats its three faction captions.
+    # Its fixed, disjoint ROIs retain unique rows within each card.
+    region = bounds if local_unique else [0, 0, 1920, 1020]
+    rows = [_unique_row(obs, re.escape(label), region)
             for obs in (original, actual)]
     if any(row is None for row in rows):
         return None
@@ -655,7 +678,7 @@ def _navigation_row(original, actual, label, images, bounds=None, *, target=Fals
            max(0, min(rows[0]['box'][1], rows[1]['box'][1])-2),
            min(1920, max(rows[0]['box'][2], rows[1]['box'][2])+2),
            min(1020, max(rows[0]['box'][3], rows[1]['box'][3])+2)]
-    if not _navigation_ink_equal(images, box):
+    if not ink_guard(images, box):
         return None
     if target:
         # Text can surround a blank click center. A colored cover in that gap
@@ -705,7 +728,10 @@ def _navigation(action, request, actual, images):
     if control == 'opponents_next':
         kind, target = 'opponents_strategy', '下一步'
         target_region = [1200, 740, 1920, 1020]
-        anchor_sets = ((('竞争对手', [0, 0, 1400, 240]),),)
+        anchor_sets = ((('竞争对手', [0, 0, 1400, 240]),),
+                       (('阵营', [150, 625, 380, 705]),
+                        ('阵营', [450, 625, 680, 705]),
+                        ('阵营', [750, 625, 980, 705])))
     else:
         kind, target = 'unknown_page', '货币战争'
         # Explicit menu semantics, not a generic unknown-page escape hatch.
@@ -727,7 +753,11 @@ def _navigation(action, request, actual, images):
     if (request.get('kind') != kind or not _box(target_region)
             or _navigation_row(original, actual, target, images, target_region, target=True) is None):
         return False
-    return any(all(_navigation_row(original, actual, label, images, bounds) is not None
+    return any(all(_navigation_row(original, actual, label, images, bounds,
+                                  local_unique=control == 'opponents_next' and label == '阵营',
+                                  ink_guard=_opponent_faction_caption_equal
+                                  if control == 'opponents_next' and label == '阵营'
+                                  else _navigation_ink_equal) is not None
                    for label, bounds in anchors) for anchors in anchor_sets)
 
 

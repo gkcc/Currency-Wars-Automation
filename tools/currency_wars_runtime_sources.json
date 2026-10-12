@@ -27,11 +27,26 @@
     "tools/currency_wars_rewards.py",
     "tools/currency_wars_runner.py",
     "tools/currency_wars_runtime_sources.json",
+    "tools/currency_wars_shop_contract.py",
     "tools/currency_wars_shop_reader.py",
     "tools/currency_wars_source_guard.py",
     "tools/currency_wars_state_reader.py",
     "tools/currency_wars_update.py",
-    "tools/currency_wars_visual_guards.py"
+    "tools/currency_wars_visual_guards.py",
+    "tools/currency_wars_unit_inspection.py",
+    "tools/currency_wars_slot_probe.py",
+    "tools/currency_wars_native_unit_bank.py",
+    "tools/currency_wars_deployment.py",
+    "tools/currency_wars_advisor.py",
+    "tools/currency_wars_decision.py",
+    "tools/currency_wars_database.py",
+    "tools/currency_wars_solver.py",
+    "tools/currency_wars_bond_model.py",
+    "tools/currency_wars_bond_proxy.py",
+    "tools/currency_wars_rules.py",
+    "tools/currency_wars_mcp.py",
+    "tools/currency_wars_session_client.py",
+    "tools/currency_wars_economic_views.py"
   ],
   "resource_roots": [
     {
@@ -53,6 +68,10 @@
     {
       "path": "tools/loot_resources",
       "required": false
+    },
+    {
+      "path": "data/currency_wars/native_unit_bank",
+      "required": true
     }
   ],
   "resource_manifests": [
@@ -89,9 +108,20 @@
         "initial-blue.png",
         "initial-gray.png"
       ]
+    },
+    {
+      "path": "data/currency_wars/native_unit_bank/manifest.json",
+      "layout": "resources",
+      "required_files": []
     }
   ],
   "resource_files": [
     "tools/shop_reader_resources/names.json"
+  ],
+  "data_files": [
+    {
+      "path": "data/currency_wars/catalog.sqlite3",
+      "max_bytes": 20000000
+    }
   ]
 }

@@ -6,8 +6,11 @@ import json
 import re
 from pathlib import Path
 
-PHASES = ('rewards', 'startup_guide', 'inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance')
-PHASE_LABELS = dict(zip(PHASES, ('领奖领空', '创业指南', '清库存', '经济', '上场/装备', '出战验收')))
+PHASES = ('rewards', 'startup_guide', 'shop_inspection', 'inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance')
+PHASE_LABELS = dict(zip(PHASES, ('领奖领空', '创业指南', '完整读店', '清库存', '统一经济', '上场/装备', '出战验收')))
+# Startup Guide is a post-match panel, not a prerequisite on every node.
+# Keep its explicit inspection phase for authenticated optional manual reads.
+PREPARATION_PHASES = tuple(phase for phase in PHASES if phase != 'startup_guide')
 
 
 def reviewed_goals(goals, snapshot_id):
@@ -145,16 +148,25 @@ def lineup_requirements(investments, team, knowledge):
 
 
 def preparation_status(reviews):
+    def completed(phase):
+        review = reviews.get(phase, {})
+        if phase == 'shop_inspection':
+            proof = review.get('proof') or {}
+            return (review.get('completed') is True and review.get('origin') == 'current_native_shop'
+                    and proof.get('source') == 'current_native_shop' and bool(proof.get('snapshot_id'))
+                    and bool(proof.get('capture_request_id')) and bool(proof.get('frame_id')))
+        return review.get('completed') is True
     steps = [{'id': phase, 'label': PHASE_LABELS[phase],
-              'completed': reviews.get(phase, {}).get('completed') is True,
+              'completed': completed(phase),
               'proof': reviews.get(phase, {}).get('proof'),
               'origin': reviews.get(phase, {}).get('origin', 'unknown')}
-             for phase in PHASES]
+             for phase in PREPARATION_PHASES]
     pending = next((item for item in steps if not item['completed']), None)
     return {'phase': pending['id'] if pending else 'ready_for_battle', 'steps': steps,
             'next_step': pending['label'] if pending else '按既有单次审批出战',
-            'startup_guide_entry': {'entry_index': 2, 'name': '创业指南'},
-            'economy_allowed': all(reviews.get(key, {}).get('completed') is True for key in PHASES[:3]),
+            'startup_guide_entry': {'entry_index': 2, 'name': '创业指南', 'schedule': 'post_match'},
+            'economy_allowed': all(completed(key)
+                                   for key in ('rewards', 'shop_inspection', 'inventory_cleanup')),
             'battle_ready': pending is None}
 
 

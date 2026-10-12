@@ -77,7 +77,8 @@ def record_fixture_reads(worker):
     def read(path, force=False, *, scope='full', reuse_primary=False):
         observed = copy.deepcopy(original_read(path, force, scope=scope))
         effective = scope if observed['page'] in ('preparation', 'shop') else 'full'
-        observed['read_contract'] = {'version': 1, 'requested_scope': scope, 'effective_scope': effective}
+        observed['read_contract'] = {'version': perception.READ_CONTRACT_VERSION,
+            'requested_scope': scope, 'effective_scope': effective}
         observed['read_timing'] = {'cache_hit': False, 'source': 'declared_scope_fixture'}
         if effective != 'full':
             omitted = {'status': 'not_read', 'reason': 'explicit inert fixture scope',

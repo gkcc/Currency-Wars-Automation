@@ -1,0 +1,2 @@
+# Separate from the strict game runtime environment and fingerprint.
+mcp==1.30.0

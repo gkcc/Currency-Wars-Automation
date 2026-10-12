@@ -19,7 +19,7 @@ import currency_wars_artifacts as artifacts
 SOURCE_MANIFEST = 'tools/currency_wars_runtime_sources.json'
 
 
-def _source_bytes(project, name):
+def _source_bytes(project, name, *, max_bytes=4_000_000):
     path = Path(project) / name
     for item in (path, *path.parents):
         info = item.lstat()
@@ -27,7 +27,8 @@ def _source_bytes(project, name):
             raise ValueError('Production source path is linked: ' + name)
         if item == Path(project):
             break
-    if not path.is_file() or not 0 < path.stat().st_size <= 4_000_000:
+    if (type(max_bytes) is not int or not 1 <= max_bytes <= 32_000_000
+            or not path.is_file() or not 0 < path.stat().st_size <= max_bytes):
         raise ValueError('Production source is missing or exceeds its bound: ' + name)
     return path.read_bytes()
 
@@ -164,6 +165,20 @@ def resource_snapshot(project):
             raise ValueError('Reader source manifest omits a required asset: ' + name)
     if not set(manifest.get('resource_files', [])) <= hashes.keys():
         raise ValueError('Required reader metadata is missing')
+    # Individually named data files avoid recursively binding imports, caches
+    # or another chat's data. The catalogue is larger than small reader assets.
+    data_files = manifest.get('data_files', [])
+    if not isinstance(data_files, list) or len(data_files) > 16:
+        raise ValueError('Bounded data file inventory is invalid')
+    for spec in data_files:
+        if not isinstance(spec, dict) or set(spec) != {'path', 'max_bytes'}:
+            raise ValueError('Data file declaration is invalid')
+        name = _relative(spec['path'])
+        if name in hashes or name in inventory:
+            raise ValueError('Data file declaration is duplicated')
+        payload = _source_bytes(project, name, max_bytes=spec['max_bytes'])
+        hashes[name] = hashlib.sha256(payload).hexdigest().upper()
+        inventory[name] = dict(present=True, files=[name])
     return dict(resource_inventory=inventory, hashes=hashes)
 
 
@@ -233,12 +248,15 @@ def mutation_lock(project, timeout_ms=5000):
         kernel.CloseHandle(handle)
 
 
-def read_object(path):
+def read_object(path, *, limit=65536):
     path = Path(path)
     info = path.lstat()
-    if path.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400 or not path.is_file() or info.st_size > 65536:
+    if path.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400 or not path.is_file() or info.st_size > limit:
         raise ValueError('Activity record path or size is invalid')
-    value = json.loads(path.read_text(encoding='utf8'))
+    payload = path.read_bytes()
+    if len(payload) > limit:
+        raise ValueError('Activity record path or size is invalid')
+    value = json.loads(payload.decode('utf8'))
     if not isinstance(value, dict):
         raise ValueError('Activity record is not an object')
     return value
@@ -277,7 +295,9 @@ def activity_reason(project, ignore_lease=None):
     current = Path(project) / 'docs/CURRENT_RUNNER.json'
     if current.exists():
         try:
-            state = read_object(current)
+            # CURRENT retains full native observations and terminal receipts.
+            # Match the original runner JSON bound; activity leases stay 64 KiB.
+            state = read_object(current, limit=2_000_000)
             if state.get('owner') != 'currency-wars-runner' or not isinstance(state.get('run_id'), str):
                 return 'Existing runner ownership is unknown; update skipped.'
             worker = identity_state(state.get('runner_pid'), 'windows:' + str(state.get('runner_creation_id', '')))

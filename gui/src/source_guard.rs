@@ -23,10 +23,13 @@ fn unlinked(path: &Path) -> Result<fs::Metadata,String> {
     Ok(metadata)
 }
 fn bytes(project:&Path,name:&str)->Result<Vec<u8>,String>{
+    bounded_bytes(project,name,4_000_000)
+}
+fn bounded_bytes(project:&Path,name:&str,limit:u64)->Result<Vec<u8>,String>{
     let path=project.join(name);
     for ancestor in path.ancestors(){unlinked(ancestor)?;if ancestor==project{break;}}
     let metadata=unlinked(&path)?;
-    if !metadata.is_file() || metadata.len()==0 || metadata.len()>4_000_000{return Err(format!("来源大小或路径无效：{name}"));}
+    if !(1..=32_000_000).contains(&limit) || !metadata.is_file() || metadata.len()==0 || metadata.len()>limit{return Err(format!("来源大小或路径无效：{name}"));}
     fs::read(path).map_err(|_|format!("来源不可读：{name}"))
 }
 fn digest(data:&[u8])->String{format!("{:X}",Sha256::digest(data))}
@@ -102,6 +105,23 @@ pub fn verify_runtime_sources(project:&Path,ready:&Value,selected_provider:&Valu
     for value in array(&manifest,"resource_files")?{
         if !hashes.contains_key(relative(value)?){return Err("必要素材元数据缺失".into());}
     }
+    let empty=Vec::new();
+    let data_files=match manifest.get("data_files") {
+        None=>&empty,
+        Some(value)=>value.as_array().ok_or("数据文件清单无效")?,
+    };
+    if data_files.len()>16{return Err("数据文件数量超过上限".into());}
+    for spec in data_files {
+        let fields=spec.as_object().ok_or("数据文件声明无效")?;
+        if fields.len()!=2 || !fields.contains_key("path") || !fields.contains_key("max_bytes") {
+            return Err("数据文件声明无效".into());
+        }
+        let name=relative(&spec["path"])?;
+        if hashes.contains_key(name) || inventory.contains_key(name){return Err("数据文件声明重复".into());}
+        let limit=spec["max_bytes"].as_u64().ok_or("数据文件大小上限无效")?;
+        hashes.insert(name.into(),digest(&bounded_bytes(project,name,limit)?));
+        inventory.insert(name.into(),json!({"present":true,"files":[name]}));
+    }
     if ready["resource_inventory"]!=Value::Object(inventory){return Err("素材成员与本机审查记录不符".into());}
     let reviewed=ready["hashes"].as_object().ok_or("源码与素材摘要缺失")?;
     if reviewed.len()!=hashes.len(){return Err("来源集合与本机审查记录不符".into());}
@@ -137,22 +157,29 @@ mod tests{
         let embedded=json!({"schema":1,"files":[INVENTORY_PATH,"tools/currency_wars_refresh_offer.py"],
             "resource_roots":[{"path":"tools/shop_reader_resources","required":true}],
             "resource_manifests":[{"path":"tools/shop_reader_resources/SOURCES.json","layout":"resources","required_files":["recommend_badge.png"]}],
-            "resource_files":["tools/shop_reader_resources/names.json"]}).to_string();
+            "resource_files":["tools/shop_reader_resources/names.json"],
+            "data_files":[{"path":"data/catalog.sqlite3","max_bytes":5_000_000}]}).to_string();
         put(root,INVENTORY_PATH,embedded.as_bytes());
         put(root,"tools/currency_wars_refresh_offer.py",b"# explicit inert protocol fixture\n");
         put(root,"tools/shop_reader_resources/SOURCES.json",br#"{"resources":[{"file":"recommend_badge.png"}]}"#);
         put(root,"tools/shop_reader_resources/names.json",b"{}");
         put(root,"tools/shop_reader_resources/recommend_badge.png",b"Declared byte fixture, not an image recognition sample");
         put(root,"provider.py",b"# inert provider, never imported\n");
+        // Inert byte fixture proves data can exceed the small-asset limit.
+        // It is never parsed as a catalogue or passed to a decision engine.
+        put(root,"data/catalog.sqlite3",&vec![b'x';4_000_001]);
         let mut hashes=serde_json::Map::new();
         let members=vec!["tools/shop_reader_resources/SOURCES.json","tools/shop_reader_resources/names.json","tools/shop_reader_resources/recommend_badge.png"];
         for name in [INVENTORY_PATH,"tools/currency_wars_refresh_offer.py"].into_iter().chain(members.iter().copied()){
             hashes.insert(name.into(),json!(digest(&bytes(root,name).unwrap())));
         }
         let provider=json!({"kind":"installed","path":root.join("provider.py"),"sha256":digest(&bytes(root,"provider.py").unwrap())});
-        let ready=json!({"hashes":hashes,"runtime_provider":provider,"resource_inventory":{"tools/shop_reader_resources":{"present":true,"files":members}}});
+        hashes.insert("data/catalog.sqlite3".into(),json!(digest(&bounded_bytes(root,"data/catalog.sqlite3",5_000_000).unwrap())));
+        let ready=json!({"hashes":hashes,"runtime_provider":provider,"resource_inventory":{
+            "tools/shop_reader_resources":{"present":true,"files":members},
+            "data/catalog.sqlite3":{"present":true,"files":["data/catalog.sqlite3"]}}});
         assert!(verify_runtime_sources(root,&ready,&provider,&embedded).is_ok());
-        for missing in ["tools/currency_wars_refresh_offer.py","tools/shop_reader_resources/recommend_badge.png","tools/shop_reader_resources/SOURCES.json"]{
+        for missing in ["tools/currency_wars_refresh_offer.py","tools/shop_reader_resources/recommend_badge.png","tools/shop_reader_resources/SOURCES.json","data/catalog.sqlite3"]{
             let path=root.join(missing);let payload=fs::read(&path).unwrap();fs::remove_file(&path).unwrap();
             assert!(verify_runtime_sources(root,&ready,&provider,&embedded).is_err(),"{missing}");fs::write(path,payload).unwrap();
             let mut unreviewed=ready.clone();unreviewed["hashes"].as_object_mut().unwrap().remove(missing);
@@ -161,6 +188,12 @@ mod tests{
         let asset=root.join("tools/shop_reader_resources/recommend_badge.png");let saved=fs::read(&asset).unwrap();fs::write(&asset,b"Changed bytes").unwrap();
         assert!(verify_runtime_sources(root,&ready,&provider,&embedded).is_err());fs::write(asset,saved).unwrap();
         assert!(verify_runtime_sources(root,&ready,&provider,&format!("{embedded}\n")).is_err());
+        let data=root.join("data/catalog.sqlite3");let saved=fs::read(&data).unwrap();
+        fs::write(&data,b"Changed catalogue bytes").unwrap();
+        assert!(verify_runtime_sources(root,&ready,&provider,&embedded).is_err());
+        fs::write(&data,vec![b'x';5_000_001]).unwrap();
+        assert!(verify_runtime_sources(root,&ready,&provider,&embedded).is_err());
+        fs::write(&data,saved).unwrap();
         fs::write(root.join("provider.py"),b"# changed provider\n").unwrap();
         assert!(verify_runtime_sources(root,&ready,&provider,&embedded).is_err());
     }
