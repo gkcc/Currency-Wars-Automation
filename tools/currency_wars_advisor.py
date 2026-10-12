@@ -389,6 +389,18 @@ def _candidate_value_modifiers(state, policy=None, valid_entities=None):
         diagnostics.append('binding_invalid:state_mismatch')
         return accepted, diagnostics
 
+    observation = _dict(state.get('observation'))
+    if observation.get('snapshot_id') != binding['snapshot_id']:
+        diagnostics.append('binding_invalid:observation_snapshot_mismatch')
+        return accepted, diagnostics
+    # Snapshot is required by the observation contract. Other envelope fields
+    # are optional in existing projections, but must agree when supplied.
+    for key in ('match_id', 'request_id', 'resume_epoch'):
+        if key in observation and (type(observation[key]) is not type(binding[key])
+                                   or observation[key] != binding[key]):
+            diagnostics.append('binding_invalid:observation_' + key + '_mismatch')
+            return accepted, diagnostics
+
     valid_entities = _dict(valid_entities)
     for index, item in enumerate(raw):
         prefix = f'{index}:'
