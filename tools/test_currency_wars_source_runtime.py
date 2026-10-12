@@ -242,9 +242,11 @@ class SourceRuntimeTests(unittest.TestCase):
         project = self.source_copy()
         ready = self.ready_fixture(project)
         path = project / 'docs/RUNNER_READY.json'
-        args = SimpleNamespace(chat_id='explicit-protocol-chat')
+        args = SimpleNamespace(chat_id='explicit-protocol-chat', launch_id='a' * 32,
+                               source_start_lease='b' * 32 + '.json')
+        lease = SimpleNamespace(bind_launch=lambda *a: None)
         with patch.object(runner, 'PROJECT', project), \
-                patch.object(runner, 'activity', side_effect=lambda *a: contextlib.nullcontext(object())), \
+                patch.object(runner, 'activity', side_effect=lambda *a: contextlib.nullcontext(lease)), \
                 patch.object(runner.entry, 'backend') as backend, \
                 patch.object(runner.subprocess, 'Popen') as spawn:
             for name, target in (('start_cli', '_start_cli'), ('worker_cli', '_worker_cli')):
