@@ -1,7 +1,7 @@
 """Serialize source updates with registration of GUI/runner lifetimes.
 
-Normal guards do not enumerate processes. Explicit operator recovery performs a
-read-only census; no game-window APIs, input, or historical-run cleanup.
+No machine-wide process census, game-window APIs, input, or historical cleanup.
+Explicit recovery requires a persisted intervening reboot and original guards.
 """
 import ast
 import contextlib
@@ -419,7 +419,7 @@ def activity(project, kind):
 
 # This is an operator recovery for the cooperative source-activity protocol,
 # not a general process cleaner or proof about arbitrary unregistered software.
-RECOVERY_SCHEMA = 'currency-wars-dead-start-v1'
+RECOVERY_SCHEMA = 'currency-wars-dead-start-v2'
 
 
 def _plain_directory(path):
@@ -479,7 +479,7 @@ def _dead_start(project, path, digest, parent_pid, parent_identity):
 
 
 def _recovery_path(project, lease_path):
-    return _plain_directory(Path(project) / 'docs/source-activity-recovery') / lease_path.name
+    return _plain_directory(Path(project) / 'docs/source-activity-recovery') / (lease_path.stem + '.retirement-v2.json')
 
 
 def _retired_start(project, path, value):
@@ -508,23 +508,10 @@ def _retired_start(project, path, value):
             or receipt.get('machine_id') != windows_machine_id()
             or type(intent.get('uptime_ms')) is not int or type(receipt.get('uptime_ms')) is not int
             or not 0 < receipt['uptime_ms'] < intent['uptime_ms'] < 2 ** 63
-            or not isinstance(receipt.get('census'), list) or not 1 <= len(receipt['census']) <= 4096
-            or receipt.get('census_sha256') != hashlib.sha256(json.dumps(
-                receipt['census'], sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-            or receipt.get('stable_scans') != 2 or receipt.get('other_activity_reason') is not None):
-        raise ValueError('Recovery receipt is incomplete or changed')
-    census = receipt['census']
-    if (any(not isinstance(row, dict) or type(row.get('pid')) is not int or row['pid'] <= 0
-            or not re.fullmatch(r'windows:[0-9]+', str(row.get('process_identity', '')))
-            or type(row.get('operator')) is not bool
-            or not isinstance(row.get('executable'), str) or not row['executable']
-            or not re.fullmatch(r'[0-9a-f]{64}', str(row.get('command_sha256', '')))
-            or not isinstance(row.get('actor_reasons'), list)
-            or row['actor_reasons'] and row['operator'] is not True for row in census)
-            or len({row['pid'] for row in census}) != len(census)
-            or sum(row['operator'] for row in census) != 1
+            or receipt.get('other_activity_reason') is not None
+            or not isinstance(receipt.get('activity_snapshot'), dict)
             or not isinstance(receipt.get('source_hashes'), dict) or not receipt['source_hashes']):
-        raise ValueError('Recovery census is incomplete or contains a non-operator actor')
+        raise ValueError('Recovery receipt is incomplete or changed')
     _, payload = _dead_start(Path(project).resolve(), path, receipt.get('lease_sha256', ''),
                             value.get('pid'), value.get('process_identity'))
     if receipt.get('original_bytes_hex') != payload.hex():
@@ -532,81 +519,32 @@ def _retired_start(project, path, value):
     return True
 
 
-def _actor_reasons(project, executable, command):
-    """Conservative supported-controller/launcher scope, irrespective of parent.
-
-    No exemption for ROOT, an unrelated Python/shell, a venv redirector, or a
-    process with a reassuring title. Unknown/unreadable metadata is refused by
-    census. Generic hosts must be closed; this function does not terminate them.
-    """
-    image = executable.replace('\\', '/').casefold().rsplit('/', 1)[-1]
-    hosts = ('python', 'pypy', 'powershell', 'pwsh', 'cmd.', 'wscript', 'cscript',
-             'mshta', 'rundll32', 'dotnet', 'node', 'deno', 'bash', 'wsl', 'ruby', 'perl')
-    text = '\n'.join([executable] + command).replace('\\', '/').casefold()
-    root = str(project).replace('\\', '/').casefold().rstrip('/') + '/'
-    reasons = []
-    if image.startswith(hosts):
-        reasons.append('interpreter_or_shell')
-    if root in text or any(token in text for token in
-            ('currency_wars', 'currency-wars', 'currencywars', 'start.ps1')):
-        reasons.append('controller_or_project_launcher')
-    return reasons
+def _activity_snapshot(project):
+    """Hash only the existing bounded registry and CURRENT; not unrelated PIDs."""
+    directory = _plain_directory(Path(project) / 'docs/source-activity')
+    paths = sorted(directory.iterdir()) if directory.exists() else []
+    if len(paths) > 128:
+        raise ValueError('Activity inventory exceeds its bound')
+    hashes = {}
+    for path in paths:
+        read_object(path)  # Original size, object and no-link contract.
+        hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    current = Path(project) / 'docs/CURRENT_RUNNER.json'
+    current_hash = None
+    if current.exists():
+        _plain_directory(current.parent)
+        read_object(current, limit=2_000_000)
+        current_hash = hashlib.sha256(current.read_bytes()).hexdigest()
+    return dict(leases=hashes, current_runner_sha256=current_hash)
 
 
-def process_census(project):
-    """Live Windows census, bounded and fail-closed; never accept a supplied list.
-
-    The two kernel-only PIDs cannot host a user-mode Python/GUI/broker. Every
-    other PID must have readable creation identity, executable and command line.
-    Only this exact operator process is exempt from the actor rejection.
-    """
-    if os.name != 'nt':
-        raise RuntimeError('Live recovery requires Windows; offline tests cannot retire a real lease')
-    import psutil
-    pids = sorted(psutil.pids())
-    if not 1 <= len(pids) <= 4096 or len(set(pids)) != len(pids):
-        raise RuntimeError('Process inventory is empty, duplicate or exceeds its bound')
-    own_state, own_identity = process_identity(os.getpid())
-    if own_state != 'active' or own_identity is None:
-        raise RuntimeError('Operator creation identity is unknown')
-    records = []
-    for pid in pids:
-        if pid in (0, 4):
-            continue
-        before = process_identity(pid)
-        try:
-            process = psutil.Process(pid)
-            executable, command = process.exe(), process.cmdline()
-        except (psutil.Error, OSError) as exc:
-            raise RuntimeError('Incomplete process access at PID ' + str(pid)) from exc
-        if (before[0] != 'active' or before[1] is None or process_identity(pid) != before
-                or not isinstance(executable, str) or not executable or not os.path.isabs(executable)
-                or not isinstance(command, list) or not command
-                or any(not isinstance(part, str) for part in command)
-                or sum(map(len, command)) > 32768):
-            raise RuntimeError('Unknown/changed process metadata at PID ' + str(pid))
-        reasons = _actor_reasons(project, executable, command)
-        own = pid == os.getpid() and before[1] == own_identity
-        if reasons and not own:
-            raise RuntimeError('Active controller/potential launcher at PID ' + str(pid) + ': ' + ','.join(reasons))
-        # Hash arbitrary arguments instead of retaining unrelated command-line
-        # secrets. The image, creation identity and classification are auditable.
-        records.append(dict(pid=pid, process_identity=before[1], executable=executable,
-                            command_sha256=hashlib.sha256(json.dumps(command).encode()).hexdigest(),
-                            operator=own, actor_reasons=reasons))
-    if sorted(psutil.pids()) != pids:
-        raise RuntimeError('Process population changed during census')
-    if sum(row['operator'] for row in records) != 1:
-        raise RuntimeError('Operator absent from process census')
-    return records
-
-
-def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity, *, apply=False, prepare=False):
+def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity, *, apply=False, prepare=False, preflight=False):
     """One selected lease, no deletion/move/marker write, no game or READY write.
 
     The same mutation lock fences all cooperating new activity registrations.
-    A prior persisted GetTickCount64 MUST exceed the current uptime: census
-    alone cannot reconstruct missing descendants or fence every legacy entry.
+    A prior persisted GetTickCount64 MUST exceed the current uptime. This
+    extinguishes the old process lineage without claiming historical parentage
+    or a machine-wide absence of unrelated/new unregistered processes.
     This API is intentionally not called by normal startup or the updater.
     """
     project = _plain_directory(Path(project).absolute()).resolve()
@@ -622,6 +560,16 @@ def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity,
             raise ValueError('An existing receipt is not a verified retirement')
         intent_path = target.with_suffix('.intent.json')
         uptime, machine = windows_uptime_ms(), windows_machine_id()
+        if sum(bool(flag) for flag in (apply, prepare, preflight)) > 1:
+            raise ValueError('Preflight, prepare and apply are separate operations')
+        if preflight:
+            sources = source_hashes(project)
+            reason = activity_reason(project, ignore_lease=path)
+            if reason:
+                raise RuntimeError(reason)
+            _activity_snapshot(project)
+            return dict(ok=True, preflight_only=True, retired=False, input_sent=False,
+                        reboot_proven=False, reviewed_source_count=len(sources))
         if prepare:
             if apply:
                 raise ValueError('Prepare and apply are separate operations')
@@ -650,7 +598,7 @@ def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity,
                 or intent.get('machine_id') != machine
                 or type(intent.get('uptime_ms')) is not int
                 or not 0 < uptime < intent['uptime_ms'] < 2 ** 63):
-            raise RuntimeError('No verified intervening Windows boot; census alone cannot retire this lease')
+            raise RuntimeError('No verified intervening Windows boot; current process absence cannot retire this lease')
         intent_digest = hashlib.sha256(intent_path.read_bytes()).hexdigest()
         # No other incomplete, active or unknown actor, including CURRENT's
         # original broker, is waived. This does not adopt another dead lease.
@@ -658,12 +606,11 @@ def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity,
         if reason:
             raise RuntimeError(reason)
         sources = source_hashes(project)
-        first = process_census(project)
-        second = process_census(project)
-        if first != second:
-            raise RuntimeError('Process census changed; no retirement written')
+        activity_snapshot = _activity_snapshot(project)
         if activity_reason(project, ignore_lease=path) is not None or source_hashes(project) != sources:
             raise RuntimeError('Source or activity changed during recovery')
+        if _activity_snapshot(project) != activity_snapshot:
+            raise RuntimeError('Registered activity changed; no retirement written')
         _, final_payload = _dead_start(project, path, digest, parent_pid, parent_identity)
         if (final_payload != payload or not uptime <= windows_uptime_ms() < intent['uptime_ms']
                 or windows_machine_id() != machine
@@ -673,10 +620,8 @@ def recover_dead_start(project, lease_name, digest, parent_pid, parent_identity,
                        lease_sha256=digest, original_lease=value, original_bytes_hex=payload.hex(),
                        historical_parentage='unknown', assessment='retired_after_boot_boundary',
                        uptime_ms=uptime, machine_id=machine, intent_sha256=intent_digest,
-                       input_sent=False, other_activity_reason=None, stable_scans=2,
-                       census=second, source_hashes=sources,
-                       census_sha256=hashlib.sha256(json.dumps(second, sort_keys=True,
-                                                   separators=(',', ':')).encode()).hexdigest())
+                       input_sent=False, other_activity_reason=None,
+                       activity_snapshot=activity_snapshot, source_hashes=sources)
         import datetime
         receipt['observed_at'] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         encoded = json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2).encode('utf8')
@@ -706,12 +651,13 @@ def recovery_cli():
     parser.add_argument('--parent-pid', type=int, required=True)
     parser.add_argument('--parent-identity', required=True)
     mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--preflight', action='store_true', help='Read-only API/lock/registry check before any restart')
     mode.add_argument('--apply', action='store_true')
     mode.add_argument('--prepare', action='store_true', help='Seal monotonic uptime and machine identity; does not retire or reboot')
     args = parser.parse_args()
     try:
         result = recover_dead_start(args.project, args.lease, args.lease_sha256,
-                                    args.parent_pid, args.parent_identity, apply=args.apply, prepare=args.prepare)
+                                    args.parent_pid, args.parent_identity, apply=args.apply, prepare=args.prepare, preflight=args.preflight)
     except (OSError, ValueError, RuntimeError, TypeError, AttributeError) as exc:
         print(json.dumps(dict(ok=False, retired=False, input_sent=False, error=str(exc)), ensure_ascii=False))
         return 2
