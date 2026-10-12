@@ -1,0 +1,344 @@
+{
+  "schema": "currency-wars-native-card-ink/v1",
+  "basis_commit": "30870dd5113456fae930d5a23d44b7556611605e",
+  "tested_checkout_head": "30870dd5113456fae930d5a23d44b7556611605e",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "12.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+    "tools/currency_wars_manual_steps.py": "9a148f6ec78556cdbb31cb54077465707a2fca9aa87877f4b7c68dd369d1bbd8",
+    "tools/currency_wars_perception.py": "d09a5c586c7f82fbadda5cbf43f5cb90b0c38e8a7da453cec5adc95153f15808",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "73f857ac9eb65143cc45cbef4a7b9e96ba59a4d034d7945c1cbb63d1de735f5c",
+    "tools/currency_wars_runner.py": "3a9e623ce3d33fce1e4e605a0119c20f5e4b64fe369771c06ee450511c4fe35d",
+    "tools/currency_wars_runtime_sources.json": "fa6010108d731fc050432f40dde6223dad53a6d9ceaf15e64c0f05a10412e15d",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "f667ad734c0af1ef110074c58b05a2b0be011cdeb77683a89dac532de1eb5881",
+    "tools/replay_currency_wars_card_confirmation.py": "74e3809dec67fdbccaa37bbf11b25478ee1f9793f1830312d170e96e545b7554",
+    "tools/replay_currency_wars_native_card_ink.py": "5196e3da4427655ac7ab2133186f947921ebe86485c3541ff795eb486ac643f4",
+    "tools/test_currency_wars_card_confirmation.py": "03600e0306d136cae063b521b5bce01113080bfa349e97653ffdc0db4008ffec",
+    "tools/test_currency_wars_native_card_ink.py": "811815456d076773d6ec48a8f3115bf311f8a54fd859758d31a43321cd9fcce7",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "source_file_count": 29,
+  "runtime_source_count": 24,
+  "native_crop_calibration": {
+    "public_evidence_commit": "6ef3793a827af65ff047ef89941714f7dd7a0017",
+    "evidence_sha256": {
+      "ROOT_ENVIRONMENT_CONFIRM_RGB.json": "b57fb0d915eb2693d3b92d5f7482100d5339c8931e7aa02c49cd34396fc676c0",
+      "ROOT_ENVIRONMENT_CAPTIONS_RGB.json": "80351a617917cb89acde862db56756b39d0e466db9d89ba6c91cf71914222f6d",
+      "ROOT_NATIVE_CONFIRM_CALIBRATION/pair-886956e3ada52cf7-0-confirm-roi.png": "14bd876a520186181d223976f41c6ffb613d254b593a0b7cb81d294ecadc2ceb",
+      "ROOT_NATIVE_CONFIRM_CALIBRATION/pair-886956e3ada52cf7-0-confirm-text.png": "bba43de081fdee55d550651be5920220239eab6dadb091bc98620f05a391b2ed",
+      "ROOT_NATIVE_CONFIRM_CALIBRATION/pair-886956e3ada52cf7-1-confirm-roi.png": "c9daacdd76f2623cd0e1ccbece11c6560926ed45ae3bfa23c9fd1b06ff41f407",
+      "ROOT_NATIVE_CONFIRM_CALIBRATION/pair-886956e3ada52cf7-1-confirm-text.png": "5f28851c8649c589cfdfbbecbdc15d8106462fd095011e600ec55c55fa5ce816",
+      "ROOT_NATIVE_CONFIRM_CALIBRATION/pair-886956e3ada52cf7-calibration.json": "677aa89522233fb9aef57705fed44397116ab819db099c3645c7f9ac72caba09"
+    },
+    "source_full_png_sha256": [
+      "bdbc45bd1343b4b78ca11c1b626eccb7dec1767e422b36237c96736cfac57e85",
+      "d38dce61543579231ae4e1144e182552af105bf9db017b5c7faf48c501e43da2"
+    ],
+    "array_pairs": 6,
+    "decoded_array_sha256_verified": 12,
+    "independent_png_crosschecks": 4,
+    "measurements": [
+      {
+        "label": "确认",
+        "array_bounds": [
+          1020,
+          950,
+          1150,
+          1025
+        ],
+        "checked_bounds": [
+          1052,
+          966,
+          1112,
+          1002
+        ],
+        "array_rgb_sha256": [
+          "019eddd459ab176e580182bb448f0ee38ed67357552baf58eaf41c37b2ef3759",
+          "7b4bda8805d9cd541734145a497129b021c7fc69a42493b845af398a42080733"
+        ],
+        "legacy_text_pass": false,
+        "candidate_pass": true,
+        "rgb_exact": false,
+        "changed_fraction": 0.5231481481481481,
+        "max_rgb_delta": 17,
+        "white_pixels": [
+          0,
+          0
+        ],
+        "edge_pixels": [
+          307,
+          310
+        ],
+        "gray_pixels": [
+          368,
+          361
+        ],
+        "gray_iou": 0.9809782608695652,
+        "gray_rgb_max_delta": 8,
+        "halo_rgb_max_delta": 15,
+        "max_value": [
+          187,
+          187
+        ]
+      },
+      {
+        "label": "角色",
+        "array_bounds": [
+          418,
+          596,
+          464,
+          628
+        ],
+        "checked_bounds": [
+          418,
+          596,
+          464,
+          628
+        ],
+        "array_rgb_sha256": [
+          "80f66a625f3d17af33f0f5ea9909da4cc38246dabf174a26e46480fcf292d2b5",
+          "80f66a625f3d17af33f0f5ea9909da4cc38246dabf174a26e46480fcf292d2b5"
+        ],
+        "legacy_text_pass": false,
+        "candidate_pass": true,
+        "rgb_exact": true,
+        "changed_fraction": 0.0,
+        "max_rgb_delta": 0,
+        "white_pixels": [
+          0,
+          0
+        ],
+        "edge_pixels": [
+          246,
+          246
+        ]
+      },
+      {
+        "label": "装备",
+        "array_bounds": [
+          420,
+          742,
+          461,
+          768
+        ],
+        "checked_bounds": [
+          420,
+          742,
+          461,
+          768
+        ],
+        "array_rgb_sha256": [
+          "f5e777bd43f703abc20de9adde38ef6747cc38fc0c88977041bacfe965da8805",
+          "f5e777bd43f703abc20de9adde38ef6747cc38fc0c88977041bacfe965da8805"
+        ],
+        "legacy_text_pass": false,
+        "candidate_pass": true,
+        "rgb_exact": true,
+        "changed_fraction": 0.0,
+        "max_rgb_delta": 0,
+        "white_pixels": [
+          0,
+          0
+        ],
+        "edge_pixels": [
+          253,
+          253
+        ]
+      },
+      {
+        "label": "yellow_book_1",
+        "array_bounds": [
+          626,
+          219,
+          650,
+          239
+        ],
+        "checked_bounds": [
+          626,
+          219,
+          650,
+          239
+        ],
+        "array_rgb_sha256": [
+          "110796c280b0076c8f6d7138d3b6c9602e29a8514a6196a84c6dacfde2314199",
+          "110796c280b0076c8f6d7138d3b6c9602e29a8514a6196a84c6dacfde2314199"
+        ],
+        "legacy_text_pass": false,
+        "candidate_pass": true,
+        "rgb_exact": true,
+        "changed_fraction": 0.0,
+        "max_rgb_delta": 0,
+        "white_pixels": [
+          0,
+          0
+        ],
+        "edge_pixels": [
+          106,
+          106
+        ]
+      },
+      {
+        "label": "yellow_book_2",
+        "array_bounds": [
+          1148,
+          219,
+          1172,
+          239
+        ],
+        "checked_bounds": [
+          1148,
+          219,
+          1172,
+          239
+        ],
+        "array_rgb_sha256": [
+          "968b8f390009cff7d959fcb3dfe97466905e8010e01521081bb80c9e68a07563",
+          "968b8f390009cff7d959fcb3dfe97466905e8010e01521081bb80c9e68a07563"
+        ],
+        "legacy_text_pass": false,
+        "candidate_pass": true,
+        "rgb_exact": true,
+        "changed_fraction": 0.0,
+        "max_rgb_delta": 0,
+        "white_pixels": [
+          0,
+          0
+        ],
+        "edge_pixels": [
+          102,
+          102
+        ]
+      },
+      {
+        "label": "yellow_book_3",
+        "array_bounds": [
+          1672,
+          219,
+          1696,
+          239
+        ],
+        "checked_bounds": [
+          1672,
+          219,
+          1696,
+          239
+        ],
+        "array_rgb_sha256": [
+          "1a8ff8473ee9e9b7d6ebb48cd293cde8fbc7bc2edad63ac8f119597e4d526cfe",
+          "1a8ff8473ee9e9b7d6ebb48cd293cde8fbc7bc2edad63ac8f119597e4d526cfe"
+        ],
+        "legacy_text_pass": false,
+        "candidate_pass": true,
+        "rgb_exact": true,
+        "changed_fraction": 0.0,
+        "max_rgb_delta": 0,
+        "white_pixels": [
+          0,
+          0
+        ],
+        "edge_pixels": [
+          104,
+          104
+        ]
+      }
+    ],
+    "all_calibrated_regions_pass": true,
+    "derived_calibration_only": true,
+    "independent_generalization": false,
+    "historical_full_frame_qualification": false,
+    "historical_actual_rows_reconstructed": false,
+    "original_request_reauthorized": false,
+    "full_native_frames_replayed": 0
+  },
+  "game_inputs": 0,
+  "new_captures": 0,
+  "new_ocr_calls": 0,
+  "controllers_started": 0,
+  "online_model_called": false,
+  "installed": false,
+  "ready_changed": false,
+  "historical_actual_available": false,
+  "whole_game_speedup": null,
+  "limits": [
+    "Native positives cover only the supplied six local ROI pairs.",
+    "Negative mutations and mixed full canvases are protocol fixtures with new PNG hashes.",
+    "A single inert publication does not verify the actual card selection or next page.",
+    "No historical epoch, pending, foreground, broker identity or input eligibility is restored."
+  ],
+  "focused_checks": {
+    "selection": [
+      "test_currency_wars_native_card_ink.NativeCardInkTests"
+    ],
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "seconds": 5.322360241996648,
+    "test_results": [
+      {
+        "test": "test_currency_wars_native_card_ink.NativeCardInkTests.test_mixed_protocol_changed_semantics_appearance_and_layout_are_refused",
+        "status": "passed",
+        "seconds": 3.1147900430005393
+      },
+      {
+        "test": "test_currency_wars_native_card_ink.NativeCardInkTests.test_mixed_protocol_keeps_source_epoch_deadline_and_publication_fences",
+        "status": "passed",
+        "seconds": 1.7373417420021724
+      },
+      {
+        "test": "test_currency_wars_native_card_ink.NativeCardInkTests.test_mixed_protocol_publishes_once_without_claiming_selection_outcome",
+        "status": "passed",
+        "seconds": 0.4290460849988449
+      },
+      {
+        "test": "test_currency_wars_native_card_ink.NativeCardInkTests.test_native_gray_confirmation_keeps_glyph_while_background_changes",
+        "status": "passed",
+        "seconds": 0.020556327999656787
+      },
+      {
+        "test": "test_currency_wars_native_card_ink.NativeCardInkTests.test_native_gray_mutations_do_not_preserve_old_state_or_exposure",
+        "status": "passed",
+        "seconds": 0.011688148999382975
+      },
+      {
+        "test": "test_currency_wars_native_card_ink.NativeCardInkTests.test_native_two_captions_and_three_books_keep_real_appearance",
+        "status": "passed",
+        "seconds": 0.007557189001090592
+      }
+    ],
+    "failure_details": [],
+    "ok": true
+  },
+  "source_set_sha256_before": "e444dc4765b0350823180ffac7a719454902966f67e21c152f139ee258da8154",
+  "source_set_sha256_after": "e444dc4765b0350823180ffac7a719454902966f67e21c152f139ee258da8154",
+  "source_unchanged": true,
+  "source_sha256_after_differences": {},
+  "evidence_unchanged": true,
+  "ok": true
+}

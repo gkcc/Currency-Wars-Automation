@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "scope": "3 new raw-evidence tests and 4 changed cache/Worker selectors; no historical suite rerun",
+  "selectors": [
+    "test_currency_wars_primary_reuse",
+    "test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated",
+    "test_currency_wars_perception_scope.WorkerReadScopeTests.test_root_request_upgrades_the_same_current_png_and_refuses_missing_or_old_identity",
+    "test_currency_wars_perception_scope.WorkerReadScopeTests.test_free_d_and_f_keep_economy_scope_for_result_and_read_only_frame_recovery",
+    "test_currency_wars_perception_scope.WorkerReadScopeTests.test_reward_results_keep_narrow_scope_until_root_full_field_review"
+  ],
+  "command": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python",
+    "-B",
+    "-X",
+    "utf8",
+    "-m",
+    "unittest",
+    "-v",
+    "test_currency_wars_primary_reuse",
+    "test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated",
+    "test_currency_wars_perception_scope.WorkerReadScopeTests.test_root_request_upgrades_the_same_current_png_and_refuses_missing_or_old_identity",
+    "test_currency_wars_perception_scope.WorkerReadScopeTests.test_free_d_and_f_keep_economy_scope_for_result_and_read_only_frame_recovery",
+    "test_currency_wars_perception_scope.WorkerReadScopeTests.test_reward_results_keep_narrow_scope_until_root_full_field_review"
+  ],
+  "returncode": 0,
+  "wall_seconds": 9.124493892000828,
+  "source_sha256_before": {
+    "tools/currency_wars_perception.py": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+    "tools/currency_wars_runner.py": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54",
+    "tools/test_currency_wars_primary_reuse.py": "c627c2183d11fc412375c92bafe6347be281591da55ef164125215fd486f4c7d",
+    "tools/test_currency_wars_perception_scope.py": "06a2e6eadc55128453ed7156466c0281b008e8d0a04259963b802511daa7a5e1"
+  },
+  "source_sha256_after": {
+    "tools/currency_wars_perception.py": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+    "tools/currency_wars_runner.py": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54",
+    "tools/test_currency_wars_primary_reuse.py": "c627c2183d11fc412375c92bafe6347be281591da55ef164125215fd486f4c7d",
+    "tools/test_currency_wars_perception_scope.py": "06a2e6eadc55128453ed7156466c0281b008e8d0a04259963b802511daa7a5e1"
+  },
+  "sources_unchanged": true,
+  "output": "focused-tests.log",
+  "evidence_type": "declared OCR/protocol fixtures; not recognition accuracy or game execution",
+  "result": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "independent_static_review": {
+    "scope": [
+      "tools/currency_wars_perception.py",
+      "tools/currency_wars_runner.py"
+    ],
+    "finding": "no blocker found; source read only, no additional tests or OCR",
+    "source_sha256": {
+      "tools/currency_wars_perception.py": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+      "tools/currency_wars_runner.py": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54"
+    }
+  }
+}

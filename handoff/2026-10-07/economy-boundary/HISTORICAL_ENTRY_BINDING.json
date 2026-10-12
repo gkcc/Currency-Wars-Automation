@@ -1,0 +1,387 @@
+{
+  "schema": "currency-wars-historical-entry-binding/v1",
+  "offline_only": true,
+  "source_files": {
+    "ROOT_PROFILE_FULL.json": "96a4ca4f36d17a9c5bd3ed3e30e846d664db4efae44e8ece2a5f8456f5f759b2",
+    "ROOT_HOST_TIMING.json": "34bed5d2c7d70a9ee9766491c655969dd3fe315aed779eb68b1b30c178f8dccd",
+    "ROOT_STAGE_PROFILE.json": "01271d4b45907e810447692b240319ce8b3e1c652175da3dc5c97020c29583e1",
+    "ROOT_RETAINED_CARD_LABELS.json": "71b992e70da83784a3c79d08e4c4687d7cfc093fc3ffe9159e5aee4ec4d60c20",
+    "ROOT_ROSTER_RESOURCE_AUDIT.json": "a87e30a393b3c24a13302cb49a962ce92d366e81a9b363ebfcccab24dcea76e6"
+  },
+  "historical_runtime_revision": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+  "code_checks": [
+    {
+      "commit": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+      "runner_sha256": "864d407e8df22ce44a3032c0807c98ad679db02d9f6071b46c4fb073329d5286",
+      "worker_methods": {
+        "advance_economy": false,
+        "economic_policy": false,
+        "accept_economy_plan": false,
+        "finish_local_economy": false
+      }
+    },
+    {
+      "commit": "85ba75af2b1d43cf34f3b116b3767783709d82f5",
+      "runner_sha256": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54",
+      "worker_methods": {
+        "advance_economy": true,
+        "economic_policy": true,
+        "accept_economy_plan": true,
+        "finish_local_economy": true
+      }
+    }
+  ],
+  "operator_event_projections": [
+    {
+      "index_zero_based": 19,
+      "id": "f8f621e55cf34b389eacd366c8d80f83",
+      "kind": "actions",
+      "label": "3-2-sell-drawer",
+      "seconds": 5.031,
+      "time": "2026-10-06T17:16:37.620881+00:00",
+      "stage": "3-2",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 20,
+      "id": "db3e42de52ef4f8a8f6ddd193bb1e26f",
+      "kind": "actions",
+      "label": "3-2-sell-before-shopping",
+      "seconds": 7.36,
+      "time": "2026-10-06T17:17:24.346345+00:00",
+      "stage": "3-2",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 21,
+      "id": "06bc9ff7e647457c9e07be424941875c",
+      "kind": "actions",
+      "label": "3-2-level-after-shop-stop",
+      "seconds": 9.015,
+      "time": "2026-10-06T17:18:37.760140+00:00",
+      "stage": "3-2",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 24,
+      "id": "7eab01be6b69414698ed8c216acbb797",
+      "kind": "battle",
+      "label": "3-2-departure",
+      "seconds": 2.563,
+      "time": "2026-10-06T17:20:35.698005+00:00",
+      "stage": "3-2",
+      "ok": false,
+      "error": ""
+    },
+    {
+      "index_zero_based": 25,
+      "id": "8228069596ab4748b6c4c636f25aabb9",
+      "kind": "battle",
+      "label": "3-2-departure",
+      "seconds": 8.515,
+      "time": "2026-10-06T17:22:07.767979+00:00",
+      "stage": "3-2",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 30,
+      "id": "3374949f9f444f06a3083be382c61f05",
+      "kind": "actions",
+      "label": "3-3-armor-read",
+      "seconds": 1.64,
+      "time": "2026-10-06T17:27:31.238811+00:00",
+      "stage": "3-3",
+      "ok": false,
+      "error": "unsupported action or argument count"
+    },
+    {
+      "index_zero_based": 35,
+      "id": "68fc0aacd3ed4a63a3a5384e8c10498c",
+      "kind": "actions",
+      "label": "3-4-accept-armor-recommendation",
+      "seconds": 0.265,
+      "time": "2026-10-06T17:34:45.326936+00:00",
+      "stage": "3-4",
+      "ok": false,
+      "error": "physical input changed; no request sent"
+    },
+    {
+      "index_zero_based": 37,
+      "id": "98df7767b78a4680971517b25eaf89eb",
+      "kind": "actions",
+      "label": "3-4-return-gear-and-merge",
+      "seconds": 0.266,
+      "time": "2026-10-06T17:37:16.186064+00:00",
+      "stage": "3-4",
+      "ok": false,
+      "error": "physical input changed; no request sent"
+    },
+    {
+      "index_zero_based": 39,
+      "id": "69d08b19f26748eb8fd297852411a3cb",
+      "kind": "actions",
+      "label": "3-4-clean-before-economy",
+      "seconds": 5.047,
+      "time": "2026-10-06T17:39:44.859037+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 41,
+      "id": "ed966fdfc2be4389bd66c68707e32376",
+      "kind": "observe",
+      "label": "3-4-fresh-before-sale",
+      "seconds": 2.765,
+      "time": "2026-10-06T17:44:48.075650+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 42,
+      "id": "c7f36f3a514f456e8e8672605d2e5748",
+      "kind": "actions",
+      "label": "3-4-sell-surplus-before-budget",
+      "seconds": 7.343,
+      "time": "2026-10-06T17:45:08.409549+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 43,
+      "id": "dd530acf761345c2b599deb36bf316d1",
+      "kind": "actions",
+      "label": "3-4-paid-roll-1",
+      "seconds": 5.562,
+      "time": "2026-10-06T17:45:56.931701+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 44,
+      "id": "2a8b83a6654c482394a3da17d4312618",
+      "kind": "actions",
+      "label": "3-4-paid-roll-2",
+      "seconds": 5.64,
+      "time": "2026-10-06T17:46:20.878257+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 45,
+      "id": "ade674258051402bb173ce236d643026",
+      "kind": "actions",
+      "label": "3-4-paid-roll-3",
+      "seconds": 5.766,
+      "time": "2026-10-06T17:46:37.011501+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 46,
+      "id": "98ef84847fe94ad3a31467dbd3de962a",
+      "kind": "actions",
+      "label": "3-4-paid-roll-4",
+      "seconds": 5.672,
+      "time": "2026-10-06T17:46:53.918362+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 47,
+      "id": "b65879a5c81e4b1e8a9475a07f31dfd2",
+      "kind": "actions",
+      "label": "3-4-paid-roll-5",
+      "seconds": 5.797,
+      "time": "2026-10-06T17:47:11.418612+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 48,
+      "id": "9fcb88e63d5e4352a2f8cd1516c0aedb",
+      "kind": "actions",
+      "label": "3-4-paid-roll-6",
+      "seconds": 5.766,
+      "time": "2026-10-06T17:47:36.401796+00:00",
+      "stage": "3-4",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 67,
+      "id": "ba7dbf79f62e4d869b38f8fdcb7c67f1",
+      "kind": "observe",
+      "label": "3-6-collect-available-rewards",
+      "seconds": 3.938,
+      "time": "2026-10-06T18:04:49.408937+00:00",
+      "stage": "3-6",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 68,
+      "id": "4e33b22f47bd43d4a0a2652afae36a00",
+      "kind": "actions",
+      "label": "3-6-close-auto-shop-before-rewards",
+      "seconds": 4.735,
+      "time": "2026-10-06T18:05:11.874004+00:00",
+      "stage": "3-6",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 69,
+      "id": "66e37434aa2a4c57be6d04b4d544cec1",
+      "kind": "actions",
+      "label": "3-6-claim-two-blue-orbs",
+      "seconds": 6.234,
+      "time": "2026-10-06T18:05:52.991446+00:00",
+      "stage": "3-6",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 70,
+      "id": "61781d41972146a1a7d49a728416e228",
+      "kind": "actions",
+      "label": "3-6-recommended-compose-and-guide-task",
+      "seconds": 6.046,
+      "time": "2026-10-06T18:06:45.176839+00:00",
+      "stage": "3-6",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 71,
+      "id": "4ab0b771f7bd458eb375361be8b4dfa2",
+      "kind": "observe",
+      "label": "3-6-task-menu-effect-check",
+      "seconds": 2.547,
+      "time": "2026-10-06T18:07:44.487258+00:00",
+      "stage": "3-6",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 82,
+      "id": "04c356671315420f87d972156e7649a4",
+      "kind": "actions",
+      "label": "3-7-read-manual-equipment-once",
+      "seconds": 4.672,
+      "time": "2026-10-06T18:20:20.088023+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 85,
+      "id": "adeaa0fa984741f8a1456d972155637f",
+      "kind": "actions",
+      "label": "3-7-sell-surplus-before-economic-plan",
+      "seconds": 8.125,
+      "time": "2026-10-06T18:26:00.677363+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 87,
+      "id": "8f1053d8170b4832bbd4c36bc236d55c",
+      "kind": "actions",
+      "label": "3-7-level9-plan-xp-first-half",
+      "seconds": 9.203,
+      "time": "2026-10-06T18:29:08.729005+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 88,
+      "id": "92ec652a745a4ba88137c26e068d846d",
+      "kind": "actions",
+      "label": "final-level9-complete",
+      "seconds": 7.625,
+      "time": "2026-10-06T18:29:57.468548+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 90,
+      "id": "8637e92f9339477999aab02ce3ca7d5a",
+      "kind": "actions",
+      "label": "final-search-topaz-b1",
+      "seconds": 5.781,
+      "time": "2026-10-06T18:33:15.236658+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 91,
+      "id": "02e74539b52f454ebe08d8a4c5d2a703",
+      "kind": "actions",
+      "label": "final-search-topaz-b2",
+      "seconds": 6.062,
+      "time": "2026-10-06T18:33:22.814425+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 92,
+      "id": "ace6b9a645284fc8b54896fe3445cd2f",
+      "kind": "actions",
+      "label": "final-search-topaz-b3",
+      "seconds": 5.797,
+      "time": "2026-10-06T18:33:30.168377+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 93,
+      "id": "737c5b6b80ab44359ea790e855fbd303",
+      "kind": "actions",
+      "label": "final-search-topaz-b4",
+      "seconds": 5.75,
+      "time": "2026-10-06T18:33:37.442227+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    },
+    {
+      "index_zero_based": 94,
+      "id": "c18e325f440845a69735812536d19940",
+      "kind": "actions",
+      "label": "final-search-topaz-b5",
+      "seconds": 5.703,
+      "time": "2026-10-06T18:33:44.655925+00:00",
+      "stage": "3-7",
+      "ok": true,
+      "error": null
+    }
+  ],
+  "interpretation": {
+    "historical_current_native_bypass_proven": false,
+    "current_candidate_deployed": false,
+    "reason": "Historical source has no current native economic loop; labels alone do not establish strategic necessity or duplicated reviews.",
+    "model_time_seconds": null,
+    "removable_root_roundtrips": null,
+    "whole_preparation_coverage": null
+  },
+  "new_game_inputs": 0,
+  "new_game_captures": 0
+}

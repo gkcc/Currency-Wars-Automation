@@ -1,0 +1,14 @@
+test_diagnostic_failure_after_success_cannot_turn_input_into_an_error (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_diagnostic_failure_after_success_cannot_turn_input_into_an_error) ... ok
+test_natural_budget_and_unrelated_policy_failure_keep_distinct_evidence (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_natural_budget_and_unrelated_policy_failure_keep_distinct_evidence) ... ok
+test_original_exception_is_not_hidden_by_diagnostics (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_original_exception_is_not_hidden_by_diagnostics) ... ok
+test_pending_uses_original_receipt_at_first_exception_handoff (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_pending_uses_original_receipt_at_first_exception_handoff) ... ok
+test_point_events_do_not_add_duration_or_root_requests (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_point_events_do_not_add_duration_or_root_requests) ... ok
+test_profile_enabled_and_disabled_have_same_natural_d_f_endpoints_and_reads (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_profile_enabled_and_disabled_have_same_natural_d_f_endpoints_and_reads) ... ok
+test_unknown_free_count_and_completion_fence_are_different_stops (test_currency_wars_economy_boundary.EconomyBoundaryTests.test_unknown_free_count_and_completion_fence_are_different_stops) ... ok
+test_published_zero_effect_stops_without_replay_and_reconcile_is_atomic (test_currency_wars_economy.EconomyTests.test_published_zero_effect_stops_without_replay_and_reconcile_is_atomic) ... ok
+test_business_steps_partition_nested_time_and_keep_actual_return_reasons (test_currency_wars_profile.ProfileTests.test_business_steps_partition_nested_time_and_keep_actual_return_reasons) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 6.743s
+
+OK

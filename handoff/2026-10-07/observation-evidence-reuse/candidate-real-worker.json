@@ -1,0 +1,4313 @@
+{
+  "schema": "currency-wars-worker-consumer-cost/v1",
+  "offline_only": true,
+  "physical_inputs": 0,
+  "fresh_game_captures": 0,
+  "source_revision": "257f84d8b036e6bcb0ef29ae51c722bcaf315e8d",
+  "source_hashes": {
+    "currency_wars_runner.py": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54",
+    "currency_wars_perception.py": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+    "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f"
+  },
+  "source_hashes_after": {
+    "currency_wars_runner.py": "1ad6c6e5b96985d2a04f4847a66ce6a6693f10189672f6193ff98939fd144a54",
+    "currency_wars_perception.py": "d686d1c0e585fe81162db40e02ebf9359627f4144a25655ca22330087bd5bde8",
+    "currency_wars_economy.py": "f82f4e18fd509863287eaf36087f06b17dafdc99ff21ec5eeb84d9497c28cfba",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "currency_wars_profile.py": "c8b4025a32267095019f8d9c60b64ee4e6cb7b18372b67fbd6372d2b28e75e7f"
+  },
+  "sources_unchanged": true,
+  "benchmark_script_sha256": "2eb1517d13e4b0d8c7110c51f2798be44b36303485d3ce34d6e618ec27070d08",
+  "machine": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "python": "3.12.14"
+  },
+  "dependencies": {
+    "onnxruntime": "1.30.0",
+    "rapidocr-onnxruntime": "1.4.4",
+    "numpy": "2.3.5",
+    "Pillow": "11.3.0",
+    "opencv-python": "4.13.0.92"
+  },
+  "dependency_import_seconds": 0.12093440100034059,
+  "accounting_contract": "Inclusive method intervals are nested. Exclusive intervals subtract immediate children and are assigned once. Worker rules/strategy includes its remaining inline bookkeeping; wrapped save/write and transport work goes to other_read_entry_io. That remainder also includes image decode/hash and uninstrumented local work. Inert publication is local receipt/frame writing, never game execution or animation. Protocol semantic/numeric lookup has its own component, never OCR. Engine init is inside cold case total, listed separately and never added twice. Imports and fixture construction precede case windows.",
+  "cases": [
+    {
+      "case": "q02_selection_request",
+      "pass": "cold",
+      "kind": "real_png_worker_consumer",
+      "inference_temperature": "cold",
+      "premises": [
+        "Actual retained PNG and production Perception; inert immutable frame transport only.",
+        "Window starts at a legal reward consumer, not the missing two-orb action chain."
+      ],
+      "status": "pass",
+      "checks": {
+        "terminal_request_kind": true,
+        "phase": true,
+        "pending": true,
+        "normal_root_requests": true,
+        "exception_root_requests": true,
+        "simulated_mutation_publications": true,
+        "terminal_full_contract": true,
+        "component_accounting": true,
+        "no_unexpected_exception": true
+      },
+      "error": null,
+      "window": "First Worker.observe through the terminal strategy request publication; initial ask included.",
+      "worker_wall_seconds": 1.4210234860001947,
+      "worker_method_seconds": 1.421014502,
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.153051583,
+        "primary_ocr": 0.940851369,
+        "field_ocr": 0.013727915,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.040001683,
+        "reward_rules": 0.029762249999999997,
+        "worker_rules_strategy": 0.0028542549999999983,
+        "publication_simulation": 0.001933036,
+        "other_read_entry_io": 0.23883241099999994,
+        "protocol_fixture_lookup": 0.0
+      },
+      "accounting_residual_seconds": 0.0,
+      "game_animation_wait_seconds": null,
+      "supervisor_wait_seconds": null,
+      "supervisor_model_seconds": null,
+      "reads": [
+        {
+          "event_id": 7,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "path": "/tmp/currency-wars-manual-bridge-test-j997952y/runtime/frames/1f7e59cb2ac9e9287c3a7555fb5f7a74bece53b0a8cc3dc9e1ca5105e47d7a39-5551d79e8c5f406aa5b3ba704dd3d8b3/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1182.71
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 16,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "path": "/tmp/currency-wars-manual-bridge-test-j997952y/runtime/frames/1f7e59cb2ac9e9287c3a7555fb5f7a74bece53b0a8cc3dc9e1ca5105e47d7a39-5551d79e8c5f406aa5b3ba704dd3d8b3/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 112.81
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false
+        }
+      ],
+      "events": [
+        {
+          "id": 0,
+          "method": "worker_case",
+          "parent_id": null,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217840756713,
+          "end_ns": 10219261771215,
+          "inclusive_seconds": 1.421014502,
+          "exclusive_seconds": 1.9129000000006613e-05
+        },
+        {
+          "id": 1,
+          "method": "Worker.observe",
+          "parent_id": 0,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217840759357,
+          "end_ns": 10219064852219,
+          "inclusive_seconds": 1.224092862,
+          "exclusive_seconds": 0.00021766700000003247
+        },
+        {
+          "id": 2,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217840891816,
+          "end_ns": 10217840945828,
+          "inclusive_seconds": 5.4012e-05,
+          "exclusive_seconds": 5.4012e-05
+        },
+        {
+          "id": 3,
+          "method": "inert_publish",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217840950264,
+          "end_ns": 10217842883300,
+          "inclusive_seconds": 0.001933036,
+          "exclusive_seconds": 0.0018611679999999999
+        },
+        {
+          "id": 4,
+          "method": "control.write_json",
+          "parent_id": 3,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217842807746,
+          "end_ns": 10217842879614,
+          "inclusive_seconds": 7.1868e-05,
+          "exclusive_seconds": 7.1868e-05
+        },
+        {
+          "id": 5,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217842950832,
+          "end_ns": 10217843045124,
+          "inclusive_seconds": 9.4292e-05,
+          "exclusive_seconds": 9.4292e-05
+        },
+        {
+          "id": 6,
+          "method": "Worker.read_frame",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10217843056100,
+          "end_ns": 10219064849955,
+          "inclusive_seconds": 1.221793855,
+          "exclusive_seconds": 0.03841455000000016
+        },
+        {
+          "id": 7,
+          "method": "Perception.read",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217881386343,
+          "end_ns": 10219064764927,
+          "inclusive_seconds": 1.183378584,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "path": "/tmp/currency-wars-manual-bridge-test-j997952y/runtime/frames/1f7e59cb2ac9e9287c3a7555fb5f7a74bece53b0a8cc3dc9e1ca5105e47d7a39-5551d79e8c5f406aa5b3ba704dd3d8b3/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1182.71
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.07423108899999975
+        },
+        {
+          "id": 8,
+          "method": "RapidOCR.__init__",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10217921786086,
+          "end_ns": 10218074837669,
+          "inclusive_seconds": 0.153051583,
+          "exclusive_seconds": 0.153051583
+        },
+        {
+          "id": 9,
+          "method": "RapidOCR.__call__",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10218101915149,
+          "end_ns": 10219042766518,
+          "inclusive_seconds": 0.940851369,
+          "exclusive_seconds": 0.940851369
+        },
+        {
+          "id": 10,
+          "method": "rewards.detect",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219043399993,
+          "end_ns": 10219058644536,
+          "inclusive_seconds": 0.015244543,
+          "exclusive_seconds": 0.015244543
+        },
+        {
+          "id": 11,
+          "method": "worker.log",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219064829384,
+          "end_ns": 10219064830105,
+          "inclusive_seconds": 7.21e-07,
+          "exclusive_seconds": 7.21e-07
+        },
+        {
+          "id": 12,
+          "method": "Worker.tick",
+          "parent_id": 0,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219064855754,
+          "end_ns": 10219261758265,
+          "inclusive_seconds": 0.196902511,
+          "exclusive_seconds": 0.0003105180000000096
+        },
+        {
+          "id": 13,
+          "method": "Worker.ask",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219065162186,
+          "end_ns": 10219261754179,
+          "inclusive_seconds": 0.196591993,
+          "exclusive_seconds": 0.0025233859999999886
+        },
+        {
+          "id": 14,
+          "method": "Worker.ensure_full_observation",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219065164730,
+          "end_ns": 10219216833757,
+          "inclusive_seconds": 0.151669027,
+          "exclusive_seconds": 1.893800000002388e-05
+        },
+        {
+          "id": 15,
+          "method": "Worker.read_frame",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "start_ns": 10219065176207,
+          "end_ns": 10219216826296,
+          "inclusive_seconds": 0.151650089,
+          "exclusive_seconds": 0.03821878499999999
+        },
+        {
+          "id": 16,
+          "method": "Perception.read",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219102993296,
+          "end_ns": 10219216424009,
+          "inclusive_seconds": 0.113430713,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "path": "/tmp/currency-wars-manual-bridge-test-j997952y/runtime/frames/1f7e59cb2ac9e9287c3a7555fb5f7a74bece53b0a8cc3dc9e1ca5105e47d7a39-5551d79e8c5f406aa5b3ba704dd3d8b3/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 112.81
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.045183407999999994
+        },
+        {
+          "id": 17,
+          "method": "RapidOCR.__call__",
+          "parent_id": 16,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            70,
+            139,
+            3
+          ],
+          "use_det": false,
+          "use_cls": false,
+          "start_ns": 10219141443008,
+          "end_ns": 10219155170923,
+          "inclusive_seconds": 0.013727915,
+          "exclusive_seconds": 0.013727915
+        },
+        {
+          "id": 18,
+          "method": "rewards.detect",
+          "parent_id": 16,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219155836747,
+          "end_ns": 10219170354454,
+          "inclusive_seconds": 0.014517707,
+          "exclusive_seconds": 0.014517707
+        },
+        {
+          "id": 19,
+          "method": "StateReader.read",
+          "parent_id": 16,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219170695128,
+          "end_ns": 10219210696811,
+          "inclusive_seconds": 0.040001683,
+          "exclusive_seconds": 0.040001683
+        },
+        {
+          "id": 20,
+          "method": "worker.log",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219216468887,
+          "end_ns": 10219216469478,
+          "inclusive_seconds": 5.91e-07,
+          "exclusive_seconds": 5.91e-07
+        },
+        {
+          "id": 21,
+          "method": "Worker.save_frame",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219216857032,
+          "end_ns": 10219258874055,
+          "inclusive_seconds": 0.042017023,
+          "exclusive_seconds": 0.042017023
+        },
+        {
+          "id": 22,
+          "method": "progression_plan",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219261326173,
+          "end_ns": 10219261346524,
+          "inclusive_seconds": 2.0351e-05,
+          "exclusive_seconds": 2.0351e-05
+        },
+        {
+          "id": 23,
+          "method": "control.write_json",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219261382288,
+          "end_ns": 10219261741079,
+          "inclusive_seconds": 0.000358791,
+          "exclusive_seconds": 0.000358791
+        },
+        {
+          "id": 24,
+          "method": "worker.log",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219261746928,
+          "end_ns": 10219261747649,
+          "inclusive_seconds": 7.21e-07,
+          "exclusive_seconds": 7.21e-07
+        },
+        {
+          "id": 25,
+          "method": "worker.publish",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219261749332,
+          "end_ns": 10219261752026,
+          "inclusive_seconds": 2.694e-06,
+          "exclusive_seconds": 2.694e-06
+        }
+      ],
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "page": "preparation",
+          "fields": {
+            "stage": "3-6",
+            "level": "8",
+            "deployed": "8/8"
+          },
+          "coins": {
+            "value": 65,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.397
+          },
+          "rewards": {
+            "scanned": true,
+            "reason": "native_side_prompt_requires_review",
+            "input_allowed": false,
+            "interaction_required": true,
+            "all_rewards_cleared": null,
+            "targets": []
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "team_checked": false,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "rewards",
+        "battle_ready": false,
+        "pending": false,
+        "reward_pending": null,
+        "spent": null,
+        "economy_completed": false,
+        "terminal_request_kind": "reward_selection",
+        "requests": [
+          {
+            "kind": "reward_selection",
+            "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+            "return_reason": {
+              "category": "strategy",
+              "business_step": "reward_selection",
+              "reason": "当前出现奖励相关选择/推荐提示，先核当前选项与策略联动。",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 1,
+        "exception_root_requests": 0,
+        "simulated_mutation_publications": 0,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "publication_trace": [
+        {
+          "request_id": "9b3e4e02b5df41978c6dcd8a7d4b4c35",
+          "frame_id": "5551d79e8c5f406aa5b3ba704dd3d8b3",
+          "frame_index": 0,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "actions": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "completed": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "receipt_origin": "inert_observation_transport",
+          "requested_wait_seconds": 0,
+          "executed_wait_seconds": null
+        }
+      ],
+      "historical_correlations": [],
+      "input_frame_sha256": [
+        "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366"
+      ],
+      "warm_reuse": null,
+      "cache_limit": "Repeated bytes on different inert observe requests are a frozen historical fixture, not proof a live re-observation stays identical.",
+      "method_counts": {
+        "worker_case": 1,
+        "Worker.observe": 1,
+        "control.write_json": 4,
+        "inert_publish": 1,
+        "Worker.read_frame": 2,
+        "Perception.read": 2,
+        "RapidOCR.__init__": 1,
+        "RapidOCR.__call__": 2,
+        "rewards.detect": 2,
+        "worker.log": 3,
+        "Worker.tick": 1,
+        "Worker.ask": 1,
+        "Worker.ensure_full_observation": 1,
+        "StateReader.read": 1,
+        "Worker.save_frame": 1,
+        "progression_plan": 1,
+        "worker.publish": 1
+      }
+    },
+    {
+      "case": "q02_selection_request",
+      "pass": "warm",
+      "kind": "real_png_worker_consumer",
+      "inference_temperature": "warm",
+      "premises": [
+        "Actual retained PNG and production Perception; inert immutable frame transport only.",
+        "Window starts at a legal reward consumer, not the missing two-orb action chain."
+      ],
+      "status": "pass",
+      "checks": {
+        "terminal_request_kind": true,
+        "phase": true,
+        "pending": true,
+        "normal_root_requests": true,
+        "exception_root_requests": true,
+        "simulated_mutation_publications": true,
+        "terminal_full_contract": true,
+        "component_accounting": true,
+        "no_unexpected_exception": true
+      },
+      "error": null,
+      "window": "First Worker.observe through the terminal strategy request publication; initial ask included.",
+      "worker_wall_seconds": 1.101573276999261,
+      "worker_method_seconds": 1.101566427,
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.77428193,
+        "field_ocr": 0.01318623,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.04099107,
+        "reward_rules": 0.032567003,
+        "worker_rules_strategy": 0.002865883000000015,
+        "publication_simulation": 0.001701296,
+        "other_read_entry_io": 0.23597301500000012,
+        "protocol_fixture_lookup": 0.0
+      },
+      "accounting_residual_seconds": 0.0,
+      "game_animation_wait_seconds": null,
+      "supervisor_wait_seconds": null,
+      "supervisor_model_seconds": null,
+      "reads": [
+        {
+          "event_id": 7,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "path": "/tmp/currency-wars-manual-bridge-test-rx7fb43f/runtime/frames/55364ec74b7cced79da738f6686a89dc294b176855dd7cf085039940086551ad-bac935d141384fb6adebebe06541a09d/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 862.6
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 15,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "path": "/tmp/currency-wars-manual-bridge-test-rx7fb43f/runtime/frames/55364ec74b7cced79da738f6686a89dc294b176855dd7cf085039940086551ad-bac935d141384fb6adebebe06541a09d/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 112.9
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false
+        }
+      ],
+      "events": [
+        {
+          "id": 0,
+          "method": "worker_case",
+          "parent_id": null,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219317830497,
+          "end_ns": 10220419396924,
+          "inclusive_seconds": 1.101566427,
+          "exclusive_seconds": 1.1698000000004427e-05
+        },
+        {
+          "id": 1,
+          "method": "Worker.observe",
+          "parent_id": 0,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219317832791,
+          "end_ns": 10220222704708,
+          "inclusive_seconds": 0.904871917,
+          "exclusive_seconds": 0.00023982099999997342
+        },
+        {
+          "id": 2,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219317995206,
+          "end_ns": 10219318066794,
+          "inclusive_seconds": 7.1588e-05,
+          "exclusive_seconds": 7.1588e-05
+        },
+        {
+          "id": 3,
+          "method": "inert_publish",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219318069838,
+          "end_ns": 10219319771134,
+          "inclusive_seconds": 0.001701296,
+          "exclusive_seconds": 0.001641586
+        },
+        {
+          "id": 4,
+          "method": "control.write_json",
+          "parent_id": 3,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219319707999,
+          "end_ns": 10219319767709,
+          "inclusive_seconds": 5.971e-05,
+          "exclusive_seconds": 5.971e-05
+        },
+        {
+          "id": 5,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219319832316,
+          "end_ns": 10219319928982,
+          "inclusive_seconds": 9.6666e-05,
+          "exclusive_seconds": 9.6666e-05
+        },
+        {
+          "id": 6,
+          "method": "Worker.read_frame",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10219319940269,
+          "end_ns": 10220222702815,
+          "inclusive_seconds": 0.902762546,
+          "exclusive_seconds": 0.03987380000000007
+        },
+        {
+          "id": 7,
+          "method": "Perception.read",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10219359743613,
+          "end_ns": 10220222631808,
+          "inclusive_seconds": 0.862888195,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "path": "/tmp/currency-wars-manual-bridge-test-rx7fb43f/runtime/frames/55364ec74b7cced79da738f6686a89dc294b176855dd7cf085039940086551ad-bac935d141384fb6adebebe06541a09d/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 862.6
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.07026301700000004
+        },
+        {
+          "id": 8,
+          "method": "RapidOCR.__call__",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10219422312904,
+          "end_ns": 10220196594834,
+          "inclusive_seconds": 0.77428193,
+          "exclusive_seconds": 0.77428193
+        },
+        {
+          "id": 9,
+          "method": "rewards.detect",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220198417554,
+          "end_ns": 10220216760802,
+          "inclusive_seconds": 0.018343248,
+          "exclusive_seconds": 0.018343248
+        },
+        {
+          "id": 10,
+          "method": "worker.log",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220222683205,
+          "end_ns": 10220222683756,
+          "inclusive_seconds": 5.51e-07,
+          "exclusive_seconds": 5.51e-07
+        },
+        {
+          "id": 11,
+          "method": "Worker.tick",
+          "parent_id": 0,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220222708293,
+          "end_ns": 10220419391105,
+          "inclusive_seconds": 0.196682812,
+          "exclusive_seconds": 0.00032853600000001815
+        },
+        {
+          "id": 12,
+          "method": "Worker.ask",
+          "parent_id": 11,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220223032913,
+          "end_ns": 10220419387189,
+          "inclusive_seconds": 0.196354276,
+          "exclusive_seconds": 0.002519098999999997
+        },
+        {
+          "id": 13,
+          "method": "Worker.ensure_full_observation",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220223035657,
+          "end_ns": 10220374431469,
+          "inclusive_seconds": 0.151395812,
+          "exclusive_seconds": 1.796699999997986e-05
+        },
+        {
+          "id": 14,
+          "method": "Worker.read_frame",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "start_ns": 10220223047335,
+          "end_ns": 10220374425180,
+          "inclusive_seconds": 0.151377845,
+          "exclusive_seconds": 0.03804770200000002
+        },
+        {
+          "id": 15,
+          "method": "Perception.read",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220260714411,
+          "end_ns": 10220374043964,
+          "inclusive_seconds": 0.113329553,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "path": "/tmp/currency-wars-manual-bridge-test-rx7fb43f/runtime/frames/55364ec74b7cced79da738f6686a89dc294b176855dd7cf085039940086551ad-bac935d141384fb6adebebe06541a09d/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 112.9
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.04492849800000001
+        },
+        {
+          "id": 16,
+          "method": "RapidOCR.__call__",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            70,
+            139,
+            3
+          ],
+          "use_det": false,
+          "use_cls": false,
+          "start_ns": 10220298963735,
+          "end_ns": 10220312149965,
+          "inclusive_seconds": 0.01318623,
+          "exclusive_seconds": 0.01318623
+        },
+        {
+          "id": 17,
+          "method": "rewards.detect",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220312382626,
+          "end_ns": 10220326606381,
+          "inclusive_seconds": 0.014223755,
+          "exclusive_seconds": 0.014223755
+        },
+        {
+          "id": 18,
+          "method": "StateReader.read",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220326930590,
+          "end_ns": 10220367921660,
+          "inclusive_seconds": 0.04099107,
+          "exclusive_seconds": 0.04099107
+        },
+        {
+          "id": 19,
+          "method": "worker.log",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220374087130,
+          "end_ns": 10220374087720,
+          "inclusive_seconds": 5.9e-07,
+          "exclusive_seconds": 5.9e-07
+        },
+        {
+          "id": 20,
+          "method": "Worker.save_frame",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220374457929,
+          "end_ns": 10220416553495,
+          "inclusive_seconds": 0.042095566,
+          "exclusive_seconds": 0.042095566
+        },
+        {
+          "id": 21,
+          "method": "progression_plan",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220419010110,
+          "end_ns": 10220419028358,
+          "inclusive_seconds": 1.8248e-05,
+          "exclusive_seconds": 1.8248e-05
+        },
+        {
+          "id": 22,
+          "method": "control.write_json",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220419051593,
+          "end_ns": 10220419373579,
+          "inclusive_seconds": 0.000321986,
+          "exclusive_seconds": 0.000321986
+        },
+        {
+          "id": 23,
+          "method": "worker.log",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220419378897,
+          "end_ns": 10220419379568,
+          "inclusive_seconds": 6.71e-07,
+          "exclusive_seconds": 6.71e-07
+        },
+        {
+          "id": 24,
+          "method": "worker.publish",
+          "parent_id": 12,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220419381731,
+          "end_ns": 10220419384625,
+          "inclusive_seconds": 2.894e-06,
+          "exclusive_seconds": 2.894e-06
+        }
+      ],
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "page": "preparation",
+          "fields": {
+            "stage": "3-6",
+            "level": "8",
+            "deployed": "8/8"
+          },
+          "coins": {
+            "value": 65,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.397
+          },
+          "rewards": {
+            "scanned": true,
+            "reason": "native_side_prompt_requires_review",
+            "input_allowed": false,
+            "interaction_required": true,
+            "all_rewards_cleared": null,
+            "targets": []
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "team_checked": false,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "rewards",
+        "battle_ready": false,
+        "pending": false,
+        "reward_pending": null,
+        "spent": null,
+        "economy_completed": false,
+        "terminal_request_kind": "reward_selection",
+        "requests": [
+          {
+            "kind": "reward_selection",
+            "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+            "return_reason": {
+              "category": "strategy",
+              "business_step": "reward_selection",
+              "reason": "当前出现奖励相关选择/推荐提示，先核当前选项与策略联动。",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 1,
+        "exception_root_requests": 0,
+        "simulated_mutation_publications": 0,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "publication_trace": [
+        {
+          "request_id": "159ca06cbfc744159d5d1afa50425c7b",
+          "frame_id": "bac935d141384fb6adebebe06541a09d",
+          "frame_index": 0,
+          "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+          "actions": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "completed": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "receipt_origin": "inert_observation_transport",
+          "requested_wait_seconds": 0,
+          "executed_wait_seconds": null
+        }
+      ],
+      "historical_correlations": [],
+      "input_frame_sha256": [
+        "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366"
+      ],
+      "warm_reuse": "Fresh Perception/Worker; only prior initialized engine/shop_reader/state_reader inherited.",
+      "cache_limit": "Repeated bytes on different inert observe requests are a frozen historical fixture, not proof a live re-observation stays identical.",
+      "method_counts": {
+        "worker_case": 1,
+        "Worker.observe": 1,
+        "control.write_json": 4,
+        "inert_publish": 1,
+        "Worker.read_frame": 2,
+        "Perception.read": 2,
+        "RapidOCR.__call__": 2,
+        "rewards.detect": 2,
+        "worker.log": 3,
+        "Worker.tick": 1,
+        "Worker.ask": 1,
+        "Worker.ensure_full_observation": 1,
+        "StateReader.read": 1,
+        "Worker.save_frame": 1,
+        "progression_plan": 1,
+        "worker.publish": 1
+      }
+    },
+    {
+      "case": "q00_q01_original_completed",
+      "pass": "cold",
+      "kind": "real_png_worker_consumer",
+      "inference_temperature": "cold",
+      "premises": [
+        "Actual retained PNG and production Perception; inert immutable frame transport only.",
+        "Window starts at a legal reward consumer, not the missing two-orb action chain.",
+        "The entire original close completed list is retained, including its coordinates and wait. Requested actions may differ in both; no single-cause mismatch claim. q01 is an inert archival successor, never a new single-orb receipt."
+      ],
+      "status": "pass",
+      "checks": {
+        "terminal_request_kind": true,
+        "phase": true,
+        "pending": true,
+        "normal_root_requests": true,
+        "exception_root_requests": true,
+        "simulated_mutation_publications": true,
+        "terminal_full_contract": true,
+        "component_accounting": true,
+        "no_unexpected_exception": true
+      },
+      "error": null,
+      "window": "First Worker.observe through the terminal strategy request publication; initial ask included.",
+      "worker_wall_seconds": 4.766588587001024,
+      "worker_method_seconds": 4.766582308,
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.129305803,
+        "primary_ocr": 3.7923059550000002,
+        "field_ocr": 0.042660879,
+        "shop_ocr": 0.0,
+        "shop_other": 0.049203387,
+        "state_reader": 0.08827695599999999,
+        "reward_rules": 0.042713246999999996,
+        "worker_rules_strategy": 0.007552291999999509,
+        "publication_simulation": 0.0054575629999999995,
+        "other_read_entry_io": 0.6091062260000014,
+        "protocol_fixture_lookup": 0.0
+      },
+      "accounting_residual_seconds": -8.881784197001252e-16,
+      "game_animation_wait_seconds": null,
+      "supervisor_wait_seconds": null,
+      "supervisor_model_seconds": null,
+      "reads": [
+        {
+          "event_id": 7,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "56d082cb13884be7b47d575d72a4d93b",
+          "frame_id": "f486775fa5ec47e987ea2b81863f03e4",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/2fb539a03f4e6decc16f0aac3328f2992651ab34f4a9c1a54da79612c124b99b-f486775fa5ec47e987ea2b81863f03e4/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1563.19
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 21,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "73a1f6bafe8543549392995218ecb05c",
+          "frame_id": "c06b8c6d6e324e3e8238c13a649f96c8",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/fd9c265cd2ba4a2909efa6867447c78966f896cedf8b1a9f48b0a359ebd630f1-c06b8c6d6e324e3e8238c13a649f96c8/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1688.3
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 45,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/ffd72bab9c917cad417bd4ccd0ed7f398c3a83c52cc339ce463b63fd1f17180c-0c5245d2b72242d3a42fce492c6ed6f2/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1003.95
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 56,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/ffd72bab9c917cad417bd4ccd0ed7f398c3a83c52cc339ce463b63fd1f17180c-0c5245d2b72242d3a42fce492c6ed6f2/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 156.64
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false
+        }
+      ],
+      "events": [
+        {
+          "id": 0,
+          "method": "worker_case",
+          "parent_id": null,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220472264758,
+          "end_ns": 10225238847066,
+          "inclusive_seconds": 4.766582308,
+          "exclusive_seconds": 4.634100000089347e-05
+        },
+        {
+          "id": 1,
+          "method": "Worker.observe",
+          "parent_id": 0,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220472267503,
+          "end_ns": 10222077068694,
+          "inclusive_seconds": 1.604801191,
+          "exclusive_seconds": 0.00019572400000011925
+        },
+        {
+          "id": 2,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220472388034,
+          "end_ns": 10220472439212,
+          "inclusive_seconds": 5.1178e-05,
+          "exclusive_seconds": 5.1178e-05
+        },
+        {
+          "id": 3,
+          "method": "inert_publish",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220472442156,
+          "end_ns": 10220474124754,
+          "inclusive_seconds": 0.001682598,
+          "exclusive_seconds": 0.001627064
+        },
+        {
+          "id": 4,
+          "method": "control.write_json",
+          "parent_id": 3,
+          "frame": null,
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220474066346,
+          "end_ns": 10220474121880,
+          "inclusive_seconds": 5.5534e-05,
+          "exclusive_seconds": 5.5534e-05
+        },
+        {
+          "id": 5,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220474185256,
+          "end_ns": 10220474282893,
+          "inclusive_seconds": 9.7637e-05,
+          "exclusive_seconds": 9.7637e-05
+        },
+        {
+          "id": 6,
+          "method": "Worker.read_frame",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "request_id": "56d082cb13884be7b47d575d72a4d93b",
+          "frame_id": "f486775fa5ec47e987ea2b81863f03e4",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10220474292537,
+          "end_ns": 10222077066591,
+          "inclusive_seconds": 1.602774054,
+          "exclusive_seconds": 0.03898338299999993
+        },
+        {
+          "id": 7,
+          "method": "Perception.read",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220512736976,
+          "end_ns": 10222076527077,
+          "inclusive_seconds": 1.563790101,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "56d082cb13884be7b47d575d72a4d93b",
+          "frame_id": "f486775fa5ec47e987ea2b81863f03e4",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/2fb539a03f4e6decc16f0aac3328f2992651ab34f4a9c1a54da79612c124b99b-f486775fa5ec47e987ea2b81863f03e4/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1563.19
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.07001239400000014
+        },
+        {
+          "id": 8,
+          "method": "RapidOCR.__init__",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10220551500275,
+          "end_ns": 10220680806078,
+          "inclusive_seconds": 0.129305803,
+          "exclusive_seconds": 0.129305803
+        },
+        {
+          "id": 9,
+          "method": "RapidOCR.__call__",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10220704947843,
+          "end_ns": 10221979433434,
+          "inclusive_seconds": 1.274485591,
+          "exclusive_seconds": 1.274485591
+        },
+        {
+          "id": 10,
+          "method": "ShopReader.read",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10221980272279,
+          "end_ns": 10222029475666,
+          "inclusive_seconds": 0.049203387,
+          "exclusive_seconds": 0.049203387
+        },
+        {
+          "id": 11,
+          "method": "rewards.detect",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222029698422,
+          "end_ns": 10222029701757,
+          "inclusive_seconds": 3.335e-06,
+          "exclusive_seconds": 3.335e-06
+        },
+        {
+          "id": 12,
+          "method": "StateReader.read",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222030056342,
+          "end_ns": 10222070835933,
+          "inclusive_seconds": 0.040779591,
+          "exclusive_seconds": 0.040779591
+        },
+        {
+          "id": 13,
+          "method": "worker.log",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222076576963,
+          "end_ns": 10222076577533,
+          "inclusive_seconds": 5.7e-07,
+          "exclusive_seconds": 5.7e-07
+        },
+        {
+          "id": 14,
+          "method": "Worker.tick",
+          "parent_id": 0,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222077072129,
+          "end_ns": 10225238806905,
+          "inclusive_seconds": 3.161734776,
+          "exclusive_seconds": 0.0018905419999994955
+        },
+        {
+          "id": 15,
+          "method": "Worker.observe",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222077279713,
+          "end_ns": 10223811497734,
+          "inclusive_seconds": 1.734218021,
+          "exclusive_seconds": 0.00014807300000008183
+        },
+        {
+          "id": 16,
+          "method": "control.write_json",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222077362668,
+          "end_ns": 10222077470671,
+          "inclusive_seconds": 0.000108003,
+          "exclusive_seconds": 0.000108003
+        },
+        {
+          "id": 17,
+          "method": "inert_publish",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222077473905,
+          "end_ns": 10222079334592,
+          "inclusive_seconds": 0.001860687,
+          "exclusive_seconds": 0.001754477
+        },
+        {
+          "id": 18,
+          "method": "control.write_json",
+          "parent_id": 17,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222079225157,
+          "end_ns": 10222079331367,
+          "inclusive_seconds": 0.00010621,
+          "exclusive_seconds": 0.00010621
+        },
+        {
+          "id": 19,
+          "method": "control.write_json",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222079384227,
+          "end_ns": 10222079432279,
+          "inclusive_seconds": 4.8052e-05,
+          "exclusive_seconds": 4.8052e-05
+        },
+        {
+          "id": 20,
+          "method": "Worker.read_frame",
+          "parent_id": 15,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "request_id": "73a1f6bafe8543549392995218ecb05c",
+          "frame_id": "c06b8c6d6e324e3e8238c13a649f96c8",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10222079442625,
+          "end_ns": 10223811495831,
+          "inclusive_seconds": 1.732053206,
+          "exclusive_seconds": 0.04338132100000003
+        },
+        {
+          "id": 21,
+          "method": "Perception.read",
+          "parent_id": 20,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10222119906164,
+          "end_ns": 10223808576898,
+          "inclusive_seconds": 1.688670734,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "73a1f6bafe8543549392995218ecb05c",
+          "frame_id": "c06b8c6d6e324e3e8238c13a649f96c8",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/fd9c265cd2ba4a2909efa6867447c78966f896cedf8b1a9f48b0a359ebd630f1-c06b8c6d6e324e3e8238c13a649f96c8/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1688.3
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.0751049880000001
+        },
+        {
+          "id": 22,
+          "method": "RapidOCR.__call__",
+          "parent_id": 21,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10222186935320,
+          "end_ns": 10223800497511,
+          "inclusive_seconds": 1.613562191,
+          "exclusive_seconds": 1.613562191
+        },
+        {
+          "id": 23,
+          "method": "rewards.detect",
+          "parent_id": 21,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223802860336,
+          "end_ns": 10223802863891,
+          "inclusive_seconds": 3.555e-06,
+          "exclusive_seconds": 3.555e-06
+        },
+        {
+          "id": 24,
+          "method": "worker.log",
+          "parent_id": 20,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223811475721,
+          "end_ns": 10223811476872,
+          "inclusive_seconds": 1.151e-06,
+          "exclusive_seconds": 1.151e-06
+        },
+        {
+          "id": 25,
+          "method": "control.write_json",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223812660658,
+          "end_ns": 10223812831886,
+          "inclusive_seconds": 0.000171228,
+          "exclusive_seconds": 0.000171228
+        },
+        {
+          "id": 26,
+          "method": "control.write_json",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223812934110,
+          "end_ns": 10223813057396,
+          "inclusive_seconds": 0.000123286,
+          "exclusive_seconds": 0.000123286
+        },
+        {
+          "id": 27,
+          "method": "Worker.command",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223813074102,
+          "end_ns": 10224991798153,
+          "inclusive_seconds": 1.178724051,
+          "exclusive_seconds": 0.04064348400000006
+        },
+        {
+          "id": 28,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223813426363,
+          "end_ns": 10223813625674,
+          "inclusive_seconds": 0.000199311,
+          "exclusive_seconds": 0.000199311
+        },
+        {
+          "id": 29,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223813728759,
+          "end_ns": 10223813857243,
+          "inclusive_seconds": 0.000128484,
+          "exclusive_seconds": 0.000128484
+        },
+        {
+          "id": 30,
+          "method": "Worker.save_frame",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223813865806,
+          "end_ns": 10223857139058,
+          "inclusive_seconds": 0.043273252,
+          "exclusive_seconds": 0.043273252
+        },
+        {
+          "id": 31,
+          "method": "worker.log",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223857150185,
+          "end_ns": 10223857151557,
+          "inclusive_seconds": 1.372e-06,
+          "exclusive_seconds": 1.372e-06
+        },
+        {
+          "id": 32,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223857286300,
+          "end_ns": 10223857387844,
+          "inclusive_seconds": 0.000101544,
+          "exclusive_seconds": 0.000101544
+        },
+        {
+          "id": 33,
+          "method": "Worker.guard_reward_step",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223857878123,
+          "end_ns": 10223860428520,
+          "inclusive_seconds": 0.002550397,
+          "exclusive_seconds": 0.002550397
+        },
+        {
+          "id": 34,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223860552577,
+          "end_ns": 10223860825679,
+          "inclusive_seconds": 0.000273102,
+          "exclusive_seconds": 0.000273102
+        },
+        {
+          "id": 35,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223860930036,
+          "end_ns": 10223861062616,
+          "inclusive_seconds": 0.00013258,
+          "exclusive_seconds": 0.00013258
+        },
+        {
+          "id": 36,
+          "method": "inert_publish",
+          "parent_id": 27,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223861113503,
+          "end_ns": 10223863027781,
+          "inclusive_seconds": 0.001914278,
+          "exclusive_seconds": 0.001824362
+        },
+        {
+          "id": 37,
+          "method": "control.write_json",
+          "parent_id": 36,
+          "frame": "0",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223862934109,
+          "end_ns": 10223863024025,
+          "inclusive_seconds": 8.9916e-05,
+          "exclusive_seconds": 8.9916e-05
+        },
+        {
+          "id": 38,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223863084867,
+          "end_ns": 10223863138948,
+          "inclusive_seconds": 5.4081e-05,
+          "exclusive_seconds": 5.4081e-05
+        },
+        {
+          "id": 39,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223863287462,
+          "end_ns": 10223863466542,
+          "inclusive_seconds": 0.00017908,
+          "exclusive_seconds": 0.00017908
+        },
+        {
+          "id": 40,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223863576588,
+          "end_ns": 10223863767426,
+          "inclusive_seconds": 0.000190838,
+          "exclusive_seconds": 0.000190838
+        },
+        {
+          "id": 41,
+          "method": "control.write_json",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223863785714,
+          "end_ns": 10223863852775,
+          "inclusive_seconds": 6.7061e-05,
+          "exclusive_seconds": 6.7061e-05
+        },
+        {
+          "id": 42,
+          "method": "Worker.save_frame",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223902723697,
+          "end_ns": 10223945975627,
+          "inclusive_seconds": 0.04325193,
+          "exclusive_seconds": 0.04325193
+        },
+        {
+          "id": 43,
+          "method": "worker.log",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223946010360,
+          "end_ns": 10223946012092,
+          "inclusive_seconds": 1.732e-06,
+          "exclusive_seconds": 1.732e-06
+        },
+        {
+          "id": 44,
+          "method": "Worker.read_frame",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10223946019263,
+          "end_ns": 10224991780557,
+          "inclusive_seconds": 1.045761294,
+          "exclusive_seconds": 0.04136611700000015
+        },
+        {
+          "id": 45,
+          "method": "Perception.read",
+          "parent_id": 44,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10223984385144,
+          "end_ns": 10224988778408,
+          "inclusive_seconds": 1.004393264,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/ffd72bab9c917cad417bd4ccd0ed7f398c3a83c52cc339ce463b63fd1f17180c-0c5245d2b72242d3a42fce492c6ed6f2/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1003.95
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.07564182599999991
+        },
+        {
+          "id": 46,
+          "method": "RapidOCR.__call__",
+          "parent_id": 45,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10224049591079,
+          "end_ns": 10224953849252,
+          "inclusive_seconds": 0.904258173,
+          "exclusive_seconds": 0.904258173
+        },
+        {
+          "id": 47,
+          "method": "rewards.detect",
+          "parent_id": 45,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224955929930,
+          "end_ns": 10224980423195,
+          "inclusive_seconds": 0.024493265,
+          "exclusive_seconds": 0.024493265
+        },
+        {
+          "id": 48,
+          "method": "worker.log",
+          "parent_id": 44,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224991749940,
+          "end_ns": 10224991751853,
+          "inclusive_seconds": 1.913e-06,
+          "exclusive_seconds": 1.913e-06
+        },
+        {
+          "id": 49,
+          "method": "worker.log",
+          "parent_id": 27,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224991787126,
+          "end_ns": 10224991787357,
+          "inclusive_seconds": 2.31e-07,
+          "exclusive_seconds": 2.31e-07
+        },
+        {
+          "id": 50,
+          "method": "Worker.reconcile_reward_step",
+          "parent_id": 14,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224991805314,
+          "exception_type": "ValueError",
+          "end_ns": 10224992314492,
+          "inclusive_seconds": 0.000509178,
+          "exclusive_seconds": 0.000509178
+        },
+        {
+          "id": 51,
+          "method": "control.write_json",
+          "parent_id": 14,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224992523016,
+          "end_ns": 10224992856319,
+          "inclusive_seconds": 0.000333303,
+          "exclusive_seconds": 0.000333303
+        },
+        {
+          "id": 52,
+          "method": "control.write_json",
+          "parent_id": 14,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224993007157,
+          "end_ns": 10224993246688,
+          "inclusive_seconds": 0.000239531,
+          "exclusive_seconds": 0.000239531
+        },
+        {
+          "id": 53,
+          "method": "Worker.ask",
+          "parent_id": 14,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224993262942,
+          "end_ns": 10225238788578,
+          "inclusive_seconds": 0.245525636,
+          "exclusive_seconds": 0.0025847180000000136
+        },
+        {
+          "id": 54,
+          "method": "Worker.ensure_full_observation",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10224993266969,
+          "end_ns": 10225190510146,
+          "inclusive_seconds": 0.197243177,
+          "exclusive_seconds": 2.3935000000002704e-05
+        },
+        {
+          "id": 55,
+          "method": "Worker.read_frame",
+          "parent_id": 54,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "start_ns": 10224993284194,
+          "end_ns": 10225190503436,
+          "inclusive_seconds": 0.197219242,
+          "exclusive_seconds": 0.040011883
+        },
+        {
+          "id": 56,
+          "method": "Perception.read",
+          "parent_id": 55,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225032845047,
+          "end_ns": 10225190051404,
+          "inclusive_seconds": 0.157206357,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "path": "/tmp/currency-wars-manual-bridge-test-n9zel3ru/runtime/frames/ffd72bab9c917cad417bd4ccd0ed7f398c3a83c52cc339ce463b63fd1f17180c-0c5245d2b72242d3a42fce492c6ed6f2/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 156.64
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.04883502099999999
+        },
+        {
+          "id": 57,
+          "method": "RapidOCR.__call__",
+          "parent_id": 56,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            56,
+            118,
+            3
+          ],
+          "use_det": false,
+          "use_cls": false,
+          "start_ns": 10225074190963,
+          "end_ns": 10225095857654,
+          "inclusive_seconds": 0.021666691,
+          "exclusive_seconds": 0.021666691
+        },
+        {
+          "id": 58,
+          "method": "RapidOCR.__call__",
+          "parent_id": 56,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            70,
+            139,
+            3
+          ],
+          "use_det": false,
+          "use_cls": false,
+          "start_ns": 10225096176084,
+          "end_ns": 10225117170272,
+          "inclusive_seconds": 0.020994188,
+          "exclusive_seconds": 0.020994188
+        },
+        {
+          "id": 59,
+          "method": "rewards.detect",
+          "parent_id": 56,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225117504816,
+          "end_ns": 10225135717908,
+          "inclusive_seconds": 0.018213092,
+          "exclusive_seconds": 0.018213092
+        },
+        {
+          "id": 60,
+          "method": "StateReader.read",
+          "parent_id": 56,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225136108517,
+          "end_ns": 10225183605882,
+          "inclusive_seconds": 0.047497365,
+          "exclusive_seconds": 0.047497365
+        },
+        {
+          "id": 61,
+          "method": "worker.log",
+          "parent_id": 55,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225190106737,
+          "end_ns": 10225190107739,
+          "inclusive_seconds": 1.002e-06,
+          "exclusive_seconds": 1.002e-06
+        },
+        {
+          "id": 62,
+          "method": "Worker.save_frame",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225190535404,
+          "end_ns": 10225235751206,
+          "inclusive_seconds": 0.045215802,
+          "exclusive_seconds": 0.045215802
+        },
+        {
+          "id": 63,
+          "method": "progression_plan",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225238273320,
+          "end_ns": 10225238290777,
+          "inclusive_seconds": 1.7457e-05,
+          "exclusive_seconds": 1.7457e-05
+        },
+        {
+          "id": 64,
+          "method": "control.write_json",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225238313801,
+          "end_ns": 10225238774747,
+          "inclusive_seconds": 0.000460946,
+          "exclusive_seconds": 0.000460946
+        },
+        {
+          "id": 65,
+          "method": "worker.log",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225238780225,
+          "end_ns": 10225238781457,
+          "inclusive_seconds": 1.232e-06,
+          "exclusive_seconds": 1.232e-06
+        },
+        {
+          "id": 66,
+          "method": "worker.publish",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "cold",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225238784411,
+          "end_ns": 10225238786715,
+          "inclusive_seconds": 2.304e-06,
+          "exclusive_seconds": 2.304e-06
+        }
+      ],
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "page": "preparation",
+          "fields": {
+            "stage": "3-6",
+            "level": "8",
+            "deployed": "8/8"
+          },
+          "coins": {
+            "value": 65,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.429
+          },
+          "rewards": {
+            "scanned": true,
+            "reason": "visible_blue_orbs",
+            "input_allowed": true,
+            "interaction_required": false,
+            "all_rewards_cleared": null,
+            "targets": [
+              {
+                "kind": "blue_orb",
+                "bounds": [
+                  1550,
+                  265,
+                  1624,
+                  334
+                ],
+                "center": [
+                  1587,
+                  299
+                ],
+                "score": 0.9112,
+                "template_id": "blue_orb_q01",
+                "blue_fraction": 0.5997,
+                "pale_rim_fraction": 0.2209,
+                "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+              },
+              {
+                "kind": "blue_orb",
+                "bounds": [
+                  1497,
+                  322,
+                  1571,
+                  391
+                ],
+                "center": [
+                  1534,
+                  356
+                ],
+                "score": 1.0,
+                "template_id": "blue_orb_q01",
+                "blue_fraction": 0.6101,
+                "pale_rim_fraction": 0.2385,
+                "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+              }
+            ]
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "team_checked": false,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "rewards",
+        "battle_ready": false,
+        "pending": true,
+        "reward_pending": {
+          "kind": "close_shop",
+          "status": "pending",
+          "outcome": "unknown",
+          "reason": "领奖原回执不是一笔完整确定输入，保持pending且不重发",
+          "publication_attempted": true,
+          "all_rewards_cleared": null
+        },
+        "spent": null,
+        "economy_completed": false,
+        "terminal_request_kind": "reward_result",
+        "requests": [
+          {
+            "kind": "reward_result",
+            "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+            "return_reason": {
+              "category": "exception",
+              "business_step": "close_shop",
+              "reason": "领奖原回执不是一笔完整确定输入，保持pending且不重发",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 0,
+        "exception_root_requests": 1,
+        "simulated_mutation_publications": 1,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "publication_trace": [
+        {
+          "request_id": "56d082cb13884be7b47d575d72a4d93b",
+          "frame_id": "f486775fa5ec47e987ea2b81863f03e4",
+          "frame_index": 0,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "actions": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "completed": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "receipt_origin": "inert_observation_transport",
+          "requested_wait_seconds": 0,
+          "executed_wait_seconds": null
+        },
+        {
+          "request_id": "73a1f6bafe8543549392995218ecb05c",
+          "frame_id": "c06b8c6d6e324e3e8238c13a649f96c8",
+          "frame_index": 0,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "actions": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "completed": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "receipt_origin": "inert_observation_transport",
+          "requested_wait_seconds": 0,
+          "executed_wait_seconds": null
+        },
+        {
+          "request_id": "b2b22a140f064c188c1f4b83ee7543ec",
+          "frame_id": "0c5245d2b72242d3a42fce492c6ed6f2",
+          "frame_index": 1,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "actions": [
+            {
+              "type": "click",
+              "args": [
+                1623.0,
+                982.0
+              ]
+            },
+            {
+              "type": "wait",
+              "args": [
+                0.7
+              ]
+            }
+          ],
+          "completed": [
+            {
+              "type": "click",
+              "args": [
+                1622.0,
+                974.0
+              ]
+            },
+            {
+              "type": "wait",
+              "args": [
+                0.3
+              ]
+            }
+          ],
+          "receipt_origin": "original_archival_close_completed_on_inert_transport",
+          "requested_wait_seconds": 0.7,
+          "executed_wait_seconds": null
+        }
+      ],
+      "historical_correlations": [],
+      "input_frame_sha256": [
+        "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+        "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+      ],
+      "warm_reuse": null,
+      "cache_limit": "Repeated bytes on different inert observe requests are a frozen historical fixture, not proof a live re-observation stays identical.",
+      "method_counts": {
+        "worker_case": 1,
+        "Worker.observe": 2,
+        "control.write_json": 21,
+        "inert_publish": 3,
+        "Worker.read_frame": 4,
+        "Perception.read": 4,
+        "RapidOCR.__init__": 1,
+        "RapidOCR.__call__": 5,
+        "ShopReader.read": 1,
+        "rewards.detect": 4,
+        "StateReader.read": 2,
+        "worker.log": 8,
+        "Worker.tick": 1,
+        "Worker.command": 1,
+        "Worker.save_frame": 3,
+        "Worker.guard_reward_step": 1,
+        "Worker.reconcile_reward_step": 1,
+        "Worker.ask": 1,
+        "Worker.ensure_full_observation": 1,
+        "progression_plan": 1,
+        "worker.publish": 1
+      }
+    },
+    {
+      "case": "q00_q01_original_completed",
+      "pass": "warm",
+      "kind": "real_png_worker_consumer",
+      "inference_temperature": "warm",
+      "premises": [
+        "Actual retained PNG and production Perception; inert immutable frame transport only.",
+        "Window starts at a legal reward consumer, not the missing two-orb action chain.",
+        "The entire original close completed list is retained, including its coordinates and wait. Requested actions may differ in both; no single-cause mismatch claim. q01 is an inert archival successor, never a new single-orb receipt."
+      ],
+      "status": "pass",
+      "checks": {
+        "terminal_request_kind": true,
+        "phase": true,
+        "pending": true,
+        "normal_root_requests": true,
+        "exception_root_requests": true,
+        "simulated_mutation_publications": true,
+        "terminal_full_contract": true,
+        "component_accounting": true,
+        "no_unexpected_exception": true
+      },
+      "error": null,
+      "window": "First Worker.observe through the terminal strategy request publication; initial ask included.",
+      "worker_wall_seconds": 4.901689476999309,
+      "worker_method_seconds": 4.901683458,
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 3.99250245,
+        "field_ocr": 0.042162534,
+        "shop_ocr": 0.0,
+        "shop_other": 0.050909095,
+        "state_reader": 0.100608224,
+        "reward_rules": 0.043031765,
+        "worker_rules_strategy": 0.007551070000000607,
+        "publication_simulation": 0.005046854999999999,
+        "other_read_entry_io": 0.6598714649999996,
+        "protocol_fixture_lookup": 0.0
+      },
+      "accounting_residual_seconds": 0.0,
+      "game_animation_wait_seconds": null,
+      "supervisor_wait_seconds": null,
+      "supervisor_model_seconds": null,
+      "reads": [
+        {
+          "event_id": 7,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "b5cbdf44cd9b47dab15a833aa2069f54",
+          "frame_id": "1dd8b6940cee422caac4147c88ce4f95",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/3746355084c4a5889b1808ad154fc431f02fb3fc8e5f3f0a923947eaeb9e3ecf-1dd8b6940cee422caac4147c88ce4f95/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1745.64
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 20,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "20aed9c940844e18933628ea0858c525",
+          "frame_id": "dd840671da804b518ad90cc31a9144c9",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/f890d8aae2a0d894bd5defc4e7c5a5b782e4e1d4b45c0726c3d15929f82aff3d-dd840671da804b518ad90cc31a9144c9/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1477.37
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 44,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/b737f36792a191049508e2f10fd5274b4ff4a54fb316e3bb1377901f263ae868-fccefec105164a6e86fbabfaafb52884/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1146.07
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false
+        },
+        {
+          "event_id": 55,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/b737f36792a191049508e2f10fd5274b4ff4a54fb316e3bb1377901f263ae868-fccefec105164a6e86fbabfaafb52884/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 155.29
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false
+        }
+      ],
+      "events": [
+        {
+          "id": 0,
+          "method": "worker_case",
+          "parent_id": null,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225296321509,
+          "end_ns": 10230198004967,
+          "inclusive_seconds": 4.901683458,
+          "exclusive_seconds": 5.4102000000000317e-05
+        },
+        {
+          "id": 1,
+          "method": "Worker.observe",
+          "parent_id": 0,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225296324113,
+          "end_ns": 10227093044131,
+          "inclusive_seconds": 1.796720018,
+          "exclusive_seconds": 0.00021101799999989623
+        },
+        {
+          "id": 2,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225296447760,
+          "end_ns": 10225296501401,
+          "inclusive_seconds": 5.3641e-05,
+          "exclusive_seconds": 5.3641e-05
+        },
+        {
+          "id": 3,
+          "method": "inert_publish",
+          "parent_id": 1,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225296504515,
+          "end_ns": 10225298154204,
+          "inclusive_seconds": 0.001649689,
+          "exclusive_seconds": 0.001579744
+        },
+        {
+          "id": 4,
+          "method": "control.write_json",
+          "parent_id": 3,
+          "frame": null,
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225298080753,
+          "end_ns": 10225298150698,
+          "inclusive_seconds": 6.9945e-05,
+          "exclusive_seconds": 6.9945e-05
+        },
+        {
+          "id": 5,
+          "method": "control.write_json",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225298220163,
+          "end_ns": 10225298320835,
+          "inclusive_seconds": 0.000100672,
+          "exclusive_seconds": 0.000100672
+        },
+        {
+          "id": 6,
+          "method": "Worker.read_frame",
+          "parent_id": 1,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "request_id": "b5cbdf44cd9b47dab15a833aa2069f54",
+          "frame_id": "1dd8b6940cee422caac4147c88ce4f95",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10225298337160,
+          "end_ns": 10227093042158,
+          "inclusive_seconds": 1.794704998,
+          "exclusive_seconds": 0.04844802700000006
+        },
+        {
+          "id": 7,
+          "method": "Perception.read",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10225346334678,
+          "end_ns": 10227092590898,
+          "inclusive_seconds": 1.74625622,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "b5cbdf44cd9b47dab15a833aa2069f54",
+          "frame_id": "1dd8b6940cee422caac4147c88ce4f95",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/3746355084c4a5889b1808ad154fc431f02fb3fc8e5f3f0a923947eaeb9e3ecf-1dd8b6940cee422caac4147c88ce4f95/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1745.64
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.07902639399999978
+        },
+        {
+          "id": 8,
+          "method": "RapidOCR.__call__",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10225414792649,
+          "end_ns": 10226978126006,
+          "inclusive_seconds": 1.563333357,
+          "exclusive_seconds": 1.563333357
+        },
+        {
+          "id": 9,
+          "method": "ShopReader.read",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10226980259945,
+          "end_ns": 10227031169040,
+          "inclusive_seconds": 0.050909095,
+          "exclusive_seconds": 0.050909095
+        },
+        {
+          "id": 10,
+          "method": "rewards.detect",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227031407330,
+          "end_ns": 10227031411075,
+          "inclusive_seconds": 3.745e-06,
+          "exclusive_seconds": 3.745e-06
+        },
+        {
+          "id": 11,
+          "method": "StateReader.read",
+          "parent_id": 7,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227031868606,
+          "end_ns": 10227084852235,
+          "inclusive_seconds": 0.052983629,
+          "exclusive_seconds": 0.052983629
+        },
+        {
+          "id": 12,
+          "method": "worker.log",
+          "parent_id": 6,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227092672771,
+          "end_ns": 10227092673522,
+          "inclusive_seconds": 7.51e-07,
+          "exclusive_seconds": 7.51e-07
+        },
+        {
+          "id": 13,
+          "method": "Worker.tick",
+          "parent_id": 0,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227093048518,
+          "end_ns": 10230197957856,
+          "inclusive_seconds": 3.104909338,
+          "exclusive_seconds": 0.0016729130000006087
+        },
+        {
+          "id": 14,
+          "method": "Worker.observe",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227093264183,
+          "end_ns": 10228622223083,
+          "inclusive_seconds": 1.5289589,
+          "exclusive_seconds": 0.0002316279999998727
+        },
+        {
+          "id": 15,
+          "method": "control.write_json",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227093350984,
+          "end_ns": 10227093461391,
+          "inclusive_seconds": 0.000110407,
+          "exclusive_seconds": 0.000110407
+        },
+        {
+          "id": 16,
+          "method": "inert_publish",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227093464405,
+          "end_ns": 10227095058440,
+          "inclusive_seconds": 0.001594035,
+          "exclusive_seconds": 0.001488536
+        },
+        {
+          "id": 17,
+          "method": "control.write_json",
+          "parent_id": 16,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227094949065,
+          "end_ns": 10227095054564,
+          "inclusive_seconds": 0.000105499,
+          "exclusive_seconds": 0.000105499
+        },
+        {
+          "id": 18,
+          "method": "control.write_json",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227095187244,
+          "end_ns": 10227095244020,
+          "inclusive_seconds": 5.6776e-05,
+          "exclusive_seconds": 5.6776e-05
+        },
+        {
+          "id": 19,
+          "method": "Worker.read_frame",
+          "parent_id": 14,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "request_id": "20aed9c940844e18933628ea0858c525",
+          "frame_id": "dd840671da804b518ad90cc31a9144c9",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10227095254786,
+          "end_ns": 10228622220840,
+          "inclusive_seconds": 1.526966054,
+          "exclusive_seconds": 0.04921567700000007
+        },
+        {
+          "id": 20,
+          "method": "Perception.read",
+          "parent_id": 19,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10227141603417,
+          "end_ns": 10228619353043,
+          "inclusive_seconds": 1.477749626,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "20aed9c940844e18933628ea0858c525",
+          "frame_id": "dd840671da804b518ad90cc31a9144c9",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/f890d8aae2a0d894bd5defc4e7c5a5b782e4e1d4b45c0726c3d15929f82aff3d-dd840671da804b518ad90cc31a9144c9/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1477.37
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.086134873
+        },
+        {
+          "id": 21,
+          "method": "RapidOCR.__call__",
+          "parent_id": 20,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10227219658569,
+          "end_ns": 10228611270037,
+          "inclusive_seconds": 1.391611468,
+          "exclusive_seconds": 1.391611468
+        },
+        {
+          "id": 22,
+          "method": "rewards.detect",
+          "parent_id": 20,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228613056613,
+          "end_ns": 10228613059898,
+          "inclusive_seconds": 3.285e-06,
+          "exclusive_seconds": 3.285e-06
+        },
+        {
+          "id": 23,
+          "method": "worker.log",
+          "parent_id": 19,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228622203404,
+          "end_ns": 10228622204155,
+          "inclusive_seconds": 7.51e-07,
+          "exclusive_seconds": 7.51e-07
+        },
+        {
+          "id": 24,
+          "method": "control.write_json",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228623166106,
+          "end_ns": 10228623322722,
+          "inclusive_seconds": 0.000156616,
+          "exclusive_seconds": 0.000156616
+        },
+        {
+          "id": 25,
+          "method": "control.write_json",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228623421531,
+          "end_ns": 10228623541032,
+          "inclusive_seconds": 0.000119501,
+          "exclusive_seconds": 0.000119501
+        },
+        {
+          "id": 26,
+          "method": "Worker.command",
+          "parent_id": 13,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228623556776,
+          "end_ns": 10229951204851,
+          "inclusive_seconds": 1.327648075,
+          "exclusive_seconds": 0.04198826899999997
+        },
+        {
+          "id": 27,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228624032854,
+          "end_ns": 10228624223041,
+          "inclusive_seconds": 0.000190187,
+          "exclusive_seconds": 0.000190187
+        },
+        {
+          "id": 28,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228624324113,
+          "end_ns": 10228624449032,
+          "inclusive_seconds": 0.000124919,
+          "exclusive_seconds": 0.000124919
+        },
+        {
+          "id": 29,
+          "method": "Worker.save_frame",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228624458025,
+          "end_ns": 10228669500504,
+          "inclusive_seconds": 0.045042479,
+          "exclusive_seconds": 0.045042479
+        },
+        {
+          "id": 30,
+          "method": "worker.log",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228669512282,
+          "end_ns": 10228669513474,
+          "inclusive_seconds": 1.192e-06,
+          "exclusive_seconds": 1.192e-06
+        },
+        {
+          "id": 31,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228669650741,
+          "end_ns": 10228669747447,
+          "inclusive_seconds": 9.6706e-05,
+          "exclusive_seconds": 9.6706e-05
+        },
+        {
+          "id": 32,
+          "method": "Worker.guard_reward_step",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228670220450,
+          "end_ns": 10228673129629,
+          "inclusive_seconds": 0.002909179,
+          "exclusive_seconds": 0.002909179
+        },
+        {
+          "id": 33,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228673266396,
+          "end_ns": 10228673501230,
+          "inclusive_seconds": 0.000234834,
+          "exclusive_seconds": 0.000234834
+        },
+        {
+          "id": 34,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228673694972,
+          "end_ns": 10228673863837,
+          "inclusive_seconds": 0.000168865,
+          "exclusive_seconds": 0.000168865
+        },
+        {
+          "id": 35,
+          "method": "inert_publish",
+          "parent_id": 26,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228673956076,
+          "end_ns": 10228675759207,
+          "inclusive_seconds": 0.001803131,
+          "exclusive_seconds": 0.001706876
+        },
+        {
+          "id": 36,
+          "method": "control.write_json",
+          "parent_id": 35,
+          "frame": "0",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228675659206,
+          "end_ns": 10228675755461,
+          "inclusive_seconds": 9.6255e-05,
+          "exclusive_seconds": 9.6255e-05
+        },
+        {
+          "id": 37,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228675822442,
+          "end_ns": 10228675876915,
+          "inclusive_seconds": 5.4473e-05,
+          "exclusive_seconds": 5.4473e-05
+        },
+        {
+          "id": 38,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228676030997,
+          "end_ns": 10228676196977,
+          "inclusive_seconds": 0.00016598,
+          "exclusive_seconds": 0.00016598
+        },
+        {
+          "id": 39,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228676324009,
+          "end_ns": 10228676490400,
+          "inclusive_seconds": 0.000166391,
+          "exclusive_seconds": 0.000166391
+        },
+        {
+          "id": 40,
+          "method": "control.write_json",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228676509058,
+          "end_ns": 10228676572133,
+          "inclusive_seconds": 6.3075e-05,
+          "exclusive_seconds": 6.3075e-05
+        },
+        {
+          "id": 41,
+          "method": "Worker.save_frame",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228716500276,
+          "end_ns": 10228762670306,
+          "inclusive_seconds": 0.04617003,
+          "exclusive_seconds": 0.04617003
+        },
+        {
+          "id": 42,
+          "method": "worker.log",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228762711849,
+          "end_ns": 10228762713331,
+          "inclusive_seconds": 1.482e-06,
+          "exclusive_seconds": 1.482e-06
+        },
+        {
+          "id": 43,
+          "method": "Worker.read_frame",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "start_ns": 10228762721413,
+          "end_ns": 10229951188056,
+          "inclusive_seconds": 1.188466643,
+          "exclusive_seconds": 0.041948031
+        },
+        {
+          "id": 44,
+          "method": "Perception.read",
+          "parent_id": 43,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10228801649507,
+          "end_ns": 10229948166587,
+          "inclusive_seconds": 1.14651708,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/b737f36792a191049508e2f10fd5274b4ff4a54fb316e3bb1377901f263ae868-fccefec105164a6e86fbabfaafb52884/preview.png",
+          "scope": "rewards",
+          "force": false,
+          "reuse_primary_requested": false,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "rewards",
+            "effective_scope": "rewards",
+            "page_ocr": "full_frame",
+            "unread": [
+              "team",
+              "inventory",
+              "shop",
+              "player_hud",
+              "deployed",
+              "hp"
+            ],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": false,
+            "primary_ocr_executed": true,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 1146.07
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 1,
+          "primary_ocr_executed": true,
+          "primary_reused_reported": false,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.08437787699999988
+        },
+        {
+          "id": 45,
+          "method": "RapidOCR.__call__",
+          "parent_id": 44,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            720,
+            1280,
+            3
+          ],
+          "use_det": true,
+          "use_cls": false,
+          "start_ns": 10228875097033,
+          "end_ns": 10229912654658,
+          "inclusive_seconds": 1.037557625,
+          "exclusive_seconds": 1.037557625
+        },
+        {
+          "id": 46,
+          "method": "rewards.detect",
+          "parent_id": 44,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229915301551,
+          "end_ns": 10229939883129,
+          "inclusive_seconds": 0.024581578,
+          "exclusive_seconds": 0.024581578
+        },
+        {
+          "id": 47,
+          "method": "worker.log",
+          "parent_id": 43,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229951160484,
+          "end_ns": 10229951162016,
+          "inclusive_seconds": 1.532e-06,
+          "exclusive_seconds": 1.532e-06
+        },
+        {
+          "id": 48,
+          "method": "worker.log",
+          "parent_id": 26,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229951194886,
+          "end_ns": 10229951195126,
+          "inclusive_seconds": 2.4e-07,
+          "exclusive_seconds": 2.4e-07
+        },
+        {
+          "id": 49,
+          "method": "Worker.reconcile_reward_step",
+          "parent_id": 13,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229951212512,
+          "exception_type": "ValueError",
+          "end_ns": 10229951647659,
+          "inclusive_seconds": 0.000435147,
+          "exclusive_seconds": 0.000435147
+        },
+        {
+          "id": 50,
+          "method": "control.write_json",
+          "parent_id": 13,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229951845077,
+          "end_ns": 10229952204289,
+          "inclusive_seconds": 0.000359212,
+          "exclusive_seconds": 0.000359212
+        },
+        {
+          "id": 51,
+          "method": "control.write_json",
+          "parent_id": 13,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229952355086,
+          "end_ns": 10229952550882,
+          "inclusive_seconds": 0.000195796,
+          "exclusive_seconds": 0.000195796
+        },
+        {
+          "id": 52,
+          "method": "Worker.ask",
+          "parent_id": 13,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229952566125,
+          "end_ns": 10230197929303,
+          "inclusive_seconds": 0.245363178,
+          "exclusive_seconds": 0.0025163539999999984
+        },
+        {
+          "id": 53,
+          "method": "Worker.ensure_full_observation",
+          "parent_id": 52,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229952569900,
+          "end_ns": 10230150330246,
+          "inclusive_seconds": 0.197760346,
+          "exclusive_seconds": 2.2514000000001255e-05
+        },
+        {
+          "id": 54,
+          "method": "Worker.read_frame",
+          "parent_id": 53,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "start_ns": 10229952585163,
+          "end_ns": 10230150322995,
+          "inclusive_seconds": 0.197737832,
+          "exclusive_seconds": 0.04192136099999999
+        },
+        {
+          "id": 55,
+          "method": "Perception.read",
+          "parent_id": 54,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10229994081803,
+          "end_ns": 10230149897663,
+          "inclusive_seconds": 0.15581586,
+          "caller": "Worker.read_frame",
+          "capture_request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "path": "/tmp/currency-wars-manual-bridge-test-3rrc_51y/runtime/frames/b737f36792a191049508e2f10fd5274b4ff4a54fb316e3bb1377901f263ae868-fccefec105164a6e86fbabfaafb52884/preview.png",
+          "scope": "full",
+          "force": false,
+          "reuse_primary_requested": true,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "same_sha_scope_seen_before": false,
+          "previous_same_sha_scope_reads": 0,
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "read_timing": {
+            "cache_hit": false,
+            "primary_ocr_reused": true,
+            "primary_ocr_executed": false,
+            "primary_ocr_contract_version": 1,
+            "elapsed_ms": 155.29
+          },
+          "image_scope_cache_hit": false,
+          "cache_metadata_is_production": true,
+          "primary_ocr_calls": 0,
+          "primary_ocr_executed": false,
+          "primary_reused_reported": true,
+          "declared_protocol_fact_lookup": false,
+          "exclusive_seconds": 0.04758557399999999
+        },
+        {
+          "id": 56,
+          "method": "RapidOCR.__call__",
+          "parent_id": 55,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            56,
+            118,
+            3
+          ],
+          "use_det": false,
+          "use_cls": false,
+          "start_ns": 10230034774519,
+          "end_ns": 10230055958020,
+          "inclusive_seconds": 0.021183501,
+          "exclusive_seconds": 0.021183501
+        },
+        {
+          "id": 57,
+          "method": "RapidOCR.__call__",
+          "parent_id": 55,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "shape": [
+            70,
+            139,
+            3
+          ],
+          "use_det": false,
+          "use_cls": false,
+          "start_ns": 10230056291102,
+          "end_ns": 10230077270135,
+          "inclusive_seconds": 0.020979033,
+          "exclusive_seconds": 0.020979033
+        },
+        {
+          "id": 58,
+          "method": "rewards.detect",
+          "parent_id": 55,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230077606332,
+          "end_ns": 10230096049489,
+          "inclusive_seconds": 0.018443157,
+          "exclusive_seconds": 0.018443157
+        },
+        {
+          "id": 59,
+          "method": "StateReader.read",
+          "parent_id": 55,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230096416402,
+          "end_ns": 10230144040997,
+          "inclusive_seconds": 0.047624595,
+          "exclusive_seconds": 0.047624595
+        },
+        {
+          "id": 60,
+          "method": "worker.log",
+          "parent_id": 54,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230149944073,
+          "end_ns": 10230149944684,
+          "inclusive_seconds": 6.11e-07,
+          "exclusive_seconds": 6.11e-07
+        },
+        {
+          "id": 61,
+          "method": "Worker.save_frame",
+          "parent_id": 52,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230150354993,
+          "end_ns": 10230194943067,
+          "inclusive_seconds": 0.044588074,
+          "exclusive_seconds": 0.044588074
+        },
+        {
+          "id": 62,
+          "method": "progression_plan",
+          "parent_id": 52,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230197398341,
+          "end_ns": 10230197415818,
+          "inclusive_seconds": 1.7477e-05,
+          "exclusive_seconds": 1.7477e-05
+        },
+        {
+          "id": 63,
+          "method": "control.write_json",
+          "parent_id": 52,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230197439333,
+          "end_ns": 10230197917485,
+          "inclusive_seconds": 0.000478152,
+          "exclusive_seconds": 0.000478152
+        },
+        {
+          "id": 64,
+          "method": "worker.log",
+          "parent_id": 52,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230197921901,
+          "end_ns": 10230197922823,
+          "inclusive_seconds": 9.22e-07,
+          "exclusive_seconds": 9.22e-07
+        },
+        {
+          "id": 65,
+          "method": "worker.publish",
+          "parent_id": 52,
+          "frame": "1",
+          "phase": "warm",
+          "read_kind": "real_worker_consumer",
+          "start_ns": 10230197924846,
+          "end_ns": 10230197926699,
+          "inclusive_seconds": 1.853e-06,
+          "exclusive_seconds": 1.853e-06
+        }
+      ],
+      "endpoint": {
+        "observation": {
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "page": "preparation",
+          "fields": {
+            "stage": "3-6",
+            "level": "8",
+            "deployed": "8/8"
+          },
+          "coins": {
+            "value": 65,
+            "bounds": [
+              1613,
+              892,
+              1687,
+              950
+            ],
+            "currency_icon_gold_fraction": 0.429
+          },
+          "rewards": {
+            "scanned": true,
+            "reason": "visible_blue_orbs",
+            "input_allowed": true,
+            "interaction_required": false,
+            "all_rewards_cleared": null,
+            "targets": [
+              {
+                "kind": "blue_orb",
+                "bounds": [
+                  1550,
+                  265,
+                  1624,
+                  334
+                ],
+                "center": [
+                  1587,
+                  299
+                ],
+                "score": 0.9112,
+                "template_id": "blue_orb_q01",
+                "blue_fraction": 0.5997,
+                "pale_rim_fraction": 0.2209,
+                "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+              },
+              {
+                "kind": "blue_orb",
+                "bounds": [
+                  1497,
+                  322,
+                  1571,
+                  391
+                ],
+                "center": [
+                  1534,
+                  356
+                ],
+                "score": 1.0,
+                "template_id": "blue_orb_q01",
+                "blue_fraction": 0.6101,
+                "pale_rim_fraction": 0.2385,
+                "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+              }
+            ]
+          },
+          "read_contract": {
+            "version": 1,
+            "requested_scope": "full",
+            "effective_scope": "full",
+            "page_ocr": "full_frame",
+            "unread": [],
+            "fallback_reason": null
+          },
+          "team_checked": false,
+          "occupied_board_slots": 0,
+          "named_board_units": 0,
+          "star_read_board_units": 0,
+          "name_and_star_read_board_units": 0
+        },
+        "phase": "rewards",
+        "battle_ready": false,
+        "pending": true,
+        "reward_pending": {
+          "kind": "close_shop",
+          "status": "pending",
+          "outcome": "unknown",
+          "reason": "领奖原回执不是一笔完整确定输入，保持pending且不重发",
+          "publication_attempted": true,
+          "all_rewards_cleared": null
+        },
+        "spent": null,
+        "economy_completed": false,
+        "terminal_request_kind": "reward_result",
+        "requests": [
+          {
+            "kind": "reward_result",
+            "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+            "return_reason": {
+              "category": "exception",
+              "business_step": "close_shop",
+              "reason": "领奖原回执不是一笔完整确定输入，保持pending且不重发",
+              "origin": "native_worker"
+            }
+          }
+        ],
+        "normal_root_requests": 0,
+        "exception_root_requests": 1,
+        "simulated_mutation_publications": 1,
+        "physical_inputs": 0,
+        "fresh_game_captures": 0
+      },
+      "publication_trace": [
+        {
+          "request_id": "b5cbdf44cd9b47dab15a833aa2069f54",
+          "frame_id": "1dd8b6940cee422caac4147c88ce4f95",
+          "frame_index": 0,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "actions": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "completed": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "receipt_origin": "inert_observation_transport",
+          "requested_wait_seconds": 0,
+          "executed_wait_seconds": null
+        },
+        {
+          "request_id": "20aed9c940844e18933628ea0858c525",
+          "frame_id": "dd840671da804b518ad90cc31a9144c9",
+          "frame_index": 0,
+          "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+          "actions": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "completed": [
+            {
+              "type": "observe",
+              "args": []
+            }
+          ],
+          "receipt_origin": "inert_observation_transport",
+          "requested_wait_seconds": 0,
+          "executed_wait_seconds": null
+        },
+        {
+          "request_id": "ff92f99f8d814573b5468218fc55e15e",
+          "frame_id": "fccefec105164a6e86fbabfaafb52884",
+          "frame_index": 1,
+          "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+          "actions": [
+            {
+              "type": "click",
+              "args": [
+                1623.0,
+                982.0
+              ]
+            },
+            {
+              "type": "wait",
+              "args": [
+                0.7
+              ]
+            }
+          ],
+          "completed": [
+            {
+              "type": "click",
+              "args": [
+                1622.0,
+                974.0
+              ]
+            },
+            {
+              "type": "wait",
+              "args": [
+                0.3
+              ]
+            }
+          ],
+          "receipt_origin": "original_archival_close_completed_on_inert_transport",
+          "requested_wait_seconds": 0.7,
+          "executed_wait_seconds": null
+        }
+      ],
+      "historical_correlations": [],
+      "input_frame_sha256": [
+        "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+        "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+      ],
+      "warm_reuse": "Fresh Perception/Worker; only prior initialized engine/shop_reader/state_reader inherited.",
+      "cache_limit": "Repeated bytes on different inert observe requests are a frozen historical fixture, not proof a live re-observation stays identical.",
+      "method_counts": {
+        "worker_case": 1,
+        "Worker.observe": 2,
+        "control.write_json": 21,
+        "inert_publish": 3,
+        "Worker.read_frame": 4,
+        "Perception.read": 4,
+        "RapidOCR.__call__": 5,
+        "ShopReader.read": 1,
+        "rewards.detect": 4,
+        "StateReader.read": 2,
+        "worker.log": 8,
+        "Worker.tick": 1,
+        "Worker.command": 1,
+        "Worker.save_frame": 3,
+        "Worker.guard_reward_step": 1,
+        "Worker.reconcile_reward_step": 1,
+        "Worker.ask": 1,
+        "Worker.ensure_full_observation": 1,
+        "progression_plan": 1,
+        "worker.publish": 1
+      }
+    }
+  ],
+  "limits": [
+    "Full real seven-D Worker loop is NOT measured: public resources and a confirmed current numeric ROI/budget binding are incomplete.",
+    "Private resource absence here does not contradict ROOT local resources or prior seven-shop recognition.",
+    "No two-orb intermediate successor exists; q02 is only a terminal consumer window.",
+    "Original close completed remains original; a transport wrapper does not make it a successful current receipt.",
+    "Protocol normal ROOT count 2 includes initial budget plus terminal lineup request; old replay count 1 used a shorter window.",
+    "Requested wait parameters are metadata, not measured physical waits. Tool-outside history remains unattributed."
+  ],
+  "comparison": {
+    "rows": [
+      {
+        "case": "q02_selection_request",
+        "pass": "cold",
+        "same_endpoint": true,
+        "both_cases_pass": true,
+        "request_sequence_matches": true,
+        "reward_pending_status_outcome_matches": true,
+        "required_endpoint_semantic_differences": [],
+        "before_status": "pass",
+        "after_status": "pass",
+        "before_worker_wall_seconds": 2.8255370179995225,
+        "after_worker_wall_seconds": 1.4210234860001947,
+        "delta_seconds": -1.4045135319993278,
+        "before_components": {
+          "engine_initialization": 0.213017088,
+          "primary_ocr": 2.223506924,
+          "field_ocr": 0.012999341,
+          "shop_ocr": 0.0,
+          "shop_other": 0.0,
+          "state_reader": 0.040367979,
+          "reward_rules": 0.029171218,
+          "worker_rules_strategy": 0.00334579700000025,
+          "publication_simulation": 0.007972177,
+          "other_read_entry_io": 0.2951490530000002,
+          "protocol_fixture_lookup": 0.0
+        },
+        "after_components": {
+          "engine_initialization": 0.153051583,
+          "primary_ocr": 0.940851369,
+          "field_ocr": 0.013727915,
+          "shop_ocr": 0.0,
+          "shop_other": 0.0,
+          "state_reader": 0.040001683,
+          "reward_rules": 0.029762249999999997,
+          "worker_rules_strategy": 0.0028542549999999983,
+          "publication_simulation": 0.001933036,
+          "other_read_entry_io": 0.23883241099999994,
+          "protocol_fixture_lookup": 0.0
+        }
+      },
+      {
+        "case": "q02_selection_request",
+        "pass": "warm",
+        "same_endpoint": true,
+        "both_cases_pass": true,
+        "request_sequence_matches": true,
+        "reward_pending_status_outcome_matches": true,
+        "required_endpoint_semantic_differences": [],
+        "before_status": "pass",
+        "after_status": "pass",
+        "before_worker_wall_seconds": 1.9328860490004445,
+        "after_worker_wall_seconds": 1.101573276999261,
+        "delta_seconds": -0.8313127720011835,
+        "before_components": {
+          "engine_initialization": 0.0,
+          "primary_ocr": 1.56263033,
+          "field_ocr": 0.016396135,
+          "shop_ocr": 0.0,
+          "shop_other": 0.0,
+          "state_reader": 0.040557556,
+          "reward_rules": 0.028679405999999998,
+          "worker_rules_strategy": 0.002739082000000211,
+          "publication_simulation": 0.001697851,
+          "other_read_entry_io": 0.2801800609999997,
+          "protocol_fixture_lookup": 0.0
+        },
+        "after_components": {
+          "engine_initialization": 0.0,
+          "primary_ocr": 0.77428193,
+          "field_ocr": 0.01318623,
+          "shop_ocr": 0.0,
+          "shop_other": 0.0,
+          "state_reader": 0.04099107,
+          "reward_rules": 0.032567003,
+          "worker_rules_strategy": 0.002865883000000015,
+          "publication_simulation": 0.001701296,
+          "other_read_entry_io": 0.23597301500000012,
+          "protocol_fixture_lookup": 0.0
+        }
+      },
+      {
+        "case": "q00_q01_original_completed",
+        "pass": "cold",
+        "same_endpoint": true,
+        "both_cases_pass": true,
+        "request_sequence_matches": true,
+        "reward_pending_status_outcome_matches": true,
+        "required_endpoint_semantic_differences": [],
+        "before_status": "pass",
+        "after_status": "pass",
+        "before_worker_wall_seconds": 4.8587077259999205,
+        "after_worker_wall_seconds": 4.766588587001024,
+        "delta_seconds": -0.09211913899889623,
+        "before_components": {
+          "engine_initialization": 0.155240977,
+          "primary_ocr": 3.852178036,
+          "field_ocr": 0.024811261,
+          "shop_ocr": 0.0,
+          "shop_other": 0.039853454,
+          "state_reader": 0.083118582,
+          "reward_rules": 0.041657874,
+          "worker_rules_strategy": 0.00729201900000029,
+          "publication_simulation": 0.006123158,
+          "other_read_entry_io": 0.6484257150000002,
+          "protocol_fixture_lookup": 0.0
+        },
+        "after_components": {
+          "engine_initialization": 0.129305803,
+          "primary_ocr": 3.7923059550000002,
+          "field_ocr": 0.042660879,
+          "shop_ocr": 0.0,
+          "shop_other": 0.049203387,
+          "state_reader": 0.08827695599999999,
+          "reward_rules": 0.042713246999999996,
+          "worker_rules_strategy": 0.007552291999999509,
+          "publication_simulation": 0.0054575629999999995,
+          "other_read_entry_io": 0.6091062260000014,
+          "protocol_fixture_lookup": 0.0
+        }
+      },
+      {
+        "case": "q00_q01_original_completed",
+        "pass": "warm",
+        "same_endpoint": true,
+        "both_cases_pass": true,
+        "request_sequence_matches": true,
+        "reward_pending_status_outcome_matches": true,
+        "required_endpoint_semantic_differences": [],
+        "before_status": "pass",
+        "after_status": "pass",
+        "before_worker_wall_seconds": 5.271543670000028,
+        "after_worker_wall_seconds": 4.901689476999309,
+        "delta_seconds": -0.36985419300071953,
+        "before_components": {
+          "engine_initialization": 0.0,
+          "primary_ocr": 4.403848808999999,
+          "field_ocr": 0.053254736999999996,
+          "shop_ocr": 0.0,
+          "shop_other": 0.046726962,
+          "state_reader": 0.086813415,
+          "reward_rules": 0.039495502,
+          "worker_rules_strategy": 0.00754369000000017,
+          "publication_simulation": 0.005041436,
+          "other_read_entry_io": 0.6288140719999993,
+          "protocol_fixture_lookup": 0.0
+        },
+        "after_components": {
+          "engine_initialization": 0.0,
+          "primary_ocr": 3.99250245,
+          "field_ocr": 0.042162534,
+          "shop_ocr": 0.0,
+          "shop_other": 0.050909095,
+          "state_reader": 0.100608224,
+          "reward_rules": 0.043031765,
+          "worker_rules_strategy": 0.007551070000000607,
+          "publication_simulation": 0.005046854999999999,
+          "other_read_entry_io": 0.6598714649999996,
+          "protocol_fixture_lookup": 0.0
+        }
+      }
+    ],
+    "no_speed_ratio_for_different_endpoint": true,
+    "limit": "One cold/warm pass per fixed case; no statistical speed guarantee, no real full-stage or game timing."
+  }
+}

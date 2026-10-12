@@ -236,6 +236,10 @@ def configuration(expected_broker_hash):
         try:verify_installation(access)
         finally:access.close()
         config = read_object(INSTALL_ROOT / 'install.json')
+        # Use the installed task's unchanged fixed-path contract before any
+        # client creates a runtime. An absolute but unapproved root is invalid.
+        from currency_wars_bridge_task import validate_config
+        validate_config(config)
         if (config.get('schema') != PROTOCOL or config.get('user_sid') != artifacts._windows_user_sid()
                 or config.get('task_name') != task_name(config['user_sid'])
                 or not re.fullmatch(r'[0-9a-f]{32}', str(config.get('installation_id', '')))
@@ -251,7 +255,68 @@ def configuration(expected_broker_hash):
     except (OSError, ValueError, KeyError) as error:
         if isinstance(error, BridgeError):
             raise
-        raise BridgeError('首次使用需要安装固定输入权限组件；启动不会反复请求Python管理员授权。') from error
+        raise BridgeError('固定输入权限组件缺失或配置/权限无效；未改用其他运行目录，也不会反复请求Python管理员授权。') from error
+
+
+def runtime_location(expected_broker_hash, *, inherited=None):
+    """Choose once before creating a run; recheck installed identity in child.
+
+    Only an absent installation permits the existing standalone default. A
+    present but incomplete/unreadable installation must never fall back. The
+    child carries its parent's standalone choice without consulting another
+    process's TEMP cache; an installed choice is always freshly validated.
+    """
+    if inherited is not None:
+        if (not isinstance(inherited, dict)
+                or set(inherited) != {'schema', 'source', 'runtime_root', 'installation_id'}
+                or type(inherited['schema']) is not int or inherited['schema'] != 1
+                or inherited['source'] not in ('installed_bridge', 'standalone')
+                or not isinstance(inherited['runtime_root'], str)
+                or (inherited['source'] == 'standalone') != (inherited['installation_id'] is None)
+                or (inherited['installation_id'] is not None
+                    and not re.fullmatch(r'[0-9a-f]{32}', str(inherited['installation_id'])))):
+            raise BridgeError('启动运行目录绑定格式无效')
+    try:
+        artifacts._no_links(INSTALL_ROOT)
+        try:
+            INSTALL_ROOT.lstat()
+        except FileNotFoundError:
+            if inherited is not None and inherited['installation_id'] is not None:
+                raise BridgeError('本次已绑定的输入权限组件消失；拒绝改用默认运行目录')
+            root = Path(inherited['runtime_root']) if inherited is not None else artifacts.default_root()
+            location = {'schema': 1, 'source': 'standalone', 'runtime_root': str(root), 'installation_id': None}
+        else:
+            config = configuration(expected_broker_hash)
+            root = Path(config['runtime_root'])
+            location = {'schema': 1, 'source': 'installed_bridge', 'runtime_root': str(root),
+                        'installation_id': config['installation_id']}
+        if not root.is_absolute() or root == Path(root.anchor):
+            raise BridgeError('启动运行根目录必须是明确绝对目录，不能是卷根')
+        artifacts._no_links(root)
+        if inherited is not None and (inherited['installation_id'] != location['installation_id']
+                or os.path.normcase(os.path.abspath(inherited['runtime_root']))
+                != os.path.normcase(os.path.abspath(root))):
+            raise BridgeError('父子启动间输入组件或运行根目录变化；未创建运行或另启控制器')
+        return location
+    except (OSError, ValueError) as error:
+        raise BridgeError('启动运行根目录无法验证；未改用其他目录') from error
+
+
+def runtime_child_environment(expected_broker_hash, location, *, environ=None):
+    """Revalidate one selected root and configure only a newly spawned child.
+
+    The installed artifact provider derives its approved base from TEMP. A
+    parent may retain another process's C: TEMP/cache while the input component
+    uses D:. Do not mutate os.environ, tempfile.tempdir, or an imported provider.
+    """
+    selected = runtime_location(expected_broker_hash, inherited=location)
+    root = Path(selected['runtime_root'])
+    if root.name.casefold() != artifacts.TOOL.casefold():
+        raise BridgeError('运行根不符合已验证的临时目录协议；不更改子进程环境')
+    child = dict(os.environ if environ is None else environ)
+    base = str(root.parent)
+    child.update(TEMP=base, TMP=base, TMPDIR=base)
+    return child
 
 
 @contextlib.contextmanager

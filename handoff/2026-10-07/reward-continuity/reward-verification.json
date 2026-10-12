@@ -1,0 +1,47 @@
+{
+  "schema": "currency-wars-reward-reader-verification/v1",
+  "recorded_at": "2026-10-07T07:18:51.883324+00:00",
+  "execution_timestamp_recorded": false,
+  "record_origin": "Summary preserved from the original tool result in this session. No standalone stdout artifact was saved at that time; no log has been reconstructed.",
+  "suite": "tools/test_currency_wars_rewards.py",
+  "test_ids": [
+    "tools.test_currency_wars_rewards.RewardObservationTests.test_absence_is_limited_and_color_or_prompt_uncertainty_blocks_input",
+    "tools.test_currency_wars_rewards.RewardObservationTests.test_controls_are_relocated_from_each_frame_not_memorized_centers",
+    "tools.test_currency_wars_rewards.RewardObservationTests.test_real_full_frames_cover_occlusion_two_controls_and_a_side_prompt",
+    "tools.test_currency_wars_rewards.RewardObservationTests.test_resource_replacement_is_rechecked_without_a_stale_template_cache",
+    "tools.test_currency_wars_rewards.RewardObservationTests.test_template_is_an_exact_source_bound_crop",
+    "tools.test_currency_wars_rewards.RewardObservationTests.test_wrong_page_missing_or_conflicting_anchors_and_unbound_frames_withhold_targets"
+  ],
+  "tests_run": 6,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 9.569,
+  "observed_result_lines": [
+    "Ran 6 tests in 9.569s",
+    "OK"
+  ],
+  "stdout_artifact": null,
+  "command_from_original_tool_call": "PYTHONPATH=/workspace/scratch/5c64bf8ff52e/test-deps:tools ORT_DISABLE_TELEMETRY=1 python -m unittest tools/test_currency_wars_rewards.py -v",
+  "rerun_for_this_record": false,
+  "source_hashes": {
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "test_currency_wars_rewards.py": "329174b906330808ec02b6c3339c7c6b038b93bf20489140388a0ab028db0fa1",
+    "reward_resources/blue-orb-q01.png": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+    "reward_resources/manifest.json": "0b2d5da751483150a0194d52a43dcb6d1b5dd6970309c3e7efe192541d03e635"
+  },
+  "source_hash_provenance": "Hashes recorded during handoff from reader/test/template files unchanged since the original six-test execution. The Perception and reward-reader hashes also match the preserved real-PNG observation report; these are not claimed to be an earlier standalone hash log.",
+  "actual_ocr_scope": "The unchanged historical q00/q01/q02 PNGs were read once through production Perception during that suite; their unknown fields were preserved.",
+  "synthetic_scope": "Relocated controls, missing controls, gray lookalikes and resource replacement are explicit test mutations, not historical successors.",
+  "related_flow_validation": "handoff/2026-10-07/reward-continuity/reward-flow-verification.json",
+  "related_replay_report": "handoff/2026-10-07/reward-continuity/reward-replay.json",
+  "physical_inputs": 0,
+  "fresh_game_captures": 0,
+  "controller_started": false,
+  "limits": [
+    "No all-rewards-cleared assertion.",
+    "No per-click historical successor exists between the two retained blue-orb inputs.",
+    "No additional OCR or test rerun was performed to produce this handoff record."
+  ]
+}

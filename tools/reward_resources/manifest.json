@@ -1,0 +1,37 @@
+{
+  "schema": "currency-wars-reward-template/v1",
+  "template_id": "blue_orb_q01",
+  "file": "blue-orb-q01.png",
+  "sha256": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+  "size": [
+    74,
+    69
+  ],
+  "source_manifest": "handoff/2026-10-07/reward-sequence/manifest.json",
+  "source_frame": "handoff/2026-10-07/reward-sequence/q01.png",
+  "source_original_sha256": "db857577b499bc1ae01b0d994a52acc657702d5eb4e250dc58705ad2cf0b1d6d",
+  "source_export_sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+  "source_roi": [
+    1497,
+    322,
+    1571,
+    391
+  ],
+  "coordinate_space": "1920x1080 archived broker preview",
+  "derivation": "Exact RGB crop of one complete lower blue orb and its immediate border; no generated or retouched pixels.",
+  "scope": {
+    "page": "preparation",
+    "scan_bounds": [
+      1320,
+      230,
+      1660,
+      500
+    ],
+    "kind": "blue_orb"
+  },
+  "limits": [
+    "A match is a currently visible control, not a receipt or all-rewards-cleared proof.",
+    "The three public frames contain no per-click successor between the two historical reward inputs.",
+    "Only the retained 1920x1080 native layout is supported."
+  ]
+}

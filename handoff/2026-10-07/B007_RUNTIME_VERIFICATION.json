@@ -1,0 +1,83 @@
+{
+  "schema": "currency-wars-b007-runtime-verification/v1",
+  "verified_at_utc": "2026-10-06T19:15:45.832331+00:00",
+  "base_commit": "6e7d3eaceb3625cbd8a095a61273642426229fd0",
+  "classification": "B-007/runtime-root",
+  "environment": {
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "game_inputs": 0
+  },
+  "test_selection": [
+    "test_local_runtime_compatibility.RuntimeRootTests",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_publishes_after_both_identity_registrations",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish",
+    "test_currency_wars_bridge_task.ProtocolTests.test_valid_fixed_protocol_and_config",
+    "test_currency_wars_bridge_task.ProtocolTests.test_config_rejects_unapproved_source_and_arbitrary_roots"
+  ],
+  "test_ids": [
+    "test_local_runtime_compatibility.RuntimeRootTests.test_absent_installation_preserves_parent_standalone_root",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_changed_disappeared_and_malformed_launch_binding_are_rejected",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_configuration_uses_unchanged_fixed_task_root_contract",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_installed_root_overrides_default_and_revalidates_in_child",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_invalid_or_unreadable_installation_never_falls_back_or_creates_worker_run",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_public_start_passes_verified_root_and_invalid_config_never_launches",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_unknown_existing_worker_prevents_root_selection_and_second_launch",
+    "test_local_runtime_compatibility.RuntimeRootTests.test_worker_marker_child_registration_and_cleanup_keep_selected_root",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_publishes_after_both_identity_registrations",
+    "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish",
+    "test_currency_wars_bridge_task.ProtocolTests.test_valid_fixed_protocol_and_config",
+    "test_currency_wars_bridge_task.ProtocolTests.test_config_rejects_unapproved_source_and_arbitrary_roots"
+  ],
+  "tests_run": 13,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "passed": true,
+  "elapsed_seconds": 0.106419,
+  "test_output": "test_absent_installation_preserves_parent_standalone_root (test_local_runtime_compatibility.RuntimeRootTests.test_absent_installation_preserves_parent_standalone_root) ... ok\ntest_changed_disappeared_and_malformed_launch_binding_are_rejected (test_local_runtime_compatibility.RuntimeRootTests.test_changed_disappeared_and_malformed_launch_binding_are_rejected) ... ok\ntest_configuration_uses_unchanged_fixed_task_root_contract (test_local_runtime_compatibility.RuntimeRootTests.test_configuration_uses_unchanged_fixed_task_root_contract) ... ok\ntest_installed_root_overrides_default_and_revalidates_in_child (test_local_runtime_compatibility.RuntimeRootTests.test_installed_root_overrides_default_and_revalidates_in_child) ... ok\ntest_invalid_or_unreadable_installation_never_falls_back_or_creates_worker_run (test_local_runtime_compatibility.RuntimeRootTests.test_invalid_or_unreadable_installation_never_falls_back_or_creates_worker_run) ... ok\ntest_public_start_passes_verified_root_and_invalid_config_never_launches (test_local_runtime_compatibility.RuntimeRootTests.test_public_start_passes_verified_root_and_invalid_config_never_launches) ... ok\ntest_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels (test_local_runtime_compatibility.RuntimeRootTests.test_runner_load_reuses_authenticated_root_for_normal_and_emergency_channels) ... ok\ntest_unknown_existing_worker_prevents_root_selection_and_second_launch (test_local_runtime_compatibility.RuntimeRootTests.test_unknown_existing_worker_prevents_root_selection_and_second_launch) ... ok\ntest_worker_marker_child_registration_and_cleanup_keep_selected_root (test_local_runtime_compatibility.RuntimeRootTests.test_worker_marker_child_registration_and_cleanup_keep_selected_root) ... ok\ntest_gui_runtime_registration_publishes_after_both_identity_registrations (test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_publishes_after_both_identity_registrations) ... ok\ntest_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish (test_local_runtime_compatibility.RuntimeCompatibilityTests.test_gui_runtime_registration_rejects_unknown_or_reused_creation_before_publish) ... ok\ntest_valid_fixed_protocol_and_config (test_currency_wars_bridge_task.ProtocolTests.test_valid_fixed_protocol_and_config) ... ok\ntest_config_rejects_unapproved_source_and_arbitrary_roots (test_currency_wars_bridge_task.ProtocolTests.test_config_rejects_unapproved_source_and_arbitrary_roots) ... ok\n\n----------------------------------------------------------------------\nRan 13 tests in 0.106s\n\nOK\n",
+  "python_compilation": {
+    "passed": true,
+    "files": [
+      "tools/currency_wars_input_bridge.py",
+      "tools/currency_wars_runner.py",
+      "tools/build_input_bridge.py",
+      "tools/test_local_runtime_compatibility.py",
+      "gui/launch.py"
+    ]
+  },
+  "diff_check": true,
+  "source_sha256": {
+    "tools/currency_wars_input_bridge.py": "8870631f7b7de30484f65c95f35af91f2d4496d0fbf0a6ba55708ed2816b77da",
+    "tools/currency_wars_runner.py": "1cf3a1b38c3a2e03d4d4b47e0e98a89da0abf95ecd2192220924432e8b027662",
+    "tools/build_input_bridge.py": "76251f29f5b9f5b569099bcf2ef0b4a4b92b5b26176fb4f36b0b58ff5f565d64",
+    "tools/test_local_runtime_compatibility.py": "be78ef12d3ec96fceb63a308de0c448a84223bf754ef60d8e1e052f6dc9fe089",
+    "gui/launch.py": "ac0a1fa7f2c8e303205094f624ee3cc582ac4ecc1a37fde945c330ba3f623d3e",
+    "gui/src/main.rs": "6dfb959d75fd84e6f1298879a85a869dfc3c1f8c81a5b39ba92af417329b5cce",
+    "gui/src/protocol.rs": "e2e859ab23fac36024b475bd26f70a3a99a9d5879d18c557d7843075884674f7",
+    "tools/currency_wars_control.py": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5",
+    "tools/currency_wars_bridge_task.py": "aff9cb2bccb5047ac9f160fee17b5eced0a61f4688f4a6c98b0a459f86819978"
+  },
+  "broker_and_driver_unchanged": true,
+  "independent_review": {
+    "runtime_python": "8/8 PASS; overlaps root selection",
+    "gui_registration": "2/2 PASS; overlaps root selection",
+    "gui_source_review": "no outstanding blocker at reviewed hashes; not a build",
+    "final_load_path_review": "Independent reviewer caught repeated default-root marker validation in runner.load; root fixed and tested both actual authentication channels."
+  },
+  "rust": {
+    "cargo_available": false,
+    "cargo_probe_exit_code": 127,
+    "tests_added": 6,
+    "tests_executed": false,
+    "build_executed": false,
+    "windows_command": "cargo test --locked --manifest-path gui/Cargo.toml runtime_location_"
+  },
+  "limitations": [
+    "Windows native SID/ACL/TaskScheduler and actual GUI/game are not verified.",
+    "No Windows input component package was built or installed.",
+    "One additional pre-existing ProtocolTests case failed on Linux hardcoded D path in author run; not counted as PASS here.",
+    "Offline checks do not establish speed improvement, whole-match autonomy, or rewards completion."
+  ]
+}

@@ -16,7 +16,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from currency_wars_perception import OPTION_LAYOUTS, SUPPLY_FIVE_CARD_LAYOUT, clean
+from currency_wars_perception import (ENVIRONMENT_CONFIRM_BOUNDS, OPTION_LAYOUTS,
+                                      SUPPLY_FIVE_CARD_LAYOUT, classify, clean)
 from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
 
 
@@ -26,49 +27,356 @@ from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
 PREPARATION_GUIDE_CONTROL = 'prep_startup_guide_2'
 PREPARATION_GUIDE_BOUNDS = [1650, 39, 1727, 94]
 PREPARATION_GUIDE_POINT = [1687, 65]
+TASK_LIST_SCROLL_CONTROL = 'startup_guide_task_list'
 _PREPARATION_GUIDE_MASK = (
     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAA/gAAAAD/4AAAAP/8AAAAf//AAAB///wAAH/z/8AAP/x/+AAP/h/+AAH/g/8AAH/A/4AAD/Af4AAD8EHwAABwMDgAAAgeAgAAAA/gAAAAA/gAAAAgOBgAAB4MDwAAD8EPwAAD/Af4AAH/A/8AAH/g/8AAP/h/+AAP/x/+AAD/7/4AAB///gAAAf//AAAAH/8AAAAB/wAAAAA/AAAAAAOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
 )
 
 
-def _guide_icon_location(image):
-    """One native template candidate in the complete prep navigation strip."""
-    hsv = cv2.cvtColor(image[38:96, 1570:1918], cv2.COLOR_RGB2HSV)
-    ink = ((hsv[:, :, 1] < 70) & (hsv[:, :, 2] > 200)).astype(np.uint8)
-    template = np.unpackbits(np.frombuffer(base64.b64decode(_PREPARATION_GUIDE_MASK), dtype=np.uint8))[:41*42].reshape(41, 42)
-    scores = cv2.matchTemplate(ink, template, cv2.TM_CCOEFF_NORMED)
-    unused, best, unused_location, location = cv2.minMaxLoc(scores)
-    if not np.isfinite(best) or best < .95:
-        return None
-    x, y = location
-    # Adjacent response pixels describe one candidate; an independent peak
-    # anywhere else among the four navigation controls is ambiguous.
-    others = scores.copy()
-    others[max(0, y-5):y+6, max(0, x-5):x+6] = -1
-    if np.any(others >= .90):
-        return None
-    native = [x+1570, y+38]
-    return native if abs(native[0]-1666) <= 2 and abs(native[1]-46) <= 2 else None
+# Native PNG calibration, evidence 99809b924393ca4540bfa4ced5c17cb89452ad73:
+# ROOT_PR28_STARTUP_GUIDE/source-navigation.png (sha256 a7f73d61...972fb2),
+# [1666,46,1708,87]. The old retained JPEG mask scores .940568 on this
+# appearance; keep its threshold and add the actual PNG silhouette instead.
+_PREPARATION_GUIDE_NATIVE_MASK = (
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAA/AAAAAB/wAAAAH/8AAAAf//AAAB/7/gAAD/z/4AAP/x/+AAP/g/+AAH/A/8AAH/Af4AAD+Af4AAB8AHwAABwEBgAAAAOAAAAAA/AAAAAAfAAAAAgOAgAABwEDgAAB8APwAAD+Af4AAH/Af4AAH/g/8AAP/h/+AAP/x/8AAD/z/4AAA/7/gAAAP/+AAAAH/4AAAAB/wAAAAAfAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+)
+_GUIDE_STRIP_BOUNDS = [1570, 38, 1918, 96]
+_GUIDE_GLYPH_BOUNDS = [1666, 46, 1708, 87]
 
 
-def _exposed_navigation_equal(images, bounds):
-    # Compute both edges on the same crop: expanding only one crop introduces
-    # artificial Canny boundary differences along the native strip border.
-    old, fresh = (_edges(image, bounds) for image in images)
-    if min(np.count_nonzero(old), np.count_nonzero(fresh)) < 100:
+def _guide_ink(crop):
+    hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+    return (hsv[:, :, 1] < 70) & (hsv[:, :, 2] > 200)
+
+
+def _guide_strip_location(strip, diagnostic=None, *, reviewed_template=None):
+    """One exposed candidate across the complete native navigation strip.
+
+    A reviewed template is extracted from the source PNG by this module, never
+    supplied by a caller. Its identity is the supervisor's separate assertion.
+    """
+    result = {'location': None, 'reason': 'invalid_navigation_crop'}
+    try:
+        if strip.shape != (58, 348, 3) or strip.dtype != np.uint8:
+            return None
+        ink = _guide_ink(strip).astype(np.uint8)
+        if reviewed_template is None:
+            templates = [(name, np.unpackbits(np.frombuffer(base64.b64decode(value), dtype=np.uint8))
+                          [:41*42].reshape(41, 42))
+                         for name, value in (('retained_jpeg', _PREPARATION_GUIDE_MASK),
+                                             ('native_png_99809b92', _PREPARATION_GUIDE_NATIVE_MASK))]
+        else:
+            if (reviewed_template.shape != (41, 42)
+                    or not 100 <= np.count_nonzero(reviewed_template) <= 900):
+                result['reason'] = 'reviewed_target_has_no_bounded_ink'
+                return None
+            templates = [('supervisor_source_png', reviewed_template.astype(np.uint8))]
+        matches = [(name, cv2.matchTemplate(ink, template, cv2.TM_CCOEFF_NORMED))
+                   for name, template in templates]
+        scores = np.maximum.reduce([score for unused_name, score in matches])
+        unused, best, unused_location, location = cv2.minMaxLoc(scores)
+        x, y = location
+        result.update(score=float(best), template=max(matches, key=lambda item: item[1][y, x])[0])
+        if not np.isfinite(best) or best < (.985 if reviewed_template is not None else .95):
+            result['reason'] = 'target_shape_unknown'
+            return None
+        # Across both native appearances, adjacent response pixels still
+        # describe one target. An independent candidate is ambiguous.
+        others = scores.copy()
+        others[max(0, y-5):y+6, max(0, x-5):x+6] = -1
+        result['other_peak'] = float(np.max(others))
+        if np.any(others >= .90):
+            result['reason'] = 'target_not_unique'
+            return None
+        native = [x+1570, y+38]
+        if abs(native[0]-1666) > 2 or abs(native[1]-46) > 2:
+            result['reason'] = 'target_outside_supported_control'
+            return None
+        result.update(location=native, reason='unique_source_shape')
+        return native
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def _guide_icon_location(image, diagnostic=None):
+    """Backward-compatible full-frame native detector; no supervisor inference."""
+    return _guide_strip_location(image[38:96, 1570:1918], diagnostic)
+
+
+def _preparation_header_crops_equal(crops, diagnostic=None):
+    """Only the fixed preparation label's light or calibrated gray glyphs.
+
+    Native gray label union [428,31,515,62]: 560/560 pixels at S<40 and
+    V=100..190, IoU 1, support and two-pixel halo RGB max delta 1. Full OCR
+    still has to identify the unique label; background colors are not glyphs.
+    """
+    result = {'allowed': False, 'reason': 'header_ink_changed_or_unknown'}
+    try:
+        if len(crops) != 2 or crops[0].shape != crops[1].shape:
+            return False
+        hsv = [cv2.cvtColor(crop, cv2.COLOR_RGB2HSV) for crop in crops]
+        delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
+        for kind in ('light', 'prep_gray'):
+            masks = [((item[:, :, 1] < 70) & (item[:, :, 2] > 190)) if kind == 'light'
+                     else ((item[:, :, 1] < 40) & (item[:, :, 2] >= 100) & (item[:, :, 2] <= 190))
+                     for item in hsv]
+            counts = [int(np.count_nonzero(mask)) for mask in masks]
+            if any(count < 24 or not .015 <= count / masks[0].size <= .60 for count in counts):
+                continue
+            union = masks[0] | masks[1]
+            iou = np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union)
+            halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+            if iou < .985 or np.mean(delta[halo] > 16) > .005:
+                continue
+            result.update(allowed=True, reason='stable_exposed_header', ink_kind=kind,
+                          ink_pixels=counts, ink_iou=float(iou), halo_max_delta=int(np.max(delta[halo])))
+            return True
         return False
-    score = cv2.matchTemplate(fresh, old, cv2.TM_CCOEFF_NORMED)[0, 0]
-    return bool(np.isfinite(score) and score >= .985)
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def _preparation_header_equal(images, bounds):
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    return _preparation_header_crops_equal([image[y:bottom, x:right] for image in images])
+
+
+def _guide_navigation_pair(strips, diagnostic=None, *, supervising=False):
+    """Local actionability shared by production and native-crop diagnosis.
+
+    This does not classify a whole frame or issue input. Unknown native shape
+    may be separately reviewed by ROOT, but current exposure and uniqueness
+    cannot be asserted past changed pixels. No moving background equality.
+    """
+    result = {'allowed': False, 'source': 'supervising_agent' if supervising else 'native',
+              'native_locations': [], 'reviewed_locations': [], 'reason': 'invalid_navigation_pair'}
+    try:
+        if len(strips) != 2 or any(strip.shape != (58, 348, 3) or strip.dtype != np.uint8 for strip in strips):
+            return False
+        native = [{}, {}]
+        native_locations = [_guide_strip_location(strip, details) for strip, details in zip(strips, native)]
+        result.update(native_locations=native_locations, native_detection=native)
+        if supervising:
+            # Fixed, current source glyph; no caller-supplied pixels/template.
+            template = _guide_ink(strips[0][8:49, 96:138])
+            reviewed = [{}, {}]
+            locations = [_guide_strip_location(strip, details, reviewed_template=template)
+                         for strip, details in zip(strips, reviewed)]
+            result.update(reviewed_locations=locations, reviewed_detection=reviewed)
+        else:
+            locations = native_locations
+        if any(location is None for location in locations) or locations[0] != locations[1]:
+            result['reason'] = 'target_identity_or_location_changed'
+            return False
+        for label, bounds in (('target', [80, 1, 157, 56]), ('navigation', [2, 2, 315, 55])):
+            x, y, right, bottom = bounds
+            crops = [strip[y:bottom, x:right] for strip in strips]
+            masks = [_guide_ink(crop) for crop in crops]
+            union = masks[0] | masks[1]
+            if np.count_nonzero(union) < 100:
+                result['reason'] = label + '_not_exposed'
+                return False
+            iou = np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union)
+            halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+            delta = np.max(np.abs(crops[0].astype(np.int16)-crops[1].astype(np.int16)), axis=2)
+            result[label] = {'ink_pixels': [int(np.count_nonzero(mask)) for mask in masks],
+                             'ink_iou': float(iou), 'halo_max_delta': int(np.max(delta[halo]))}
+            if iou < .99 or np.mean(delta[halo] > 16) > .005:
+                result['reason'] = label + '_exposure_changed'
+                return False
+        # A cover over the click center must not hide inside negative space.
+        centers = [strip[23:32, 113:122] for strip in strips]
+        if (any(np.count_nonzero(_guide_ink(crop)) < 4 for crop in centers)
+                or np.max(np.abs(centers[0].astype(np.int16)-centers[1].astype(np.int16))) > 16):
+            result['reason'] = 'click_center_not_exposed'
+            return False
+        result.update(allowed=True, reason='stable_unique_exposed_target')
+        return True
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def _preparation_modal_row(observation):
+    # Veto only: preparation anchors can remain behind a confirmation panel.
+    # Do not require unrelated board/quest OCR to stay byte-for-byte equal.
+    for row in observation.get('rows', []):
+        score = row.get('confidence')
+        if (type(score) in (int, float) and .72 <= score <= 1.
+                and _inside(row.get('box'), [300, 120, 1650, 1000])
+                and re.fullmatch(r'(?:确认|确定|取消|关闭|继续|下一步|是否.+|请选择.*)',
+                                 clean(row.get('text', '')))):
+            return row
+    return None
+
+
+def validate_task_list_scroll(action, request):
+    """Static contract only; the owning Worker still authenticates both frames.
+
+    The chapter label is selected from current OCR by the supervisor. It is a
+    local anchor, never a new native page classification or a completed task.
+    """
+    proof = action.get('target_evidence', {})
+    original = request.get('observation', {})
+    keys = {'control_id', 'source', 'snapshot_id', 'capture_request_id', 'frame_id',
+            'text', 'bounds', 'chapter_text', 'chapter_bounds'}
+    if (not isinstance(proof, dict) or set(proof) != keys
+            or proof.get('control_id') != TASK_LIST_SCROLL_CONTROL
+            or proof.get('source') != 'observed_screen'
+            or action.get('type') != 'scroll' or action.get('expected_page') != 'unknown'
+            or request.get('kind') != 'unknown_page' or original.get('page') != 'unknown'
+            or request.get('preparation_checklist', {}).get('phase') != 'startup_guide'
+            or proof.get('snapshot_id') != request.get('snapshot_id')
+            or original.get('snapshot_id') != request.get('snapshot_id')):
+        raise ValueError('任务列表滚动仅限当前创业指南复核的原生unknown页和原帧证据')
+    for key in ('capture_request_id', 'frame_id'):
+        if (not isinstance(proof.get(key), str) or not proof[key]
+                or proof[key] != original.get(key)):
+            raise ValueError('任务列表滚动的原capture/frame来源不符')
+    values, box = action.get('args'), proof.get('bounds')
+    if (not isinstance(values, list) or len(values) != 3
+            or any(type(v) not in (int, float) or not np.isfinite(v) for v in values)
+            or values[2] not in (-120, 120) or not _box(box)
+            or not box[0] <= values[0] < box[2] or not box[1] <= values[1] < box[3]):
+        raise ValueError('任务列表只允许目标ROI内单次正负120滚动')
+    label, chapter = proof.get('text'), proof.get('chapter_text')
+    if (not isinstance(label, str) or not clean(label)
+            or not isinstance(chapter, str) or not clean(chapter)
+            or len({clean(label), clean(chapter), '创业指南'}) != 3
+            or not _box(proof.get('chapter_bounds'))
+            or not isinstance(action.get('guard_texts'), list)
+            or not {clean(label), clean(chapter), '创业指南'}.issubset(
+                {clean(value) for value in action['guard_texts'] if isinstance(value, str)})):
+        raise ValueError('任务列表滚动须提供不同的当前唯一目标、章节行和创业指南标题')
+    for text, bounds in ((label, box), (chapter, proof['chapter_bounds'])):
+        row = _unique_row(original, re.escape(clean(text)), [0, 0, 1920, 1020])
+        if row is None or row['box'] != bounds:
+            raise ValueError('任务列表ROI必须来自当前完整唯一OCR行，不能扩大ROI稀释差异')
+    if box[2] - box[0] > 800 or box[3] - box[1] > 100:
+        raise ValueError('任务列表滚动目标不是有界的单行文字')
+    return proof
+
+
+def _low_amplitude_rgb_equal(before, after, diagnostic=None):
+    """Bounded local color noise, calibrated from the frozen PR31 counter pair.
+
+    The native 52x35 pair has max=4, mean=.05018315 and changed=.05329670.
+    These bounds apply only after identity/geometry/exposure checks. They do
+    not identify a rendering cause and never alter global image thresholds.
+    """
+    if (before.shape != after.shape or before.ndim != 3 or before.shape[2] != 3
+            or not before.size or before.dtype != np.uint8 or after.dtype != np.uint8):
+        return False
+    delta = np.abs(before.astype(np.int16) - after.astype(np.int16))
+    metrics = dict(max_abs_rgb=int(np.max(delta)), mean_abs_rgb=float(np.mean(delta)),
+                   changed_fraction=float(np.mean(np.any(delta != 0, axis=2))))
+    if diagnostic is not None:
+        diagnostic.update(metrics)
+    return (metrics['max_abs_rgb'] <= 4 and metrics['mean_abs_rgb'] <= .06
+            and metrics['changed_fraction'] <= .06)
+
+
+def _task_scroll_anchors(action, original, actual, images):
+    proof = action['target_evidence']
+    if (actual.get('page') != 'unknown' or original.get('page') != 'unknown'
+            or any(classify(obs.get('rows', [])) != 'unknown' for obs in (original, actual))
+            or original.get('fields', {}).get('stage') != actual.get('fields', {}).get('stage')
+            or any(_preparation_modal_row(obs) is not None for obs in (original, actual))):
+        return False
+    for label, expected in (('创业指南', None), (proof['chapter_text'], proof['chapter_bounds'])):
+        rows = [_unique_row(obs, re.escape(clean(label)), [0, 0, 1920, 1020])
+                for obs in (original, actual)]
+        if (any(row is None for row in rows) or rows[0]['box'] != rows[1]['box']
+                or expected is not None and rows[0]['box'] != expected):
+            return False
+        anchor, target = rows[0]['box'], proof['bounds']
+        if (max(anchor[0], target[0]) < min(anchor[2], target[2])
+                and max(anchor[1], target[1]) < min(anchor[3], target[3])):
+            return False
+        x, y, right, bottom = anchor
+        # These labels can be gray. Require real contours and the same tight
+        # complete-ROI color bound, not an uncalibrated white/dark-ink model.
+        if (np.count_nonzero(_edges(images[0], anchor)) < 24
+                or not _low_amplitude_rgb_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right])):
+            return False
+    return True
+
+
+def stable_task_list_scroll(action, request, actual, current_png, diagnostic=None):
+    """One noncritical list scroll: same text and geometry, tiny RGB changes."""
+    result = dict(allowed=False, reason='任务列表局部证据未通过')
+    try:
+        proof = validate_task_list_scroll(action, request)
+        images = _frames(request, actual, current_png)
+        if images is None or not _task_scroll_anchors(action, request['observation'], actual, images):
+            result['reason'] = '当前页面、章节、覆盖或PNG来源已变'
+            return False
+        row = _unique_row(actual, re.escape(clean(proof['text'])), [0, 0, 1920, 1020])
+        if row is None or row['box'] != proof['bounds']:
+            result['reason'] = '当前唯一文字或完整几何已变'
+            return False
+        x, y, right, bottom = proof['bounds']
+        if np.count_nonzero(_edges(images[0], proof['bounds'])) < 24:
+            result['reason'] = '原目标缺少可核实的文字轮廓'
+            return False
+        allowed = _low_amplitude_rgb_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right], result)
+        result.update(allowed=bool(allowed), reason='局部低幅变化已核实' if allowed else '局部像素变化超出已证范围')
+        return allowed
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
+        return False
+    finally:
+        if diagnostic is not None:
+            diagnostic.update(result)
+
+
+def task_list_scroll_postcondition(action, before, before_png, actual, current_png):
+    """Measure a signed displacement from the actual pre-input frame, once.
+
+    Disappearance or a changed string is not success. The caller authenticates
+    the original input receipt, fresh capture/frame and current manual phase.
+    """
+    result = dict(verified=False, shift_y=None, reason='滚动后位移未核实')
+    try:
+        pair = dict(observation=before, snapshot_id=before['snapshot_id'], original_png=before_png)
+        images = _frames(pair, actual, current_png)
+        if images is None or not _task_scroll_anchors(action, before, actual, images):
+            result['reason'] = '滚动后页面、章节、覆盖或PNG来源已变'
+            return result
+        proof = action['target_evidence']
+        rows = [_unique_row(obs, re.escape(clean(proof['text'])), [0, 0, 1920, 1020])
+                for obs in (before, actual)]
+        if any(row is None for row in rows) or rows[0]['box'] != proof['bounds']:
+            return result
+        old, fresh = rows[0]['box'], rows[1]['box']
+        shift = fresh[1] - old[1]
+        result['shift_y'] = shift
+        if (fresh[0] != old[0] or fresh[2] != old[2] or fresh[3] - old[3] != shift
+                or not 2 <= abs(shift) <= 240 or shift * action['args'][2] <= 0):
+            result['reason'] = '未观察到方向一致的有界纵向位移'
+            return result
+        if not _low_amplitude_rgb_equal(images[0][old[1]:old[3], old[0]:old[2]],
+                                        images[1][fresh[1]:fresh[3], fresh[0]:fresh[2]], result):
+            result['reason'] = '移动后的同一文字轮廓或颜色未核实'
+            return result
+        result.update(verified=True, reason='位移已核实')
+        return result
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
+        return result
 
 
 def stable_preparation_icon_target(action, request, actual, current_png, diagnostic=None):
-    """Read-only evidence for one fixed icon; caller enforces epoch/deadline/broker.
+    """One fixed navigation action, anchored to current native preparation.
 
-    Page OCR anchors establish preparation but the target itself has no text.
-    Both PNG digests, stage, unique template and exposed navigation outlines
-    must agree. No generic coordinate or caller template exemption is granted.
+    Epoch/deadline/owner/manual-proof validation belongs to the existing caller.
+    This guard checks byte sources, both native pages/anchors, target uniqueness
+    and current local exposure. It never promotes a supervisor label to native.
     """
-    allowed = False
+    result = {'allowed': False, 'guard': 'native_prep_guide_icon_v2', 'input_sent': False,
+              'reason': 'unsupported_guide_action'}
     try:
         if not all(isinstance(value, dict) for value in (action, request, actual)):
             return False
@@ -78,6 +386,7 @@ def stable_preparation_icon_target(action, request, actual, current_png, diagnos
                 or original.get('page') != 'preparation' or actual.get('page') != 'preparation'
                 or action.get('type') != 'click_point' or action.get('expected_page') != 'preparation'
                 or not isinstance(proof, dict) or proof.get('control_id') != PREPARATION_GUIDE_CONTROL
+                or proof.get('source') not in (None, 'native', 'supervising_agent')
                 or proof.get('snapshot_id') != request.get('snapshot_id')
                 or proof.get('bounds') != PREPARATION_GUIDE_BOUNDS
                 or action.get('args') != PREPARATION_GUIDE_POINT
@@ -85,45 +394,38 @@ def stable_preparation_icon_target(action, request, actual, current_png, diagnos
             return False
         images = _frames(request, actual, current_png)
         if images is None:
+            result['reason'] = 'frame_source_mismatch'
             return False
         stage = original.get('fields', {}).get('stage')
         if (not isinstance(stage, str) or not re.fullmatch(r'[1-3]-[1-9]', stage)
-                or actual.get('fields', {}).get('stage') != stage):
+                or actual.get('fields', {}).get('stage') != stage
+                or any(classify(obs.get('rows', [])) != 'preparation' for obs in (original, actual))):
+            result['reason'] = 'preparation_page_or_stage_changed'
             return False
-        for pattern, bounds in (
-                ('备战阶段', [410, 20, 540, 65]),
-                (re.escape(stage), [420, 50, 520, 105]),
-                ('出战', [1760, 710, 1875, 790]),
-                ('商店', [1575, 950, 1675, 1020]),
-                ('前台区域', [895, 285, 1030, 330])):
-            if _paired_row(original, actual, pattern, bounds, images) is None:
+        if any(_preparation_modal_row(obs) is not None for obs in (original, actual)):
+            result['reason'] = 'preparation_modal_control_visible'
+            return False
+        for pattern, bounds, ink_guard in (
+                ('备战阶段', [410, 20, 540, 65], _preparation_header_equal),
+                (re.escape(stage), [420, 50, 520, 105], None),
+                ('出战', [1760, 710, 1875, 790], None),
+                ('商店', [1575, 950, 1675, 1020], None)):
+            if _paired_row(original, actual, pattern, bounds, images, ink_guard=ink_guard) is None:
+                result.update(reason='preparation_anchor_changed_or_unknown', anchor=pattern)
                 return False
-        locations = [_guide_icon_location(image) for image in images]
-        if any(location is None for location in locations) or locations[0] != locations[1]:
-            return False
-        # An otherwise exposed icon is not an exemption for a newly opened
-        # page/panel. Ignore only the bottom latency/UID footer. Whole-screen
-        # comparison can veto here, but never establishes target evidence.
-        visible = [sorted(clean(row.get('text', '')) for row in obs.get('rows', [])
-                          if .90 <= row.get('confidence', 0) <= 1.
-                          and _inside(row.get('box'), [0, 0, 1920, 1020]))
-                   for obs in (original, actual)]
-        if visible[0] != visible[1]:
-            return False
-        delta = np.max(np.abs(images[0][:1020].astype(np.int16)
-                              - images[1][:1020].astype(np.int16)), axis=2)
-        if np.mean(delta > 40) > .035:
-            return False
-        # Full local control boundaries reject changed/occluded strip state;
-        # equality of the white target silhouette alone is insufficient.
-        allowed = (_exposed_navigation_equal(images, PREPARATION_GUIDE_BOUNDS)
-                   and _exposed_navigation_equal(images, [1572, 40, 1885, 93]))
+        # The front-caption OCR is not a navigation precondition. Nor are
+        # unrelated animated background pixels / unchanged whole-page OCR.
+        local = {}
+        allowed = _guide_navigation_pair([image[38:96, 1570:1918] for image in images], local,
+                                         supervising=proof.get('source') == 'supervising_agent')
+        result.update(local)
+        return allowed
     except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
-        allowed = False
+        result['reason'] = 'guide_evidence_unreadable'
+        return False
     finally:
         if diagnostic is not None:
-            diagnostic.update(allowed=bool(allowed), guard='native_prep_guide_icon_v1', input_sent=False)
-    return bool(allowed)
+            diagnostic.update(result)
 
 
 def _frames(request, actual, current_png):
@@ -209,7 +511,7 @@ def _unique_row(observation, pattern, bounds):
     return row if type(score) in (int, float) and .90 <= score <= 1. else None
 
 
-def _paired_row(original, actual, pattern, bounds, images):
+def _paired_row(original, actual, pattern, bounds, images, *, ink_guard=None):
     rows = [_unique_row(obs, pattern, bounds) for obs in (original, actual)]
     if any(row is None for row in rows) or clean(rows[0]['text']) != clean(rows[1]['text']):
         return None
@@ -219,7 +521,244 @@ def _paired_row(original, actual, pattern, bounds, images):
            min(rows[0]['box'][1], rows[1]['box'][1])-2,
            max(rows[0]['box'][2], rows[1]['box'][2])+2,
            max(rows[0]['box'][3], rows[1]['box'][3])+2]
-    return rows[1] if _text_equal(images, box) else None
+    return rows[1] if (ink_guard or _text_equal)(images, box) else None
+
+
+def _environment_gray_confirmation_equal(images, bounds):
+    """One calibrated disabled appearance, only for environment card selection.
+
+    Native pair: evidence commit 6ef3793a, ROOT_ENVIRONMENT_CONFIRM_RGB.json;
+    glyph [1052,966,1112,1002] has 368/361 gray pixels, IoU .980978,
+    Current native pair has 359/367 pixels, IoU .978202; eight antialiased
+    border pixels cross V=100. Minimum IoU .975 retains displacement rejection.
+    support RGB delta <=8, two-pixel halo delta <=15. Background animation
+    is not text. White/enabled, blank, shifted or covered ink fails here.
+    This does not authorize clicking the disabled confirmation itself.
+    """
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    masks = []
+    for crop in crops:
+        hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+        s, v = hsv[:, :, 1], hsv[:, :, 2]
+        if np.any(v > 190):
+            return False
+        mask = (s < 40) & (v >= 100) & (v <= 190)
+        if np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60:
+            return False
+        masks.append(mask)
+    union = masks[0] | masks[1]
+    if np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .975:
+        return False
+    delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
+    halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+    return bool(np.max(delta[union]) <= 8 and np.max(delta[halo]) <= 16)
+
+
+def _environment_caption_equal(images, bounds):
+    """Native structure ink is gray; exact local RGB preserves its appearance.
+
+    ROOT_ENVIRONMENT_CAPTIONS_RGB.json: paired 角色/装备 ROIs are identical,
+    with 246/253 Canny pixels. A blank or uniform cover is not a glyph.
+    """
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    return (np.array_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right])
+            and np.count_nonzero(_edges(images[0], bounds)) >= 24)
+
+
+def _environment_book_equal(images, bounds):
+    # Same retained source: all three yellow book ROIs are RGB-exact pairs,
+    # with 106/102/104 edge pixels. Books are not white OCR glyphs. Every
+    # color/state byte must still match; neither blank nor flat color passes.
+    return _environment_caption_equal(images, bounds)
+
+
+def _environment_confirmation_equal(images, bounds):
+    # Keep the established bright-text contract; the two appearances cannot
+    # cross-match because the gray branch rejects every V >190 pixel.
+    return (_text_equal(images, bounds)
+            or _environment_gray_confirmation_equal(images, bounds))
+
+
+def _environment_caption_row(original, actual, label, bounds, images):
+    center = (bounds[0] + bounds[2]) // 2
+    # Native 战技点契约 places its role caption at y712..740. The full
+    # card still requires exactly one caption; neither ROI tolerates movement.
+    regions = {'角色': ((575, 645), (695, 760)), '装备': ((720, 785),)}[clean(label)]
+    for top, bottom in regions:
+        row = _paired_row(original, actual, re.escape(clean(label)),
+                          [center-60, top, center+60, bottom], images,
+                          ink_guard=_environment_caption_equal)
+        if row is not None:
+            return row
+    return None
+
+
+def navigation_target(action, request):
+    """Identify the two guarded text controls, without granting permission.
+
+    Identification deliberately precedes exact/kind/bounds validation: a bad
+    variant of these controls must not fall back to the small global-delta path.
+    Other targets retain their existing policy and receive no new exemption.
+    """
+    if not isinstance(action, dict) or not isinstance(request, dict):
+        return None
+    if action.get('type') != 'click_text':
+        return None
+    page = request.get('observation', {}).get('page')
+    label = clean(action.get('text', ''))
+    matches = lambda target: label == target or (bool(label) and not action.get('exact', True) and label in target)
+    if page == 'opponents' and matches('下一步'):
+        return 'opponents_next'
+    if page == 'unknown' and matches('货币战争'):
+        return 'activity_currency_wars'
+    return None
+
+
+def _navigation_ink_equal(images, bounds):
+    """Fixed-position light OR dark glyphs, with their exposed local halo.
+
+    A normalized grayscale score alone would accept a dimmed/covered button.
+    Compare foreground support and original RGB as well. No translated search,
+    arbitrary color tolerance, full-card comparison, or extra OCR is used.
+    Animation is allowed outside this small observed text/halo region.
+    """
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    hsv = [cv2.cvtColor(crop, cv2.COLOR_RGB2HSV) for crop in crops]
+    delta = np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16)), axis=2)
+    for polarity in ('light', 'dark'):
+        masks = [((item[:, :, 1] < 90) & (item[:, :, 2] > 190))
+                 if polarity == 'light' else item[:, :, 2] < 80 for item in hsv]
+        if any(np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60 for mask in masks):
+            continue
+        union = masks[0] | masks[1]
+        if np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .985:
+            continue
+        # A two-pixel halo ties the text to its currently exposed control,
+        # including dark text on a light button. Overlay/dimming changes in
+        # this local support veto even when OCR still returns the old string.
+        exposed = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+        if np.mean(delta[exposed] > 16) <= .005:
+            return True
+    return False
+
+
+def _opponent_faction_caption_equal(images, bounds):
+    # Three native 2026-10-12 frames: these gray captions differ by at most
+    # two RGB levels. No moving boss background or click target uses this.
+    if not _box(bounds):
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    return (np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))) <= 2
+            and all(np.count_nonzero(_edges(image, bounds)) >= 24 for image in images))
+
+
+def _navigation_row(original, actual, label, images, bounds=None, *, target=False, local_unique=False,
+                    ink_guard=_navigation_ink_equal):
+    # Only the completed opponent grid repeats its three faction captions.
+    # Its fixed, disjoint ROIs retain unique rows within each card.
+    region = bounds if local_unique else [0, 0, 1920, 1020]
+    rows = [_unique_row(obs, re.escape(label), region)
+            for obs in (original, actual)]
+    if any(row is None for row in rows):
+        return None
+    if bounds is not None and any(not _inside(row['box'], bounds) for row in rows):
+        return None
+    if any(abs(a-b) > 2 for a, b in zip(rows[0]['box'], rows[1]['box'])):
+        return None
+    box = [max(0, min(rows[0]['box'][0], rows[1]['box'][0])-2),
+           max(0, min(rows[0]['box'][1], rows[1]['box'][1])-2),
+           min(1920, max(rows[0]['box'][2], rows[1]['box'][2])+2),
+           min(1020, max(rows[0]['box'][3], rows[1]['box'][3])+2)]
+    if not ink_guard(images, box):
+        return None
+    if target:
+        # Text can surround a blank click center. A colored cover in that gap
+        # is observable even when every glyph and its halo remain unchanged.
+        x, y, right, bottom = box
+        delta = np.max(np.abs(images[0][y:bottom, x:right].astype(np.int16)
+                              - images[1][y:bottom, x:right].astype(np.int16)), axis=2)
+        cx, cy = (rows[1]['box'][0]+rows[1]['box'][2])//2-x, (rows[1]['box'][1]+rows[1]['box'][3])//2-y
+        center = delta[max(0, cy-4):cy+5, max(0, cx-4):cx+5]
+        if np.mean(delta > 16) > .005 or center.size == 0 or np.max(center) > 16:
+            return None
+    return rows[1]
+
+
+def _navigation_visible_semantics(original, actual):
+    # This uses the native rows already read from each immutable frame. The
+    # lower threshold is veto-only, never an authorization for a weak target.
+    # Ignore the existing bottom UID/latency footer, not a dynamic game field.
+    rows = []
+    for observation in (original, actual):
+        visible = []
+        for row in observation.get('rows', []):
+            if not _box(row.get('box')):
+                return False
+            if row['box'][1] >= 1020:
+                continue
+            score = row.get('confidence')
+            if type(score) not in (int, float) or not 0 <= score <= 1:
+                return False
+            if score >= .72:
+                visible.append((clean(row.get('text', '')), row['box']))
+        rows.append(sorted(visible))
+    return (bool(rows[0]) and len(rows[0]) == len(rows[1])
+            and all(old[0] == fresh[0] and all(abs(a-b) <= 2 for a, b in zip(old[1], fresh[1]))
+                    for old, fresh in zip(*rows)))
+
+
+def _navigation(action, request, actual, images):
+    original = request['observation']
+    control = navigation_target(action, request)
+    if (control is None or action.get('exact', True) is not True
+            or action.get('expected_page') != original.get('page')
+            or action.get('bounds') is not None and not _box(action['bounds'])
+            or any(classify(obs.get('rows', [])) != original.get('page') for obs in (original, actual))
+            or not _navigation_visible_semantics(original, actual)):
+        return False
+    if control == 'opponents_next':
+        kind, target = 'opponents_strategy', '下一步'
+        target_region = [1200, 740, 1920, 1020]
+        anchor_sets = ((('竞争对手', [0, 0, 1400, 240]),),
+                       (('阵营', [150, 625, 380, 705]),
+                        ('阵营', [450, 625, 680, 705]),
+                        ('阵营', [750, 625, 980, 705])))
+    else:
+        kind, target = 'unknown_page', '货币战争'
+        # Explicit menu semantics, not a generic unknown-page escape hatch.
+        # Native dual-frame coverage for these layouts must be recorded
+        # separately; synthetic protocol fixtures are not calibration frames.
+        # These are semantic-role bounds (header, menu, content), not a claim
+        # of retained native calibration. Reject body-only text lookalikes;
+        # these bounds do not prove all unknown layouts are real menu cards.
+        target_region = [300, 160, 1920, 1000]
+        header = [0, 0, 1000, 180]
+        menu = [0, 70, 1900, 1000]
+        anchor_sets = ((('星际和平指南', header), ('宇宙纷争', menu)),
+                       (('星际和平指南', header), ('逐光捡金', menu)),
+                       (('旅情事记', header), ('常驻活动', menu)))
+    if action.get('bounds') is not None:
+        bounds = action['bounds']
+        target_region = [max(target_region[0], bounds[0]), max(target_region[1], bounds[1]),
+                         min(target_region[2], bounds[2]), min(target_region[3], bounds[3])]
+    if (request.get('kind') != kind or not _box(target_region)
+            or _navigation_row(original, actual, target, images, target_region, target=True) is None):
+        return False
+    return any(all(_navigation_row(original, actual, label, images, bounds,
+                                  local_unique=control == 'opponents_next' and label == '阵营',
+                                  ink_guard=_opponent_faction_caption_equal
+                                  if control == 'opponents_next' and label == '阵营'
+                                  else _navigation_ink_equal) is not None
+                   for label, bounds in anchors) for anchors in anchor_sets)
 
 
 def _quality(image, bounds):
@@ -255,6 +794,29 @@ def _card_outline_equal(images, bounds):
     return True
 
 
+def _environment_structure_labels(original, actual, labels, bounds, images):
+    """Account for native section headings, without rewriting effect_lines.
+
+    ROOT's retained environment card has 角色 at [420,598,462,626] and
+    装备 at [422,744,459,766]. The latter is below the effect reader's y=690
+    limit. Only these centered, paired native headings may extend coverage;
+    other rows remain unaccounted for and fail the complete-card check.
+    """
+    extra = []
+    for label in ('角色', '装备'):
+        found = [[row for row in observation.get('rows', [])
+                  if clean(row.get('text', '')) == label and _inside(row.get('box'), bounds)]
+                 for observation in (original, actual)]
+        if not any(found):
+            continue
+        if (any(len(rows) != 1 for rows in found)
+                or _environment_caption_row(original, actual, label, bounds, images) is None):
+            return None
+        if label not in [clean(text) for text in labels]:
+            extra.append(label)
+    return extra
+
+
 def _cards(action, request, actual, images):
     original = request['observation']
     page = original.get('page')
@@ -269,11 +831,12 @@ def _cards(action, request, actual, images):
         return False
     header, header_roi, confirm_roi = {
         'investment': ('请选择投资策略', [820, 60, 1100, 145], [880, 935, 1040, 1030]),
-        'environment': ('投资环境', [850, 55, 1070, 145], [880, 935, 1040, 1030]),
+        'environment': ('投资环境', [850, 55, 1070, 145], ENVIRONMENT_CONFIRM_BOUNDS),
         'supply': ('补给阶段', [800, 120, 1120, 190], [1580, 950, 1810, 1025]),
     }[page]
-    if any(_paired_row(original, actual, re.escape(label), bounds, images) is None
-           for label, bounds in ((header, header_roi), ('确认', confirm_roi))):
+    if (_paired_row(original, actual, re.escape(header), header_roi, images) is None
+            or _paired_row(original, actual, '确认', confirm_roi, images,
+                           ink_guard=_environment_confirmation_equal if page == 'environment' else None) is None):
         return False
     proof = action.get('target_evidence', {})
     index = proof.get('card_index')
@@ -293,6 +856,11 @@ def _cards(action, request, actual, images):
         labels = [option.get('title'), *option['effect_lines']]
         if any(not isinstance(label, str) or not clean(label) for label in labels):
             return False
+        if page == 'environment':
+            structural = _environment_structure_labels(original, actual, labels, bounds, images)
+            if structural is None:
+                return False
+            labels = [*labels, *structural]
         # Every visible row in the full card text area must be accounted for;
         # a shortened effect list or a newly overlaid label cannot qualify.
         text_top = 360 if page == 'environment' else 460 if page == 'investment' else 320
@@ -302,7 +870,10 @@ def _cards(action, request, actual, images):
             if sorted(clean(row['text']) for row in visible) != sorted(clean(label) for label in labels):
                 return False
         for label in labels:
-            if _paired_row(original, actual, re.escape(clean(label)), bounds, images) is None:
+            row = (_environment_caption_row(original, actual, label, bounds, images)
+                   if page == 'environment' and clean(label) in ('角色', '装备')
+                   else _paired_row(original, actual, re.escape(clean(label)), bounds, images))
+            if row is None:
                 return False
         x, y, right, bottom = bounds
         # Complete outline and the central illustration preserve the selected
@@ -316,7 +887,9 @@ def _cards(action, request, actual, images):
             if not _text_equal(images, [x+125, y+100, right-125, y+205]):
                 return False
         # Native book badges cannot disappear, appear, or be occluded.
-        if page in ('investment', 'environment') and not _text_equal(images, [right-45, y+21, right-21, y+41]):
+        if page == 'environment' and not _environment_book_equal(images, [right-45, y+21, right-21, y+41]):
+            return False
+        if page == 'investment' and not _text_equal(images, [right-45, y+21, right-21, y+41]):
             return False
     point = action.get('args')
     target = _unique_row(actual, re.escape(clean(selected['title'])), layout[index-1])
@@ -374,7 +947,7 @@ def _shop(action, request, actual, images):
     if request.get('kind') != 'shop_strategy' or actual.get('page') != 'shop' or action.get('type') != 'buy_shop':
         return False
     slot = stable_purchase_slot(original.get('shop') or {}, actual.get('shop') or {}, action.get('slot'),
-                                request['snapshot_id'], actual.get('snapshot_id'))
+                                request['snapshot_id'], actual.get('snapshot_id'), images=images)
     if slot is None or slot['name'] != action.get('name') or slot['cost'] != action.get('cost'):
         return False
     stage = original.get('fields', {}).get('stage')
@@ -408,6 +981,8 @@ def stable_semantic_target(action, request, actual, current_png, diagnostic=None
         page = original.get('page')
         if images is None or actual.get('page') != page:
             allowed = False
+        elif navigation_target(action, request) is not None:
+            allowed = _navigation(action, request, actual, images)
         elif page in ('investment', 'environment', 'supply'):
             allowed = _cards(action, request, actual, images)
         elif page == 'settlement':

@@ -1,0 +1,707 @@
+{
+  "schema": "currency-wars-reward-roi/v1",
+  "basis_commit": "5cf3d9b3ae693d5df670203352d0d55bae3d19c5",
+  "tested_checkout_head": "5cf3d9b3ae693d5df670203352d0d55bae3d19c5",
+  "source_binding_authority": "Exact tested bytes; checkout HEAD may precede uncommitted changes or be absent in an archive.",
+  "environment": {
+    "system": "Linux",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.3.5",
+      "Pillow": "12.3.0",
+      "psutil": "7.2.2",
+      "opencv-python": "4.13.0.92"
+    }
+  },
+  "source_sha256": {
+    "gui/launch.py": "b67e505a6da4ca3f5ec034a9f9740379ef814db2d5044efdb57ed77dbe5f6986",
+    "gui/processes.py": "9de7d4ef8a6e09e9c193e3da2325ab6a37c60ce82c2d4f2e43bb0655e0e98296",
+    "requirements.txt": "a82867e765c48504225dca4a82e0de6ed7f92ed515bd113d029e8144c3bd661a",
+    "tools/currency_wars_artifacts.py": "133bbca1a4d854e6ebe904e7d8bf7b61720430e6dcc0d929acd9baf3d0b36788",
+    "tools/currency_wars_bridge_task.py": "b83259ee0741a67bd2d396823279b7ddcb2ffc07edeeb8c3f95882ca59e69911",
+    "tools/currency_wars_broker_entry.py": "6c0fd3c9116794f69b61d16241db47837227f4025641599c197d08581aff10e2",
+    "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+    "tools/currency_wars_control.py": "e499928dc305815b21d1f06314d34d7ff758c44433f2f27a108dd716090f496f",
+    "tools/currency_wars_economy.py": "7a2c704510d9a064f893a4164921de7a0a7b1bdeef0594a9e783792e093ec9c7",
+    "tools/currency_wars_input_bridge.py": "00e84c0e838f890c9c084ec241fa9d3b75131190eb62d24cef70ff1aadc58388",
+    "tools/currency_wars_manual_stage.py": "0b8039225251683bc76ece97079240408ac2b9a68f4d0984dded79cc1c0c860e",
+    "tools/currency_wars_manual_steps.py": "c7aacdd61d8c20d3aece053761e27e2dce36e7714d07ecbf9f2203a354807adf",
+    "tools/currency_wars_perception.py": "d09a5c586c7f82fbadda5cbf43f5cb90b0c38e8a7da453cec5adc95153f15808",
+    "tools/currency_wars_profile.py": "25a4402b6b4bcbc1709cd23a938535d0562bbb974cb4e905d8a1f9479342641d",
+    "tools/currency_wars_progression.py": "19c0e8c60d768604d8b6dbf13804533449e6804b5ba23d070a2832e291bebec5",
+    "tools/currency_wars_refresh_offer.py": "1cd55c43821ba1f99fb0b07f4ae945f4a5146d83de5a538645d47a25454faa59",
+    "tools/currency_wars_rewards.py": "3e0d7c5185ee3c40b68b9852299010d1abd2d9cd32eaf024496eed1fd16e718c",
+    "tools/currency_wars_runner.py": "44227da6109e1cf198d00aebbf2fb89c248199f4e112539ec6e95e67e82555ad",
+    "tools/currency_wars_runtime_sources.json": "1c90624daed8f1a3ff58656238685b901174a7ad7fc927427f511cedae0b0668",
+    "tools/currency_wars_shop_reader.py": "55760b092da7b45f73b18633b62b88ab9d74574449b4b511bd38964712bfd8b8",
+    "tools/currency_wars_source_guard.py": "4c31cd78b48a6faa6f88b5c1d8bd32c1d0cf96f8fb6a29282b2ed4f2459e50bf",
+    "tools/currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "tools/currency_wars_update.py": "a513962220e013f356b4e4223f44f62d6849f280d2bcc091bf5e48072123ef98",
+    "tools/currency_wars_visual_guards.py": "f667ad734c0af1ef110074c58b05a2b0be011cdeb77683a89dac532de1eb5881",
+    "tools/replay_currency_wars_preparation.py": "778805b12814a4a28f36677842d7f0d4c81b1cd1be29360134c761cf89774a4d",
+    "tools/replay_currency_wars_reward_roi.py": "c7c1467cbbeda6f52885dea817501d6298babf8cb3dc196f2489ffd47138daea",
+    "tools/replay_currency_wars_rewards.py": "b7914699511186e10419c1556209fef4f1360d866f7069ea7b760a1a10690d64",
+    "tools/test_currency_wars_manual_reward_roi.py": "a1c35264090222eabe4553f54d5ffc5e980c24cf822b5c0dd1790a977dfbfb74",
+    "tools/test_currency_wars_native_reward_detector.py": "55e11063f099b0967af38c8c468a0ab9889fa4e211ab4dc9bab63db714f00f3b",
+    "tools/test_currency_wars_reward_roi_flow.py": "4774bf50bfa233b5db10ac270e6146973243c689b186c3e1fadf2af85ada0846",
+    "tools/test_currency_wars_submission_queue.py": "058c39657468d61f51e2a7a819a4d5448c2ddf88a1dd13ebc352370bf42dda76",
+    "tools/test_local_runtime_compatibility.py": "10027da3381123e0d591debf619f507c6ce1e5ccf4b1c8ce1440c6c731d3b3a2"
+  },
+  "source_file_count": 32,
+  "runtime_source_count": 24,
+  "artifact_sha256": {
+    "handoff/2026-10-07/reward-sequence/manifest.json": "2c66fad7b2cd5a5b74a2317c1e368df0470de64dee9664a00abcc934de1a1906",
+    "handoff/2026-10-07/reward-sequence/q00.png": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+    "handoff/2026-10-07/reward-sequence/q01.png": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/diagnosis.json": "e1347f3f15cc7a992caaa47f9d5145fe05740d4ee0cf96a950a659a1e05baab9",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/fresh_worker-scan.png": "a17366ab16cbe9248f2d2da223a3a6122c7b8676f39cb8a5f0e917b5293381f4",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-scan.png": "8e93e3d3967bf4bd86ccdf2ab9f6f3db5d7b8ca0ec06f9b47f8796d64233d708",
+    "handoff/2026-10-08/ROOT_NATIVE_REWARDS/manual_before-scan.png": "d3e9905b2a37bdcdcf2f4d345222d2180c6808348d90c50cb29d4f413a8f82ac",
+    "tools/reward_resources/blue-orb-q01.png": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+    "tools/reward_resources/initial-blue.png": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+    "tools/reward_resources/initial-gray.png": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+    "tools/reward_resources/manifest.json": "0b2d5da751483150a0194d52a43dcb6d1b5dd6970309c3e7efe192541d03e635",
+    "tools/reward_resources/native-orbs-sources.json": "165705869c47b56cdda51c4f697ce09f34fb16a5b9dd042112094bfb221be87c"
+  },
+  "evidence_commit": "4edab30f9da025953b92f306070dcc2cf0af78ae",
+  "resource_contract": {
+    "required_calibration_assets": [
+      "initial-blue.png",
+      "initial-gray.png"
+    ],
+    "exact_source_crop_rgb_verified": true,
+    "shared_runtime_manifest": "tools/currency_wars_runtime_sources.json",
+    "ready_or_complete_private_resource_binding_verified": false
+  },
+  "game_inputs": 0,
+  "controllers_started": 0,
+  "new_game_captures": 0,
+  "new_ocr_calls": 0,
+  "online_model_called": false,
+  "candidate_installed": false,
+  "ready_changed": false,
+  "whole_game_speedup": null,
+  "native_post_input_chain_verified": false,
+  "natural_position_generalization_verified": false,
+  "focused_checks": {
+    "selection": [
+      "test_currency_wars_native_reward_detector.NativeRewardDetectorTests",
+      "test_currency_wars_manual_reward_roi.ManualRewardRoiTests",
+      "test_currency_wars_reward_roi_flow.RewardRoiFlowTests"
+    ],
+    "tests": 14,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "seconds": 32.99729568099792,
+    "results": [
+      {
+        "test": "test_currency_wars_native_reward_detector.NativeRewardDetectorTests.test_derived_occlusion_flat_color_state_and_movement_negatives",
+        "status": "passed",
+        "seconds": 4.897016443999746
+      },
+      {
+        "test": "test_currency_wars_native_reward_detector.NativeRewardDetectorTests.test_generated_translation_is_dynamic_location_not_native_coverage",
+        "status": "passed",
+        "seconds": 0.5556332320011279
+      },
+      {
+        "test": "test_currency_wars_native_reward_detector.NativeRewardDetectorTests.test_missing_or_changed_calibration_is_unknown_not_empty_success",
+        "status": "passed",
+        "seconds": 0.023030502001347486
+      },
+      {
+        "test": "test_currency_wars_native_reward_detector.NativeRewardDetectorTests.test_native_foreground_stability_is_distinct_from_whole_crop_rgb",
+        "status": "passed",
+        "seconds": 0.2834944739988714
+      },
+      {
+        "test": "test_currency_wars_native_reward_detector.NativeRewardDetectorTests.test_three_native_scans_locate_blue_and_gray_without_old_positions",
+        "status": "passed",
+        "seconds": 0.8479419620016415
+      },
+      {
+        "test": "test_currency_wars_manual_reward_roi.ManualRewardRoiTests.test_current_source_binding_refuses_mismatched_frame_authority_scope_and_bytes",
+        "status": "passed",
+        "seconds": 0.039396841999405297
+      },
+      {
+        "test": "test_currency_wars_manual_reward_roi.ManualRewardRoiTests.test_one_annotation_dispatch_keeps_native_unknown_pending_and_never_requeues_same_intent",
+        "status": "passed",
+        "seconds": 0.04289977000007639
+      },
+      {
+        "test": "test_currency_wars_manual_reward_roi.ManualRewardRoiTests.test_stale_claim_or_prior_unknown_refuses_before_capture_and_preserves_original_receipt",
+        "status": "passed",
+        "seconds": 0.1195781429996714
+      },
+      {
+        "test": "test_currency_wars_reward_roi_flow.RewardRoiFlowTests.test_blue_and_gray_same_worker_single_pickup_preserves_unknown_and_never_clears_phase",
+        "status": "passed",
+        "seconds": 7.878509918002237
+      },
+      {
+        "test": "test_currency_wars_reward_roi_flow.RewardRoiFlowTests.test_moved_target_or_flat_cover_remains_pending_after_bounded_reads",
+        "status": "passed",
+        "seconds": 4.577518957001303
+      },
+      {
+        "test": "test_currency_wars_reward_roi_flow.RewardRoiFlowTests.test_no_effect_and_missing_original_frame_share_two_read_budget_without_resending",
+        "status": "passed",
+        "seconds": 3.7505066430021543
+      },
+      {
+        "test": "test_currency_wars_reward_roi_flow.RewardRoiFlowTests.test_source_epoch_deadline_and_stage_mutations_at_publication_refuse_zero_input",
+        "status": "passed",
+        "seconds": 4.649292267997225
+      },
+      {
+        "test": "test_currency_wars_reward_roi_flow.RewardRoiFlowTests.test_unannotated_native_loop_reads_two_then_one_then_zero_and_keeps_final_root_review",
+        "status": "passed",
+        "seconds": 3.8279476099996828
+      },
+      {
+        "test": "test_currency_wars_reward_roi_flow.RewardRoiFlowTests.test_unknown_delivery_keeps_original_id_and_blocks_next_job_before_any_capture",
+        "status": "passed",
+        "seconds": 1.4951235259977693
+      }
+    ],
+    "failure_details": []
+  },
+  "native_crop_calibration": [
+    {
+      "frame": "initial",
+      "source_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1",
+      "scope": "native_derived_scan_calibration",
+      "targets": [
+        {
+          "kind": "gray_orb",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "center": [
+            1486,
+            326
+          ],
+          "template_id": "gray_orb_foreground_v1",
+          "appearance_reference": "initial-gray.png",
+          "appearance_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "score": 0.999999,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 1.0,
+            "body_score": 1.0,
+            "max_patch_delta": 0.0,
+            "blue_fraction": 0.114,
+            "neutral_fraction": 0.8929,
+            "median_value": 182.0
+          }
+        },
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "center": [
+            1369,
+            429
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "initial-blue.png",
+          "appearance_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "score": 1.0,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 1.0,
+            "body_score": 1.0,
+            "max_patch_delta": 0.0,
+            "blue_fraction": 0.9298,
+            "neutral_fraction": 0.0848,
+            "median_value": 255.0
+          }
+        }
+      ],
+      "uncertain": false,
+      "candidate_diagnostics": [
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "center": [
+            1369,
+            429
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "initial-blue.png",
+          "appearance_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "score": 1.0,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 1.0,
+            "body_score": 1.0,
+            "max_patch_delta": 0.0,
+            "blue_fraction": 0.9298,
+            "neutral_fraction": 0.0848,
+            "median_value": 255.0
+          },
+          "trusted": true
+        },
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            394,
+            1407,
+            463
+          ],
+          "center": [
+            1370,
+            428
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "blue_orb_q01",
+          "appearance_sha256": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+          "score": 0.904693,
+          "appearance": {
+            "trusted": false,
+            "reasons": [
+              "foreground_ring_changed",
+              "interior_shape_changed"
+            ],
+            "ring_score": 0.904693,
+            "body_score": 0.885183,
+            "max_patch_delta": 23.2012,
+            "blue_fraction": 0.9505,
+            "neutral_fraction": 0.0527,
+            "median_value": 255.0
+          },
+          "trusted": false
+        },
+        {
+          "kind": "gray_orb",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "center": [
+            1486,
+            326
+          ],
+          "template_id": "gray_orb_foreground_v1",
+          "appearance_reference": "initial-gray.png",
+          "appearance_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "score": 0.999999,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 1.0,
+            "body_score": 1.0,
+            "max_patch_delta": 0.0,
+            "blue_fraction": 0.114,
+            "neutral_fraction": 0.8929,
+            "median_value": 182.0
+          },
+          "trusted": true
+        }
+      ]
+    },
+    {
+      "frame": "manual_before",
+      "source_png_sha256": "bb9fbd80669e0818aa41135401c12f285df50a3ed2bed94e77e76b32b48b8dbd",
+      "scope": "native_derived_scan_calibration",
+      "targets": [
+        {
+          "kind": "gray_orb",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "center": [
+            1486,
+            326
+          ],
+          "template_id": "gray_orb_foreground_v1",
+          "appearance_reference": "initial-gray.png",
+          "appearance_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "score": 0.979582,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.979582,
+            "body_score": 0.97951,
+            "max_patch_delta": 18.5,
+            "blue_fraction": 0.1161,
+            "neutral_fraction": 0.8922,
+            "median_value": 175.5
+          }
+        },
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "center": [
+            1369,
+            429
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "initial-blue.png",
+          "appearance_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "score": 0.983664,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.983664,
+            "body_score": 0.938307,
+            "max_patch_delta": 20.7191,
+            "blue_fraction": 0.9346,
+            "neutral_fraction": 0.0871,
+            "median_value": 254.0
+          }
+        }
+      ],
+      "uncertain": false,
+      "candidate_diagnostics": [
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "center": [
+            1369,
+            429
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "initial-blue.png",
+          "appearance_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "score": 0.983664,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.983664,
+            "body_score": 0.938307,
+            "max_patch_delta": 20.7191,
+            "blue_fraction": 0.9346,
+            "neutral_fraction": 0.0871,
+            "median_value": 254.0
+          },
+          "trusted": true
+        },
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            394,
+            1407,
+            463
+          ],
+          "center": [
+            1370,
+            428
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "blue_orb_q01",
+          "appearance_sha256": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+          "score": 0.91349,
+          "appearance": {
+            "trusted": false,
+            "reasons": [
+              "foreground_ring_changed"
+            ],
+            "ring_score": 0.913491,
+            "body_score": 0.922863,
+            "max_patch_delta": 24.1561,
+            "blue_fraction": 0.9552,
+            "neutral_fraction": 0.0539,
+            "median_value": 254.0
+          },
+          "trusted": false
+        },
+        {
+          "kind": "gray_orb",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "center": [
+            1486,
+            326
+          ],
+          "template_id": "gray_orb_foreground_v1",
+          "appearance_reference": "initial-gray.png",
+          "appearance_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "score": 0.979582,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.979582,
+            "body_score": 0.97951,
+            "max_patch_delta": 18.5,
+            "blue_fraction": 0.1161,
+            "neutral_fraction": 0.8922,
+            "median_value": 175.5
+          },
+          "trusted": true
+        }
+      ]
+    },
+    {
+      "frame": "fresh_worker",
+      "source_png_sha256": "378fac4756e60846d847d196412b78f1eb886854457117ebaccc65fb79bf6af9",
+      "scope": "native_derived_scan_calibration",
+      "targets": [
+        {
+          "kind": "gray_orb",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "center": [
+            1486,
+            326
+          ],
+          "template_id": "gray_orb_foreground_v1",
+          "appearance_reference": "initial-gray.png",
+          "appearance_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "score": 0.983347,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.983347,
+            "body_score": 0.97887,
+            "max_patch_delta": 18.6071,
+            "blue_fraction": 0.1161,
+            "neutral_fraction": 0.8908,
+            "median_value": 176.0
+          }
+        },
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "center": [
+            1369,
+            429
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "initial-blue.png",
+          "appearance_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "score": 0.986818,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.986818,
+            "body_score": 0.946911,
+            "max_patch_delta": 22.216,
+            "blue_fraction": 0.9355,
+            "neutral_fraction": 0.0877,
+            "median_value": 254.0
+          }
+        }
+      ],
+      "uncertain": false,
+      "candidate_diagnostics": [
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            393,
+            1405,
+            466
+          ],
+          "center": [
+            1369,
+            429
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "initial-blue.png",
+          "appearance_sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+          "score": 0.986818,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.986818,
+            "body_score": 0.946911,
+            "max_patch_delta": 22.216,
+            "blue_fraction": 0.9355,
+            "neutral_fraction": 0.0877,
+            "median_value": 254.0
+          },
+          "trusted": true
+        },
+        {
+          "kind": "blue_orb",
+          "bounds": [
+            1333,
+            394,
+            1407,
+            463
+          ],
+          "center": [
+            1370,
+            428
+          ],
+          "template_id": "blue_orb_foreground_v1",
+          "appearance_reference": "blue_orb_q01",
+          "appearance_sha256": "20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11",
+          "score": 0.916573,
+          "appearance": {
+            "trusted": false,
+            "reasons": [
+              "foreground_ring_changed"
+            ],
+            "ring_score": 0.916573,
+            "body_score": 0.929187,
+            "max_patch_delta": 22.1777,
+            "blue_fraction": 0.9555,
+            "neutral_fraction": 0.0545,
+            "median_value": 254.0
+          },
+          "trusted": false
+        },
+        {
+          "kind": "gray_orb",
+          "bounds": [
+            1463,
+            303,
+            1510,
+            349
+          ],
+          "center": [
+            1486,
+            326
+          ],
+          "template_id": "gray_orb_foreground_v1",
+          "appearance_reference": "initial-gray.png",
+          "appearance_sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+          "score": 0.983347,
+          "appearance": {
+            "trusted": true,
+            "reasons": [],
+            "ring_score": 0.983347,
+            "body_score": 0.97887,
+            "max_patch_delta": 18.6071,
+            "blue_fraction": 0.1161,
+            "neutral_fraction": 0.8908,
+            "median_value": 176.0
+          },
+          "trusted": true
+        }
+      ]
+    }
+  ],
+  "consumer_protocol": [
+    {
+      "kind": "blue_orb",
+      "contract": "native_crop_composite_declared_protocol",
+      "input_requests": 1,
+      "post_input_read_requests": 1,
+      "outcome": "one_visible_orb_removed",
+      "native_unknown_retained": true,
+      "all_rewards_cleared": null,
+      "real_game_input": false
+    },
+    {
+      "kind": "gray_orb",
+      "contract": "native_crop_composite_declared_protocol",
+      "input_requests": 1,
+      "post_input_read_requests": 1,
+      "outcome": "one_visible_orb_removed",
+      "native_unknown_retained": true,
+      "all_rewards_cleared": null,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_post_input_mutation",
+      "mutation": "move",
+      "input_requests": 1,
+      "post_input_read_requests": 2,
+      "status": "pending",
+      "all_rewards_cleared": null,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_post_input_mutation",
+      "mutation": "flat_cover",
+      "input_requests": 1,
+      "post_input_read_requests": 2,
+      "status": "pending",
+      "all_rewards_cleared": null,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_no_effect",
+      "missing_original_frame": false,
+      "input_requests": 1,
+      "post_input_read_requests": 2,
+      "pending": true,
+      "real_game_input": false
+    },
+    {
+      "contract": "declared_no_effect",
+      "missing_original_frame": true,
+      "input_requests": 1,
+      "post_input_read_requests": 2,
+      "pending": true,
+      "real_game_input": false
+    },
+    {
+      "contract": "native_detector_on_declared_pixel_successors",
+      "input_requests": 2,
+      "source": "native_reader",
+      "target_counts": [
+        2,
+        1,
+        0
+      ],
+      "verification_reads": [
+        1,
+        1
+      ],
+      "statuses": [
+        "verified",
+        "verified"
+      ],
+      "all_rewards_cleared": null,
+      "endpoint": "preparation_strategy/rewards",
+      "real_game_input": false
+    }
+  ],
+  "source_set_sha256_before": "fd642112b0a2961c4dd78a08cd0c2b0903ab037feee0d23779c78795777703ef",
+  "source_set_sha256_after": "fd642112b0a2961c4dd78a08cd0c2b0903ab037feee0d23779c78795777703ef",
+  "source_unchanged": true,
+  "artifacts_unchanged": true,
+  "loaded_source_closure_missing": [],
+  "ok": true
+}

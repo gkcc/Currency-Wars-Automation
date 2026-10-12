@@ -1,0 +1,13 @@
+test_current_change_low_or_unknown_coins_present_moved_or_covered_target_refuses (test_currency_wars_reward_recovery.RewardRecoveryTests.test_current_change_low_or_unknown_coins_present_moved_or_covered_target_refuses) ... ok
+test_exhausted_pending_current_recovery_blue_once_then_new_epoch_full_review (test_currency_wars_reward_recovery.RewardRecoveryTests.test_exhausted_pending_current_recovery_blue_once_then_new_epoch_full_review) ... ok
+test_failed_read_only_report_retained_and_only_new_current_proof_may_retry (test_currency_wars_reward_recovery.RewardRecoveryTests.test_failed_read_only_report_retained_and_only_new_current_proof_may_retry) ... ok
+test_original_completed_and_later_control_handoff_allow_paused_read_only_recovery (test_currency_wars_reward_recovery.RewardRecoveryTests.test_original_completed_and_later_control_handoff_allow_paused_read_only_recovery) ... ok
+test_recovery_proof_domains_and_expired_request_refuse_before_capture (test_currency_wars_reward_recovery.RewardRecoveryTests.test_recovery_proof_domains_and_expired_request_refuse_before_capture) ... ok
+test_recovery_record_tamper_or_distinct_duplicate_cannot_grant_new_input (test_currency_wars_reward_recovery.RewardRecoveryTests.test_recovery_record_tamper_or_distinct_duplicate_cannot_grant_new_input) ... ok
+test_unknown_original_delivery_blocks_recovery_before_new_capture (test_currency_wars_reward_recovery.RewardRecoveryTests.test_unknown_original_delivery_blocks_recovery_before_new_capture) ... ok
+test_user_stop_or_worker_deadline_refuses_new_recovery_capture (test_currency_wars_reward_recovery.RewardRecoveryTests.test_user_stop_or_worker_deadline_refuses_new_recovery_capture) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 68.581s
+
+OK

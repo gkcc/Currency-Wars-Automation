@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "generated_at_utc": "2026-10-06T17:17:10.322004+00:00",
+  "base_commit": "3878f9ce9cdf427efd2fe58539a93c3794fbf3f8",
+  "branch": "fix/frame-isolation-profile-20261007",
+  "revision_binding": "Use the PR head Git SHA together with these exact source SHA256 values; profile source_sha is a file SHA256, not a Git commit.",
+  "environment": {
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "dependencies": "requirements.txt exact versions installed in isolated scratch test-deps; profile module adds only standard-library usage"
+  },
+  "source_sha256": {
+    "gui/src/main.rs": "380b9543b1129842b383314dc3a1f0cd0d0bd6876268a2346712bea3b921509e",
+    "tools/currency_wars_artifacts.py": "98ea2b2b0f6845d8bd66f74606c5629817e63f4846833780aa7b7cf4f946929a",
+    "tools/currency_wars_bridge_task.py": "aff9cb2bccb5047ac9f160fee17b5eced0a61f4688f4a6c98b0a459f86819978",
+    "tools/currency_wars_broker_entry.py": "2aa1cf57f3dccc8512009c0a8de422b642d8211bb4fb7fcbba1df5089400ba81",
+    "tools/currency_wars_coaching.py": "0da449ddb343d984f17c92bd7dd3378e0604d0bcf37232bfff94c0c2395f050d",
+    "tools/currency_wars_control.py": "187f826feb6e29beae8175ce9854845d19354f8344723c84663f6fe79ec0dca5",
+    "tools/currency_wars_input_bridge.py": "7d464ac1b4274e529ae6a3facef052a264935c40af6fd313b9db14eefa8cc5b3",
+    "tools/currency_wars_perception.py": "42a2b87396f2882cf37320c24b897517edb71257fc10326804bde78056775c23",
+    "tools/currency_wars_profile.py": "6dd66183322d10e14785e1e6598c753805b2de1ed6396be95a61c9ab7e9ad964",
+    "tools/currency_wars_progression.py": "e39b5019b2af05874595b84b640d4176cfd5c44037936288a8480842f9ed17a4",
+    "tools/currency_wars_runner.py": "2467ca90ab016233e51e45de4395aa2814a03e3467fed8c24751209ca9402e77",
+    "tools/currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "tools/currency_wars_source_guard.py": "e0001dd5385264482cfecfebcb7d2c5332fc6fe23c10bfd31ba68a7803354368",
+    "tools/currency_wars_state_reader.py": "9112728a718da356587cbc41cbf6b0925b1b38475cd7376f6ffcc719297ea8ef",
+    "tools/currency_wars_visual_guards.py": "c9a7d3d2f4a817fa10402636bc065af12b1319345c7b687f761c4da6264b97d7",
+    "tools/test_currency_wars_bridge_task.py": "1760eef6289c83146bfc12f786042f8e8ef08918a010167e76d9ef4fd13b4424",
+    "tools/test_currency_wars_frames.py": "415c1ae3918e4847c8cad53b9d02ab5e8c3868fe390f262006edf84fec3e36ce",
+    "tools/test_currency_wars_profile.py": "9cc314c4f7b64b867ae924c263e1b1548cc6d038af15fe869bb99bb1276a60dd",
+    "tools/test_local_runtime_compatibility.py": "ef96983b149256c2312bd3d3956db8dda537bbcaa833d5546dcdbee6625d4502"
+  },
+  "checks": {
+    "root_focused_suite": {
+      "status": "PASS",
+      "tests_run": 32,
+      "failures": 0,
+      "errors": 0,
+      "elapsed_seconds": 4.039,
+      "selected_tests": [
+        "test_currency_wars_frames",
+        "test_currency_wars_profile",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_worker_reads_its_receipt_and_releases_only_consumed_previous_frame",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_worker_capture_failure_reobserves_without_resending_completed_input",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_worker_bad_observations_are_bounded_and_do_not_adopt_old_frame",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_bridge_partial_completion_survives_resume_without_blanket_completion_or_resend",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_bridge_rejects_changed_match_stage_new_takeover_and_stale_fresh_frame",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_trace_does_not_survive_a_later_unrecorded_sale",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_unknown_manual_phase_keeps_prior_verified_phase_without_new_takeover",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_battle_acceptance_uses_current_population_instead_of_historical_full_team",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_two_manual_checkpoint_writers_publish_only_one_pending_phase",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_finish_manual_phase_does_not_overwrite_changed_checkpoint_status",
+        "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_bridge_incomplete_or_omitted_receipt_stays_pending"
+      ],
+      "invocation": "PYTHONPATH=<requirements dependencies>:tools python -B -X utf8 -m unittest <selected_tests>",
+      "coverage": {
+        "immutable_frames": 12,
+        "profile": 9,
+        "worker_integration": 3,
+        "existing_manual_contracts": 8
+      }
+    },
+    "independent_review": {
+      "status": "PASS_FOR_DRAFT_PR",
+      "distinct_cases_run": 34,
+      "scope": "12 frame + 9 profile + 10 existing manual/takeover receipt + 3 Worker integration cases; overlaps the root suite, not an additional 34 independent scenarios",
+      "production_changes_by_reviewer": false
+    },
+    "existing_resume_cases": {
+      "status": "PASS",
+      "tests_run": 4,
+      "method": "Production ResumeTests; replace only the test Windows scratch-directory context with Linux TemporaryDirectory; native input/window objects remain inert test doubles",
+      "windows_live_verified": false
+    },
+    "profile_product_path": {
+      "status": "PASS",
+      "events": 28,
+      "issues": 0,
+      "exports": [
+        "json",
+        "csv",
+        "html"
+      ],
+      "path": "Worker.observe twice -> cross-tick waiting parent -> Worker.command once -> finish_profile",
+      "input_method": "inert existing manual_bridge_fixture/frame_worker; synthetic PNG",
+      "first_and_last_node": "partial"
+    },
+    "python_ast": {
+      "status": "PASS",
+      "files": [
+        "tools/currency_wars_control.py",
+        "tools/currency_wars_broker_entry.py",
+        "tools/currency_wars_bridge_task.py",
+        "tools/currency_wars_runner.py",
+        "tools/currency_wars_profile.py"
+      ]
+    },
+    "control_pins": {
+      "status": "PASS",
+      "sha256": "187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5",
+      "locations": [
+        "tools/currency_wars_broker_entry.py:PINNED",
+        "tools/currency_wars_bridge_task.py:PINNED_BROKER_SHA256"
+      ]
+    },
+    "gui_core_manifest": {
+      "status": "PASS",
+      "files": 14,
+      "new_file": "tools/currency_wars_profile.py",
+      "built": false
+    },
+    "git_diff_check": {
+      "status": "PASS"
+    },
+    "fixture_correction": {
+      "description": "The input-then-bad-frame case initially lacked battle-page anchors and was correctly rejected by the existing battle_input guard. Added synthetic preparation/battle-button anchors to that fixture, then all 32 cases passed in one final run.",
+      "production_guard_relaxed": false
+    }
+  },
+  "current_live_report": {
+    "source": "User relay of local Codex evidence; no matching private image inspected by cloud",
+    "reported_date": "2026-10-07 Asia/Shanghai",
+    "same_unfinished_match": true,
+    "run_id": "616b087bce2c4346a544d3802b2f19e0",
+    "stage": "3-1",
+    "hp": 100,
+    "win_streak": 10,
+    "level": 7,
+    "xp": [
+      38,
+      52
+    ],
+    "coins": 52,
+    "feixiao_copies": [
+      8,
+      9
+    ],
+    "old_worker_exit_cause": "C-001 unconfirmed",
+    "old_broker_pid_reused": true,
+    "reused_pid_killed": false,
+    "active_core_frozen": true
+  },
+  "boundaries": {
+    "game_inputs": 0,
+    "new_code_live_verified": false,
+    "new_gui_build_verified": false,
+    "fixed_component_repair_verified": false,
+    "full_match_automation_verified": false,
+    "real_performance_comparison_available": false,
+    "manual_business_result_classification_complete": false,
+    "economic_dependency_order_implemented": false,
+    "f_xp_shortcut_changed": false,
+    "main_merge_authorized_during_active_match": false
+  },
+  "remaining_verification": [
+    "Existing Windows reviewed repair-package/install and private runtime workflow",
+    "New GUI 14-file readiness using actual source hashes",
+    "Actual 1080p/4K immutable capture and Windows open-file behavior",
+    "Worker and supervisor interleaved observations with explicit per-request release",
+    "Successful/partial/unknown input receipts followed by fresh-only observation and new-epoch revalidation",
+    "Real per-node profile baseline and after sample with equal producer/scenario coverage",
+    "Supervisor temporary helper profile instrumentation and B-008 handoff correction",
+    "B-003 business recovery and B-004/B-005 task-order implementation in subsequent batches"
+  ],
+  "historical_evidence": "The historical 83 checks, old GUI build, old SSS, and supervisor-controlled play were not rerun or relabeled as this revision live success."
+}

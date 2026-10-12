@@ -1,0 +1,52 @@
+{
+  "schema": "currency-wars-reward-flow-verification/v1",
+  "created_at": "2026-10-07T07:17:14.232782+00:00",
+  "suite": "tools/test_currency_wars_reward_flow.py",
+  "tests_run": 6,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 9.885,
+  "case_names": [
+    "test_real_worker_relocates_two_single_clicks_then_requires_full_field_review",
+    "test_zero_effect_two_to_zero_charge_and_group_receipt_stop_without_retry",
+    "test_later_external_input_old_after_frame_and_changed_epoch_preserve_pending",
+    "test_stop_guards_block_publication_and_same_pixels_do_not_restore_an_old_frame",
+    "test_unknown_delivery_blocks_a_root_escape_reply_even_on_a_selection_page",
+    "test_business_archive_keeps_same_match_unknown_without_importing_old_match_or_refused_steps"
+  ],
+  "command": "PYTHONPATH=/workspace/scratch/5c64bf8ff52e/test-deps:tools ORT_DISABLE_TELEMETRY=1 python -m unittest tools/test_currency_wars_reward_flow.py -v",
+  "python": "3.12.14",
+  "source_hashes": {
+    "currency_wars_runner.py": "44e5248504559129d1d393020586116549c04eda21783c57a3352deab220b648",
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25",
+    "replay_currency_wars_rewards.py": "90140443e873cf8c6e6f38675b439c18f0a33f31dcc44468855f38e491ad5fd2",
+    "test_currency_wars_reward_flow.py": "34961bc959efccc524922d88fc939bedda29f84ec136164742c419eb647681c6"
+  },
+  "protocol_report": "handoff/2026-10-07/reward-continuity/reward-replay.json",
+  "protocol_report_sha256": "f5d01a1217725d39880b9e992f4e5a2f6140d947f687fccca5cf2700ede776e0",
+  "historical_reader_source_hashes": {
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25"
+  },
+  "historical_ocr_rerun": false,
+  "evidence": {
+    "normal_preparation": "Two isolated blue-orb requests with fresh relocation; one final full-field ROOT review; 0/6 phases.",
+    "normal_shop": "One close-shop request, then two isolated blue-orb requests; independent synthetic .7 waits, never borrowed historical receipts.",
+    "unread_team": "Full-team identity remains unknown and does not block close/orb mechanical controls.",
+    "unknown_effect": "No effect, 2-to-0, debit, grouped completed, external input, old frame and epoch changes retain pending without automatic replay.",
+    "stopped": "No new simulated input publication. Explicit not-published refusal may be followed by read-only observe.",
+    "unknown_delivery_reply": "On a supply page without visible stage, the current ROOT key27 plan reaches the shared command publication guard and is refused.",
+    "archive_scope": "Same-match unknown survives a successor lease; old-match, entry-watermarked and refused records do not become new-match unknown. Original archive unchanged."
+  },
+  "physical_inputs": 0,
+  "fresh_game_captures": 0,
+  "controller_started": false,
+  "candidate_deployed": false,
+  "limits": [
+    "Synthetic pixel/HUD/receipt cases are not real game successors.",
+    "All-rewards-cleared remains unknown; no complete preparation or end-to-end speedup is proved.",
+    "The report reuses unchanged real-PNG OCR with original reader hashes; only current protocol paths were rerun."
+  ]
+}

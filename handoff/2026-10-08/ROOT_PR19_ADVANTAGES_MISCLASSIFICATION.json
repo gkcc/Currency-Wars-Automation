@@ -1,0 +1,191 @@
+{
+  "receipt_id": "b71a7bf33f6840ebb7e5fea80f2519e3",
+  "snapshot_sha256": "25632a83eebdee01c30cfe1b5ee3b75fd8e3f69e213c8b1de0895e7181910575",
+  "page_actual_root": "advantages",
+  "page_reader": "battle",
+  "native_advantages_anchor_match": true,
+  "rows": [
+    {
+      "text": "货币战争",
+      "raw_text": "货币战争",
+      "normalization_basis": null,
+      "confidence": 0.9903,
+      "box": [
+        100,
+        33,
+        184,
+        68
+      ]
+    },
+    {
+      "text": "优势布局",
+      "raw_text": "优势布局",
+      "normalization_basis": null,
+      "confidence": 0.998,
+      "box": [
+        102,
+        64,
+        204,
+        96
+      ]
+    },
+    {
+      "text": "常驻优势",
+      "raw_text": "常驻优势",
+      "normalization_basis": null,
+      "confidence": 0.9976,
+      "box": [
+        726,
+        111,
+        818,
+        141
+      ]
+    },
+    {
+      "text": "赛季优势",
+      "raw_text": "赛季优势",
+      "normalization_basis": null,
+      "confidence": 0.9998,
+      "box": [
+        1104,
+        110,
+        1196,
+        141
+      ]
+    },
+    {
+      "text": "已布局优势",
+      "raw_text": "已布局优势",
+      "normalization_basis": null,
+      "confidence": 0.9974,
+      "box": [
+        1576,
+        150,
+        1706,
+        184
+      ]
+    },
+    {
+      "text": "28/40",
+      "raw_text": "28/40",
+      "normalization_basis": null,
+      "confidence": 0.9969,
+      "box": [
+        1766,
+        153,
+        1840,
+        183
+      ]
+    },
+    {
+      "text": "米",
+      "raw_text": "米",
+      "normalization_basis": null,
+      "confidence": 0.9911,
+      "box": [
+        720,
+        356,
+        777,
+        416
+      ]
+    },
+    {
+      "text": "为",
+      "raw_text": "为",
+      "normalization_basis": null,
+      "confidence": 0.7187,
+      "box": [
+        728,
+        507,
+        770,
+        543
+      ]
+    },
+    {
+      "text": "神奇动物",
+      "raw_text": "神奇动物",
+      "normalization_basis": null,
+      "confidence": 0.9953,
+      "box": [
+        400,
+        868,
+        520,
+        904
+      ]
+    },
+    {
+      "text": "扑满有概率出现在你的战斗中，击败扑满能获取随机奖励。",
+      "raw_text": "扑满有概率出现在你的战斗中，击败扑满能获取随机奖励。",
+      "normalization_basis": null,
+      "confidence": 0.9926,
+      "box": [
+        400,
+        914,
+        956,
+        948
+      ]
+    },
+    {
+      "text": "×100",
+      "raw_text": "×100",
+      "normalization_basis": null,
+      "confidence": 0.9414,
+      "box": [
+        1572,
+        921,
+        1644,
+        952
+      ]
+    },
+    {
+      "text": "布局",
+      "raw_text": "布局",
+      "normalization_basis": null,
+      "confidence": 0.9996,
+      "box": [
+        1710,
+        920,
+        1770,
+        952
+      ]
+    },
+    {
+      "text": "受到的伤害降低10%。",
+      "raw_text": "受到的伤害降低10%。",
+      "normalization_basis": null,
+      "confidence": 0.9671,
+      "box": [
+        402,
+        942,
+        618,
+        975
+      ]
+    },
+    {
+      "text": "附加机制解锁",
+      "raw_text": "附加机制解锁",
+      "normalization_basis": null,
+      "confidence": 0.9995,
+      "box": [
+        138,
+        966,
+        296,
+        999
+      ]
+    },
+    {
+      "text": "幸运一击伤害提高10%",
+      "raw_text": "幸运一击伤害提高10%",
+      "normalization_basis": null,
+      "confidence": 0.9975,
+      "box": [
+        404,
+        972,
+        636,
+        1000
+      ]
+    }
+  ],
+  "source_head": "8bcff97b5a9287a6ffda405ee33a17473d1e32ac",
+  "raw_snapshot_public": false
+}

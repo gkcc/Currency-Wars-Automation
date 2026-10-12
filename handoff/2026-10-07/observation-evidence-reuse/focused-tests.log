@@ -1,0 +1,12 @@
+test_only_explicit_full_reuse_accepts_same_sha_and_current_ocr_contract (test_currency_wars_primary_reuse.PrimaryEvidenceReuseTests.test_only_explicit_full_reuse_accepts_same_sha_and_current_ocr_contract) ... ok
+test_raw_evidence_and_scope_semantics_have_independent_ownership (test_currency_wars_primary_reuse.PrimaryEvidenceReuseTests.test_raw_evidence_and_scope_semantics_have_independent_ownership) ... ok
+test_unknown_and_modal_classification_keep_full_frame_evidence (test_currency_wars_primary_reuse.PrimaryEvidenceReuseTests.test_unknown_and_modal_classification_keep_full_frame_evidence) ... ok
+test_same_png_scope_cache_and_returned_nested_objects_are_isolated (test_currency_wars_perception_scope.PerceptionScopeTests.test_same_png_scope_cache_and_returned_nested_objects_are_isolated) ... ok
+test_root_request_upgrades_the_same_current_png_and_refuses_missing_or_old_identity (test_currency_wars_perception_scope.WorkerReadScopeTests.test_root_request_upgrades_the_same_current_png_and_refuses_missing_or_old_identity) ... ok
+test_free_d_and_f_keep_economy_scope_for_result_and_read_only_frame_recovery (test_currency_wars_perception_scope.WorkerReadScopeTests.test_free_d_and_f_keep_economy_scope_for_result_and_read_only_frame_recovery) ... ok
+test_reward_results_keep_narrow_scope_until_root_full_field_review (test_currency_wars_perception_scope.WorkerReadScopeTests.test_reward_results_keep_narrow_scope_until_root_full_field_review) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 8.809s
+
+OK

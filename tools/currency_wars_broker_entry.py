@@ -4,12 +4,20 @@ Only directory provenance and bounded request transport live here. All game
 input, pause, foreground and process guards remain in the pinned broker.
 """
 import argparse
+import contextlib
+from datetime import datetime
 import errno
 import hashlib
 import importlib.util
+import io
 import json
+import math
+import os
+import re
 import secrets
+import stat
 import sys
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -17,7 +25,7 @@ from pathlib import Path
 import currency_wars_artifacts as artifacts
 
 SOURCE = Path(__file__).with_name('currency_wars_control.py')
-PINNED = '2B93583C57EE7593CA17CC951F078FA9CD4238285CA84AA83325646F45D86B54'
+PINNED = 'E499928DC305815B21D1F06314D34D7FF758C44433F2F27A108DD716090F496F'
 
 
 def read_json(path, limit=2_000_000):
@@ -37,12 +45,128 @@ def read_json(path, limit=2_000_000):
             time.sleep(.025)
 
 
+class ObservationUnavailable(ValueError):
+    """The receipt's frame is unusable; only a fresh observe may be requested."""
+
+
+def _observation_paths(run, result):
+    if not isinstance(result, dict):
+        raise ValueError('observation receipt is missing')
+    observation, request_id = result.get('observation'), result.get('id')
+    if (not isinstance(request_id, str) or not 1 <= len(request_id) <= 100
+            or not isinstance(observation, dict) or type(observation.get('frame_protocol')) is not int
+            or observation.get('frame_protocol') != 1
+            or observation.get('request_id') != request_id
+            or not re.fullmatch(r'[0-9a-f]{32}', str(observation.get('frame_id', '')))
+            or not isinstance(observation.get('captured_at'), str)
+            or datetime.fromisoformat(observation['captured_at']).tzinfo is None):
+        raise ValueError('immutable observation receipt identity or capture time is unavailable')
+    run = Path(run).absolute()
+    frame_dir = run / 'frames' / (hashlib.sha256(request_id.encode()).hexdigest() + '-' + observation['frame_id'])
+    if (observation.get('snapshot') != str(frame_dir / 'preview.png')
+            or observation.get('original') != str(frame_dir / 'original.png')):
+        raise ValueError('observation path does not belong to its request')
+    return frame_dir, observation
+
+
+def _no_frame_links(path):
+    for candidate in (path, *path.parents):
+        info = candidate.lstat()
+        if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
+            raise ValueError('observation path contains a link or junction')
+
+
+def _frame_payload(path, observation, role):
+    _no_frame_links(path)
+    info = path.stat()
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not 0 < info.st_size <= 64 * 1024 * 1024:
+        raise ValueError('observation file type or size is invalid')
+    expected, size = observation.get(role + '_sha256'), observation.get(role + '_size')
+    if (not isinstance(expected, str) or not re.fullmatch(r'[0-9a-f]{64}', expected)
+            or not isinstance(size, list) or len(size) != 2
+            or any(type(value) is not int or not 1 <= value <= 16384 for value in size)):
+        raise ValueError('observation hash or dimensions are invalid')
+    payload = path.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != expected:
+        raise ValueError('observation hash mismatch')
+    return payload, size
+
+
+def observation_frame(run, result, *, original=False):
+    """Validate and return this receipt's immutable frame, without input retries.
+
+    Bytes are read once and fully decoded from memory. The path remains stable
+    after this function returns because publication never reuses frame names.
+    Old mutable screenshot receipts deliberately do not satisfy this contract.
+    """
+    from PIL import Image
+    try:
+        frame_dir, observation = _observation_paths(run, result)
+        role, filename = ('original', 'original.png') if original else ('snapshot', 'preview.png')
+        path = frame_dir / filename
+        # Reading one immutable payload prevents an open/load race. Do not use
+        # LOAD_TRUNCATED_IMAGES, relax confidence, or recover an older image.
+        payload, size = _frame_payload(path, observation, role)
+        with Image.open(io.BytesIO(payload)) as image:
+            if image.format != 'PNG' or list(image.size) != size or (not original and image.size != (1920, 1080)):
+                raise ValueError('observation format or dimensions mismatch')
+            image.load()
+        with Image.open(io.BytesIO(payload)) as image:
+            image.verify()
+        return path
+    except (OSError, ValueError, TypeError, KeyError, SyntaxError, Image.DecompressionBombError) as error:
+        raise ObservationUnavailable(str(error) + '; request only a new observation, never resend input') from error
+
+
+def release_observation(run, result):
+    """Explicitly release a consumed, final receipt's pair; never remove ledger.
+
+    Callers must finish all reads and copy any durable proof first. Each caller
+    releases only its own request, so another request's readers keep their files.
+    An old receipt still returns its original input outcome after release; it
+    cannot be republished to obtain the screenshot again.
+    """
+    run = Path(run).absolute()
+    try:
+        frame_dir, observation = _observation_paths(run, result)
+        ledger = run / 'request-ledger' / (hashlib.sha256(result['id'].encode()).hexdigest() + '.json')
+        _no_frame_links(ledger)
+        receipt = read_json(ledger)
+        if (receipt.get('id') != result['id'] or not isinstance(receipt.get('request'), dict)
+                or receipt['request'].get('id') != result['id']
+                or receipt.get('result') != result):
+            raise ValueError('frame release requires this exact final receipt; pending or altered result is retained')
+        _no_frame_links(frame_dir.parent)
+        if not frame_dir.exists() and not frame_dir.is_symlink():
+            return {'released': False, 'already_released': True, 'released_bytes': 0}
+        _no_frame_links(frame_dir)
+        paths = [(frame_dir / 'original.png', 'original'), (frame_dir / 'preview.png', 'snapshot')]
+        present = {path.name for path in frame_dir.iterdir()}
+        if not present.issubset({'original.png', 'preview.png'}):
+            raise ValueError('frame directory has unrecognized contents; retained')
+        # Validate every remaining file before any removal. Hash checks bind
+        # release to the published bytes; readers already performed full decode.
+        payloads = [(path, len(_frame_payload(path, observation, role)[0]))
+                    for path, role in paths if path.name in present]
+        for path, unused_size in payloads:
+            path.unlink()
+        frame_dir.rmdir()
+        return {'released': True, 'already_released': False,
+                'released_bytes': sum(size for unused_path, size in payloads)}
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        raise ObservationUnavailable(str(error) + '; frame retained where possible; never resend input') from error
+
+
 def backend():
-    if hashlib.sha256(SOURCE.read_bytes()).hexdigest().upper() != PINNED:
+    payload = SOURCE.read_bytes()
+    if hashlib.sha256(payload).hexdigest().upper() != PINNED:
         raise ValueError('safety broker source changed; no operation permitted')
     spec = importlib.util.spec_from_file_location('currency_wars_safety', SOURCE)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    if SOURCE.read_bytes() != payload:
+        raise ValueError('safety broker source changed during loading; no operation permitted')
+    # Execute exactly the verified bytes, never a second loader read or pyc.
+    exec(compile(payload, str(SOURCE), 'exec'), module.__dict__)
     return module
 
 
@@ -165,8 +289,135 @@ def install_expected_resume(control):
 class SubmissionDeadlineExpired(TimeoutError):
     """A new request was refused before publication, not a missing reply."""
 
+    request_published = False
 
-def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, submit_deadline=None):
+
+class SubmissionQueueTimeout(TimeoutError):
+    """The original submission mutex stayed busy; no request was published."""
+
+    request_published = False
+
+
+class _SubmissionLease:
+    """Use the already held broker mutex only in this caller's active scope."""
+
+    def __init__(self, control):
+        self.control, self.active = control, True
+        self.caller = (os.getpid(), threading.get_ident())
+        self.queue_wait_diagnostic_failed = False
+
+    def _check(self):
+        if not self.active or self.caller != (os.getpid(), threading.get_ident()):
+            raise RuntimeError('submission lease is not active for this caller; no request published')
+
+    def __getattr__(self, name):
+        self._check()
+        return getattr(self.control, name)
+
+    @property
+    def submission_lease_active(self):
+        self._check()
+        return True
+
+    @contextlib.contextmanager
+    def submission_lock(self):
+        self._check()
+        yield
+
+
+@contextlib.contextmanager
+def submission_lease(control, *, timeout=2.0, submit_deadline=None, queue_wait=None):
+    """Bounded acquisition of the SAME mutex for observe and input requests.
+
+    Only a refused ``__enter__`` may wait. Once held, no body/publisher/reply
+    exception causes a retry. The yielded control can also cover a bounded
+    observe/read/publish transaction; nested Entry requests reuse that mutex.
+    The lease never deletes another caller's lock or republishes a request.
+    """
+    if (type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 <= timeout <= 5
+            or submit_deadline is not None and (type(submit_deadline) not in (int, float)
+                or not math.isfinite(submit_deadline))
+            or queue_wait is not None and not callable(queue_wait)):
+        raise ValueError('submission acquisition requires a finite 0-5 second bound')
+    start_ns, contended = time.monotonic_ns(), False
+    leased, diagnostic_failed = None, False
+    reused = getattr(control, 'submission_lease_active', False) is True
+
+    def report(outcome):
+        nonlocal diagnostic_failed
+        if queue_wait is not None:
+            try:
+                queue_wait({'start_ns': start_ns, 'end_ns': time.monotonic_ns(), 'outcome': outcome,
+                            'contended': contended, 'lease_reused': reused, 'request_published': False})
+            except Exception as error:
+                # Diagnostics cannot replace a refusal, cancel an acquired
+                # request or make any published input look unissued. Retain a
+                # boolean and reuse the optional recorder's type-only failure;
+                # callback text may contain private paths or credentials.
+                diagnostic_failed = True
+                if leased is not None:
+                    leased.queue_wait_diagnostic_failed = True
+                try:
+                    profile = getattr(getattr(queue_wait, '__self__', None), 'profile', None)
+                    if profile is not None:
+                        profile._disable(error)
+                except Exception:
+                    pass
+
+    queue_deadline = time.monotonic() + timeout
+    deadline = min(queue_deadline, submit_deadline) if submit_deadline is not None else queue_deadline
+    try:
+        while True:
+            if submit_deadline is not None and time.monotonic() >= submit_deadline:
+                raise SubmissionDeadlineExpired('submission deadline expired before acquisition; no request published')
+            manager = control.submission_lock()
+            try:
+                manager.__enter__()
+            except RuntimeError as error:
+                if str(error) != 'another request is pending; no concurrent submission':
+                    raise
+                contended = True
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    if submit_deadline is not None and time.monotonic() >= submit_deadline:
+                        raise SubmissionDeadlineExpired('submission deadline expired before acquisition; no request published') from error
+                    raise SubmissionQueueTimeout('submission queue deadline expired; no request published; lock retained') from error
+                time.sleep(min(.025, remaining))
+            else:
+                break
+    except BaseException as error:
+        report('deadline' if isinstance(error, SubmissionDeadlineExpired) else
+               'busy' if isinstance(error, SubmissionQueueTimeout) else 'refused')
+        if diagnostic_failed:
+            error.queue_wait_diagnostic_failed = True
+        raise
+    if submit_deadline is not None and time.monotonic() >= submit_deadline:
+        manager.__exit__(None, None, None)
+        report('deadline')
+        raise SubmissionDeadlineExpired('submission deadline expired during acquisition; no request published')
+    leased = _SubmissionLease(control)
+    try:
+        report('acquired')
+        yield leased
+    except BaseException:
+        if not manager.__exit__(*sys.exc_info()):
+            raise
+    else:
+        manager.__exit__(None, None, None)
+    finally:
+        leased.active = False
+
+
+def _guard_runner_owned_input(control, value):
+    physical = value.get('handoff') is True or any(
+        action['type'] in ('click', 'key', 'drag', 'scroll') for action in value.get('actions', []))
+    if (value.get('kind') != 'resume' and physical
+            and Path(control.ROOT, 'runner-owner.json').exists()
+            and getattr(control, 'business_guarded_submission', False) is not True):
+        raise ValueError('runner-owned input requires current business intent; use runner manual-step/decide; no request published')
+
+
+def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, submit_deadline=None, queue_wait=None):
     if not isinstance(rid, str) or not 1 <= len(rid) <= 100:
         raise ValueError('bounded request ID required')
     state = control.status()
@@ -181,13 +432,17 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, sub
     else:
         value['actions'] = control.validate_actions([
             {'type': p[0], 'args': p[1:]} for p in (t.split(':') for t in tokens)])
-    with control.submission_lock():
-        ledger = Path(control.ROOT, 'request-ledger')
-        receipt = ledger / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    ledger = Path(control.ROOT, 'request-ledger')
+    receipt = ledger / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+    # An existing ID may only reconcile its original payload/outcome. Its
+    # expired publication deadline must not prevent reading that old result.
+    acquisition_deadline = None if receipt.exists() else submit_deadline
+    if not receipt.exists():
+        _guard_runner_owned_input(control, value)
+    with submission_lease(control, submit_deadline=acquisition_deadline, queue_wait=queue_wait):
         if (submit_deadline is not None and time.monotonic() >= submit_deadline
                 and not receipt.exists()):
             raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
-        ledger.mkdir(exist_ok=True)
         if receipt.exists():
             previous = read_json(receipt)
             if previous.get('id') != rid or previous.get('request') != value:
@@ -197,8 +452,10 @@ def request(control, kind, tokens, rid, handoff, expected_pause_id=UNSET, *, sub
             # A previous publication might already have executed. Waiting for
             # that exact ID is allowed; publication is never repeated.
         else:
+            _guard_runner_owned_input(control, value)
             if submit_deadline is not None and time.monotonic() >= submit_deadline:
                 raise SubmissionDeadlineExpired('submission deadline expired before publication; no request published')
+            ledger.mkdir(exist_ok=True)
             control.write_json(receipt, {'id': rid, 'request': value, 'result': None})
             if submit_deadline is not None and time.monotonic() >= submit_deadline:
                 # Only this new, still-unpublished receipt exists. Do not leave

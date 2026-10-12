@@ -1,0 +1,145 @@
+{
+  "schema": "root-pr27-native-hud-gap/v1",
+  "candidate": "d536da965fa42d800b24992aae363246c9f3d67c",
+  "stage": "1-1",
+  "mode": "standard",
+  "pr27_windows": {
+    "tests": 14,
+    "ok": true,
+    "seconds": 14.288760299968999,
+    "source_set": "fd642112b0a2961c4dd78a08cd0c2b0903ab037feee0d23779c78795777703ef"
+  },
+  "native_two_orbs_current_complete_frame_detected": true,
+  "business_resume_accepted": true,
+  "reward_game_inputs": 0,
+  "economy_inputs": 0,
+  "rejection": "收店/免费领奖缺当前节点或绑定HUD的金币，无法核异常扣费。",
+  "coins_native_key": "absent",
+  "cause": {
+    "purchase_experience_confidence": 0.9994,
+    "shop_confidence": 0.9999,
+    "gold_icon_fraction": 0.35791826309067687,
+    "gold_icon_threshold": 0.15,
+    "digit_roi": [
+      1638,
+      900,
+      1687,
+      940
+    ],
+    "digit_ocr_raw": "4 ",
+    "digit_ocr_confidence": 0.7972828149795532,
+    "digit_required_confidence": 0.9,
+    "level_raw": "LV.3",
+    "level_confidence": 0.8300190418958664,
+    "xp_native": [
+      0,
+      4
+    ]
+  },
+  "source_map": [
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/resume-coins.png",
+      "original_png_sha256": "84929b723a979bffd1eb7cef1e0c353577dad7b08dcfc7921387be26a2c63267",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "crop_sha256": "4f46559f8b39d511b2e959d4add277aab6f3a0f0fec904df70964281688d661f",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/resume-player.png",
+      "original_png_sha256": "84929b723a979bffd1eb7cef1e0c353577dad7b08dcfc7921387be26a2c63267",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        220,
+        815,
+        375,
+        1020
+      ],
+      "crop_sha256": "23b9dae06e56252a02e820ad012e9fb0d6c5dd7889dad45f35dbf50d082d898a",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-coins.png",
+      "original_png_sha256": "a88e445efd199830b171f0c5dbed4bf15d993d66f52356ad532ba857178a7348",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        1520,
+        805,
+        1720,
+        1020
+      ],
+      "crop_sha256": "996fce70a7f82d358055f2ecd1eec538c9f084b913fd48901c089eb05f86f8c0",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    },
+    {
+      "file": "handoff/2026-10-08/ROOT_PR27_HUD/reward_block-player.png",
+      "original_png_sha256": "a88e445efd199830b171f0c5dbed4bf15d993d66f52356ad532ba857178a7348",
+      "original_size": [
+        1920,
+        1080
+      ],
+      "source_bounds": [
+        220,
+        815,
+        375,
+        1020
+      ],
+      "crop_sha256": "1ecad10647247a1e5cb9772fecc0a77df9fe3c981c9e03b30704ee0ddd14145e",
+      "root_reading": {
+        "coins": 4,
+        "level": 3,
+        "xp": [
+          0,
+          4
+        ]
+      },
+      "source": "supervising_agent_independent_current_frame_read",
+      "native_fields_unchanged": true
+    }
+  ],
+  "gui_manifest_requires_rebuild": true,
+  "actual_gui_build_seconds": 22.9,
+  "check_install_launch_after_rebuild": "PASS",
+  "limitation": "current-frame visual eligibility is not a reward receipt or input authorization; no current game pickup occurred"
+}

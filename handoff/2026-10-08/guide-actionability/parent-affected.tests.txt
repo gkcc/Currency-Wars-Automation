@@ -1,0 +1,6 @@
+test_exhausted_pending_current_recovery_blue_once_then_new_epoch_full_review (test_currency_wars_reward_recovery.RewardRecoveryTests.test_exhausted_pending_current_recovery_blue_once_then_new_epoch_full_review) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 10.005s
+
+OK

@@ -1,10 +1,10 @@
 """One-window, bounded Star Rail broker with latched pause and explicit resume."""
-import argparse, contextlib, ctypes as C, json, math, os, secrets, shutil
+import argparse, contextlib, ctypes as C, hashlib, io, json, math, os, secrets, shutil, stat
 import subprocess, sys, tempfile, time, uuid
 from ctypes import wintypes as W
 from datetime import datetime, timezone
 from pathlib import Path
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
 
 u = C.WinDLL('user32', use_last_error=True)
 k = C.WinDLL('kernel32', use_last_error=True)
@@ -250,12 +250,134 @@ def win():
             raise RuntimeError('game process/window identity changed or unverified')
     return hwnd, pid.value, (origin.x, origin.y, origin.x + rect.right, origin.y + rect.bottom)
 
-def observe():
+def _publish_png(image, target):
+    """Close and fully decode a staged PNG before publishing its unique name.
+
+    The caller owns a new frame directory. No reader ever opens the staging
+    name, and no later observation replaces a published frame. Keep staging
+    on the same volume; a cross-volume copy is not an atomic publication.
+    """
+    target = Path(target)
+    temporary = target.with_name(target.name + '.' + uuid.uuid4().hex + '.tmp')
+    try:
+        if target.exists():
+            raise ValueError('frame already published; immutable image is not overwritten')
+        image.load()
+        with temporary.open('xb') as stream:
+            image.save(stream, format='PNG')
+        payload = temporary.read_bytes()
+        with Image.open(io.BytesIO(payload)) as decoded:
+            if decoded.format != 'PNG' or decoded.size != image.size:
+                raise ValueError('staged frame format or dimensions changed')
+            decoded.load()
+        # verify checks PNG chunk integrity; load above checks actual pixels.
+        with Image.open(io.BytesIO(payload)) as decoded:
+            decoded.verify()
+        deadline = time.monotonic() + .75
+        while True:
+            try:
+                os.replace(temporary, target)
+                break
+            except OSError as exc:
+                if getattr(exc, 'winerror', None) not in (5, 32) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(min(.025, max(0, deadline - time.monotonic())))
+        return {'sha256': hashlib.sha256(payload).hexdigest(), 'size': list(image.size), 'bytes': len(payload)}
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _check_frame_capacity(frame_root, image_size):
+    """Keep retained frames below the existing owned-runtime cleanup bounds.
+
+    The unique broker serializes publishers. Consumers explicitly release only
+    their own consumed frames; this guard never evicts another reader's data.
+    Reserve an uncompressed RGBA-sized pair plus encoding overhead before grab.
+    """
+    reserve = (image_size[0] * image_size[1] + 1920 * 1080) * 4 + 1024 * 1024
+    total, count = reserve, 3
+    def unreadable(error):
+        raise error
+    for folder, directories, files in os.walk(frame_root, followlinks=False, onerror=unreadable):
+        for name in directories + files:
+            path = Path(folder, name)
+            info = path.lstat()
+            if (stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400
+                    or not (stat.S_ISREG(info.st_mode) or stat.S_ISDIR(info.st_mode))
+                    or (stat.S_ISREG(info.st_mode) and info.st_nlink != 1)):
+                raise ValueError('frame storage contains an unverified path')
+            total += info.st_size if stat.S_ISREG(info.st_mode) else 0
+            count += 1
+            if total > 384 * 1024 * 1024 or count > 12000:
+                raise ValueError('frame storage capacity reached; release consumed receipt frames before observing')
+    if total > 384 * 1024 * 1024:
+        raise ValueError('frame dimensions exceed the bounded storage budget')
+
+
+def observe(request_id=None):
+    if request_id is None:
+        request_id = 'observe-' + uuid.uuid4().hex
+    if not isinstance(request_id, str) or not 1 <= len(request_id) <= 100:
+        raise ValueError('bounded observation request identity required')
     hwnd, pid, rect = win()
-    im = ImageGrab.grab(bbox=rect, all_screens=True)
-    im.save(Path(ROOT, 'game-current.png'))
-    im.resize((1920, 1080)).save(Path(ROOT, 'game-preview.png'))
-    return {'hwnd': int(hwnd), 'pid': pid, 'rect': rect, 'foreground': int(u.GetForegroundWindow() or 0), 'snapshot': str(Path(ROOT, 'game-preview.png'))}
+    captured_at = utc_now()
+    frame_id = uuid.uuid4().hex
+    frame_root = Path(ROOT, 'frames')
+    frame_root.mkdir(exist_ok=True)
+    for path in (frame_root, *frame_root.parents):
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
+            raise ValueError('frame directory contains a link or junction')
+    _check_frame_capacity(frame_root, (rect[2] - rect[0], rect[3] - rect[1]))
+    frame_dir = frame_root / (hashlib.sha256(request_id.encode()).hexdigest() + '-' + frame_id)
+    frame_dir.mkdir()  # Exclusive ownership, including in concurrent observers.
+    original, preview = frame_dir / 'original.png', frame_dir / 'preview.png'
+    try:
+        with ImageGrab.grab(bbox=rect, all_screens=True) as im:
+            original_info = _publish_png(im, original)
+            with im.resize((1920, 1080)) as resized:
+                preview_info = _publish_png(resized, preview)
+        # Only the receipt publishes the pair. Consumers use these exact paths,
+        # never a mutable "latest image" alias or another request's result.
+        return {'hwnd': int(hwnd), 'pid': pid, 'rect': rect,
+                'foreground': int(u.GetForegroundWindow() or 0),
+                'frame_protocol': 1, 'request_id': request_id, 'frame_id': frame_id,
+                'captured_at': captured_at, 'snapshot': str(preview), 'original': str(original),
+                'snapshot_sha256': preview_info['sha256'], 'original_sha256': original_info['sha256'],
+                'snapshot_size': preview_info['size'], 'original_size': original_info['size'],
+                'snapshot_bytes': preview_info['bytes'], 'original_bytes': original_info['bytes']}
+    except Exception:
+        # This directory has not been announced in a receipt. Never sweep any
+        # other frame or delete a published frame to make room for a new one.
+        for path in (original, preview):
+            path.unlink(missing_ok=True)
+        frame_dir.rmdir()
+        raise
+
+
+def attach_observation(request_id, result):
+    """Retry only capture, retaining the original input outcome and receipt ID."""
+    started_ns = time.monotonic_ns()
+    try:
+        for attempt in range(2):
+            try:
+                result['observation'] = observe(request_id)
+                result['observation_attempts'] = attempt + 1
+                result.pop('observation_error', None)
+                result.pop('observation_retry_allowed', None)
+                return result
+            except Exception as exc:
+                result['observation_error'] = str(exc)
+                result['observation_attempts'] = attempt + 1
+                result['observation_retry_allowed'] = True
+                if Path(ROOT, 'broker-stop').exists():
+                    break
+                if attempt == 0:
+                    time.sleep(.05)
+        return result
+    finally:
+        result.setdefault('profile_intervals', []).append({'name': 'broker observation',
+            'operation': 'capture', 'start_ns': started_ns, 'end_ns': time.monotonic_ns()})
 
 def point(x, y, rect):
     if not all(math.isfinite(v) for v in (x, y)) or not (0 <= x < 1920 and 0 <= y < 1080):
@@ -466,10 +588,21 @@ def execute_batch(request):
         raise RuntimeError('inputs halted; resolve contention and explicitly resume')
     deadline = time.monotonic() + 30
     BATCH_DEADLINE = deadline
-    completed = []
+    completed, attempted_actions, intervals = [], [], []
+    input_attempted = bool(active and request.get('handoff'))
+    failing_action_index = None
+    action_started_ns = None
     try:
-        hwnd = begin_batch(bool(request.get('handoff'))) if active else None
-        for action in actions:
+        batch_started_ns = time.monotonic_ns()
+        try:
+            hwnd = begin_batch(bool(request.get('handoff'))) if active else None
+        finally:
+            intervals.append({'name': 'broker batch guard',
+                'operation': 'takeover' if input_attempted else 'unknown',
+                'start_ns': batch_started_ns, 'end_ns': time.monotonic_ns()})
+        action_started_ns = time.monotonic_ns()
+        for index, action in enumerate(actions):
+            failing_action_index = index
             if time.monotonic() >= deadline or Path(ROOT, 'broker-stop').exists():
                 raise RuntimeError('batch deadline reached or stop requested')
             kind, values = action['type'], action['args']
@@ -480,21 +613,31 @@ def execute_batch(request):
             elif kind == 'observe':
                 pass
             else:
+                # A dispatch can send input and then fail its focus/animation
+                # check. Empty completed is therefore not proof of zero input.
+                input_attempted = True
+                attempted_actions.append(action)
                 {'click': click, 'key': key, 'drag': drag, 'scroll': scroll}[kind](*values)
             completed.append(action)
             if active:
                 wait_guarded(.3, deadline, hwnd)
-        return {'id': request['id'], 'ok': True, 'completed': completed, 'observation': observe()}
+        result = {'id': request['id'], 'ok': True, 'completed': completed,
+                  'input_attempted': input_attempted, 'attempted_actions': attempted_actions,
+                  'profile_intervals': intervals}
     except Exception as exc:
-        result = {'id': request['id'], 'ok': False, 'error': str(exc), 'completed': completed}
+        result = {'id': request['id'], 'ok': False, 'error': str(exc), 'completed': completed,
+                  'input_attempted': input_attempted, 'attempted_actions': attempted_actions,
+                  'failing_action_index': failing_action_index, 'profile_intervals': intervals}
         write_json(Path(ROOT, 'input-halted.json'), result)
-        try:
-            result['observation'] = observe()
-        except Exception:
-            pass
-        return result
     finally:
         BATCH_DEADLINE = None
+        if action_started_ns is not None:
+            intervals.append({'name': 'broker action batch',
+                'operation': 'input_animation' if active else 'unknown',
+                'start_ns': action_started_ns, 'end_ns': time.monotonic_ns()})
+    # Capture failures cannot convert already-issued input into a retryable
+    # action failure, halt input ownership, or execute this batch a second time.
+    return attach_observation(request['id'], result)
 
 def execute_resume(request):
     global BATCH_DEADLINE, RESUMING, RESUME_PAUSE_ID
@@ -512,11 +655,19 @@ def execute_resume(request):
     RESUME_PAUSE_ID = pause.get('pause_id') if pause else None
     RESUMING = True
     BATCH_DEADLINE = time.monotonic() + 5
+    frame_result = {'profile_intervals': []}
     try:
         hwnd, unused_pid, unused_rect = win()
-        handoff_focus(hwnd)
-        focus()
-        observation = observe()
+        handoff_started_ns = time.monotonic_ns()
+        try:
+            handoff_focus(hwnd)
+            focus()
+        finally:
+            frame_result['profile_intervals'].append({'name': 'broker resume handoff',
+                'operation': 'takeover', 'start_ns': handoff_started_ns, 'end_ns': time.monotonic_ns()})
+        attach_observation(request['id'], frame_result)
+        if 'observation' not in frame_result:
+            raise RuntimeError('resume observation unavailable; do not repeat handoff')
         # A new manual request takes priority even if activation already succeeded.
         input_guard()
         with control_state_lock():
@@ -528,9 +679,12 @@ def execute_resume(request):
                 raise RuntimeError('resume final foreground/deadline/stop verification failed')
             Path(ROOT, 'manual-pause.json').unlink(missing_ok=True)
             Path(ROOT, 'input-halted.json').unlink(missing_ok=True)
-        return {'id': request['id'], 'ok': True, 'resumed': True, 'completed': [], 'observation': observation}
+        return {'id': request['id'], 'ok': True, 'resumed': True, 'completed': [],
+                'input_attempted': True, 'attempted_actions': [], **frame_result}
     except Exception as exc:
-        result = {'id': request['id'], 'ok': False, 'resumed': False, 'error': str(exc), 'completed': []}
+        result = {'id': request['id'], 'ok': False, 'resumed': False, 'error': str(exc), 'completed': [],
+                  'input_attempted': True, 'attempted_actions': []}
+        result.update(frame_result)
         write_json(Path(ROOT, 'input-halted.json'), result)
         return result
     finally:
@@ -693,12 +847,23 @@ def pause(reason):
         time.sleep(.025)
 
 def request_reply(request):
+    # In a runner-owned session the public raw client has no business intent.
+    # The existing Worker/Entry is the sole supported guarded input route;
+    # read-only inspection and emergency/control handoff remain available.
+    if (Path(ROOT, 'runner-owner.json').exists() and request.get('kind') == 'actions'
+            and (request.get('handoff') or any(a.get('type') in ('click', 'key', 'drag', 'scroll')
+                                             for a in request.get('actions', [])))):
+        raise ValueError('runner-owned input requires runner manual-step or decide; raw submit is not published')
     state = status()
     if not state['ready']:
         raise RuntimeError('broker not ready; no request written')
     if request.get('kind') == 'resume' and state['protocol_version'] != PROTOCOL_VERSION:
         raise RuntimeError('loaded broker does not support safe resume; no request written')
     with submission_lock():
+        if (Path(ROOT, 'runner-owner.json').exists() and request.get('kind') == 'actions'
+                and (request.get('handoff') or any(a.get('type') in ('click', 'key', 'drag', 'scroll')
+                                                 for a in request.get('actions', [])))):
+            raise ValueError('runner ownership changed before raw submit; no request published')
         rid = uuid.uuid4().hex
         request.update({'id': rid, 'chat_id': OWNER['chat_id'], 'run_token': OWNER['run_token']})
         publish_request(request)

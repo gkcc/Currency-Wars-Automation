@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "resources": [
+    {
+      "file": "initial-blue.png",
+      "sha256": "d362f664af664e6864a55193f20d5d9faadf5122c0eb0651b154b4c079aa55fd",
+      "source_commit": "4edab30f9da025953b92f306070dcc2cf0af78ae",
+      "source_file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-blue.png",
+      "source_full_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1",
+      "source_bounds": [
+        1333,
+        393,
+        1405,
+        466
+      ],
+      "calibration_sample": true,
+      "independent_generalization_example": false
+    },
+    {
+      "file": "initial-gray.png",
+      "sha256": "72d266178de25affc73cc0c1d5fd68a047e8a485258b76d394a3bfc0c98d69fd",
+      "source_commit": "4edab30f9da025953b92f306070dcc2cf0af78ae",
+      "source_file": "handoff/2026-10-08/ROOT_NATIVE_REWARDS/initial-gray.png",
+      "source_full_png_sha256": "29206504af8d05cb2780f23660b32fd540bdce24390682b1930130b57c8552f1",
+      "source_bounds": [
+        1463,
+        303,
+        1510,
+        349
+      ],
+      "calibration_sample": true,
+      "independent_generalization_example": false
+    }
+  ]
+}

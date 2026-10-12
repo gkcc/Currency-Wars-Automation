@@ -204,6 +204,8 @@ def _clear_update_lease():
 def gui_fingerprint(project):
     root = Path(project)
     paths = [root / 'gui' / name for name in ('Cargo.toml', 'Cargo.lock', 'build.rs', 'tauri.conf.json')]
+    # The native readiness checker embeds this shared production inventory.
+    paths.append(root / 'tools/currency_wars_runtime_sources.json')
     for folder in ('src', 'ui', 'icons'):
         paths += sorted((root / 'gui' / folder).rglob('*'))
     return {str(p.relative_to(root)).replace('\\', '/'): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -241,6 +243,9 @@ def launch_prerequisites(project):
             return 'Rust/UI sources or binary changed. Run Setup.ps1 -BuildGui before starting.'
     except (OSError, ValueError):
         return 'Local installation/build attestation missing. Run Setup.ps1 -BuildGui.'
+    # READY/source failure disables native start/resume, not GUI access to an
+    # existing worker's pause/stop. Normal runner entrypoints enforce the same
+    # source gate independently before loading any controller backend.
     return None
 
 

@@ -6,8 +6,11 @@ import json
 import re
 from pathlib import Path
 
-PHASES = ('rewards', 'startup_guide', 'inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance')
-PHASE_LABELS = dict(zip(PHASES, ('领奖领空', '创业指南', '清库存', '经济', '上场/装备', '出战验收')))
+PHASES = ('rewards', 'startup_guide', 'shop_inspection', 'inventory_cleanup', 'economy', 'lineup_equipment', 'battle_acceptance')
+PHASE_LABELS = dict(zip(PHASES, ('领奖领空', '创业指南', '完整读店', '清库存', '统一经济', '上场/装备', '出战验收')))
+# Startup Guide is a post-match panel, not a prerequisite on every node.
+# Keep its explicit inspection phase for authenticated optional manual reads.
+PREPARATION_PHASES = tuple(phase for phase in PHASES if phase != 'startup_guide')
 
 
 def reviewed_goals(goals, snapshot_id):
@@ -145,17 +148,66 @@ def lineup_requirements(investments, team, knowledge):
 
 
 def preparation_status(reviews):
+    def completed(phase):
+        review = reviews.get(phase, {})
+        if phase == 'shop_inspection':
+            proof = review.get('proof') or {}
+            return (review.get('completed') is True and review.get('origin') == 'current_native_shop'
+                    and proof.get('source') == 'current_native_shop' and bool(proof.get('snapshot_id'))
+                    and bool(proof.get('capture_request_id')) and bool(proof.get('frame_id')))
+        return review.get('completed') is True
     steps = [{'id': phase, 'label': PHASE_LABELS[phase],
-              'completed': reviews.get(phase, {}).get('completed') is True,
+              'completed': completed(phase),
               'proof': reviews.get(phase, {}).get('proof'),
               'origin': reviews.get(phase, {}).get('origin', 'unknown')}
-             for phase in PHASES]
+             for phase in PREPARATION_PHASES]
     pending = next((item for item in steps if not item['completed']), None)
     return {'phase': pending['id'] if pending else 'ready_for_battle', 'steps': steps,
             'next_step': pending['label'] if pending else '按既有单次审批出战',
-            'startup_guide_entry': {'entry_index': 2, 'name': '创业指南'},
-            'economy_allowed': all(reviews.get(key, {}).get('completed') is True for key in PHASES[:3]),
+            'startup_guide_entry': {'entry_index': 2, 'name': '创业指南', 'schedule': 'post_match'},
+            'economy_allowed': all(completed(key)
+                                   for key in ('rewards', 'shop_inspection', 'inventory_cleanup')),
             'battle_ready': pending is None}
+
+
+def reward_status(observed, review=None):
+    """No absent-template inference: only a current reviewed full sweep is clear.
+
+    The worker still authenticates the review's run, epoch and request through
+    verified_source. This pure predicate never upgrades native confidence.
+    """
+    if observed.get('page') in ('investment', 'environment', 'supply', 'reward_overlay'):
+        return 'pending'
+    review = review if isinstance(review, dict) else {}
+    proof, value = review.get('proof'), review.get('value')
+    if (observed.get('page') != 'preparation' or not observed.get('snapshot_id')
+            or not isinstance(proof, dict) or not isinstance(value, dict)
+            or proof.get('source') != 'observed_screen'
+            or proof.get('snapshot_id') != observed['snapshot_id']
+            or value.get('reviewer') != 'supervising_agent'):
+        return 'unknown'
+    if value.get('all_claimed') is False:
+        return 'pending'
+    return ('clear' if value.get('all_claimed') is True
+            and value.get('rescanned_after_claim') is True else 'unknown')
+
+
+def reviewed_capacity(value):
+    """A separate, explicit supervisor reading; never writes native team facts."""
+    if not isinstance(value, dict) or type(value.get('bench_capacity')) is not int or value['bench_capacity'] != 9:
+        raise ValueError('容量须独立实读9个备战席，不能由人口推定')
+    slots = value.get('slots')
+    if (not isinstance(slots, list) or len(slots) != 9 or any(not isinstance(slot, dict) for slot in slots)
+            or any(type(slot.get('slot')) is not int for slot in slots)
+            or {slot['slot'] for slot in slots} != set(range(1, 10))
+            or any(slot.get('status') not in ('empty', 'occupied') for slot in slots)
+            or value.get('overflow_checked') is not True
+            or type(value.get('overflow_count')) is not int or not 0 <= value['overflow_count'] <= 64):
+        raise ValueError('备战席或临时溢出未逐项回读；满人口不能代替库存检查')
+    occupied = sum(slot['status'] == 'occupied' for slot in slots)
+    return {'bench_capacity': 9, 'occupied': occupied, 'free_slots': 9 - occupied,
+            'overflow_count': value['overflow_count'], 'slots': slots,
+            'origin': 'supervising_agent'}
 
 
 def inventory_mutation(action):
@@ -166,12 +218,14 @@ def inventory_mutation(action):
             or kind == 'click_text' and any(word in text for word in ('出售', '合成', '装备', '拆卸', '赋予', '复制')))
 
 
-def action_effect(action):
+def action_effect(action, page=None):
     """Effect classes for invalidation, never an exemption from target guards."""
     text = action.get('text', '')
     if inventory_mutation(action):
         return 'inventory'
-    if (action.get('type') == 'buy_xp' or action.get('type') == 'key' and action.get('args') in ([68], [69])
+    location = page or action.get('expected_page')
+    if (action.get('type') == 'buy_xp' or action.get('type') == 'key' and
+            (action.get('args') == [68] or action.get('args') == [70] and location in ('preparation', 'shop'))
             or action.get('type') == 'click_text' and any(word in text for word in ('刷新', '购买经验'))):
         return 'economy'
     return 'navigation'

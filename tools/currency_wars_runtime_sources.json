@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "entrypoints": [
+    "gui/launch.py",
+    "tools/currency_wars_runner.py",
+    "tools/currency_wars_broker_entry.py",
+    "tools/currency_wars_bridge_task.py",
+    "tools/currency_wars_control.py"
+  ],
+  "files": [
+    "gui/launch.py",
+    "gui/processes.py",
+    "requirements.txt",
+    "tools/currency_wars_artifacts.py",
+    "tools/currency_wars_bridge_task.py",
+    "tools/currency_wars_broker_entry.py",
+    "tools/currency_wars_coaching.py",
+    "tools/currency_wars_control.py",
+    "tools/currency_wars_economy.py",
+    "tools/currency_wars_input_bridge.py",
+    "tools/currency_wars_manual_stage.py",
+    "tools/currency_wars_manual_steps.py",
+    "tools/currency_wars_perception.py",
+    "tools/currency_wars_profile.py",
+    "tools/currency_wars_progression.py",
+    "tools/currency_wars_refresh_offer.py",
+    "tools/currency_wars_rewards.py",
+    "tools/currency_wars_runner.py",
+    "tools/currency_wars_runtime_sources.json",
+    "tools/currency_wars_shop_contract.py",
+    "tools/currency_wars_shop_reader.py",
+    "tools/currency_wars_source_guard.py",
+    "tools/currency_wars_state_reader.py",
+    "tools/currency_wars_update.py",
+    "tools/currency_wars_visual_guards.py",
+    "tools/currency_wars_unit_inspection.py",
+    "tools/currency_wars_slot_probe.py",
+    "tools/currency_wars_native_unit_bank.py",
+    "tools/currency_wars_deployment.py",
+    "tools/currency_wars_advisor.py",
+    "tools/currency_wars_decision.py",
+    "tools/currency_wars_database.py",
+    "tools/currency_wars_solver.py",
+    "tools/currency_wars_bond_model.py",
+    "tools/currency_wars_bond_proxy.py",
+    "tools/currency_wars_rules.py",
+    "tools/currency_wars_mcp.py",
+    "tools/currency_wars_session_client.py",
+    "tools/currency_wars_economic_views.py"
+  ],
+  "resource_roots": [
+    {
+      "path": "tools/shop_reader_resources",
+      "required": true
+    },
+    {
+      "path": "tools/refresh_offer_resources",
+      "required": true
+    },
+    {
+      "path": "tools/reward_resources",
+      "required": true
+    },
+    {
+      "path": "tools/free_lineup_resources",
+      "required": false
+    },
+    {
+      "path": "tools/loot_resources",
+      "required": false
+    },
+    {
+      "path": "data/currency_wars/native_unit_bank",
+      "required": true
+    }
+  ],
+  "resource_manifests": [
+    {
+      "path": "tools/shop_reader_resources/SOURCES.json",
+      "layout": "resources",
+      "required_files": [
+        "recommend_badge.png"
+      ]
+    },
+    {
+      "path": "tools/shop_reader_resources/state_reader/SOURCES.json",
+      "layout": "resources",
+      "required_files": []
+    },
+    {
+      "path": "tools/refresh_offer_resources/SOURCES.json",
+      "layout": "resources",
+      "required_files": [
+        "currency_coin.png"
+      ]
+    },
+    {
+      "path": "tools/reward_resources/manifest.json",
+      "layout": "single",
+      "required_files": [
+        "blue-orb-q01.png"
+      ]
+    },
+    {
+      "path": "tools/reward_resources/native-orbs-sources.json",
+      "layout": "resources",
+      "required_files": [
+        "initial-blue.png",
+        "initial-gray.png"
+      ]
+    },
+    {
+      "path": "data/currency_wars/native_unit_bank/manifest.json",
+      "layout": "resources",
+      "required_files": []
+    }
+  ],
+  "resource_files": [
+    "tools/shop_reader_resources/names.json"
+  ],
+  "data_files": [
+    {
+      "path": "data/currency_wars/catalog.sqlite3",
+      "max_bytes": 20000000
+    }
+  ]
+}

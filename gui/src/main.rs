@@ -3,6 +3,7 @@ mod protocol;
 mod input;
 mod attention;
 mod floating_native;
+mod source_guard;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use protocol::{Binding, InitializationPause, ResumeGuard, ResumeProof, read_json, text, request_png};
@@ -17,7 +18,7 @@ fn now_ms() -> u128 { SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_def
 
 #[derive(Clone)]
 struct Config { project: PathBuf, python: PathBuf, runner: PathBuf, chat: String,
-                runtime: PathBuf, test_mode: bool, debug_port: Option<u16> }
+                runtime: PathBuf, runtime_authority: protocol::RuntimeAuthority, runtime_provider:Value, test_mode: bool, debug_port: Option<u16> }
 
 impl Config {
     fn load() -> Result<Self, String> {
@@ -31,10 +32,12 @@ impl Config {
                      else { project.join("tools/currency_wars_runner.py") };
         let runtime = PathBuf::from(argument("--runtime-dir").ok_or("请从gui/launch.py或货币战争助手.cmd启动，以保持运行目录归属")?);
         read_json(&runtime.join(".agent-workflow-owner.json"))?;
+        let chat=argument("--chat-id").ok_or("启动器必须提供本次会话身份")?;
+        let runtime_authority=protocol::RuntimeAuthority::from_gui(&runtime,&chat,argument("--runtime-location-json").as_deref())?;
+        let runtime_provider=runtime_authority.runtime_provider().clone();
         let python = argument("--python").map(PathBuf::from).unwrap_or_else(|| project.join(".venv/Scripts/python.exe"));
         if !python.is_file() || !runner.is_file() { return Err("Python执行器路径尚未就绪".into()); }
-        Ok(Self { project, python, runner, runtime, test_mode,
-                  chat: argument("--chat-id").ok_or("启动器必须提供本次会话身份")?,
+        Ok(Self { project, python, runner, runtime, runtime_authority, runtime_provider, test_mode, chat,
                   debug_port: if test_mode { argument("--debug-port").and_then(|v| v.parse().ok()) } else { None } })
     }
 }
@@ -280,12 +283,12 @@ impl Shared {
         let cached={let session=self.session.lock().unwrap();(session.binding.clone(),session.terminal)};
         if let Some(mut binding) = cached.0 {
             if cached.1{return Ok(binding);}
-            let current=Binding::load(&binding.root,&binding.chat)?;binding.same_owner(&current)?;
+            let current=Binding::load_with_runtime(&binding.root,&binding.chat,&self.config.runtime_authority)?;binding.same_owner(&current)?;
             if current.broker.is_some(){binding.broker=current.broker;}
             self.bind(binding.clone())?;return Ok(binding);
         }
         let pointer = read_json(&self.config.project.join("docs/CURRENT_RUNNER.json"))?;
-        let binding = Binding::load(Path::new(text(&pointer, "run_dir")), &self.config.chat)?;
+        let binding = Binding::load_with_runtime(Path::new(text(&pointer, "run_dir")), &self.config.chat,&self.config.runtime_authority)?;
         binding.verify(&pointer)?;
         self.bind(binding.clone())?;
         Ok(binding)
@@ -432,10 +435,16 @@ fn cli(shared: &Shared, action: &str, binding: Option<&Binding>, reason: &str, r
     let mut command = Command::new(&shared.config.python);
     command.args(["-B","-X","utf8"]).arg(&shared.config.runner).arg(action).arg("--chat-id").arg(&shared.config.chat);
     if let Some(binding) = binding {
-        Binding::load(&binding.root,&binding.chat)?;
+        let current=Binding::load_with_runtime(&binding.root,&binding.chat,&shared.config.runtime_authority)?;
+        binding.same_owner(&current)?;
         command.arg("--run-dir").arg(&binding.root).arg("--run-token").arg(&binding.token);
     }
-    if action == "start" { command.args(["--max-seconds","7200","--max-matches","1"]); }
+    if action == "start" {
+        command.args(["--max-seconds","7200","--max-matches","1"]);
+        if let Some(location)=shared.config.runtime_authority.location(){
+            command.arg("--runtime-location-json").arg(serde_json::to_string(location).map_err(|e|e.to_string())?);
+        }
+    }
     if action == "resume" { command.arg("--handoff").arg("--resume-guard-json").arg(serde_json::to_string(&resume_guard.ok_or("恢复缺少点击时的旧暂停守卫")?.value()).map_err(|e|e.to_string())?); }
     if !reason.is_empty() && ["pause","takeover","stop"].contains(&action) { command.arg("--reason").arg(reason.chars().take(200).collect::<String>()); }
     #[cfg(windows)] { use std::os::windows::process::CommandExt; command.creation_flags(0x08000000); }
@@ -548,7 +557,7 @@ fn control_guarded(shared:&SharedState,action:&str,reason:&str,reassert_epoch:Op
         let value = cli(shared,action,binding.as_ref(),reason,resume_guard.as_ref())?;
         let state = value["state"].clone();
         let binding = if let Some(binding)=binding { binding } else {
-            let found=Binding::load(Path::new(text(&state,"run_dir")),&shared.config.chat)?;
+            let found=Binding::load_with_runtime(Path::new(text(&state,"run_dir")),&shared.config.chat,&shared.config.runtime_authority)?;
             found.verify(&state)?;
             shared.bind(found.clone())?;
             found
@@ -901,20 +910,12 @@ fn message_records(shared:&Shared)->Result<Vec<Value>,String>{
     Ok(records)
 }
 
-const CORE_FILES:[&str;13]=["tools/currency_wars_runner.py","tools/currency_wars_broker_entry.py","tools/currency_wars_perception.py","tools/currency_wars_control.py","tools/currency_wars_artifacts.py","tools/currency_wars_source_guard.py","tools/currency_wars_input_bridge.py","tools/currency_wars_bridge_task.py","tools/currency_wars_coaching.py","tools/currency_wars_visual_guards.py","tools/currency_wars_shop_reader.py","tools/currency_wars_state_reader.py","tools/currency_wars_progression.py"];
 fn readiness(shared:&Shared)->Value{
     let checked=(||->Result<Value,String>{
         let manifest=read_json(&shared.config.project.join("docs/RUNNER_READY.json")).map_err(|_|"独立审查尚未完成".to_string())?;
         let review=&manifest["independent_review"];
         if manifest["ready"]!=true || text(&manifest,"owner")!="currency-wars-runner" || text(&manifest,"chat_id")!=shared.config.chat || text(review,"status")!="PASS" || text(review,"reviewer_chat_id").is_empty() || text(review,"reviewed_at").is_empty(){return Err("执行器尚未获得归属一致的独立审查通过记录".into());}
-        for file in CORE_FILES{
-            let expected=text(&manifest["hashes"],file);
-            let path=shared.config.project.join(file);let metadata=fs::symlink_metadata(&path).map_err(|_|format!("源码缺失：{file}"))?;
-            if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.len()>4_000_000{return Err(format!("源码路径或大小异常：{file}"));}
-            let bytes=fs::read(path).map_err(|_|format!("源码暂不可读取：{file}"))?;
-            let actual=format!("{:X}",Sha256::digest(bytes));
-            if expected.len()!=64 || !expected.eq_ignore_ascii_case(&actual){return Err(format!("源码已变更，需要重新核验：{file}"));}
-        }
+        source_guard::verify_runtime_sources(&shared.config.project,&manifest,&shared.config.runtime_provider,source_guard::EMBEDDED_INVENTORY)?;
         Ok(json!({"ready":true,"reason":"本地执行器已通过独立审查与源码校验。","independent_review":review,"checked_at_ms":now_ms()}))
     })();
     checked.unwrap_or_else(|reason|json!({"ready":false,"reason":reason,"checked_at_ms":now_ms()}))
@@ -1053,7 +1054,7 @@ mod tests{
             write("runner-state.json",&manual);
         };
         let setup=||{
-            reset();let s=Arc::new(Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"resume-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())});
+            reset();let s=Arc::new(Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"resume-fixture".into(),runtime:root.clone(),runtime_authority:protocol::RuntimeAuthority::legacy().unwrap(),runtime_provider:Value::Null,test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())});
             let b=Binding::load(&root,"resume-fixture").unwrap();s.bind(b.clone()).unwrap();s.accept(&b,manual.clone(),1,false).unwrap();(s,b)
         };
         let begin=|s:&Shared|{s.epoch.store(2,Ordering::SeqCst);s.session.lock().unwrap().begin_control("resume",2,0);};
@@ -1123,7 +1124,7 @@ mod tests{
         let mut pause=json!({"pause_id":"original-pause","reason":"新本地worker初始安全暂停","chat_id":"close-fixture","run_token":"fixture-only"});write("manual-pause.json",&pause);
         let mut ack=json!({"pause_id":"original-pause","broker_pid":39,"broker_creation_time":49,"chat_id":"close-fixture","run_token":"fixture-only","owned_inputs_released":true});write("pause-ack.json",&ack);
         let mut state=json!({"protocol_version":1,"owner":"currency-wars-runner","chat_id":"close-fixture","run_id":run,"run_dir":root,"runner_pid":marker["pid"],"runner_creation_id":creation,"launch_id":launch,"state_sequence":1,"control_mode":"starting","broker":{"protocol_version":2,"broker_pid":39,"broker_creation_time":49,"chat_id":"close-fixture","run_dir":root,"paused":true,"acknowledged":true,"pause_id":"original-pause","broker_state":{"state":"running"}},"last_command":{"kind":"start","id":launch}});write("runner-state.json",&state);
-        let s=Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"close-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
+        let s=Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"close-fixture".into(),runtime:root.clone(),runtime_authority:protocol::RuntimeAuthority::legacy().unwrap(),runtime_provider:Value::Null,test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
         let b=Binding::load(&root,"close-fixture").unwrap();s.bind(b.clone()).unwrap();s.session.lock().unwrap().begin_control("start",1,0);s.authorize_start(&b,&state,1).unwrap();
         state["control_mode"]=json!("manual");state["reason"]=initial["reason"].clone();assert!(b.pause_confirmed(&state).is_ok());
         assert!(matches!(s.accept(&b,state.clone(),1,false),Ok(Acceptance::Applied)));s.session.lock().unwrap().pending.remove("start");
@@ -1166,7 +1167,7 @@ mod tests{
             for entry in fs::read_dir(root.join("manual-intents")).unwrap(){fs::remove_file(entry.unwrap().path()).unwrap();}
             write(&format!("manual-intents/{init}.json"),&initial);write("runner-manual.json",&initial);write("manual-pause.json",&pause);write("runner-state.json",raw);
         };
-        let shared=||Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"startup-fixture".into(),runtime:root.clone(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
+        let shared=||Shared{config:Config{project:root.clone(),python:PathBuf::new(),runner:PathBuf::new(),chat:"startup-fixture".into(),runtime:root.clone(),runtime_authority:protocol::RuntimeAuthority::legacy().unwrap(),runtime_provider:Value::Null,test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(1),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
         let setup=|raw:&Value|{reset(raw);let s=shared();let b=Binding::load(&root,"startup-fixture").unwrap();s.bind(b.clone()).unwrap();s.session.lock().unwrap().begin_control("start",1,0);s.authorize_start(&b,raw,1).unwrap();(s,b)};
         let manual=|raw:&Value|{let mut s=raw.clone();s["control_mode"]=json!("manual");s["reason"]=json!("初始化；等待唯一broker与一次受控交接");s};
         let check=|name:&str,condition:bool|{assert!(condition,"{name}");println!("STARTUP_CHECK {name}");};
@@ -1225,8 +1226,8 @@ mod tests{
     }
     #[test]
     fn late_prebroker_binding_cannot_erase_known_identity_or_accept_sentinel(){
-        let shared=Shared{config:Config{project:PathBuf::from(r"C:\Temp\project"),python:PathBuf::new(),runner:PathBuf::new(),chat:"chat".into(),runtime:PathBuf::new(),test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(0),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
-        let early=Binding{root:PathBuf::from(r"C:\Temp\run"),chat:"chat".into(),run_id:"run".into(),token:"token".into(),pid:31,creation:"41".into(),marker_id:"run".into(),broker:None,launch_id:"launch".into()};
+        let shared=Shared{config:Config{project:PathBuf::from(r"C:\Temp\project"),python:PathBuf::new(),runner:PathBuf::new(),chat:"chat".into(),runtime:PathBuf::new(),runtime_authority:protocol::RuntimeAuthority::legacy().unwrap(),runtime_provider:Value::Null,test_mode:true,debug_port:None},session:Mutex::new(Session::new(true)),epoch:AtomicU64::new(0),closed:AtomicBool::new(false),closing:AtomicBool::new(false),hwnd:AtomicUsize::new(0),children:Mutex::new(HashMap::new()),app:Mutex::new(None),message_lock:Mutex::new(()),message_sequence:AtomicU64::new(0),update_checking:AtomicBool::new(false),update_result:Mutex::new(None),attention:Mutex::new(attention::Policy::default())};
+        let early=Binding{root:PathBuf::from(r"C:\Temp\run"),chat:"chat".into(),run_id:"run".into(),token:"token".into(),pid:31,creation:"41".into(),marker_id:"run".into(),broker:None,launch_id:"launch".into(),runtime_location:None,runtime_authority:protocol::RuntimeAuthority::legacy().unwrap()};
         let mut known=early.clone();known.broker=Some(protocol::ProcessIdentity{pid:32,creation:"42".into()});
         shared.bind(known.clone()).unwrap();shared.bind(early.clone()).unwrap();
         assert_eq!(shared.session.lock().unwrap().binding.as_ref().unwrap().broker.as_ref().unwrap().pid,32);

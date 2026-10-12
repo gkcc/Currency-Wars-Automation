@@ -1,0 +1,104 @@
+{
+  "task": "B-005",
+  "parent_sha": "c58f6a988194b25cef5c22f710f758692f864a3d",
+  "development_base_sha": "beaea343ee7edf29bcba70ba8351a7dc462a83da",
+  "recorded_at": "2026-10-06T18:20:41.656240+00:00",
+  "environment": "Linux; actual B003+B004+B005 combined source; real Entry/Worker methods with synthetic numeric PNGs and control substitutes",
+  "root_verification": {
+    "test_selection": [
+      "test_currency_wars_economy.EconomyTests",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_preparation_reviews_survive_navigation_but_inventory_invalidates_downstream",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_unclaimed_rewards_block_spending_and_selling",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_selected_investment_requires_both_units_and_board_limits",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_live_guide_level_search_requires_mode_and_live_read_proof",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_runner_normalizes_real_perception_level_string_for_live_and_cached_phase",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_old_completed_reviews_do_not_allow_current_underfilled_battle_input",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_inventory_mutations_cannot_reuse_coordinates_within_a_plan",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_worker_capture_failure_reobserves_without_resending_completed_input",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_reward_capacity_single_sale_requires_receipt_and_new_capacity_then_returns_to_rewards",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_reward_capacity_exact_b003_resume_reconciles_original_sale_in_new_epoch",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_reward_capacity_b003_manual_result_after_multiple_handoffs_closes_unknown_pending",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_reward_capacity_rejects_stale_identity_roi_change_and_economy_disguise",
+      "test_local_runtime_compatibility.RuntimeCompatibilityTests.test_manual_current_guide_review_requires_reward_rescan_and_preserves_guide"
+    ],
+    "tests_run": 28,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "elapsed_seconds": 4.946,
+    "source_sha256": {
+      "tools/currency_wars_runner.py": "91627bdac41c7d73c18c7bdbb3b2221c2bd573f682fa64004520a1a6551b5e65",
+      "tools/currency_wars_economy.py": "5d18cf7da4f16f031be1d4508651ec0ae55665243d900823dd9dfee740bdb96c",
+      "tools/currency_wars_coaching.py": "9ee40dae3b476504f6bfb61dc29eeefb97e55fefac9eee5e7000cac701640895",
+      "tools/test_currency_wars_economy.py": "25e39b873deaeafcfbad1619a8f53d69d05067d3f2648df37aca3a79f6c14eaf",
+      "gui/src/main.rs": "dde71d0713c5e2f8732e03e81e49ab1aaaede7406f25d591df8b15764c138f55"
+    }
+  },
+  "independent_verification": {
+    "economy_tests": {
+      "run": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsed_seconds": 3.972
+    },
+    "related_existing_tests": {
+      "run": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsed_seconds": 0.384
+    },
+    "counts_overlap_root_selection": true,
+    "contradictory_observe_subtests": 2,
+    "subtests_not_counted_as_extra_tests": true,
+    "final_read_only_fence_probes": 5
+  },
+  "checks": {
+    "python_ast_files": [
+      "tools/currency_wars_runner.py",
+      "tools/currency_wars_coaching.py",
+      "tools/currency_wars_economy.py",
+      "tools/test_currency_wars_economy.py"
+    ],
+    "staged_diff": "passed",
+    "controller_sha256": "187F826FEB6E29BEAE8175CE9854845D19354F8344723C84663F6FE79EC0DCA5",
+    "entry_and_bridge_pins_match": true,
+    "gui_core_file_count": 15,
+    "all_gui_core_files_exist": true
+  },
+  "integration_changes": [
+    "Kept B003 current-request/manual-history distinction and deferred missing native facts",
+    "Kept B004 capacity pending, single-sale exception, actual request persistence and current manual-result closure",
+    "Current economy plan uses separate supervised numeric ROI evidence and never writes native fully_read/confidence",
+    "Direct B003 delivery classification for economic receipt fence; no observe-name shortcut or duplicate classification protocol"
+  ],
+  "review_blocker_resolved": {
+    "finding": "Pure observe label could bypass B003 unknown_input for contradictory input_attempted/attempted_actions",
+    "evidence": "Independent probe reproduced acceptance; failure and completed variants now both reject without changing pending",
+    "resolution": "Use manual_receipt_state directly and reject physical-input metadata before allowing later read-only evidence"
+  },
+  "real_cas_fixture_coverage": [
+    "F published then all after-frame reads unavailable: pending and actual receipt persist",
+    "Stale pause CAS refuses before publication and keeps original pending/epoch",
+    "Production latch_manual/explicit_resume/Entry writes and verifies exact new resume event",
+    "Only fresh request/proof/frame in new epoch may reconcile original F",
+    "One F total; actual experience spend 4; original receipt and old review bytes unchanged"
+  ],
+  "historical_standalone_linux_suite_attempt": {
+    "tests_run": 38,
+    "passed": 29,
+    "errors": 9,
+    "reason": "Windows mbcs/CREATE_NO_WINDOW/process identity unavailable",
+    "not_current_final_suite_pass": true
+  },
+  "limitations": [
+    "No new Windows build, installation or game input",
+    "Actual numeric ROI bindings and real free D/paid search/current-slot purchase still require local validation",
+    "Each transaction still uses current Perception path; full-screen OCR elimination not claimed",
+    "Standard late-game reserve reduction requires actual remaining-interest evidence; no verified final-stage rule map yet",
+    "Ledger continuity is scoped to the same run and active_match_id; B007 cross-worker business identity continuation remains pending",
+    "No whole-match autonomous success or measured before-after speed result"
+  ],
+  "game_inputs": 0
+}

@@ -1,0 +1,41 @@
+{
+  "schema": "root-native-scroll-guard-diagnosis/v1",
+  "candidate": "d2477df7c5620fe606340e068642bf684445a5fb",
+  "classification": "B: general coordinate ROI uses byte-exact comparison after unique current text/point proof; ROOT two initial invalid plans classified separately as caller construction errors",
+  "source_request_id": "d196b2a0f88f40bc92d06c932ae85b8c",
+  "source_sha256": "e88d6ff5c0cc7db9b47f13bb3cda31d72e55147f361dbbfcf828658f91e3c553",
+  "actual_capture_request_id": "6c867349279b4ff6abdd7a57b16c75da",
+  "actual_sha256": "e6f085993e4b13852b0cf6b117cc7d47cffaea1979c9fd0c4ed0eada659bcf39",
+  "actual_frame_id": "a53b677663d3444eb5fa055f515f8e1d",
+  "target_label": "0/2",
+  "target_bounds": [
+    1460,
+    324,
+    1512,
+    359
+  ],
+  "point": [
+    1486,
+    341.5
+  ],
+  "changed_pixel_fraction": 0.053296703296703295,
+  "mean_abs_rgb_difference": 0.050183150183150185,
+  "max_abs_rgb_difference": 4,
+  "publication_attempted": false,
+  "physical_scroll_sent": false,
+  "error": "目标ROI实际已变；全屏dHash近似不能批准旧选项",
+  "native_navigation_success": {
+    "outcome": "expected_title_observed",
+    "input_request_id": "9a4cf5e983a44611abc3bf81b625b43b",
+    "completed_clicks": 1,
+    "extra_verification_reads": 0,
+    "automatic_phase_completion": false
+  },
+  "game_stage": "1-1",
+  "chapter": "4",
+  "progress": "6/7",
+  "remaining_task": "累计使用2次特权赋予卡升级进阶装备",
+  "task_progress": "0/2",
+  "private_full_frames_retained": true,
+  "background_animation_cause": "suspected, not proven by pixel change alone"
+}

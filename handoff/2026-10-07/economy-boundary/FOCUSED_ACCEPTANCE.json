@@ -1,0 +1,36 @@
+{
+  "schema": "currency-wars-economy-boundary-tests/v1",
+  "baseline_sha": "85ba75af2b1d43cf34f3b116b3767783709d82f5",
+  "evidence_main_sha": "c8c09213aade00748a722452a0bf4fc5dca095b6",
+  "working_tree_head_at_test": "76711d9739679328997b504518ea408a131c80e5",
+  "binding_rule": "This pre-commit working tree is bound by the four source SHA256 values, not by its earlier HEAD alone.",
+  "selectors": [
+    "test_currency_wars_economy_boundary",
+    "test_currency_wars_economy.EconomyTests.test_published_zero_effect_stops_without_replay_and_reconcile_is_atomic",
+    "test_currency_wars_profile.ProfileTests.test_business_steps_partition_nested_time_and_keep_actual_return_reasons"
+  ],
+  "tests_run": 9,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "seconds": 6.742854811998768,
+  "source_sha256": {
+    "tools/currency_wars_runner.py": "dbdb3e94d83fb0f3a91fc3879c3a9822abfaa4a60d572dc0d67c9b55e384ed9a",
+    "tools/currency_wars_profile.py": "e913f23d6d2b86d21ea178130a32f7e0b1daa6d2f8d0e161024be896d24717cc",
+    "tools/replay_currency_wars_economy_boundary.py": "e3fdedc2e41b5be09a03a945785fd06cbaf5d65417aa1572f48afccf5c30781a",
+    "tools/test_currency_wars_economy_boundary.py": "c871ca3e2b0427a18ecfc799928a5a2ecdec0e0f2bfc110ff1c7527009b3b668"
+  },
+  "source_sha256_after": {
+    "tools/currency_wars_runner.py": "dbdb3e94d83fb0f3a91fc3879c3a9822abfaa4a60d572dc0d67c9b55e384ed9a",
+    "tools/currency_wars_profile.py": "e913f23d6d2b86d21ea178130a32f7e0b1daa6d2f8d0e161024be896d24717cc",
+    "tools/replay_currency_wars_economy_boundary.py": "e3fdedc2e41b5be09a03a945785fd06cbaf5d65417aa1572f48afccf5c30781a",
+    "tools/test_currency_wars_economy_boundary.py": "c871ca3e2b0427a18ecfc799928a5a2ecdec0e0f2bfc110ff1c7527009b3b668"
+  },
+  "source_unchanged": true,
+  "offline_only": true,
+  "game_inputs": 0,
+  "new_game_captures": 0,
+  "online_model_calls": 0,
+  "candidate_installed": false,
+  "evidence_limit": "Explicit protocol fixtures and point-accounting checks. No real OCR or game performance result."
+}

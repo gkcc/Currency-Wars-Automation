@@ -1,0 +1,7 @@
+﻿section,case,normal_root_before,normal_root_after,exception_root_before,exception_root_after,seconds_before,seconds_after,timing_claim
+real_starts,shop_character_level_999,0,0,0,0,2.5613884909980698,2.9776087849968462,one pass; no speedup inference
+real_starts,shop_actual_player_level_8,0,0,0,0,2.1416555600007996,2.1387391339958413,one pass; no speedup inference
+real_starts,boss_level_90_intro,0,0,1,1,0.8013322119950317,0.7904448359986418,one pass; no speedup inference
+real_starts,final_preparation_player_level_9,1,1,0,0,2.159875191995525,1.6547358679963509,one pass; no speedup inference
+synthetic_contracts,three_f_success,2,1,0,0,0.2829676359979203,0.23914248299843166,one pass; no speedup inference
+synthetic_contracts,zero_effect,1,1,1,1,0.19429200600279728,0.13538828200398711,one pass; no speedup inference

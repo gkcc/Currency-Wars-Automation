@@ -1,0 +1,5704 @@
+{
+  "schema": "currency-wars-perception-method-profile/v1",
+  "offline_only": true,
+  "physical_inputs": 0,
+  "new_game_captures": 0,
+  "source_revision": "5e46351372ff26980a92a9806909c732607f50ea",
+  "source_hashes": {
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25"
+  },
+  "source_hashes_after": {
+    "currency_wars_perception.py": "fe11fd84e8d7ae8b153d1108250813737acb266206562b33107bb26b192a9b8d",
+    "currency_wars_shop_reader.py": "e6a069766c010021875d3f002db935af741eb5692af1266abccfa8b8f6338bc3",
+    "currency_wars_state_reader.py": "69acca4d20625fc23f41fa9872b9855fd9f3f526a1f29b949e432dd9422ed8a2",
+    "currency_wars_rewards.py": "7afc4216ed9f72c1c857e99350871b436e90dc7b9e9b58198df4b86e68cfbc25"
+  },
+  "source_unchanged_during_measurement": true,
+  "scope": "full",
+  "machine": {
+    "system": "Linux",
+    "machine": "x86_64",
+    "node": "971a7bcb66f9",
+    "python": "3.12.14"
+  },
+  "dependency_import_seconds": 0.14434356899982959,
+  "production_import_seconds": 0.0023063389999151696,
+  "cold_start_contract": "First actual read constructs the OCR engine. ORT/RapidOCR and production module imports are measured separately above, never silently added into each frame.",
+  "cache_contract": "Each actual forced read is followed by one unforced same-byte read. External wall time measures cache cost; cached elapsed_ms is the original computation, not cache time.",
+  "accounting_contract": "Inclusive method totals are nested, not additive. Exclusive method totals subtract immediate-child intervals and sum to the Perception.read interval. Direct RapidOCR calls retain image shape, detection mode and caller. Missing private shop/state assets remain unknown; no synthetic shop or confidence injection.",
+  "sequence": [
+    {
+      "id": "q00",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/reward-sequence/q00.png",
+      "sha256": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c"
+    },
+    {
+      "id": "q01",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/reward-sequence/q01.png",
+      "sha256": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf"
+    },
+    {
+      "id": "q02",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/reward-sequence/q02.png",
+      "sha256": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366"
+    },
+    {
+      "id": "r00",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/refresh-sequence/r00.png",
+      "sha256": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c"
+    },
+    {
+      "id": "r01",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/fixtures/shop_actual_player_level_8.png",
+      "sha256": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c"
+    },
+    {
+      "id": "r02",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/refresh-sequence/r02.png",
+      "sha256": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738"
+    },
+    {
+      "id": "r03",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/refresh-sequence/r03.png",
+      "sha256": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81"
+    },
+    {
+      "id": "r04",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/refresh-sequence/r04.png",
+      "sha256": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b"
+    },
+    {
+      "id": "r05",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/refresh-sequence/r05.png",
+      "sha256": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b"
+    },
+    {
+      "id": "r06",
+      "path": "/workspace/scratch/82285573bcbd/currency-wars/handoff/2026-10-07/refresh-sequence/r06.png",
+      "sha256": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023"
+    }
+  ],
+  "observations": [
+    {
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": true,
+      "wall_seconds": 1.8347716500002207,
+      "perception_elapsed_ms": 1833.98,
+      "event_ids": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "semantics": {
+        "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+        "page": "shop",
+        "fields": {
+          "stage": "3-6",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 65,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.392
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 60
+      },
+      "nested_exclusive_sum_seconds": 1.834759802,
+      "perception_method_inclusive_seconds": 1.834759802,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__init__": 0.216307967,
+        "RapidOCR.__call__": 1.395403163,
+        "rewards.detect": 2.995e-06,
+        "StateReader._load": 0.000110647,
+        "native_player_hud": 0.000330288,
+        "ShopReader.read": 0.044689567,
+        "Perception.read": 1.834759802,
+        "StateReader.read": 0.045085474,
+        "classify": 0.001818142,
+        "ShopReader._load": 0.000114553,
+        "semantic_facts": 0.000435377
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.216307967,
+        "primary_ocr": 1.395403163,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.044689567,
+        "state_reader": 0.045085474,
+        "reward_rules": 2.995e-06,
+        "other_perception": 0.13327063600000008
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0015005229997768765,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        11
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001496237,
+      "perception_method_inclusive_seconds": 0.001496237,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001496237
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001496237
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.1615906039996844,
+      "perception_elapsed_ms": 1159.55,
+      "event_ids": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "semantics": {
+        "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+        "page": "preparation",
+        "fields": {
+          "stage": "3-6",
+          "level": "8",
+          "deployed": "8/8"
+        },
+        "coins": {
+          "value": 65,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.429
+        },
+        "shop_ok": null,
+        "shop_status": null,
+        "shop_errors": null,
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": true,
+          "reason": "visible_blue_orbs",
+          "input_allowed": true,
+          "interaction_required": false,
+          "area_fully_visible": true,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [
+          {
+            "kind": "blue_orb",
+            "bounds": [
+              1550,
+              265,
+              1624,
+              334
+            ],
+            "center": [
+              1587,
+              299
+            ],
+            "score": 0.9112
+          },
+          {
+            "kind": "blue_orb",
+            "bounds": [
+              1497,
+              322,
+              1571,
+              391
+            ],
+            "center": [
+              1534,
+              356
+            ],
+            "score": 1.0
+          }
+        ],
+        "ocr_rows_count": 34
+      },
+      "nested_exclusive_sum_seconds": 1.1615806789999998,
+      "perception_method_inclusive_seconds": 1.161580679,
+      "accounting_residual_seconds": 2.220446049250313e-16,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.026728145,
+        "rewards.detect": 0.014797509,
+        "StateReader._load": 0.000112119,
+        "native_player_hud": 0.013558621,
+        "Perception.read": 1.161580679,
+        "classify": 0.00015269,
+        "StateReader.read": 0.042133832,
+        "semantic_facts": 0.015044462
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.999982875,
+        "field_ocr": 0.02674527,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.042133832,
+        "reward_rules": 0.014797509,
+        "other_perception": 0.07792119299999979
+      },
+      "components_residual_seconds": 2.220446049250313e-16
+    },
+    {
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0013544429993999074,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        22
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001287291,
+      "perception_method_inclusive_seconds": 0.001287291,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001287291
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001287291
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.351776935000089,
+      "perception_elapsed_ms": 1349.88,
+      "event_ids": [
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "semantics": {
+        "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+        "page": "preparation",
+        "fields": {
+          "stage": "3-6",
+          "level": "8",
+          "deployed": "8/8"
+        },
+        "coins": {
+          "value": 65,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.397
+        },
+        "shop_ok": null,
+        "shop_status": null,
+        "shop_errors": null,
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": true,
+          "reason": "native_side_prompt_requires_review",
+          "input_allowed": false,
+          "interaction_required": true,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 36
+      },
+      "nested_exclusive_sum_seconds": 1.351767421,
+      "perception_method_inclusive_seconds": 1.351767421,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.20326838,
+        "rewards.detect": 0.020001384,
+        "StateReader._load": 0.000120021,
+        "native_player_hud": 0.000100171,
+        "Perception.read": 1.351767421,
+        "classify": 0.000153461,
+        "StateReader.read": 0.046278343,
+        "semantic_facts": 0.020540496
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.179923127,
+        "field_ocr": 0.023345253,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.046278343,
+        "reward_rules": 0.020001384,
+        "other_perception": 0.08221931400000007
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0012006510005448945,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        32
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.0011597,
+      "perception_method_inclusive_seconds": 0.0011597,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.0011597
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.0011597
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.604783380000299,
+      "perception_elapsed_ms": 1602.57,
+      "event_ids": [
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "semantics": {
+        "snapshot_id": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 70,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.604773885,
+      "perception_method_inclusive_seconds": 1.604773885,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.441193321,
+        "rewards.detect": 2.003e-06,
+        "StateReader._load": 0.000181244,
+        "native_player_hud": 0.02856161,
+        "ShopReader.read": 0.041285041,
+        "Perception.read": 1.604773885,
+        "StateReader.read": 0.042371842,
+        "classify": 0.000228304,
+        "ShopReader._load": 0.000127853,
+        "semantic_facts": 0.000306302
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.412849609,
+        "field_ocr": 0.028343712,
+        "shop_ocr": 0.0,
+        "shop_other": 0.041285041,
+        "state_reader": 0.042371842,
+        "reward_rules": 2.003e-06,
+        "other_perception": 0.07992167799999987
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0013820149997627595,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        44
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001340091,
+      "perception_method_inclusive_seconds": 0.001340091,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001340091
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001340091
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.2086907779994362,
+      "perception_elapsed_ms": 1205.8,
+      "event_ids": [
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55
+      ],
+      "semantics": {
+        "snapshot_id": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 68,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.208680431,
+      "perception_method_inclusive_seconds": 1.208680431,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.040168728,
+        "rewards.detect": 2.154e-06,
+        "StateReader._load": 0.000143136,
+        "native_player_hud": 0.013618371,
+        "ShopReader.read": 0.039949317,
+        "Perception.read": 1.208680431,
+        "StateReader.read": 0.043279911,
+        "classify": 0.000255585,
+        "ShopReader._load": 0.000110967,
+        "semantic_facts": 0.000322015
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.026779233,
+        "field_ocr": 0.013389495,
+        "shop_ocr": 0.0,
+        "shop_other": 0.039949317,
+        "state_reader": 0.043279911,
+        "reward_rules": 2.154e-06,
+        "other_perception": 0.08528032100000014
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0021083800002088537,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        56
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.002059776,
+      "perception_method_inclusive_seconds": 0.002059776,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.002059776
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.002059776
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.1016841480004587,
+      "perception_elapsed_ms": 1099.5,
+      "event_ids": [
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67
+      ],
+      "semantics": {
+        "snapshot_id": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 66,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 62
+      },
+      "nested_exclusive_sum_seconds": 1.101675925,
+      "perception_method_inclusive_seconds": 1.101675925,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.939655133,
+        "rewards.detect": 2.523e-06,
+        "StateReader._load": 0.000114903,
+        "native_player_hud": 0.013987476,
+        "ShopReader.read": 0.039789682,
+        "Perception.read": 1.101675925,
+        "StateReader.read": 0.041409726,
+        "classify": 0.000222796,
+        "ShopReader._load": 0.000121854,
+        "semantic_facts": 0.000324119
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.925900488,
+        "field_ocr": 0.013754645,
+        "shop_ocr": 0.0,
+        "shop_other": 0.039789682,
+        "state_reader": 0.041409726,
+        "reward_rules": 2.523e-06,
+        "other_perception": 0.08081886099999996
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.001253579999684007,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        68
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001190335,
+      "perception_method_inclusive_seconds": 0.001190335,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001190335
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001190335
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.0092237320004642,
+      "perception_elapsed_ms": 1007.06,
+      "event_ids": [
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79
+      ],
+      "semantics": {
+        "snapshot_id": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 64,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 58
+      },
+      "nested_exclusive_sum_seconds": 1.009218083,
+      "perception_method_inclusive_seconds": 1.009218083,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.847137817,
+        "rewards.detect": 2.304e-06,
+        "StateReader._load": 0.000141233,
+        "native_player_hud": 0.014019575,
+        "ShopReader.read": 0.040466123,
+        "Perception.read": 1.009218083,
+        "StateReader.read": 0.041018286,
+        "classify": 0.00022544,
+        "ShopReader._load": 0.000127963,
+        "semantic_facts": 0.000258209
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.833332866,
+        "field_ocr": 0.013804951,
+        "shop_ocr": 0.0,
+        "shop_other": 0.040466123,
+        "state_reader": 0.041018286,
+        "reward_rules": 2.304e-06,
+        "other_perception": 0.08059355300000001
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0014541529999405611,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        80
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001399541,
+      "perception_method_inclusive_seconds": 0.001399541,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001399541
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001399541
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.1399377389998335,
+      "perception_elapsed_ms": 1138.37,
+      "event_ids": [
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91
+      ],
+      "semantics": {
+        "snapshot_id": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 62,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 63
+      },
+      "nested_exclusive_sum_seconds": 1.139931019,
+      "perception_method_inclusive_seconds": 1.139931019,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.9771964160000001,
+        "rewards.detect": 2.404e-06,
+        "StateReader._load": 0.000110066,
+        "native_player_hud": 0.013403205,
+        "ShopReader.read": 0.040196647,
+        "Perception.read": 1.139931019,
+        "StateReader.read": 0.042700392,
+        "classify": 0.000254454,
+        "ShopReader._load": 0.000110036,
+        "semantic_facts": 0.000286822
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.964001745,
+        "field_ocr": 0.013194671,
+        "shop_ocr": 0.0,
+        "shop_other": 0.040196647,
+        "state_reader": 0.042700392,
+        "reward_rules": 2.404e-06,
+        "other_perception": 0.07983516000000011
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0015203129996734788,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        92
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001466242,
+      "perception_method_inclusive_seconds": 0.001466242,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001466242
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001466242
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.1570119609996254,
+      "perception_elapsed_ms": 1154.96,
+      "event_ids": [
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103
+      ],
+      "semantics": {
+        "snapshot_id": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 60,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.1570051509999997,
+      "perception_method_inclusive_seconds": 1.157005151,
+      "accounting_residual_seconds": 2.220446049250313e-16,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.993031539,
+        "rewards.detect": 2.213e-06,
+        "StateReader._load": 0.00010636,
+        "native_player_hud": 0.013011925,
+        "ShopReader.read": 0.039831005,
+        "Perception.read": 1.157005151,
+        "StateReader.read": 0.042369724,
+        "classify": 0.000248645,
+        "ShopReader._load": 0.000109705,
+        "semantic_facts": 0.000268756
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.980263723,
+        "field_ocr": 0.012767816,
+        "shop_ocr": 0.0,
+        "shop_other": 0.039831005,
+        "state_reader": 0.042369724,
+        "reward_rules": 2.213e-06,
+        "other_perception": 0.08177066999999973
+      },
+      "components_residual_seconds": 2.220446049250313e-16
+    },
+    {
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0014083449996178388,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        104
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001353492,
+      "perception_method_inclusive_seconds": 0.001353492,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001353492
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001353492
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.1362268819993915,
+      "perception_elapsed_ms": 1134.07,
+      "event_ids": [
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115
+      ],
+      "semantics": {
+        "snapshot_id": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 58,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.136217598,
+      "perception_method_inclusive_seconds": 1.136217598,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.964891092,
+        "rewards.detect": 3.265e-06,
+        "StateReader._load": 0.000106361,
+        "native_player_hud": 0.021320226,
+        "ShopReader.read": 0.046573745,
+        "Perception.read": 1.136217598,
+        "StateReader.read": 0.044955819,
+        "classify": 0.000229015,
+        "ShopReader._load": 0.000123466,
+        "semantic_facts": 0.000357369
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.94381911,
+        "field_ocr": 0.021071982,
+        "shop_ocr": 0.0,
+        "shop_other": 0.046573745,
+        "state_reader": 0.044955819,
+        "reward_rules": 3.265e-06,
+        "other_perception": 0.07979367699999998
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0012735109994537197,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        116
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001216655,
+      "perception_method_inclusive_seconds": 0.001216655,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001216655
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001216655
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.1819361480002044,
+      "perception_elapsed_ms": 1179.76,
+      "event_ids": [
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126
+      ],
+      "semantics": {
+        "snapshot_id": "046f21816898cf88621977bf567344c8e8b89d59fccfa92718fb9b3ad9d0285c",
+        "page": "shop",
+        "fields": {
+          "stage": "3-6",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 65,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.392
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 60
+      },
+      "nested_exclusive_sum_seconds": 1.181926313,
+      "perception_method_inclusive_seconds": 1.181926313,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.012801773,
+        "rewards.detect": 2.814e-06,
+        "StateReader._load": 0.000131508,
+        "native_player_hud": 9.1458e-05,
+        "ShopReader.read": 0.039990355,
+        "Perception.read": 1.181926313,
+        "StateReader.read": 0.040495987,
+        "classify": 0.000252411,
+        "ShopReader._load": 0.000136065,
+        "semantic_facts": 0.000352952
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.012801773,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.039990355,
+        "state_reader": 0.040495987,
+        "reward_rules": 2.814e-06,
+        "other_perception": 0.08863538399999993
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0013377180002862588,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        127
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001284367,
+      "perception_method_inclusive_seconds": 0.001284367,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001284367
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001284367
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 0.8507358939996266,
+      "perception_elapsed_ms": 848.68,
+      "event_ids": [
+        128,
+        129,
+        130,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137
+      ],
+      "semantics": {
+        "snapshot_id": "c08b5ba47534afa4c778240f9327494d610a3f331060cda5665face50bc3e4bf",
+        "page": "preparation",
+        "fields": {
+          "stage": "3-6",
+          "level": "8",
+          "deployed": "8/8"
+        },
+        "coins": {
+          "value": 65,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.429
+        },
+        "shop_ok": null,
+        "shop_status": null,
+        "shop_errors": null,
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": true,
+          "reason": "visible_blue_orbs",
+          "input_allowed": true,
+          "interaction_required": false,
+          "area_fully_visible": true,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [
+          {
+            "kind": "blue_orb",
+            "bounds": [
+              1550,
+              265,
+              1624,
+              334
+            ],
+            "center": [
+              1587,
+              299
+            ],
+            "score": 0.9112
+          },
+          {
+            "kind": "blue_orb",
+            "bounds": [
+              1497,
+              322,
+              1571,
+              391
+            ],
+            "center": [
+              1534,
+              356
+            ],
+            "score": 1.0
+          }
+        ],
+        "ocr_rows_count": 34
+      },
+      "nested_exclusive_sum_seconds": 0.850726479,
+      "perception_method_inclusive_seconds": 0.850726479,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.714981914,
+        "rewards.detect": 0.014526219,
+        "StateReader._load": 0.000107272,
+        "native_player_hud": 0.013836789,
+        "Perception.read": 0.850726479,
+        "classify": 0.000148995,
+        "StateReader.read": 0.043686329,
+        "semantic_facts": 0.014782967
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.687925466,
+        "field_ocr": 0.027056447999999997,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.043686329,
+        "reward_rules": 0.014526219,
+        "other_perception": 0.07753201699999998
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.001211266000609612,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        138
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001144927,
+      "perception_method_inclusive_seconds": 0.001144927,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001144927
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001144927
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.033752044000721,
+      "perception_elapsed_ms": 1031.59,
+      "event_ids": [
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147
+      ],
+      "semantics": {
+        "snapshot_id": "ffb4bb93d77eb9b96fa1860cd78595d2b7c1d4373061412982868c54cf00e366",
+        "page": "preparation",
+        "fields": {
+          "stage": "3-6",
+          "level": "8",
+          "deployed": "8/8"
+        },
+        "coins": {
+          "value": 65,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.397
+        },
+        "shop_ok": null,
+        "shop_status": null,
+        "shop_errors": null,
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": true,
+          "reason": "native_side_prompt_requires_review",
+          "input_allowed": false,
+          "interaction_required": true,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 36
+      },
+      "nested_exclusive_sum_seconds": 1.033745434,
+      "perception_method_inclusive_seconds": 1.033745434,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 0.899770038,
+        "rewards.detect": 0.014271128,
+        "StateReader._load": 0.000108994,
+        "native_player_hud": 5.4061e-05,
+        "Perception.read": 1.033745434,
+        "classify": 0.000153501,
+        "StateReader.read": 0.040191078,
+        "semantic_facts": 0.01463082
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.885989561,
+        "field_ocr": 0.013780477,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.040191078,
+        "reward_rules": 0.014271128,
+        "other_perception": 0.07951318999999998
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0012107259999538655,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        148
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001154511,
+      "perception_method_inclusive_seconds": 0.001154511,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001154511
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001154511
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.2557470699994155,
+      "perception_elapsed_ms": 1253.08,
+      "event_ids": [
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159
+      ],
+      "semantics": {
+        "snapshot_id": "f7e7398ff857097783d6be94dcbe612496132e7f0af2bc2bfe179cdd2b71687c",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 70,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.255738588,
+      "perception_method_inclusive_seconds": 1.255738588,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.085804602,
+        "rewards.detect": 2.324e-06,
+        "StateReader._load": 0.000101103,
+        "native_player_hud": 0.013462658,
+        "ShopReader.read": 0.042257814,
+        "Perception.read": 1.255738588,
+        "StateReader.read": 0.042973462,
+        "classify": 0.000224428,
+        "ShopReader._load": 0.000107813,
+        "semantic_facts": 0.000282396
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.07257832,
+        "field_ocr": 0.013226282,
+        "shop_ocr": 0.0,
+        "shop_other": 0.042257814,
+        "state_reader": 0.042973462,
+        "reward_rules": 2.324e-06,
+        "other_perception": 0.0847003859999999
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.001281441999708477,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        160
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001238457,
+      "perception_method_inclusive_seconds": 0.001238457,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001238457
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001238457
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.183231844999682,
+      "perception_elapsed_ms": 1181.14,
+      "event_ids": [
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171
+      ],
+      "semantics": {
+        "snapshot_id": "7ffc0c065f665754a5ce2d7b4e278cbca3078c2cda0ee39403a0783dddca135c",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 68,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.183224333,
+      "perception_method_inclusive_seconds": 1.183224333,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.018393052,
+        "rewards.detect": 2.414e-06,
+        "StateReader._load": 0.0001127,
+        "native_player_hud": 0.016873532,
+        "ShopReader.read": 0.040005458,
+        "Perception.read": 1.183224333,
+        "StateReader.read": 0.042834162,
+        "classify": 0.000488496,
+        "ShopReader._load": 0.000114763,
+        "semantic_facts": 0.000297208
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.001748986,
+        "field_ocr": 0.016644066,
+        "shop_ocr": 0.0,
+        "shop_other": 0.040005458,
+        "state_reader": 0.042834162,
+        "reward_rules": 2.414e-06,
+        "other_perception": 0.08198924700000015
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0012659489993893658,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        172
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001211256,
+      "perception_method_inclusive_seconds": 0.001211256,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001211256
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001211256
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.5353539449997697,
+      "perception_elapsed_ms": 1533.19,
+      "event_ids": [
+        173,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180,
+        181,
+        182,
+        183
+      ],
+      "semantics": {
+        "snapshot_id": "60645f3de4a03501a783be4f03bbb2642c0c749eb034eb5d2c64961ed7ae3738",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 66,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 62
+      },
+      "nested_exclusive_sum_seconds": 1.535345722,
+      "perception_method_inclusive_seconds": 1.535345722,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.3703947699999999,
+        "rewards.detect": 2.033e-06,
+        "StateReader._load": 0.000104978,
+        "native_player_hud": 0.01378215,
+        "ShopReader.read": 0.040264158,
+        "Perception.read": 1.535345722,
+        "StateReader.read": 0.041316605,
+        "classify": 0.000221464,
+        "ShopReader._load": 0.000111398,
+        "semantic_facts": 0.000267513
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.356852612,
+        "field_ocr": 0.013542158,
+        "shop_ocr": 0.0,
+        "shop_other": 0.040264158,
+        "state_reader": 0.041316605,
+        "reward_rules": 2.033e-06,
+        "other_perception": 0.08336815599999996
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0013078609999865876,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        184
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001256574,
+      "perception_method_inclusive_seconds": 0.001256574,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001256574
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001256574
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.4898105969996323,
+      "perception_elapsed_ms": 1487.53,
+      "event_ids": [
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        193,
+        194,
+        195
+      ],
+      "semantics": {
+        "snapshot_id": "c0059ee8c25cef0410091e162594675053732315cbe5b8131769f9282fea7c81",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 64,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 58
+      },
+      "nested_exclusive_sum_seconds": 1.489803015,
+      "perception_method_inclusive_seconds": 1.489803015,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.323690811,
+        "rewards.detect": 2.714e-06,
+        "StateReader._load": 0.000110957,
+        "native_player_hud": 0.015729727,
+        "ShopReader.read": 0.040469297,
+        "Perception.read": 1.489803015,
+        "StateReader.read": 0.043795733,
+        "classify": 0.000220282,
+        "ShopReader._load": 0.000108865,
+        "semantic_facts": 0.000294644
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.308278222,
+        "field_ocr": 0.015412589,
+        "shop_ocr": 0.0,
+        "shop_other": 0.040469297,
+        "state_reader": 0.043795733,
+        "reward_rules": 2.714e-06,
+        "other_perception": 0.08184445999999983
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0013178870003685006,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        196
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001255753,
+      "perception_method_inclusive_seconds": 0.001255753,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001255753
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001255753
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.2982310339994,
+      "perception_elapsed_ms": 1295.9,
+      "event_ids": [
+        197,
+        198,
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207
+      ],
+      "semantics": {
+        "snapshot_id": "e4ec2756c5e5a6a30137501e52a0f87ef0d40a23623adb2c832496d52fc9b53b",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 62,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 63
+      },
+      "nested_exclusive_sum_seconds": 1.298223452,
+      "perception_method_inclusive_seconds": 1.298223452,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.132301015,
+        "rewards.detect": 2.183e-06,
+        "StateReader._load": 0.000114473,
+        "native_player_hud": 0.013892767,
+        "ShopReader.read": 0.041104595,
+        "Perception.read": 1.298223452,
+        "StateReader.read": 0.042484365,
+        "classify": 0.000234513,
+        "ShopReader._load": 0.000117296,
+        "semantic_facts": 0.000271649
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.118647539,
+        "field_ocr": 0.013653476,
+        "shop_ocr": 0.0,
+        "shop_other": 0.041104595,
+        "state_reader": 0.042484365,
+        "reward_rules": 2.183e-06,
+        "other_perception": 0.08233129399999999
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0012576360004459275,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        208
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001200319,
+      "perception_method_inclusive_seconds": 0.001200319,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001200319
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001200319
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.3751571789998707,
+      "perception_elapsed_ms": 1373.23,
+      "event_ids": [
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219
+      ],
+      "semantics": {
+        "snapshot_id": "75b7857ce66e7e41e2d7e793401da0919531f619c0b0ad881b13f4b6ba82dd5b",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 60,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.3751481750000003,
+      "perception_method_inclusive_seconds": 1.375148175,
+      "accounting_residual_seconds": -2.220446049250313e-16,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.207557438,
+        "rewards.detect": 3.094e-06,
+        "StateReader._load": 0.000111276,
+        "native_player_hud": 0.028963616,
+        "ShopReader.read": 0.04402669,
+        "Perception.read": 1.375148175,
+        "StateReader.read": 0.042713585,
+        "classify": 0.000229973,
+        "ShopReader._load": 0.000114461,
+        "semantic_facts": 0.000295971
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.178833148,
+        "field_ocr": 0.02872429,
+        "shop_ocr": 0.0,
+        "shop_other": 0.04402669,
+        "state_reader": 0.042713585,
+        "reward_rules": 3.094e-06,
+        "other_perception": 0.0808473680000003
+      },
+      "components_residual_seconds": -2.220446049250313e-16
+    },
+    {
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0014443310001297505,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        220
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001361398,
+      "perception_method_inclusive_seconds": 0.001361398,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001361398
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001361398
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "engine_cold": false,
+      "wall_seconds": 1.2672420130002138,
+      "perception_elapsed_ms": 1265.46,
+      "event_ids": [
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228,
+        229,
+        230,
+        231
+      ],
+      "semantics": {
+        "snapshot_id": "ae0a596fe1f04244ee3d7fe9988fda109820fa9f787cc4ea306e98a109e18023",
+        "page": "shop",
+        "fields": {
+          "stage": "3-4",
+          "level": "8",
+          "deployed": null
+        },
+        "coins": {
+          "value": 58,
+          "bounds": [
+            1613,
+            892,
+            1687,
+            950
+          ],
+          "currency_icon_gold_fraction": 0.423
+        },
+        "shop_ok": false,
+        "shop_status": "error",
+        "shop_errors": [
+          "FileNotFoundError: [Errno 2] No such file or directory: '/workspace/scratch/82285573bcbd/currency-wars/tools/shop_reader_resources/SOURCES.json'"
+        ],
+        "team_checked": false,
+        "team_fully_read": false,
+        "known_board_units": 0,
+        "rewards": {
+          "scanned": false,
+          "reason": "shop_occludes_reward_area",
+          "input_allowed": false,
+          "interaction_required": false,
+          "area_fully_visible": false,
+          "uncertain": false,
+          "all_rewards_cleared": null
+        },
+        "reward_targets": [],
+        "ocr_rows_count": 61
+      },
+      "nested_exclusive_sum_seconds": 1.267234281,
+      "perception_method_inclusive_seconds": 1.267234281,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "RapidOCR.__call__": 1.098159382,
+        "rewards.detect": 2.805e-06,
+        "StateReader._load": 0.000124415,
+        "native_player_hud": 0.017634384,
+        "ShopReader.read": 0.041121274,
+        "Perception.read": 1.267234281,
+        "StateReader.read": 0.043007192,
+        "classify": 0.000229642,
+        "ShopReader._load": 0.000110605,
+        "semantic_facts": 0.000313987
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 1.080751376,
+        "field_ocr": 0.017408006,
+        "shop_ocr": 0.0,
+        "shop_other": 0.041121274,
+        "state_reader": 0.043007192,
+        "reward_rules": 2.805e-06,
+        "other_perception": 0.08494362799999997
+      },
+      "components_residual_seconds": 0.0
+    },
+    {
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "wall_seconds": 0.0013266460000522784,
+      "cache_returned_same_object": true,
+      "stored_elapsed_ms_is_original_computation": true,
+      "event_ids": [
+        232
+      ],
+      "semantics_equal_actual": true,
+      "nested_exclusive_sum_seconds": 0.001265275,
+      "perception_method_inclusive_seconds": 0.001265275,
+      "accounting_residual_seconds": 0.0,
+      "method_inclusive_seconds": {
+        "Perception.read": 0.001265275
+      },
+      "requested_scope": "full",
+      "exclusive_components_seconds": {
+        "engine_initialization": 0.0,
+        "primary_ocr": 0.0,
+        "field_ocr": 0.0,
+        "shop_ocr": 0.0,
+        "shop_other": 0.0,
+        "state_reader": 0.0,
+        "reward_rules": 0.0,
+        "other_perception": 0.001265275
+      },
+      "components_residual_seconds": 0.0
+    }
+  ],
+  "events": [
+    {
+      "id": 0,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5900134400627,
+      "end_ns": 5901969160429,
+      "inclusive_seconds": 1.834759802,
+      "exclusive_seconds": 0.13068982400000007
+    },
+    {
+      "id": 1,
+      "method": "RapidOCR.__init__",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5900214208944,
+      "end_ns": 5900430516911,
+      "inclusive_seconds": 0.216307967,
+      "exclusive_seconds": 0.216307967
+    },
+    {
+      "id": 2,
+      "method": "RapidOCR.__call__",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5900474160440,
+      "end_ns": 5901869563603,
+      "inclusive_seconds": 1.395403163,
+      "exclusive_seconds": 1.395403163
+    },
+    {
+      "id": 3,
+      "method": "classify",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901869793931,
+      "end_ns": 5901871612073,
+      "inclusive_seconds": 0.001818142,
+      "exclusive_seconds": 0.001818142
+    },
+    {
+      "id": 4,
+      "method": "ShopReader.read",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901871634777,
+      "end_ns": 5901916324344,
+      "inclusive_seconds": 0.044689567,
+      "exclusive_seconds": 0.044575013999999996
+    },
+    {
+      "id": 5,
+      "method": "ShopReader._load",
+      "parent_id": 4,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901916165765,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5901916280318,
+      "inclusive_seconds": 0.000114553,
+      "exclusive_seconds": 0.000114553
+    },
+    {
+      "id": 6,
+      "method": "native_player_hud",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901916586360,
+      "end_ns": 5901916916648,
+      "inclusive_seconds": 0.000330288,
+      "exclusive_seconds": 0.000330288
+    },
+    {
+      "id": 7,
+      "method": "semantic_facts",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901916935236,
+      "end_ns": 5901917370613,
+      "inclusive_seconds": 0.000435377,
+      "exclusive_seconds": 0.000432382
+    },
+    {
+      "id": 8,
+      "method": "rewards.detect",
+      "parent_id": 7,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901916944159,
+      "end_ns": 5901916947154,
+      "inclusive_seconds": 2.995e-06,
+      "exclusive_seconds": 2.995e-06
+    },
+    {
+      "id": 9,
+      "method": "StateReader.read",
+      "parent_id": 0,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901917385235,
+      "end_ns": 5901962470709,
+      "inclusive_seconds": 0.045085474,
+      "exclusive_seconds": 0.044974827
+    },
+    {
+      "id": 10,
+      "method": "StateReader._load",
+      "parent_id": 9,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901962272399,
+      "end_ns": 5901962383046,
+      "inclusive_seconds": 0.000110647,
+      "exclusive_seconds": 0.000110647
+    },
+    {
+      "id": 11,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q00",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5901969192948,
+      "end_ns": 5901970689185,
+      "inclusive_seconds": 0.001496237,
+      "exclusive_seconds": 0.001496237
+    },
+    {
+      "id": 12,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5901970712270,
+      "end_ns": 5903132292949,
+      "inclusive_seconds": 1.161580679,
+      "exclusive_seconds": 0.0773227099999998
+    },
+    {
+      "id": 13,
+      "method": "RapidOCR.__call__",
+      "parent_id": 12,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5902039223668,
+      "end_ns": 5903039206543,
+      "inclusive_seconds": 0.999982875,
+      "exclusive_seconds": 0.999982875
+    },
+    {
+      "id": 14,
+      "method": "classify",
+      "parent_id": 12,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903039283379,
+      "end_ns": 5903039436069,
+      "inclusive_seconds": 0.00015269,
+      "exclusive_seconds": 0.00015269
+    },
+    {
+      "id": 15,
+      "method": "native_player_hud",
+      "parent_id": 12,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903039462419,
+      "end_ns": 5903053021040,
+      "inclusive_seconds": 0.013558621,
+      "exclusive_seconds": 0.00019884000000000047
+    },
+    {
+      "id": 16,
+      "method": "RapidOCR.__call__",
+      "parent_id": 15,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5903039615400,
+      "end_ns": 5903052975181,
+      "inclusive_seconds": 0.013359781,
+      "exclusive_seconds": 0.013359781
+    },
+    {
+      "id": 17,
+      "method": "RapidOCR.__call__",
+      "parent_id": 12,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        70,
+        139,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5903053203205,
+      "end_ns": 5903066588694,
+      "inclusive_seconds": 0.013385489,
+      "exclusive_seconds": 0.013385489
+    },
+    {
+      "id": 18,
+      "method": "semantic_facts",
+      "parent_id": 12,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903067481301,
+      "end_ns": 5903082525763,
+      "inclusive_seconds": 0.015044462,
+      "exclusive_seconds": 0.0002469529999999994
+    },
+    {
+      "id": 19,
+      "method": "rewards.detect",
+      "parent_id": 18,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903067491987,
+      "end_ns": 5903082289496,
+      "inclusive_seconds": 0.014797509,
+      "exclusive_seconds": 0.014797509
+    },
+    {
+      "id": 20,
+      "method": "StateReader.read",
+      "parent_id": 12,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903082537691,
+      "end_ns": 5903124671523,
+      "inclusive_seconds": 0.042133832,
+      "exclusive_seconds": 0.042021713
+    },
+    {
+      "id": 21,
+      "method": "StateReader._load",
+      "parent_id": 20,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903124462528,
+      "end_ns": 5903124574647,
+      "inclusive_seconds": 0.000112119,
+      "exclusive_seconds": 0.000112119
+    },
+    {
+      "id": 22,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q01",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5903132333470,
+      "end_ns": 5903133620761,
+      "inclusive_seconds": 0.001287291,
+      "exclusive_seconds": 0.001287291
+    },
+    {
+      "id": 23,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5903133700261,
+      "end_ns": 5904485467682,
+      "inclusive_seconds": 1.351767421,
+      "exclusive_seconds": 0.08142657000000009
+    },
+    {
+      "id": 24,
+      "method": "RapidOCR.__call__",
+      "parent_id": 23,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5903207449730,
+      "end_ns": 5904387372857,
+      "inclusive_seconds": 1.179923127,
+      "exclusive_seconds": 1.179923127
+    },
+    {
+      "id": 25,
+      "method": "classify",
+      "parent_id": 23,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904387456934,
+      "end_ns": 5904387610395,
+      "inclusive_seconds": 0.000153461,
+      "exclusive_seconds": 0.000153461
+    },
+    {
+      "id": 26,
+      "method": "native_player_hud",
+      "parent_id": 23,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904387635483,
+      "end_ns": 5904387735654,
+      "inclusive_seconds": 0.000100171,
+      "exclusive_seconds": 0.000100171
+    },
+    {
+      "id": 27,
+      "method": "RapidOCR.__call__",
+      "parent_id": 23,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        70,
+        139,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5904387894904,
+      "end_ns": 5904411240157,
+      "inclusive_seconds": 0.023345253,
+      "exclusive_seconds": 0.023345253
+    },
+    {
+      "id": 28,
+      "method": "semantic_facts",
+      "parent_id": 23,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904411506419,
+      "end_ns": 5904432046915,
+      "inclusive_seconds": 0.020540496,
+      "exclusive_seconds": 0.0005391119999999978
+    },
+    {
+      "id": 29,
+      "method": "rewards.detect",
+      "parent_id": 28,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904411516884,
+      "end_ns": 5904431518268,
+      "inclusive_seconds": 0.020001384,
+      "exclusive_seconds": 0.020001384
+    },
+    {
+      "id": 30,
+      "method": "StateReader.read",
+      "parent_id": 23,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904432059765,
+      "end_ns": 5904478338108,
+      "inclusive_seconds": 0.046278343,
+      "exclusive_seconds": 0.046158322
+    },
+    {
+      "id": 31,
+      "method": "StateReader._load",
+      "parent_id": 30,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904478145448,
+      "end_ns": 5904478265469,
+      "inclusive_seconds": 0.000120021,
+      "exclusive_seconds": 0.000120021
+    },
+    {
+      "id": 32,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q02",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5904485497777,
+      "end_ns": 5904486657477,
+      "inclusive_seconds": 0.0011597,
+      "exclusive_seconds": 0.0011597
+    },
+    {
+      "id": 33,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5904486707562,
+      "end_ns": 5906091481447,
+      "inclusive_seconds": 1.604773885,
+      "exclusive_seconds": 0.07917117699999987
+    },
+    {
+      "id": 34,
+      "method": "RapidOCR.__call__",
+      "parent_id": 33,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5904558233267,
+      "end_ns": 5905971082876,
+      "inclusive_seconds": 1.412849609,
+      "exclusive_seconds": 1.412849609
+    },
+    {
+      "id": 35,
+      "method": "classify",
+      "parent_id": 33,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5905971207604,
+      "end_ns": 5905971435908,
+      "inclusive_seconds": 0.000228304,
+      "exclusive_seconds": 0.000228304
+    },
+    {
+      "id": 36,
+      "method": "ShopReader.read",
+      "parent_id": 33,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5905971448297,
+      "end_ns": 5906012733338,
+      "inclusive_seconds": 0.041285041,
+      "exclusive_seconds": 0.041157188000000004
+    },
+    {
+      "id": 37,
+      "method": "ShopReader._load",
+      "parent_id": 36,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906012564804,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5906012692657,
+      "inclusive_seconds": 0.000127853,
+      "exclusive_seconds": 0.000127853
+    },
+    {
+      "id": 38,
+      "method": "native_player_hud",
+      "parent_id": 33,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906012807210,
+      "end_ns": 5906041368820,
+      "inclusive_seconds": 0.02856161,
+      "exclusive_seconds": 0.0002178980000000011
+    },
+    {
+      "id": 39,
+      "method": "RapidOCR.__call__",
+      "parent_id": 38,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5906012978939,
+      "end_ns": 5906041322651,
+      "inclusive_seconds": 0.028343712,
+      "exclusive_seconds": 0.028343712
+    },
+    {
+      "id": 40,
+      "method": "semantic_facts",
+      "parent_id": 33,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906041407699,
+      "end_ns": 5906041714001,
+      "inclusive_seconds": 0.000306302,
+      "exclusive_seconds": 0.000304299
+    },
+    {
+      "id": 41,
+      "method": "rewards.detect",
+      "parent_id": 40,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906041416462,
+      "end_ns": 5906041418465,
+      "inclusive_seconds": 2.003e-06,
+      "exclusive_seconds": 2.003e-06
+    },
+    {
+      "id": 42,
+      "method": "StateReader.read",
+      "parent_id": 33,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906041720841,
+      "end_ns": 5906084092683,
+      "inclusive_seconds": 0.042371842,
+      "exclusive_seconds": 0.042190598
+    },
+    {
+      "id": 43,
+      "method": "StateReader._load",
+      "parent_id": 42,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906083808654,
+      "end_ns": 5906083989898,
+      "inclusive_seconds": 0.000181244,
+      "exclusive_seconds": 0.000181244
+    },
+    {
+      "id": 44,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r00",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5906091512665,
+      "end_ns": 5906092852756,
+      "inclusive_seconds": 0.001340091,
+      "exclusive_seconds": 0.001340091
+    },
+    {
+      "id": 45,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5906092904364,
+      "end_ns": 5907301584795,
+      "inclusive_seconds": 1.208680431,
+      "exclusive_seconds": 0.08447599900000013
+    },
+    {
+      "id": 46,
+      "method": "RapidOCR.__call__",
+      "parent_id": 45,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5906168550133,
+      "end_ns": 5907195329366,
+      "inclusive_seconds": 1.026779233,
+      "exclusive_seconds": 1.026779233
+    },
+    {
+      "id": 47,
+      "method": "classify",
+      "parent_id": 45,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907195456067,
+      "end_ns": 5907195711652,
+      "inclusive_seconds": 0.000255585,
+      "exclusive_seconds": 0.000255585
+    },
+    {
+      "id": 48,
+      "method": "ShopReader.read",
+      "parent_id": 45,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907195719835,
+      "end_ns": 5907235669152,
+      "inclusive_seconds": 0.039949317,
+      "exclusive_seconds": 0.03983835
+    },
+    {
+      "id": 49,
+      "method": "ShopReader._load",
+      "parent_id": 48,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907235500678,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5907235611645,
+      "inclusive_seconds": 0.000110967,
+      "exclusive_seconds": 0.000110967
+    },
+    {
+      "id": 50,
+      "method": "native_player_hud",
+      "parent_id": 45,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907235748071,
+      "end_ns": 5907249366442,
+      "inclusive_seconds": 0.013618371,
+      "exclusive_seconds": 0.00022887600000000112
+    },
+    {
+      "id": 51,
+      "method": "RapidOCR.__call__",
+      "parent_id": 50,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5907235943917,
+      "end_ns": 5907249333412,
+      "inclusive_seconds": 0.013389495,
+      "exclusive_seconds": 0.013389495
+    },
+    {
+      "id": 52,
+      "method": "semantic_facts",
+      "parent_id": 45,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907249419713,
+      "end_ns": 5907249741728,
+      "inclusive_seconds": 0.000322015,
+      "exclusive_seconds": 0.000319861
+    },
+    {
+      "id": 53,
+      "method": "rewards.detect",
+      "parent_id": 52,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907249427544,
+      "end_ns": 5907249429698,
+      "inclusive_seconds": 2.154e-06,
+      "exclusive_seconds": 2.154e-06
+    },
+    {
+      "id": 54,
+      "method": "StateReader.read",
+      "parent_id": 45,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907249748849,
+      "end_ns": 5907293028760,
+      "inclusive_seconds": 0.043279911,
+      "exclusive_seconds": 0.043136774999999995
+    },
+    {
+      "id": 55,
+      "method": "StateReader._load",
+      "parent_id": 54,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907292608556,
+      "end_ns": 5907292751692,
+      "inclusive_seconds": 0.000143136,
+      "exclusive_seconds": 0.000143136
+    },
+    {
+      "id": 56,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r01",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5907301613489,
+      "end_ns": 5907303673265,
+      "inclusive_seconds": 0.002059776,
+      "exclusive_seconds": 0.002059776
+    },
+    {
+      "id": 57,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5907303733717,
+      "end_ns": 5908405409642,
+      "inclusive_seconds": 1.101675925,
+      "exclusive_seconds": 0.08004163799999997
+    },
+    {
+      "id": 58,
+      "method": "RapidOCR.__call__",
+      "parent_id": 57,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5907376219349,
+      "end_ns": 5908302119837,
+      "inclusive_seconds": 0.925900488,
+      "exclusive_seconds": 0.925900488
+    },
+    {
+      "id": 59,
+      "method": "classify",
+      "parent_id": 57,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908302245396,
+      "end_ns": 5908302468192,
+      "inclusive_seconds": 0.000222796,
+      "exclusive_seconds": 0.000222796
+    },
+    {
+      "id": 60,
+      "method": "ShopReader.read",
+      "parent_id": 57,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908302475083,
+      "end_ns": 5908342264765,
+      "inclusive_seconds": 0.039789682,
+      "exclusive_seconds": 0.039667828
+    },
+    {
+      "id": 61,
+      "method": "ShopReader._load",
+      "parent_id": 60,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908342101939,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5908342223793,
+      "inclusive_seconds": 0.000121854,
+      "exclusive_seconds": 0.000121854
+    },
+    {
+      "id": 62,
+      "method": "native_player_hud",
+      "parent_id": 57,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908342342442,
+      "end_ns": 5908356329918,
+      "inclusive_seconds": 0.013987476,
+      "exclusive_seconds": 0.00023283100000000105
+    },
+    {
+      "id": 63,
+      "method": "RapidOCR.__call__",
+      "parent_id": 62,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5908342530786,
+      "end_ns": 5908356285431,
+      "inclusive_seconds": 0.013754645,
+      "exclusive_seconds": 0.013754645
+    },
+    {
+      "id": 64,
+      "method": "semantic_facts",
+      "parent_id": 57,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908356396559,
+      "end_ns": 5908356720678,
+      "inclusive_seconds": 0.000324119,
+      "exclusive_seconds": 0.000321596
+    },
+    {
+      "id": 65,
+      "method": "rewards.detect",
+      "parent_id": 64,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908356406935,
+      "end_ns": 5908356409458,
+      "inclusive_seconds": 2.523e-06,
+      "exclusive_seconds": 2.523e-06
+    },
+    {
+      "id": 66,
+      "method": "StateReader.read",
+      "parent_id": 57,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908356727558,
+      "end_ns": 5908398137284,
+      "inclusive_seconds": 0.041409726,
+      "exclusive_seconds": 0.041294823
+    },
+    {
+      "id": 67,
+      "method": "StateReader._load",
+      "parent_id": 66,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908397955981,
+      "end_ns": 5908398070884,
+      "inclusive_seconds": 0.000114903,
+      "exclusive_seconds": 0.000114903
+    },
+    {
+      "id": 68,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r02",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5908405434630,
+      "end_ns": 5908406624965,
+      "inclusive_seconds": 0.001190335,
+      "exclusive_seconds": 0.001190335
+    },
+    {
+      "id": 69,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5908406696774,
+      "end_ns": 5909415914857,
+      "inclusive_seconds": 1.009218083,
+      "exclusive_seconds": 0.07989758400000002
+    },
+    {
+      "id": 70,
+      "method": "RapidOCR.__call__",
+      "parent_id": 69,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5908478591488,
+      "end_ns": 5909311924354,
+      "inclusive_seconds": 0.833332866,
+      "exclusive_seconds": 0.833332866
+    },
+    {
+      "id": 71,
+      "method": "classify",
+      "parent_id": 69,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909312076033,
+      "end_ns": 5909312301473,
+      "inclusive_seconds": 0.00022544,
+      "exclusive_seconds": 0.00022544
+    },
+    {
+      "id": 72,
+      "method": "ShopReader.read",
+      "parent_id": 69,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909312309094,
+      "end_ns": 5909352775217,
+      "inclusive_seconds": 0.040466123,
+      "exclusive_seconds": 0.04033816
+    },
+    {
+      "id": 73,
+      "method": "ShopReader._load",
+      "parent_id": 72,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909352606152,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5909352734115,
+      "inclusive_seconds": 0.000127963,
+      "exclusive_seconds": 0.000127963
+    },
+    {
+      "id": 74,
+      "method": "native_player_hud",
+      "parent_id": 69,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909352853224,
+      "end_ns": 5909366872799,
+      "inclusive_seconds": 0.014019575,
+      "exclusive_seconds": 0.00021462400000000006
+    },
+    {
+      "id": 75,
+      "method": "RapidOCR.__call__",
+      "parent_id": 74,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5909353035229,
+      "end_ns": 5909366840180,
+      "inclusive_seconds": 0.013804951,
+      "exclusive_seconds": 0.013804951
+    },
+    {
+      "id": 76,
+      "method": "semantic_facts",
+      "parent_id": 69,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909366918829,
+      "end_ns": 5909367177038,
+      "inclusive_seconds": 0.000258209,
+      "exclusive_seconds": 0.000255905
+    },
+    {
+      "id": 77,
+      "method": "rewards.detect",
+      "parent_id": 76,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909366927682,
+      "end_ns": 5909366929986,
+      "inclusive_seconds": 2.304e-06,
+      "exclusive_seconds": 2.304e-06
+    },
+    {
+      "id": 78,
+      "method": "StateReader.read",
+      "parent_id": 69,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909367182967,
+      "end_ns": 5909408201253,
+      "inclusive_seconds": 0.041018286,
+      "exclusive_seconds": 0.040877053
+    },
+    {
+      "id": 79,
+      "method": "StateReader._load",
+      "parent_id": 78,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909407991987,
+      "end_ns": 5909408133220,
+      "inclusive_seconds": 0.000141233,
+      "exclusive_seconds": 0.000141233
+    },
+    {
+      "id": 80,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r03",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5909415938723,
+      "end_ns": 5909417338264,
+      "inclusive_seconds": 0.001399541,
+      "exclusive_seconds": 0.001399541
+    },
+    {
+      "id": 81,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5909417402110,
+      "end_ns": 5910557333129,
+      "inclusive_seconds": 1.139931019,
+      "exclusive_seconds": 0.07908775400000012
+    },
+    {
+      "id": 82,
+      "method": "RapidOCR.__call__",
+      "parent_id": 81,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5909489351787,
+      "end_ns": 5910453353532,
+      "inclusive_seconds": 0.964001745,
+      "exclusive_seconds": 0.964001745
+    },
+    {
+      "id": 83,
+      "method": "classify",
+      "parent_id": 81,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910453483468,
+      "end_ns": 5910453737922,
+      "inclusive_seconds": 0.000254454,
+      "exclusive_seconds": 0.000254454
+    },
+    {
+      "id": 84,
+      "method": "ShopReader.read",
+      "parent_id": 81,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910453745363,
+      "end_ns": 5910493942010,
+      "inclusive_seconds": 0.040196647,
+      "exclusive_seconds": 0.040086611
+    },
+    {
+      "id": 85,
+      "method": "ShopReader._load",
+      "parent_id": 84,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910493793195,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5910493903231,
+      "inclusive_seconds": 0.000110036,
+      "exclusive_seconds": 0.000110036
+    },
+    {
+      "id": 86,
+      "method": "native_player_hud",
+      "parent_id": 81,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910494021279,
+      "end_ns": 5910507424484,
+      "inclusive_seconds": 0.013403205,
+      "exclusive_seconds": 0.0002085339999999998
+    },
+    {
+      "id": 87,
+      "method": "RapidOCR.__call__",
+      "parent_id": 86,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5910494199478,
+      "end_ns": 5910507394149,
+      "inclusive_seconds": 0.013194671,
+      "exclusive_seconds": 0.013194671
+    },
+    {
+      "id": 88,
+      "method": "semantic_facts",
+      "parent_id": 81,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910507469252,
+      "end_ns": 5910507756074,
+      "inclusive_seconds": 0.000286822,
+      "exclusive_seconds": 0.000284418
+    },
+    {
+      "id": 89,
+      "method": "rewards.detect",
+      "parent_id": 88,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910507476673,
+      "end_ns": 5910507479077,
+      "inclusive_seconds": 2.404e-06,
+      "exclusive_seconds": 2.404e-06
+    },
+    {
+      "id": 90,
+      "method": "StateReader.read",
+      "parent_id": 81,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910507763566,
+      "end_ns": 5910550463958,
+      "inclusive_seconds": 0.042700392,
+      "exclusive_seconds": 0.042590326
+    },
+    {
+      "id": 91,
+      "method": "StateReader._load",
+      "parent_id": 90,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910550276395,
+      "end_ns": 5910550386461,
+      "inclusive_seconds": 0.000110066,
+      "exclusive_seconds": 0.000110066
+    },
+    {
+      "id": 92,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r04",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5910557356584,
+      "end_ns": 5910558822826,
+      "inclusive_seconds": 0.001466242,
+      "exclusive_seconds": 0.001466242
+    },
+    {
+      "id": 93,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5910558886341,
+      "end_ns": 5911715891492,
+      "inclusive_seconds": 1.157005151,
+      "exclusive_seconds": 0.08101137299999972
+    },
+    {
+      "id": 94,
+      "method": "RapidOCR.__call__",
+      "parent_id": 93,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5910632041366,
+      "end_ns": 5911612305089,
+      "inclusive_seconds": 0.980263723,
+      "exclusive_seconds": 0.980263723
+    },
+    {
+      "id": 95,
+      "method": "classify",
+      "parent_id": 93,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911612435686,
+      "end_ns": 5911612684331,
+      "inclusive_seconds": 0.000248645,
+      "exclusive_seconds": 0.000248645
+    },
+    {
+      "id": 96,
+      "method": "ShopReader.read",
+      "parent_id": 93,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911612691973,
+      "end_ns": 5911652522978,
+      "inclusive_seconds": 0.039831005,
+      "exclusive_seconds": 0.0397213
+    },
+    {
+      "id": 97,
+      "method": "ShopReader._load",
+      "parent_id": 96,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911652371750,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5911652481455,
+      "inclusive_seconds": 0.000109705,
+      "exclusive_seconds": 0.000109705
+    },
+    {
+      "id": 98,
+      "method": "native_player_hud",
+      "parent_id": 93,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911652599263,
+      "end_ns": 5911665611188,
+      "inclusive_seconds": 0.013011925,
+      "exclusive_seconds": 0.00024410900000000103
+    },
+    {
+      "id": 99,
+      "method": "RapidOCR.__call__",
+      "parent_id": 98,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5911652806035,
+      "end_ns": 5911665573851,
+      "inclusive_seconds": 0.012767816,
+      "exclusive_seconds": 0.012767816
+    },
+    {
+      "id": 100,
+      "method": "semantic_facts",
+      "parent_id": 93,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911665682695,
+      "end_ns": 5911665951451,
+      "inclusive_seconds": 0.000268756,
+      "exclusive_seconds": 0.000266543
+    },
+    {
+      "id": 101,
+      "method": "rewards.detect",
+      "parent_id": 100,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911665692140,
+      "end_ns": 5911665694353,
+      "inclusive_seconds": 2.213e-06,
+      "exclusive_seconds": 2.213e-06
+    },
+    {
+      "id": 102,
+      "method": "StateReader.read",
+      "parent_id": 93,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911665957059,
+      "end_ns": 5911708326783,
+      "inclusive_seconds": 0.042369724,
+      "exclusive_seconds": 0.042263364
+    },
+    {
+      "id": 103,
+      "method": "StateReader._load",
+      "parent_id": 102,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911708143226,
+      "end_ns": 5911708249586,
+      "inclusive_seconds": 0.00010636,
+      "exclusive_seconds": 0.00010636
+    },
+    {
+      "id": 104,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r05",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5911715917962,
+      "end_ns": 5911717271454,
+      "inclusive_seconds": 0.001353492,
+      "exclusive_seconds": 0.001353492
+    },
+    {
+      "id": 105,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5911717335791,
+      "end_ns": 5912853553389,
+      "inclusive_seconds": 1.136217598,
+      "exclusive_seconds": 0.07896231399999998
+    },
+    {
+      "id": 106,
+      "method": "RapidOCR.__call__",
+      "parent_id": 105,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5911788697602,
+      "end_ns": 5912732516712,
+      "inclusive_seconds": 0.94381911,
+      "exclusive_seconds": 0.94381911
+    },
+    {
+      "id": 107,
+      "method": "classify",
+      "parent_id": 105,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912732668301,
+      "end_ns": 5912732897316,
+      "inclusive_seconds": 0.000229015,
+      "exclusive_seconds": 0.000229015
+    },
+    {
+      "id": 108,
+      "method": "ShopReader.read",
+      "parent_id": 105,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912732906049,
+      "end_ns": 5912779479794,
+      "inclusive_seconds": 0.046573745,
+      "exclusive_seconds": 0.046450279
+    },
+    {
+      "id": 109,
+      "method": "ShopReader._load",
+      "parent_id": 108,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912779316918,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5912779440384,
+      "inclusive_seconds": 0.000123466,
+      "exclusive_seconds": 0.000123466
+    },
+    {
+      "id": 110,
+      "method": "native_player_hud",
+      "parent_id": 105,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912779555388,
+      "end_ns": 5912800875614,
+      "inclusive_seconds": 0.021320226,
+      "exclusive_seconds": 0.00024824400000000163
+    },
+    {
+      "id": 111,
+      "method": "RapidOCR.__call__",
+      "parent_id": 110,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5912779757492,
+      "end_ns": 5912800829474,
+      "inclusive_seconds": 0.021071982,
+      "exclusive_seconds": 0.021071982
+    },
+    {
+      "id": 112,
+      "method": "semantic_facts",
+      "parent_id": 105,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912800935324,
+      "end_ns": 5912801292693,
+      "inclusive_seconds": 0.000357369,
+      "exclusive_seconds": 0.000354104
+    },
+    {
+      "id": 113,
+      "method": "rewards.detect",
+      "parent_id": 112,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912800945529,
+      "end_ns": 5912800948794,
+      "inclusive_seconds": 3.265e-06,
+      "exclusive_seconds": 3.265e-06
+    },
+    {
+      "id": 114,
+      "method": "StateReader.read",
+      "parent_id": 105,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912801299563,
+      "end_ns": 5912846255382,
+      "inclusive_seconds": 0.044955819,
+      "exclusive_seconds": 0.044849458
+    },
+    {
+      "id": 115,
+      "method": "StateReader._load",
+      "parent_id": 114,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912846080438,
+      "end_ns": 5912846186799,
+      "inclusive_seconds": 0.000106361,
+      "exclusive_seconds": 0.000106361
+    },
+    {
+      "id": 116,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r06",
+      "phase": "cold_sequence",
+      "read_kind": "cache",
+      "start_ns": 5912853581101,
+      "end_ns": 5912854797756,
+      "inclusive_seconds": 0.001216655,
+      "exclusive_seconds": 0.001216655
+    },
+    {
+      "id": 117,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5912854865288,
+      "end_ns": 5914036791601,
+      "inclusive_seconds": 1.181926313,
+      "exclusive_seconds": 0.08794137699999993
+    },
+    {
+      "id": 118,
+      "method": "RapidOCR.__call__",
+      "parent_id": 117,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5912934556361,
+      "end_ns": 5913947358134,
+      "inclusive_seconds": 1.012801773,
+      "exclusive_seconds": 1.012801773
+    },
+    {
+      "id": 119,
+      "method": "classify",
+      "parent_id": 117,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913947486508,
+      "end_ns": 5913947738919,
+      "inclusive_seconds": 0.000252411,
+      "exclusive_seconds": 0.000252411
+    },
+    {
+      "id": 120,
+      "method": "ShopReader.read",
+      "parent_id": 117,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913947747421,
+      "end_ns": 5913987737776,
+      "inclusive_seconds": 0.039990355,
+      "exclusive_seconds": 0.03985429
+    },
+    {
+      "id": 121,
+      "method": "ShopReader._load",
+      "parent_id": 120,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913987556433,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5913987692498,
+      "inclusive_seconds": 0.000136065,
+      "exclusive_seconds": 0.000136065
+    },
+    {
+      "id": 122,
+      "method": "native_player_hud",
+      "parent_id": 117,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913987815333,
+      "end_ns": 5913987906791,
+      "inclusive_seconds": 9.1458e-05,
+      "exclusive_seconds": 9.1458e-05
+    },
+    {
+      "id": 123,
+      "method": "semantic_facts",
+      "parent_id": 117,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913987921213,
+      "end_ns": 5913988274165,
+      "inclusive_seconds": 0.000352952,
+      "exclusive_seconds": 0.000350138
+    },
+    {
+      "id": 124,
+      "method": "rewards.detect",
+      "parent_id": 123,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913987929055,
+      "end_ns": 5913987931869,
+      "inclusive_seconds": 2.814e-06,
+      "exclusive_seconds": 2.814e-06
+    },
+    {
+      "id": 125,
+      "method": "StateReader.read",
+      "parent_id": 117,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5913988280475,
+      "end_ns": 5914028776462,
+      "inclusive_seconds": 0.040495987,
+      "exclusive_seconds": 0.040364478999999995
+    },
+    {
+      "id": 126,
+      "method": "StateReader._load",
+      "parent_id": 125,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914028566666,
+      "end_ns": 5914028698174,
+      "inclusive_seconds": 0.000131508,
+      "exclusive_seconds": 0.000131508
+    },
+    {
+      "id": 127,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q00",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5914036820755,
+      "end_ns": 5914038105122,
+      "inclusive_seconds": 0.001284367,
+      "exclusive_seconds": 0.001284367
+    },
+    {
+      "id": 128,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914038169129,
+      "end_ns": 5914888895608,
+      "inclusive_seconds": 0.850726479,
+      "exclusive_seconds": 0.07691093999999998
+    },
+    {
+      "id": 129,
+      "method": "RapidOCR.__call__",
+      "parent_id": 128,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5914107356220,
+      "end_ns": 5914795281686,
+      "inclusive_seconds": 0.687925466,
+      "exclusive_seconds": 0.687925466
+    },
+    {
+      "id": 130,
+      "method": "classify",
+      "parent_id": 128,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914795364611,
+      "end_ns": 5914795513606,
+      "inclusive_seconds": 0.000148995,
+      "exclusive_seconds": 0.000148995
+    },
+    {
+      "id": 131,
+      "method": "native_player_hud",
+      "parent_id": 128,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914795537412,
+      "end_ns": 5914809374201,
+      "inclusive_seconds": 0.013836789,
+      "exclusive_seconds": 0.00021533400000000105
+    },
+    {
+      "id": 132,
+      "method": "RapidOCR.__call__",
+      "parent_id": 131,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5914795711254,
+      "end_ns": 5914809332709,
+      "inclusive_seconds": 0.013621455,
+      "exclusive_seconds": 0.013621455
+    },
+    {
+      "id": 133,
+      "method": "RapidOCR.__call__",
+      "parent_id": 128,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        70,
+        139,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5914809562004,
+      "end_ns": 5914822996997,
+      "inclusive_seconds": 0.013434993,
+      "exclusive_seconds": 0.013434993
+    },
+    {
+      "id": 134,
+      "method": "semantic_facts",
+      "parent_id": 128,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914823240294,
+      "end_ns": 5914838023261,
+      "inclusive_seconds": 0.014782967,
+      "exclusive_seconds": 0.00025674799999999935
+    },
+    {
+      "id": 135,
+      "method": "rewards.detect",
+      "parent_id": 134,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914823250380,
+      "end_ns": 5914837776599,
+      "inclusive_seconds": 0.014526219,
+      "exclusive_seconds": 0.014526219
+    },
+    {
+      "id": 136,
+      "method": "StateReader.read",
+      "parent_id": 128,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914838034107,
+      "end_ns": 5914881720436,
+      "inclusive_seconds": 0.043686329,
+      "exclusive_seconds": 0.043579057000000004
+    },
+    {
+      "id": 137,
+      "method": "StateReader._load",
+      "parent_id": 136,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914881506634,
+      "end_ns": 5914881613906,
+      "inclusive_seconds": 0.000107272,
+      "exclusive_seconds": 0.000107272
+    },
+    {
+      "id": 138,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q01",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5914888925163,
+      "end_ns": 5914890070090,
+      "inclusive_seconds": 0.001144927,
+      "exclusive_seconds": 0.001144927
+    },
+    {
+      "id": 139,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5914890146174,
+      "end_ns": 5915923891608,
+      "inclusive_seconds": 1.033745434,
+      "exclusive_seconds": 0.078945936
+    },
+    {
+      "id": 140,
+      "method": "RapidOCR.__call__",
+      "parent_id": 139,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5914960940209,
+      "end_ns": 5915846929770,
+      "inclusive_seconds": 0.885989561,
+      "exclusive_seconds": 0.885989561
+    },
+    {
+      "id": 141,
+      "method": "classify",
+      "parent_id": 139,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915847016391,
+      "end_ns": 5915847169892,
+      "inclusive_seconds": 0.000153501,
+      "exclusive_seconds": 0.000153501
+    },
+    {
+      "id": 142,
+      "method": "native_player_hud",
+      "parent_id": 139,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915847195050,
+      "end_ns": 5915847249111,
+      "inclusive_seconds": 5.4061e-05,
+      "exclusive_seconds": 5.4061e-05
+    },
+    {
+      "id": 143,
+      "method": "RapidOCR.__call__",
+      "parent_id": 139,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        70,
+        139,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5915847408562,
+      "end_ns": 5915861189039,
+      "inclusive_seconds": 0.013780477,
+      "exclusive_seconds": 0.013780477
+    },
+    {
+      "id": 144,
+      "method": "semantic_facts",
+      "parent_id": 139,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915861447769,
+      "end_ns": 5915876078589,
+      "inclusive_seconds": 0.01463082,
+      "exclusive_seconds": 0.000359692
+    },
+    {
+      "id": 145,
+      "method": "rewards.detect",
+      "parent_id": 144,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915861458615,
+      "end_ns": 5915875729743,
+      "inclusive_seconds": 0.014271128,
+      "exclusive_seconds": 0.014271128
+    },
+    {
+      "id": 146,
+      "method": "StateReader.read",
+      "parent_id": 139,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915876089074,
+      "end_ns": 5915916280152,
+      "inclusive_seconds": 0.040191078,
+      "exclusive_seconds": 0.040082084
+    },
+    {
+      "id": 147,
+      "method": "StateReader._load",
+      "parent_id": 146,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915916089635,
+      "end_ns": 5915916198629,
+      "inclusive_seconds": 0.000108994,
+      "exclusive_seconds": 0.000108994
+    },
+    {
+      "id": 148,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "q02",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5915923922294,
+      "end_ns": 5915925076805,
+      "inclusive_seconds": 0.001154511,
+      "exclusive_seconds": 0.001154511
+    },
+    {
+      "id": 149,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5915925140872,
+      "end_ns": 5917180879460,
+      "inclusive_seconds": 1.255738588,
+      "exclusive_seconds": 0.0839595099999999
+    },
+    {
+      "id": 150,
+      "method": "RapidOCR.__call__",
+      "parent_id": 149,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5916000676670,
+      "end_ns": 5917073254990,
+      "inclusive_seconds": 1.07257832,
+      "exclusive_seconds": 1.07257832
+    },
+    {
+      "id": 151,
+      "method": "classify",
+      "parent_id": 149,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917073387280,
+      "end_ns": 5917073611708,
+      "inclusive_seconds": 0.000224428,
+      "exclusive_seconds": 0.000224428
+    },
+    {
+      "id": 152,
+      "method": "ShopReader.read",
+      "parent_id": 149,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917073619179,
+      "end_ns": 5917115876993,
+      "inclusive_seconds": 0.042257814,
+      "exclusive_seconds": 0.042150001
+    },
+    {
+      "id": 153,
+      "method": "ShopReader._load",
+      "parent_id": 152,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917115730762,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5917115838575,
+      "inclusive_seconds": 0.000107813,
+      "exclusive_seconds": 0.000107813
+    },
+    {
+      "id": 154,
+      "method": "native_player_hud",
+      "parent_id": 149,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917115954750,
+      "end_ns": 5917129417408,
+      "inclusive_seconds": 0.013462658,
+      "exclusive_seconds": 0.00023637599999999995
+    },
+    {
+      "id": 155,
+      "method": "RapidOCR.__call__",
+      "parent_id": 154,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5917116158057,
+      "end_ns": 5917129384339,
+      "inclusive_seconds": 0.013226282,
+      "exclusive_seconds": 0.013226282
+    },
+    {
+      "id": 156,
+      "method": "semantic_facts",
+      "parent_id": 149,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917129467143,
+      "end_ns": 5917129749539,
+      "inclusive_seconds": 0.000282396,
+      "exclusive_seconds": 0.000280072
+    },
+    {
+      "id": 157,
+      "method": "rewards.detect",
+      "parent_id": 156,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917129475746,
+      "end_ns": 5917129478070,
+      "inclusive_seconds": 2.324e-06,
+      "exclusive_seconds": 2.324e-06
+    },
+    {
+      "id": 158,
+      "method": "StateReader.read",
+      "parent_id": 149,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917129755749,
+      "end_ns": 5917172729211,
+      "inclusive_seconds": 0.042973462,
+      "exclusive_seconds": 0.042872359
+    },
+    {
+      "id": 159,
+      "method": "StateReader._load",
+      "parent_id": 158,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917172528118,
+      "end_ns": 5917172629221,
+      "inclusive_seconds": 0.000101103,
+      "exclusive_seconds": 0.000101103
+    },
+    {
+      "id": 160,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r00",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5917180906120,
+      "end_ns": 5917182144577,
+      "inclusive_seconds": 0.001238457,
+      "exclusive_seconds": 0.001238457
+    },
+    {
+      "id": 161,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5917182195985,
+      "end_ns": 5918365420318,
+      "inclusive_seconds": 1.183224333,
+      "exclusive_seconds": 0.08097649100000015
+    },
+    {
+      "id": 162,
+      "method": "RapidOCR.__call__",
+      "parent_id": 161,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5917255702463,
+      "end_ns": 5918257451449,
+      "inclusive_seconds": 1.001748986,
+      "exclusive_seconds": 1.001748986
+    },
+    {
+      "id": 163,
+      "method": "classify",
+      "parent_id": 161,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918257583408,
+      "end_ns": 5918258071904,
+      "inclusive_seconds": 0.000488496,
+      "exclusive_seconds": 0.000488496
+    },
+    {
+      "id": 164,
+      "method": "ShopReader.read",
+      "parent_id": 161,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918258080317,
+      "end_ns": 5918298085775,
+      "inclusive_seconds": 0.040005458,
+      "exclusive_seconds": 0.039890695000000004
+    },
+    {
+      "id": 165,
+      "method": "ShopReader._load",
+      "parent_id": 164,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918297930080,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5918298044843,
+      "inclusive_seconds": 0.000114763,
+      "exclusive_seconds": 0.000114763
+    },
+    {
+      "id": 166,
+      "method": "native_player_hud",
+      "parent_id": 161,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918298162080,
+      "end_ns": 5918315035612,
+      "inclusive_seconds": 0.016873532,
+      "exclusive_seconds": 0.00022946600000000109
+    },
+    {
+      "id": 167,
+      "method": "RapidOCR.__call__",
+      "parent_id": 166,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5918298348741,
+      "end_ns": 5918314992807,
+      "inclusive_seconds": 0.016644066,
+      "exclusive_seconds": 0.016644066
+    },
+    {
+      "id": 168,
+      "method": "semantic_facts",
+      "parent_id": 161,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918315097094,
+      "end_ns": 5918315394302,
+      "inclusive_seconds": 0.000297208,
+      "exclusive_seconds": 0.00029479399999999997
+    },
+    {
+      "id": 169,
+      "method": "rewards.detect",
+      "parent_id": 168,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918315106368,
+      "end_ns": 5918315108782,
+      "inclusive_seconds": 2.414e-06,
+      "exclusive_seconds": 2.414e-06
+    },
+    {
+      "id": 170,
+      "method": "StateReader.read",
+      "parent_id": 161,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918315400652,
+      "end_ns": 5918358234814,
+      "inclusive_seconds": 0.042834162,
+      "exclusive_seconds": 0.042721462
+    },
+    {
+      "id": 171,
+      "method": "StateReader._load",
+      "parent_id": 170,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918358046611,
+      "end_ns": 5918358159311,
+      "inclusive_seconds": 0.0001127,
+      "exclusive_seconds": 0.0001127
+    },
+    {
+      "id": 172,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r01",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5918365447259,
+      "end_ns": 5918366658515,
+      "inclusive_seconds": 0.001211256,
+      "exclusive_seconds": 0.001211256
+    },
+    {
+      "id": 173,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5918366719808,
+      "end_ns": 5919902065530,
+      "inclusive_seconds": 1.535345722,
+      "exclusive_seconds": 0.08264121999999996
+    },
+    {
+      "id": 174,
+      "method": "RapidOCR.__call__",
+      "parent_id": 173,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5918440331685,
+      "end_ns": 5919797184297,
+      "inclusive_seconds": 1.356852612,
+      "exclusive_seconds": 1.356852612
+    },
+    {
+      "id": 175,
+      "method": "classify",
+      "parent_id": 173,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919797320432,
+      "end_ns": 5919797541896,
+      "inclusive_seconds": 0.000221464,
+      "exclusive_seconds": 0.000221464
+    },
+    {
+      "id": 176,
+      "method": "ShopReader.read",
+      "parent_id": 173,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919797550469,
+      "end_ns": 5919837814627,
+      "inclusive_seconds": 0.040264158,
+      "exclusive_seconds": 0.04015276
+    },
+    {
+      "id": 177,
+      "method": "ShopReader._load",
+      "parent_id": 176,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919837664360,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5919837775758,
+      "inclusive_seconds": 0.000111398,
+      "exclusive_seconds": 0.000111398
+    },
+    {
+      "id": 178,
+      "method": "native_player_hud",
+      "parent_id": 173,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919837892494,
+      "end_ns": 5919851674644,
+      "inclusive_seconds": 0.01378215,
+      "exclusive_seconds": 0.00023999199999999964
+    },
+    {
+      "id": 179,
+      "method": "RapidOCR.__call__",
+      "parent_id": 178,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5919838076982,
+      "end_ns": 5919851619140,
+      "inclusive_seconds": 0.013542158,
+      "exclusive_seconds": 0.013542158
+    },
+    {
+      "id": 180,
+      "method": "semantic_facts",
+      "parent_id": 173,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919851726162,
+      "end_ns": 5919851993675,
+      "inclusive_seconds": 0.000267513,
+      "exclusive_seconds": 0.00026547999999999996
+    },
+    {
+      "id": 181,
+      "method": "rewards.detect",
+      "parent_id": 180,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919851733853,
+      "end_ns": 5919851735886,
+      "inclusive_seconds": 2.033e-06,
+      "exclusive_seconds": 2.033e-06
+    },
+    {
+      "id": 182,
+      "method": "StateReader.read",
+      "parent_id": 173,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919852027105,
+      "end_ns": 5919893343710,
+      "inclusive_seconds": 0.041316605,
+      "exclusive_seconds": 0.041211627
+    },
+    {
+      "id": 183,
+      "method": "StateReader._load",
+      "parent_id": 182,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919893167194,
+      "end_ns": 5919893272172,
+      "inclusive_seconds": 0.000104978,
+      "exclusive_seconds": 0.000104978
+    },
+    {
+      "id": 184,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r02",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5919902089877,
+      "end_ns": 5919903346451,
+      "inclusive_seconds": 0.001256574,
+      "exclusive_seconds": 0.001256574
+    },
+    {
+      "id": 185,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5919903406782,
+      "end_ns": 5921393209797,
+      "inclusive_seconds": 1.489803015,
+      "exclusive_seconds": 0.08101510999999983
+    },
+    {
+      "id": 186,
+      "method": "RapidOCR.__call__",
+      "parent_id": 185,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5919975910880,
+      "end_ns": 5921284189102,
+      "inclusive_seconds": 1.308278222,
+      "exclusive_seconds": 1.308278222
+    },
+    {
+      "id": 187,
+      "method": "classify",
+      "parent_id": 185,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921284315833,
+      "end_ns": 5921284536115,
+      "inclusive_seconds": 0.000220282,
+      "exclusive_seconds": 0.000220282
+    },
+    {
+      "id": 188,
+      "method": "ShopReader.read",
+      "parent_id": 185,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921284543126,
+      "end_ns": 5921325012423,
+      "inclusive_seconds": 0.040469297,
+      "exclusive_seconds": 0.040360432
+    },
+    {
+      "id": 189,
+      "method": "ShopReader._load",
+      "parent_id": 188,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921324863298,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5921324972163,
+      "inclusive_seconds": 0.000108865,
+      "exclusive_seconds": 0.000108865
+    },
+    {
+      "id": 190,
+      "method": "native_player_hud",
+      "parent_id": 185,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921325085503,
+      "end_ns": 5921340815230,
+      "inclusive_seconds": 0.015729727,
+      "exclusive_seconds": 0.00031713799999999806
+    },
+    {
+      "id": 191,
+      "method": "RapidOCR.__call__",
+      "parent_id": 190,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5921325359366,
+      "end_ns": 5921340771955,
+      "inclusive_seconds": 0.015412589,
+      "exclusive_seconds": 0.015412589
+    },
+    {
+      "id": 192,
+      "method": "semantic_facts",
+      "parent_id": 185,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921340877494,
+      "end_ns": 5921341172138,
+      "inclusive_seconds": 0.000294644,
+      "exclusive_seconds": 0.00029193
+    },
+    {
+      "id": 193,
+      "method": "rewards.detect",
+      "parent_id": 192,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921340887449,
+      "end_ns": 5921340890163,
+      "inclusive_seconds": 2.714e-06,
+      "exclusive_seconds": 2.714e-06
+    },
+    {
+      "id": 194,
+      "method": "StateReader.read",
+      "parent_id": 185,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921341178988,
+      "end_ns": 5921384974721,
+      "inclusive_seconds": 0.043795733,
+      "exclusive_seconds": 0.043684776
+    },
+    {
+      "id": 195,
+      "method": "StateReader._load",
+      "parent_id": 194,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921384792887,
+      "end_ns": 5921384903844,
+      "inclusive_seconds": 0.000110957,
+      "exclusive_seconds": 0.000110957
+    },
+    {
+      "id": 196,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r03",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5921393235566,
+      "end_ns": 5921394491319,
+      "inclusive_seconds": 0.001255753,
+      "exclusive_seconds": 0.001255753
+    },
+    {
+      "id": 197,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5921394563248,
+      "end_ns": 5922692786700,
+      "inclusive_seconds": 1.298223452,
+      "exclusive_seconds": 0.08158802399999998
+    },
+    {
+      "id": 198,
+      "method": "RapidOCR.__call__",
+      "parent_id": 197,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5921467464564,
+      "end_ns": 5922586112103,
+      "inclusive_seconds": 1.118647539,
+      "exclusive_seconds": 1.118647539
+    },
+    {
+      "id": 199,
+      "method": "classify",
+      "parent_id": 197,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922586247427,
+      "end_ns": 5922586481940,
+      "inclusive_seconds": 0.000234513,
+      "exclusive_seconds": 0.000234513
+    },
+    {
+      "id": 200,
+      "method": "ShopReader.read",
+      "parent_id": 197,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922586490273,
+      "end_ns": 5922627594868,
+      "inclusive_seconds": 0.041104595,
+      "exclusive_seconds": 0.040987299
+    },
+    {
+      "id": 201,
+      "method": "ShopReader._load",
+      "parent_id": 200,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922627434206,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5922627551502,
+      "inclusive_seconds": 0.000117296,
+      "exclusive_seconds": 0.000117296
+    },
+    {
+      "id": 202,
+      "method": "native_player_hud",
+      "parent_id": 197,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922627697673,
+      "end_ns": 5922641590440,
+      "inclusive_seconds": 0.013892767,
+      "exclusive_seconds": 0.00023929100000000085
+    },
+    {
+      "id": 203,
+      "method": "RapidOCR.__call__",
+      "parent_id": 202,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5922627901009,
+      "end_ns": 5922641554485,
+      "inclusive_seconds": 0.013653476,
+      "exclusive_seconds": 0.013653476
+    },
+    {
+      "id": 204,
+      "method": "semantic_facts",
+      "parent_id": 197,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922641667406,
+      "end_ns": 5922641939055,
+      "inclusive_seconds": 0.000271649,
+      "exclusive_seconds": 0.000269466
+    },
+    {
+      "id": 205,
+      "method": "rewards.detect",
+      "parent_id": 204,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922641676069,
+      "end_ns": 5922641678252,
+      "inclusive_seconds": 2.183e-06,
+      "exclusive_seconds": 2.183e-06
+    },
+    {
+      "id": 206,
+      "method": "StateReader.read",
+      "parent_id": 197,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922641945094,
+      "end_ns": 5922684429459,
+      "inclusive_seconds": 0.042484365,
+      "exclusive_seconds": 0.042369892000000006
+    },
+    {
+      "id": 207,
+      "method": "StateReader._load",
+      "parent_id": 206,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922684241796,
+      "end_ns": 5922684356269,
+      "inclusive_seconds": 0.000114473,
+      "exclusive_seconds": 0.000114473
+    },
+    {
+      "id": 208,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r04",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5922692812179,
+      "end_ns": 5922694012498,
+      "inclusive_seconds": 0.001200319,
+      "exclusive_seconds": 0.001200319
+    },
+    {
+      "id": 209,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5922694078678,
+      "end_ns": 5924069226853,
+      "inclusive_seconds": 1.375148175,
+      "exclusive_seconds": 0.0800851920000003
+    },
+    {
+      "id": 210,
+      "method": "RapidOCR.__call__",
+      "parent_id": 209,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5922764657803,
+      "end_ns": 5923943490951,
+      "inclusive_seconds": 1.178833148,
+      "exclusive_seconds": 1.178833148
+    },
+    {
+      "id": 211,
+      "method": "classify",
+      "parent_id": 209,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5923943666612,
+      "end_ns": 5923943896585,
+      "inclusive_seconds": 0.000229973,
+      "exclusive_seconds": 0.000229973
+    },
+    {
+      "id": 212,
+      "method": "ShopReader.read",
+      "parent_id": 209,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5923943904427,
+      "end_ns": 5923987931117,
+      "inclusive_seconds": 0.04402669,
+      "exclusive_seconds": 0.043912229
+    },
+    {
+      "id": 213,
+      "method": "ShopReader._load",
+      "parent_id": 212,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5923987776496,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5923987890957,
+      "inclusive_seconds": 0.000114461,
+      "exclusive_seconds": 0.000114461
+    },
+    {
+      "id": 214,
+      "method": "native_player_hud",
+      "parent_id": 209,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5923988040910,
+      "end_ns": 5924017004526,
+      "inclusive_seconds": 0.028963616,
+      "exclusive_seconds": 0.0002393260000000015
+    },
+    {
+      "id": 215,
+      "method": "RapidOCR.__call__",
+      "parent_id": 214,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5923988236892,
+      "end_ns": 5924016961182,
+      "inclusive_seconds": 0.02872429,
+      "exclusive_seconds": 0.02872429
+    },
+    {
+      "id": 216,
+      "method": "semantic_facts",
+      "parent_id": 209,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5924017067360,
+      "end_ns": 5924017363331,
+      "inclusive_seconds": 0.000295971,
+      "exclusive_seconds": 0.00029287700000000004
+    },
+    {
+      "id": 217,
+      "method": "rewards.detect",
+      "parent_id": 216,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5924017076594,
+      "end_ns": 5924017079688,
+      "inclusive_seconds": 3.094e-06,
+      "exclusive_seconds": 3.094e-06
+    },
+    {
+      "id": 218,
+      "method": "StateReader.read",
+      "parent_id": 209,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5924017369600,
+      "end_ns": 5924060083185,
+      "inclusive_seconds": 0.042713585,
+      "exclusive_seconds": 0.042602309
+    },
+    {
+      "id": 219,
+      "method": "StateReader._load",
+      "parent_id": 218,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5924059842076,
+      "end_ns": 5924059953352,
+      "inclusive_seconds": 0.000111276,
+      "exclusive_seconds": 0.000111276
+    },
+    {
+      "id": 220,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r05",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5924069255195,
+      "end_ns": 5924070616593,
+      "inclusive_seconds": 0.001361398,
+      "exclusive_seconds": 0.001361398
+    },
+    {
+      "id": 221,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5924070708760,
+      "end_ns": 5925337943041,
+      "inclusive_seconds": 1.267234281,
+      "exclusive_seconds": 0.08417642599999997
+    },
+    {
+      "id": 222,
+      "method": "RapidOCR.__call__",
+      "parent_id": 221,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "use_det": true,
+      "use_cls": false,
+      "caller": "Perception.read",
+      "start_ns": 5924147409283,
+      "end_ns": 5925228160659,
+      "inclusive_seconds": 1.080751376,
+      "exclusive_seconds": 1.080751376
+    },
+    {
+      "id": 223,
+      "method": "classify",
+      "parent_id": 221,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925228297983,
+      "end_ns": 5925228527625,
+      "inclusive_seconds": 0.000229642,
+      "exclusive_seconds": 0.000229642
+    },
+    {
+      "id": 224,
+      "method": "ShopReader.read",
+      "parent_id": 221,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925228534966,
+      "end_ns": 5925269656240,
+      "inclusive_seconds": 0.041121274,
+      "exclusive_seconds": 0.041010669
+    },
+    {
+      "id": 225,
+      "method": "ShopReader._load",
+      "parent_id": 224,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925269486577,
+      "exception_type": "FileNotFoundError",
+      "end_ns": 5925269597182,
+      "inclusive_seconds": 0.000110605,
+      "exclusive_seconds": 0.000110605
+    },
+    {
+      "id": 226,
+      "method": "native_player_hud",
+      "parent_id": 221,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925269734406,
+      "end_ns": 5925287368790,
+      "inclusive_seconds": 0.017634384,
+      "exclusive_seconds": 0.0002263779999999993
+    },
+    {
+      "id": 227,
+      "method": "RapidOCR.__call__",
+      "parent_id": 226,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "shape": [
+        56,
+        118,
+        3
+      ],
+      "use_det": false,
+      "use_cls": false,
+      "caller": "native_player_hud",
+      "start_ns": 5925269922877,
+      "end_ns": 5925287330883,
+      "inclusive_seconds": 0.017408006,
+      "exclusive_seconds": 0.017408006
+    },
+    {
+      "id": 228,
+      "method": "semantic_facts",
+      "parent_id": 221,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925287425094,
+      "end_ns": 5925287739081,
+      "inclusive_seconds": 0.000313987,
+      "exclusive_seconds": 0.000311182
+    },
+    {
+      "id": 229,
+      "method": "rewards.detect",
+      "parent_id": 228,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925287434357,
+      "end_ns": 5925287437162,
+      "inclusive_seconds": 2.805e-06,
+      "exclusive_seconds": 2.805e-06
+    },
+    {
+      "id": 230,
+      "method": "StateReader.read",
+      "parent_id": 221,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925287745591,
+      "end_ns": 5925330752783,
+      "inclusive_seconds": 0.043007192,
+      "exclusive_seconds": 0.042882777
+    },
+    {
+      "id": 231,
+      "method": "StateReader._load",
+      "parent_id": 230,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "actual",
+      "start_ns": 5925330553356,
+      "end_ns": 5925330677771,
+      "inclusive_seconds": 0.000124415,
+      "exclusive_seconds": 0.000124415
+    },
+    {
+      "id": 232,
+      "method": "Perception.read",
+      "parent_id": null,
+      "frame": "r06",
+      "phase": "warm_sequence",
+      "read_kind": "cache",
+      "start_ns": 5925337968048,
+      "end_ns": 5925339233323,
+      "inclusive_seconds": 0.001265275,
+      "exclusive_seconds": 0.001265275
+    }
+  ],
+  "method_totals": {
+    "cold_sequence/actual": {
+      "Perception.read": {
+        "calls": 10,
+        "inclusive_seconds": 12.705609994000001,
+        "exclusive_seconds": 0.8520869429999998
+      },
+      "RapidOCR.__init__": {
+        "calls": 1,
+        "inclusive_seconds": 0.216307967,
+        "exclusive_seconds": 0.216307967
+      },
+      "RapidOCR.__call__": {
+        "calls": 20,
+        "inclusive_seconds": 10.828673734,
+        "exclusive_seconds": 10.828673734
+      },
+      "classify": {
+        "calls": 10,
+        "inclusive_seconds": 0.003788532,
+        "exclusive_seconds": 0.003788532
+      },
+      "ShopReader.read": {
+        "calls": 8,
+        "inclusive_seconds": 0.33278112699999995,
+        "exclusive_seconds": 0.33183473
+      },
+      "ShopReader._load": {
+        "calls": 8,
+        "inclusive_seconds": 0.0009463970000000001,
+        "exclusive_seconds": 0.0009463970000000001
+      },
+      "native_player_hud": {
+        "calls": 10,
+        "inclusive_seconds": 0.131911468,
+        "exclusive_seconds": 0.0022244150000000065
+      },
+      "semantic_facts": {
+        "calls": 10,
+        "inclusive_seconds": 0.03814392700000001,
+        "exclusive_seconds": 0.0033251729999999972
+      },
+      "rewards.detect": {
+        "calls": 10,
+        "inclusive_seconds": 0.034818754,
+        "exclusive_seconds": 0.034818754
+      },
+      "StateReader.read": {
+        "calls": 10,
+        "inclusive_seconds": 0.43160334899999997,
+        "exclusive_seconds": 0.43035725900000005
+      },
+      "StateReader._load": {
+        "calls": 10,
+        "inclusive_seconds": 0.0012460899999999998,
+        "exclusive_seconds": 0.0012460899999999998
+      }
+    },
+    "cold_sequence/cache": {
+      "Perception.read": {
+        "calls": 10,
+        "inclusive_seconds": 0.01396936,
+        "exclusive_seconds": 0.01396936
+      }
+    },
+    "warm_sequence/actual": {
+      "Perception.read": {
+        "calls": 10,
+        "inclusive_seconds": 12.471115792,
+        "exclusive_seconds": 0.818240226
+      },
+      "RapidOCR.__call__": {
+        "calls": 20,
+        "inclusive_seconds": 10.863854795000002,
+        "exclusive_seconds": 10.863854795000002
+      },
+      "classify": {
+        "calls": 10,
+        "inclusive_seconds": 0.002403705,
+        "exclusive_seconds": 0.002403705
+      },
+      "ShopReader.read": {
+        "calls": 8,
+        "inclusive_seconds": 0.32923964099999997,
+        "exclusive_seconds": 0.328318375
+      },
+      "ShopReader._load": {
+        "calls": 8,
+        "inclusive_seconds": 0.000921266,
+        "exclusive_seconds": 0.000921266
+      },
+      "native_player_hud": {
+        "calls": 10,
+        "inclusive_seconds": 0.134321142,
+        "exclusive_seconds": 0.0020888200000000016
+      },
+      "semantic_facts": {
+        "calls": 10,
+        "inclusive_seconds": 0.031790107000000005,
+        "exclusive_seconds": 0.0029723789999999994
+      },
+      "rewards.detect": {
+        "calls": 10,
+        "inclusive_seconds": 0.028817727999999997,
+        "exclusive_seconds": 0.028817727999999997
+      },
+      "StateReader.read": {
+        "calls": 10,
+        "inclusive_seconds": 0.42349849800000006,
+        "exclusive_seconds": 0.422370822
+      },
+      "StateReader._load": {
+        "calls": 10,
+        "inclusive_seconds": 0.0011276760000000002,
+        "exclusive_seconds": 0.0011276760000000002
+      }
+    },
+    "warm_sequence/cache": {
+      "Perception.read": {
+        "calls": 10,
+        "inclusive_seconds": 0.012372837,
+        "exclusive_seconds": 0.012372837
+      }
+    }
+  },
+  "mode": "full",
+  "scope_api_available": false,
+  "derived_components_note": "Exclusive component sums derived from the retained real method intervals; no OCR rerun or fields modified. Direct det/rec member breakdown was measured separately."
+}
