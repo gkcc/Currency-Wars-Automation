@@ -30,8 +30,6 @@ class DeadStartRecoveryTests(unittest.TestCase):
         self.digest = hashlib.sha256(self.payload).hexdigest()
         self.uptime = 1000000
         self.machine = 'b' * 32
-        self.census = [dict(pid=900, process_identity='windows:100', executable='C:/Python/python.exe',
-                           command_sha256='c' * 64, operator=True, actor_reasons=['interpreter_or_shell'])]
         self.stack = contextlib.ExitStack()
         self.addCleanup(self.stack.close)
         self.stack.enter_context(patch.object(guard, 'mutation_lock', lambda *a, **k: contextlib.nullcontext()))
@@ -39,7 +37,6 @@ class DeadStartRecoveryTests(unittest.TestCase):
         self.stack.enter_context(patch.object(guard, 'windows_uptime_ms', side_effect=lambda: self.uptime))
         self.stack.enter_context(patch.object(guard, 'windows_machine_id', side_effect=lambda: self.machine))
         self.stack.enter_context(patch.object(guard, 'source_hashes', return_value={'guard.py': 'd' * 64}))
-        self.scanner = self.stack.enter_context(patch.object(guard, 'process_census', side_effect=lambda _: copy.deepcopy(self.census)))
 
     def run_recovery(self, **kwargs):
         return guard.recover_dead_start(self.root, self.path.name, self.digest,
@@ -49,12 +46,11 @@ class DeadStartRecoveryTests(unittest.TestCase):
         self.assertTrue(self.run_recovery(prepare=True)['restart_still_required'])
         self.uptime = 1000
 
-    def test_prepare_does_not_retire_and_same_boot_census_is_insufficient(self):
+    def test_prepare_does_not_retire_and_same_boot_is_insufficient(self):
         self.assertTrue(self.run_recovery(prepare=True)['prepared'])
         self.assertIsNotNone(guard.activity_reason(self.root))
         with self.assertRaisesRegex(RuntimeError, 'boot'):
             self.run_recovery(apply=True)
-        self.scanner.assert_not_called()
         self.assertEqual(self.path.read_bytes(), self.payload)
 
     def test_missing_intent_refuses_even_if_all_processes_appear_dead(self):
@@ -115,25 +111,16 @@ class DeadStartRecoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, 'broker'):
                 self.run_recovery(apply=True)
 
-    def test_census_failure_or_new_process_refuses_without_receipt(self):
-        self.prepared_after_restart()
-        with patch.object(guard, 'process_census', side_effect=RuntimeError('access unknown')):
-            with self.assertRaises(RuntimeError):
-                self.run_recovery(apply=True)
-        with patch.object(guard, 'process_census', side_effect=[self.census, self.census + [{'pid': 901}]]):
-            with self.assertRaisesRegex(RuntimeError, 'census changed'):
-                self.run_recovery(apply=True)
-        self.assertFalse(guard._recovery_path(self.root, self.path).exists())
 
     def test_source_change_and_lease_change_refuse(self):
         self.prepared_after_restart()
         with patch.object(guard, 'source_hashes', side_effect=[{'a': '1'}, {'a': '2'}]):
             with self.assertRaisesRegex(RuntimeError, 'Source or activity'):
                 self.run_recovery(apply=True)
-        def changing_scan(_):
+        def changing_source(_):
             self.path.write_bytes(self.payload + b' ')
-            return self.census
-        with patch.object(guard, 'process_census', side_effect=changing_scan):
+            return {'guard.py': 'd' * 64}
+        with patch.object(guard, 'source_hashes', side_effect=changing_source):
             with self.assertRaises(ValueError):
                 self.run_recovery(apply=True)
 
@@ -168,14 +155,42 @@ class DeadStartRecoveryTests(unittest.TestCase):
     def test_linked_audit_directory_refuses(self):
         outside = self.root / 'elsewhere'
         outside.mkdir()
-        (self.root / 'docs/source-activity-recovery').symlink_to(outside, target_is_directory=True)
+        try:
+            (self.root / 'docs/source-activity-recovery').symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            if getattr(exc, 'winerror', None) == 1314:
+                self.skipTest('Windows symlink fixture privilege unavailable; not a passed safety check')
+            raise
         with self.assertRaises(ValueError):
             self.run_recovery(prepare=True)
 
-    def test_broad_actor_scope_does_not_exempt_an_unrelated_shell(self):
-        for image in ('python.exe', 'pythonw.exe', 'pwsh.exe', 'cmd.exe', 'node.exe', 'CurrencyWars.exe'):
-            self.assertTrue(guard._actor_reasons(self.root, 'C:/apps/' + image, ['unrelated']))
-        self.assertTrue(guard._actor_reasons(self.root, 'C:/renamed.exe', [str(self.root / 'tools/run.py')]))
+
+    def test_operator_shell_and_protected_processes_are_not_a_recovery_dependency(self):
+        import psutil
+        # If recovery tries to inspect lsass or its ordinary shell/venv parent,
+        # fail this test. Only exact registered PIDs use the original guard.
+        with patch.object(psutil, 'pids', side_effect=AssertionError('No machine-wide census')), \
+                patch.object(psutil, 'Process', side_effect=PermissionError('protected PID 332')):
+            self.assertTrue(self.run_recovery(preflight=True)['preflight_only'])
+            self.assertFalse(guard._recovery_path(self.root, self.path).parent.exists())
+            self.prepared_after_restart()
+            self.assertTrue(self.run_recovery(apply=True)['retired'])
+            self.assertIsNone(guard.activity_reason(self.root))
+
+    def test_registered_inventory_changed_inside_lock_refuses(self):
+        self.prepared_after_restart()
+        with patch.object(guard, '_activity_snapshot', side_effect=[{'old': 1}, {'new': 2}]):
+            with self.assertRaisesRegex(RuntimeError, 'Registered activity changed'):
+                self.run_recovery(apply=True)
+        self.assertFalse(guard._recovery_path(self.root, self.path).exists())
+
+    def test_preflight_still_rejects_registered_unknown_controller(self):
+        other = self.path.with_name('e' * 32 + '.json')
+        other.write_text(json.dumps(dict(self.value, kind='runner')))
+        with self.assertRaises(RuntimeError):
+            self.run_recovery(preflight=True)
+        self.assertFalse(guard._recovery_path(self.root, self.path).parent.exists())
+
 
 
 ORIGINAL_IDENTITY_STATE = guard.identity_state
@@ -219,35 +234,6 @@ class LaunchRegistrationTests(unittest.TestCase):
         self.assertEqual([row[0] for row in order], ['activity', 'bind', 'review', 'worker'])
 
 
-class LiveCensusContractTests(unittest.TestCase):
-    def test_native_census_rejects_unknown_access_new_process_and_extra_interpreter(self):
-        import psutil
-        own = os.getpid()
-        def identity(pid):
-            return ('active', 'windows:' + str(pid + 1000))
-        def process(pid):
-            return SimpleNamespace(exe=lambda: '/apps/python.exe' if pid == own else '/apps/notepad.exe',
-                                   cmdline=lambda: ['operator' if pid == own else 'note', 'private-argument'])
-        with patch.object(guard.os, 'name', 'nt'), patch.object(guard, 'process_identity', side_effect=identity), \
-                patch.object(psutil, 'pids', return_value=[0, 4, own, own + 1]), \
-                patch.object(psutil, 'Process', side_effect=process):
-            result = guard.process_census('/project')
-            self.assertEqual(len(result), 2)
-            self.assertNotIn('private-argument', json.dumps(result))
-            with patch.object(psutil, 'Process', side_effect=psutil.AccessDenied(own + 1)):
-                with self.assertRaisesRegex(RuntimeError, 'Incomplete'):
-                    guard.process_census('/project')
-            with patch.object(psutil, 'pids', side_effect=[[own], [own, own + 2]]):
-                with self.assertRaisesRegex(RuntimeError, 'population changed'):
-                    guard.process_census('/project')
-            with patch.object(psutil, 'Process', return_value=SimpleNamespace(
-                    exe=lambda: '/apps/python.exe', cmdline=lambda: ['python', 'unrelated.py'])):
-                with self.assertRaisesRegex(RuntimeError, 'Active controller'):
-                    guard.process_census('/project')
-            with patch.object(psutil, 'Process', return_value=SimpleNamespace(
-                    exe=lambda: '/apps/notepad.exe', cmdline=lambda: [])):
-                with self.assertRaisesRegex(RuntimeError, 'Unknown'):
-                    guard.process_census('/project')
 
 
 class StartOrchestrationTests(unittest.TestCase):
