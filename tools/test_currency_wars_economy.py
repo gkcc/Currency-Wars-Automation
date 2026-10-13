@@ -240,6 +240,40 @@ class SelectedModelContracts(TestCase):
             self.assertFalse(worker.economy_observation(actual)['shop_complete'])
             self.assertEqual(control.action_index, 0)
 
+    def test_accept_budget_keeps_original_nonreentrant_mutex_through_comparison(self):
+        import currency_wars_economic_views as views
+        import test_currency_wars_submission_queue as queue_fixture
+        with EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
+            locking = queue_fixture.transport(worker.run)
+            control.submission_lock = locking.submission_lock  # Original O_EXCL implementation.
+            original, request = worker.last_observation, worker.state['decision_request']
+            scope = {'stage': '2-3', 'match_id': worker.active_match_id, 'resume_epoch': worker.epoch()}
+            worker.economic_roster_view = {'observation': copy.deepcopy(original),
+                'png': request['original_png'], 'scope': scope, 'watermark': worker.economy_receipt_watermark()}
+            worker.economic_navigation_receipts = {}
+            worker.observe()
+            published = len(control.published)
+            lock_path = worker.run / 'client-submit.lock'
+            def compose(*args):
+                self.assertTrue(lock_path.exists())
+                with self.assertRaises(RuntimeError):
+                    with locking.submission_lock():
+                        pass  # A competing raw lock cannot enter during this read.
+                return None  # This test does not claim a native roster composition.
+            with patch.object(views, 'compose_view', side_effect=compose):
+                worker.accept_economy_plan(record)
+            self.assertIs(worker.c, control)
+            self.assertFalse(lock_path.exists())
+            self.assertEqual(len(control.published), published)
+            self.assertEqual(worker.economy_binding['allocation_review']['origin'], 'local_advisor_recomputation')
+            ledger = copy.deepcopy(worker.economy_ledger('2-3'))
+            with patch.object(views, 'compose_view', side_effect=RuntimeError('declared read failure')):
+                with self.assertRaises(RuntimeError):
+                    worker.accept_economy_plan(record)
+            self.assertIs(worker.c, control)
+            self.assertFalse(lock_path.exists())
+            self.assertEqual(worker.economy_ledger('2-3'), ledger)
+
     def test_comparison_source_authenticates_navigation_and_every_intervening_receipt(self):
         import currency_wars_economic_views as views
         with EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):

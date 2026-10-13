@@ -1134,7 +1134,18 @@ def native_experience_offer(rows, image, page, snapshot_id, player, engine=None)
         # Current native price uses neutral light ink; colored gold is separate.
         neutral = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 160)
         unused, unused_labels, stats, unused_centers = cv2.connectedComponentsWithStats(neutral.astype('uint8'), 8)
-        glyphs = stats[1:]
+        glyphs, decoration = [], []
+        for x, y, w, h, area in stats[1:]:
+            # Retained 1-4 price: a complete native thin horizontal rule at
+            # y976..980 crosses the whole field; the numeral starts at y984.
+            # Authenticate that specific rule, never mask the gold/left area.
+            if (x == 0 and w == x2 - x1 and 4 <= y and y + h <= 8 and 2 <= h <= 4
+                    and np.all(np.sum(neutral[y:y+h, x:x+w], axis=0) >= 2)):
+                decoration.append([int(x1+x), int(y1+y), int(x1+x+w), int(y1+y+h)])
+            else:
+                glyphs.append((x, y, w, h, area))
+        if decoration:
+            result['evidence']['native_price_decoration_bounds'] = decoration
         dx1, dy1, dx2, dy2 = EXPERIENCE_DIGIT_ROI
         if (not 1 <= len(glyphs) <= 5 or any(area < 3 or x <= 1 or y <= 1
                 or x + w >= x2 - x1 - 1 or y + h >= y2 - y1 - 1

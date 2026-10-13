@@ -132,6 +132,16 @@ class NativePlayerHUDTests(unittest.TestCase):
         self.assertTrue(offer['cost_checked'])
         self.assertIsNone(offer['buy_gain'])
         self.assertEqual(offer['evidence']['cost']['raw_text'], '4')
+        decorated = image.copy()
+        decorated.paste((220,220,230), (264,976,343,980))
+        decorated_offer = native_experience_offer(rows, decorated, 'shop', 'frame', player, engine=engine)
+        self.assertEqual(decorated_offer['buy_cost'], 4)
+        self.assertIsNone(decorated_offer['buy_gain'])
+        for box in ((301,984,305,1003), (341,984,345,1003), (330,984,338,1003)):
+            extra = decorated.copy()
+            extra.paste((220,220,230), box)
+            self.assertIsNone(native_experience_offer(rows, extra, 'shop', 'frame', player,
+                                                     engine=engine)['buy_cost'])
         for wrong_rows in (
                 rows + [self.row('4', [309, 980, 324, 1008]), self.row('8', [329, 980, 340, 1008])],
                 rows + [self.row('?4', [273, 980, 324, 1008])],

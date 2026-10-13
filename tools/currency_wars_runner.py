@@ -5986,9 +5986,10 @@ class Worker:
         return result
 
     def accept_economy_plan(self, record):
-        # Budget replacement and acknowledged pending reconciliation commit
-        # under the same existing input submission fence.
-        with self.c.submission_lock():
+        # Retain the existing submission fence through the whole acceptance.
+        # Its owning Entry lease propagates to nested comparison reads; the
+        # non-reentrant native mutex is acquired once, never bypassed.
+        with self.observation_input_lease():
             return self._accept_economy_plan(record)
 
     @staticmethod
