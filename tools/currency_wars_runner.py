@@ -3594,6 +3594,8 @@ class Worker:
         if getattr(self, 'business_needs_review', False):
             if login_navigation:
                 pass  # Entering the login screen does not accept old business continuity.
+            elif self.account_navigation_allowed(tokens, action, self.last_observation or {}):
+                pass
             elif action and action.get('type') == 'close_shop_for_observation':
                 self.guard_business_view(action, self.last_observation or {})
             else:
@@ -3684,9 +3686,13 @@ class Worker:
                         or self.manual_input_blocked() or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
                     raise RuntimeError('发布前健康/前台/接管/停止检查拒绝，未提交')
                 self.guard_command_intent(tokens, action, current, request_id=value['id'])
+                if (getattr(self, 'business_needs_review', False) and not login_navigation
+                        and not (action and action.get('type') == 'close_shop_for_observation')
+                        and not self.account_navigation_allowed(tokens, action, current)):
+                    raise ValueError('发布前局外导航已失配，原业务仍未承接')
                 if login_navigation:
                     self.guard_login_navigation(tokens, action, current)
-                    self.c.write_json(self.run / 'runner-login-navigation.json', {
+                    self.c.write_json(self.account_entry_record(action['text']), {
                         'input_request_id': value['id'], 'snapshot_id': current['snapshot_id'],
                         'publication_attempted': True, 'business_resume_accepted': False})
                 if planned_inputs:
@@ -7952,7 +7958,8 @@ class Worker:
                 raise ValueError('本次请求原始帧已更换，拒绝菜单导航')
             self.log({'event': 'navigation_guard_matched', 'request_id': request['request_id'],
                       'snapshot_id': actual['snapshot_id'], 'input_sent': False})
-        self.update_context(reply.get('context_update', {}))
+        if not getattr(self, 'business_needs_review', False) or request.get('kind') == 'business_resume':
+            self.update_context(reply.get('context_update', {}))
         for action in reply['actions']:
             if self.manual_input_blocked() or self.epoch() != request['resume_epoch']:
                 raise RuntimeError('手动接管使未执行计划失效')
@@ -8623,34 +8630,63 @@ class Worker:
         self.publish(control_mode='halted', reason=reason, broker=result)
         self.log({'event': 'input_halt', 'reason': reason, 'broker': result})
 
+    def account_navigation_allowed(self, tokens, action, observed):
+        """Reuse existing account navigation while old match continuity is pending."""
+        page = observed.get('page')
+        if canonical_stage(observed.get('fields', {}).get('stage')) is not None:
+            return False
+        if page in ('reward_overlay', 'update_notice'):
+            return tokens == ['key:27', 'wait:0.7']
+        if page == 'world_entry':
+            return tokens == ['key:70', 'wait:1.5']
+        request = self.state.get('decision_request') or {}
+        if page != 'unknown' or not action or request.get('kind') != 'unknown_page':
+            return False
+        reply = {'snapshot_id': request.get('snapshot_id'), 'actions': [action]}
+        return (stable_world_menu_navigation(reply, request, observed)
+                or stable_phone_guide_navigation(reply, request, observed)
+                or stable_peace_guide_tab_navigation(reply, request, observed)
+                or (navigation_target(action, request) == 'activity_currency_wars'
+                    and stable_semantic_plan(reply, request, observed, self.frame_path)))
+
+    def account_entry_record(self, label):
+        return self.run / ('runner-login-navigation.json' if label == '点击进入'
+                           else 'runner-daily-supply-navigation.json')
+
     def guard_login_navigation(self, tokens, action, observed):
-        bounds = (905, 990, 1015, 1040)
-        target = find_text(observed.get('rows', []), '点击进入', bounds, exact=True)
+        label = action.get('text')
+        bounds = {'点击进入': (905, 990, 1015, 1040),
+                  '点击领取今日补给': (760, 890, 1160, 970)}.get(label)
+        target = find_text(observed.get('rows', []), label, bounds, exact=True) if bounds else None
+        daily = label == '点击领取今日补给'
         if (observed.get('page') != 'unknown' or not full_observation(observed)
                 or canonical_stage(observed.get('fields', {}).get('stage')) is not None
                 or not target or action.get('type') != 'click_text'
-                or action.get('text') != '点击进入' or action.get('bounds') != bounds
-                or action.get('purpose') != 'login_startup'
-                or (self.run / 'runner-login-navigation.json').exists()):
-            raise ValueError('当前登录入口未核或本租期已尝试；只回读，不重发')
+                or action.get('bounds') != bounds or action.get('purpose') != 'login_startup'
+                or daily and not find_text(observed.get('rows', []), '列车补给', exact=True)
+                or self.account_entry_record(label).exists()):
+            raise ValueError('当前登录/每日补给入口未核或本租期已尝试；只回读，不重发')
         box = target['box']
         if tokens != [f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7']:
-            raise ValueError('登录导航仅点当前唯一“点击进入”的文字中心')
+            raise ValueError('账户导航仅点当前唯一准确文字中心')
 
     def enter_login_once(self, observed):
-        bounds = (905, 990, 1015, 1040)
-        target = find_text(observed.get('rows', []), '点击进入', bounds, exact=True)
-        if (observed.get('page') != 'unknown' or not target
-                or (self.run / 'runner-login-navigation.json').exists()):
+        if observed.get('page') != 'unknown':
             return False
-        self.state['decision_request'] = None
-        box = target['box']
-        self.command([f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7'],
-            '当前登录页只点击进入一次，再读取新帧；原业务连续性仍未确认', 'unknown',
-            '读取登录入口后的实际页面，不计阶段完成', action={
-                'type': 'click_text', 'text': '点击进入', 'exact': True, 'bounds': bounds,
-                'expected_page': 'unknown', 'purpose': 'login_startup'})
-        return True
+        for label, bounds in (('点击进入', (905, 990, 1015, 1040)),
+                              ('点击领取今日补给', (760, 890, 1160, 970))):
+            target = find_text(observed.get('rows', []), label, bounds, exact=True)
+            if not target or self.account_entry_record(label).exists():
+                continue
+            self.state['decision_request'] = None
+            box = target['box']
+            self.command([f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7'],
+                '当前账户入口只点击一次，再读取新帧；原业务连续性仍未确认', 'unknown',
+                '读取账户入口后的实际页面，不计局内阶段完成', action={
+                    'type': 'click_text', 'text': label, 'exact': True, 'bounds': bounds,
+                    'expected_page': 'unknown', 'purpose': 'login_startup'})
+            return True
+        return False
 
     def tick(self, observed):
         try:
@@ -8673,6 +8709,24 @@ class Worker:
         if self.enter_login_once(observed):
             return
         if getattr(self, 'business_needs_review', False):
+            page = observed.get('page')
+            if (page in ('reward_overlay', 'update_notice')
+                    and self.account_navigation_allowed(['key:27', 'wait:0.7'], None, observed)):
+                self.state['decision_request'] = None
+                self.command(['key:27', 'wait:0.7'], '关闭已识别局外模态并回读，旧局仍未承接', page)
+                return
+            if (page == 'world_entry'
+                    and self.account_navigation_allowed(['key:70', 'wait:1.5'], None, observed)):
+                if not self.world_entry_attempted:
+                    self.world_entry_attempted = True
+                    self.state['decision_request'] = None
+                    self.command(['key:70', 'wait:1.5'], '原生货币战争F入口一次导航，旧局仍未承接', page)
+                else:
+                    self.ask(observed, 'world_entry_unverified', 'F已尝试；只核当前页面，不重复输入')
+                return
+            if page == 'unknown':
+                self.ask(observed, 'unknown_page', '进入货币战争前只使用已有大世界/手机/指南导航；旧局连续性未确认，不继承XP或执行局内经济。')
+                return
             if observed.get('page') not in BUSINESS_REVIEW_PAGES:
                 self.publish(phase='续接只读等待可核页面', decision_request=None,
                              reason='当前战斗/未知过渡页不发输入，沿原硬期限等待新帧')
