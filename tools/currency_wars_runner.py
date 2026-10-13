@@ -1678,9 +1678,17 @@ def stable_preparation_inspection(action, request, actual, current_png):
     after = _image(current_png, actual['snapshot_id'])
     x1, y1, x2, y2 = geometry['bounds']
     first, second = before[y1:y2, x1:x2], after[y1:y2, x1:x2]
-    if (hashlib.sha256(first.tobytes()).hexdigest() != action['roi_sha256']
-            or not np.array_equal(first, second)):
-        raise ValueError('备战图标的完整原ROI摘要/新帧像素不符，零输入')
+    if hashlib.sha256(first.tobytes()).hexdigest() != action['roi_sha256']:
+        raise ValueError('备战图标的完整原ROI摘要不符，零输入')
+    # Both inputs remain original 1920x1080 perception PNGs. Measured same-icon
+    # rendering noise: channel max 2, mean .02896, changed .08023, tile .28889.
+    # Original PNG/ROI digests stay exact; only fresh rendering is bounded.
+    delta = np.abs(first.astype(np.int16) - second.astype(np.int16))
+    if (int(delta.max()) > 2 or float(delta.mean()) > .04
+            or float(np.any(delta != 0, axis=2).mean()) > .10
+            or max(float(tile.mean()) for row in np.array_split(delta, 8)
+                   for tile in np.array_split(row, 8, axis=1)) > .30):
+        raise ValueError('备战图标的新帧ROI渲染差异越界，零输入')
     gray = first.mean(axis=2)
     if min(float(tile.std()) for row in np.array_split(gray, 2) for tile in np.array_split(row, 2, axis=1)) < 20:
         raise ValueError('固定图标整tile空白、遮挡或不能确认，零输入')
