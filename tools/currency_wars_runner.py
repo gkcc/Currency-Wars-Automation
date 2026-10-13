@@ -4331,6 +4331,7 @@ class Worker:
         if not isinstance(value, dict):
             raise ValueError('准备复核缺少结构化value')
         phase = value.get('phase')
+        review_proof = record['proof']
         if phase == 'shop_inspection' and manual_record is not None:
             raise ValueError('历史商店人工标记不能继承；须当前请求ROOT五槽实读')
         if manual_record is not None and (phase != manual_record.get('phase') or value != manual_record.get('review')):
@@ -4391,9 +4392,23 @@ class Worker:
                 if current_review is None:
                     self.supervised_shop_read = prior
                     raise ValueError('ROOT读店鲜帧卡名价/资源/收据变更，不能继承原缺项复核')
+                receipt = manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
+                current_payload = self.frame_path.read_bytes()
+                current_path = self.records / ('shop-inspection-' + actual['snapshot_id'] + '.png')
+                if current_path.exists():
+                    if current_path.read_bytes() != current_payload:
+                        raise ValueError('ROOT读店鲜帧原PNG已变，不覆盖')
+                else:
+                    with current_path.open('xb') as stream:
+                        stream.write(current_payload)
+                review_proof = {'source': 'supervising_agent', 'snapshot_id': actual['snapshot_id'],
+                    'capture_request_id': actual['capture_request_id'], 'frame_id': actual['frame_id'],
+                    'evidence_file': str(current_path), 'match_id': self.active_match_id,
+                    'stage': stage, 'resume_epoch': self.epoch()}
                 self.shop_read_navigation_receipts = {}
             self.economy_read_cache = None
             value = {**value, 'read_review': current_review, 'completion_origin': 'supervising_agent',
+                'source_review_proof': copy.deepcopy(record['proof']), 'completion_receipt': redact(receipt),
                 'offers': [priced_read_slot(actual['shop'], slot, actual['snapshot_id'], review=current_review)
                            for slot in range(1, 6)]}
         if phase == 'rewards':
@@ -4505,7 +4520,7 @@ class Worker:
         if mode in ('标准博弈', '超频博弈'):
             self.live_mode = {'value': mode, 'match_id': self.active_match_id, 'origin': 'supervising_agent',
                               'proof': record['proof']}
-        self.preparation_reviews[phase] = {**value, 'proof': record['proof'], 'origin': 'supervising_agent',
+        self.preparation_reviews[phase] = {**value, 'proof': review_proof, 'origin': 'supervising_agent',
                                            'observed_at': source['observed_at']}
         if phase == 'startup_guide':
             self.preparation_reviews[phase].update(goals=goals, task_source=task_source)
@@ -4517,7 +4532,7 @@ class Worker:
         self.context['preparation_review'] = {'value': self.preparation_reviews, 'origin': 'supervising_agent'}
         self.node_progress = getattr(self, 'node_progress', 0) + 1
         self.log({'event': 'preparation_phase_verified', 'phase': phase, 'stage': stage,
-                  'origin': 'supervising_agent', 'proof': record['proof']})
+                  'origin': 'supervising_agent', 'proof': review_proof})
 
     def verified_manual_source(self, item, fresh):
         epoch = optional(self.run / 'runner-resume-epoch.json') or {}

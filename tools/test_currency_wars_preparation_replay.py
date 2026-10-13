@@ -86,6 +86,39 @@ class PreparationReplayTests(TestCase):
             self.assertEqual(worker.preparation_checklist(observed)['phase'], 'rewards')
             self.assertEqual(control.action_index, 0)
 
+    def test_verified_supervised_shop_read_advances_but_incomplete_proof_does_not(self):
+        with existing.EconomyTests().worker() as (worker, record, control, frames):
+            observed = worker.last_observation
+            worker.preparation_reviews = {'rewards': {'completed': True}}
+            self.assertEqual(worker.preparation_checklist(observed)['phase'], 'inventory_cleanup')
+            read = copy.deepcopy(worker.preparation_reviews['shop_inspection'])
+            read['origin'] = read['proof']['source'] = 'supervising_agent'
+            read['read_review'] = {'source': 'supervising_agent', 'snapshot_id': read['proof']['snapshot_id'],
+                'offers': [{key: slot.get(key) for key in ('slot', 'name', 'cost', 'recommended', 'bounds', 'position')}
+                           for slot in observed['shop']['slots']]}
+            for index, declared in enumerate(read['read_review']['offers']):
+                # The old empty-shop fixture omits geometry; declare valid disjoint cards.
+                x, y, width, height = 20 + index * 300, 59, 244, 273
+                declared.update(bounds=[x, y, width, height],
+                                position=[round(x + width / 2), round(y + height / 2)])
+            for offer in read['offers']:
+                offer.update(read_origin='supervising_agent', purchase_eligible=False)
+            self.assertEqual(runner.coaching.preparation_status(
+                {'rewards': {'completed': True}, 'shop_inspection': read})['phase'], 'inventory_cleanup')
+            worker.preparation_reviews['shop_inspection'] = read
+            status = worker.preparation_checklist(observed)
+            self.assertEqual(status['phase'], 'inventory_cleanup')
+            self.assertFalse(status['economy_allowed'])
+            self.assertFalse(status['battle_ready'])
+            for missing in ('proof', 'read_review', 'offers'):
+                reviews = copy.deepcopy(worker.preparation_reviews)
+                reviews['shop_inspection'].pop(missing)
+                self.assertEqual(runner.coaching.preparation_status(reviews)['phase'], 'shop_inspection')
+            reviews = {'rewards': {'completed': True},
+                       'shop_inspection': {'completed': True, 'origin': 'supervising_agent'}}
+            self.assertEqual(runner.coaching.preparation_status(reviews)['phase'], 'shop_inspection')
+            self.assertEqual(control.action_index, 0)
+
     def test_shop_read_cannot_use_an_old_or_unknown_original_receipt(self):
         with existing.EconomyTests().worker() as (worker, record, control, frames):
             observed = worker.last_observation

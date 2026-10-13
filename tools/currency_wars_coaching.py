@@ -152,9 +152,55 @@ def preparation_status(reviews):
         review = reviews.get(phase, {})
         if phase == 'shop_inspection':
             proof = review.get('proof') or {}
-            return (review.get('completed') is True and review.get('origin') == 'current_native_shop'
+            native = (review.get('completed') is True and review.get('origin') == 'current_native_shop'
                     and proof.get('source') == 'current_native_shop' and bool(proof.get('snapshot_id'))
                     and bool(proof.get('capture_request_id')) and bool(proof.get('frame_id')))
+            if native:
+                return True
+            read = review.get('read_review') or {}
+            offers, read_offers = review.get('offers') or [], read.get('offers') or []
+            receipt = review.get('completion_receipt') or {}
+            request, result = receipt.get('request') or {}, receipt.get('result') or {}
+            frame = result.get('observation') or {}
+            if (review.get('completed') is not True or review.get('origin') != 'supervising_agent'
+                    or proof.get('source') != 'supervising_agent' or read.get('source') != 'supervising_agent'
+                    or not all(proof.get(key) for key in ('snapshot_id', 'capture_request_id', 'frame_id',
+                                                          'evidence_file', 'match_id', 'stage'))
+                    or not (type(proof.get('resume_epoch')) is int and proof['resume_epoch'] >= 0
+                            or isinstance(proof.get('resume_epoch'), str) and bool(proof['resume_epoch']))
+                    or review.get('stage') != proof['stage'] or read.get('snapshot_id') != proof['snapshot_id']
+                    or read.get('continuation_capture_request_id', proof['capture_request_id']) != proof['capture_request_id']
+                    or receipt.get('id') != proof['capture_request_id'] or result.get('ok') is not True
+                    or request.get('kind') != 'actions' or request.get('handoff') is not False
+                    or not request.get('actions') or result.get('completed') != request['actions']
+                    or frame.get('frame_protocol') != 1 or frame.get('request_id') != proof['capture_request_id']
+                    or frame.get('frame_id') != proof['frame_id'] or frame.get('snapshot_sha256') != proof['snapshot_id']
+                    or len(offers) != 5 or len(read_offers) != 5
+                    or any(not isinstance(row, dict) or type(row.get('slot')) is not int for row in offers + read_offers)
+                    or {row['slot'] for row in offers} != set(range(1, 6))
+                    or {row['slot'] for row in read_offers} != set(range(1, 6))):
+                return False
+            for offer in offers:
+                raw = next(row for row in read_offers if row['slot'] == offer['slot'])
+                bounds, point = raw.get('bounds'), raw.get('position')
+                if (any(offer.get(key) != raw.get(key) for key in ('name', 'cost', 'recommended'))
+                        or offer.get('read_origin') != 'supervising_agent'
+                        or type(offer.get('purchase_eligible')) is not bool
+                        or offer.get('recommended') is not None and type(offer['recommended']) is not bool
+                        or offer.get('recommended') is None and offer['purchase_eligible']
+                        or not isinstance(bounds, list) or len(bounds) != 4 or any(type(v) is not int for v in bounds)
+                        or not 0 <= bounds[0] < bounds[0] + bounds[2] <= 1920
+                        or not 0 <= bounds[1] < bounds[1] + bounds[3] <= 1080
+                        or point != [round(bounds[0] + bounds[2] / 2), round(bounds[1] + bounds[3] / 2)]):
+                    return False
+                if offer.get('status') == 'empty':
+                    if offer.get('name') is not None or offer.get('cost') is not None or offer['purchase_eligible']:
+                        return False
+                elif (offer.get('status') not in ('recognized', 'unknown')
+                        or not isinstance(offer.get('name'), str) or not offer['name'].strip()
+                        or type(offer.get('cost')) is not int or not 1 <= offer['cost'] <= 5):
+                    return False
+            return True
         return review.get('completed') is True
     steps = [{'id': phase, 'label': PHASE_LABELS[phase],
               'completed': completed(phase),
