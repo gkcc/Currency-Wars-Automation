@@ -380,5 +380,83 @@ class InvestmentNativeGuardTests(unittest.TestCase):
         self.assertFalse(guards.stable_semantic_target(action, self.request, self.actual, self.current))
 
 
+class SupplyNativeGuardTests(unittest.TestCase):
+    """Two retained supply captures; all checks remain read-only."""
+    @classmethod
+    def setUpClass(cls):
+        directory = os.environ.get('CW_NATIVE_SUPPLY_EVIDENCE_DIR')
+        if not directory:
+            raise unittest.SkipTest('Retained supply pair was not supplied')
+        directory = Path(directory)
+        cls.paths = [directory / (name + '-strategy-original.png') for name in
+            ('29ab994f217045d1b44713f1b90dc091', '3b2b0f7dfa3b468cace7a228b77214c6')]
+        reader = perception.Perception()
+        cls.observations = [reader.read(path,scope='full') for path in cls.paths]
+        cls.request = dict(kind='supply_strategy', snapshot_id=cls.observations[0]['snapshot_id'],
+            observation=cls.observations[0], original_png=str(cls.paths[0]), resume_epoch='offline-proof')
+        option = cls.observations[0]['semantic']['options'][2]
+        cls.action = dict(type='click_point', args=[867,567], expected_page='supply',
+            target_evidence={**option, 'text':option['title'], 'snapshot_id':cls.request['snapshot_id']})
+
+    def test_complete_supply_and_linked_title_pass_public_selection_without_confirm(self):
+        from types import SimpleNamespace
+        for observation in self.observations:
+            self.assertEqual(len(observation['semantic']['options']),5)
+            weak = [row for row in observation['rows'] if row['box']==[836,550,898,584]]
+            self.assertEqual(len(weak),1)
+            self.assertEqual(weak[0]['confidence'],.655)
+            derived = [row for row in observation['rows'] if row.get('normalization_basis')==perception.SUPPLY_TITLE_CONTRAST_BASIS]
+            self.assertEqual(len(derived),1)
+            self.assertGreaterEqual(derived[0]['confidence'],.90)
+            self.assertEqual(derived[0]['normalization_evidence']['primary_rows'],weak)
+        self.assertTrue(guards.stable_semantic_target(self.action,self.request,self.observations[1],self.paths[1]))
+        worker = SimpleNamespace(epoch=lambda:'offline-proof',frame_path=self.paths[1],log=lambda event:None)
+        runner.Worker.check_target_roi(worker,self.action,self.request,self.observations[1])
+        confirm = {**self.action,'type':'click_text','text':'确认','exact':True}
+        self.assertFalse(guards.stable_semantic_target(confirm,self.request,self.observations[1],self.paths[1]))
+
+    def test_unlinked_conflicting_duplicate_or_occluded_title_and_gray_caption_refuse(self):
+        for damage in ('missing_link','conflict','duplicate','wrong_snapshot','wrong_primary_field'):
+            with self.subTest(damage=damage):
+                actual = copy.deepcopy(self.observations[1])
+                derived = next(row for row in actual['rows'] if row.get('normalization_basis')==perception.SUPPLY_TITLE_CONTRAST_BASIS)
+                if damage=='missing_link':
+                    derived.pop('normalization_evidence')
+                elif damage=='conflict':
+                    next(row for row in actual['rows'] if row['box']==[836,550,898,584])['text']='Conflicting title'
+                elif damage=='duplicate':
+                    actual['rows'].append(copy.deepcopy(derived))
+                elif damage=='wrong_snapshot':
+                    derived['normalization_evidence']['snapshot_id']='0'*64
+                else:
+                    derived['normalization_evidence']['primary_field']=[832,546,902,588]
+                self.assertFalse(guards.stable_semantic_target(self.action,self.request,actual,self.paths[1]))
+        original = np.array(Image.open(self.paths[1]).convert('RGB'))
+        with runner.artifacts.scratch_directory('supply-guard-regression') as directory:
+            for damage in ('title_cover','leading_glyph','trailing_glyph','caption_cover','caption_move','selected_count'):
+                with self.subTest(damage=damage):
+                    changed = original.copy()
+                    actual = copy.deepcopy(self.observations[1])
+                    if damage=='title_cover':
+                        changed[552:580,835:897]=120
+                    elif damage=='leading_glyph':
+                        changed[554:578,833:838]=255
+                    elif damage=='trailing_glyph':
+                        changed[554:578,910:926]=255
+                    elif damage=='caption_cover':
+                        changed[966:1000,1645:1739]=40
+                    elif damage=='caption_move':
+                        changed[966:1000,1645:1739]=np.roll(changed[966:1000,1645:1739],1,axis=1)
+                    else:
+                        next(row for row in actual['rows'] if row['text']=='已选择0/1')['text']='已选择1/1'
+                    path = Path(directory)/(damage+'.png')
+                    Image.fromarray(changed).save(path)
+                    actual['snapshot_id']=hashlib.sha256(path.read_bytes()).hexdigest()
+                    for row in actual['rows']:
+                        if row.get('normalization_basis')==perception.SUPPLY_TITLE_CONTRAST_BASIS:
+                            row['normalization_evidence']['snapshot_id']=actual['snapshot_id']
+                    self.assertFalse(guards.stable_semantic_target(self.action,self.request,actual,path))
+
+
 if __name__ == '__main__':
     unittest.main()

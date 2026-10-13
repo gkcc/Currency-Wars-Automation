@@ -392,10 +392,125 @@ def rows_in(rows, bounds):
         key=lambda r: (r['box'][1], r['box'][0]))
 
 
+SUPPLY_TITLE_CONTRAST_BASIS = 'fixed_native_five_supply_title_contrast_roi'
+
+
+def supply_title_projection(rows, snapshot_id=None, image=None):
+    """Only linked primary title rows yield to a separately recognized title.
+
+    The original rows/confidences remain in the observation. No other visible
+    card text is deduplicated, and malformed/ambiguous links fail the read.
+    """
+    remove, slots = [], set()
+    for row in rows:
+        if row.get('normalization_basis') != SUPPLY_TITLE_CONTRAST_BASIS:
+            continue
+        evidence = row.get('normalization_evidence') or {}
+        index = evidence.get('card_index')
+        if (type(index) is not int or not 1 <= index <= 5 or index in slots
+                or not .90 <= row.get('confidence', 0) <= 1.
+                or evidence.get('snapshot_id') != (snapshot_id or evidence.get('snapshot_id'))
+                or not isinstance(evidence.get('snapshot_id'), str)
+                or not re.fullmatch(r'[0-9a-f]{64}', evidence['snapshot_id'])
+                or evidence.get('recipe') != 'gray_gt180_black_on_white_no_resize'):
+            return None
+        box = SUPPLY_FIVE_CARD_LAYOUT[index-1]
+        field = [box[0]+39, 546, box[2]-30, 588]
+        primary = evidence.get('primary_rows')
+        if (evidence.get('primary_field') != field or not isinstance(primary, list) or len(primary) > 1
+                or not (field[0] <= row['box'][0] < row['box'][2] <= field[2]
+                        and field[1] <= row['box'][1] < row['box'][3] <= field[3])):
+            return None
+        if image is not None:
+            import cv2
+            ink = cv2.cvtColor(image[field[1]:field[3],field[0]:field[2]],cv2.COLOR_RGB2GRAY) > 180
+            yy,xx = np.where(ink)
+            if (len(xx) < 60 or xx.min()+field[0] < row['box'][0]+3
+                    or xx.max()+field[0] >= row['box'][2]-3
+                    or yy.min()+field[1] < row['box'][1]+3 or yy.max()+field[1] >= row['box'][3]-3):
+                return None  # A leading/trailing glyph cannot hide outside the recognized crop.
+        if primary:
+            item = primary[0]
+            matches = [i for i, candidate in enumerate(rows) if candidate == item]
+            if (len(matches) != 1 or item.get('confidence', 1) >= .90
+                    or clean(item.get('raw_text', item.get('text', ''))) != clean(row['text'])):
+                return None
+            remove.append(matches[0])
+        elif any(candidate is not row and field[0] <= (candidate['box'][0]+candidate['box'][2])/2 < field[2]
+                 and field[1] <= (candidate['box'][1]+candidate['box'][3])/2 < field[3] for candidate in rows):
+            return None
+        slots.add(index)
+    return [row for i, row in enumerate(rows) if i not in remove]
+
+
+def native_supply_title_fallback(rows, image, engine, snapshot_id):
+    """One contrast read per uncertain fixed five-card title; never guessed names."""
+    import cv2
+    result = []
+    try:
+        names = json.loads(Path(__file__).with_name('shop_reader_resources').joinpath('names.json').read_text('utf-8-sig'))['names']
+    except (OSError, ValueError, KeyError, TypeError):
+        return result
+    for index, box in enumerate(SUPPLY_FIVE_CARD_LAYOUT, 1):
+        field = [box[0]+39, 546, box[2]-30, 588]
+        primary = [row for row in rows if field[0] <= (row['box'][0]+row['box'][2])/2 < field[2]
+                   and field[1] <= (row['box'][1]+row['box'][3])/2 < field[3]]
+        if len(primary) > 1 or primary and primary[0]['confidence'] >= .90:
+            continue
+        patch = np.array(image.crop(field).convert('RGB'))
+        ink = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY) > 180
+        ys, xs = np.where(ink)
+        if (len(xs) < 60 or xs.min() < 3 or xs.max() >= ink.shape[1]-3
+                or ys.min() < 3 or ys.max() >= ink.shape[0]-3):
+            continue
+        runs, start = [], None
+        for x, present in enumerate(list(np.any(ink, axis=0)) + [False]):
+            if present and start is None:
+                start = x
+            elif not present and start is not None:
+                runs.append((start, x))
+                start = None
+        if not 1 <= len(runs) <= 8 or any(end-start < 10 or np.count_nonzero(ink[:,start:end]) < 50 for start,end in runs):
+            continue
+        if primary:
+            x,y,right,bottom = primary[0]['box']
+            roi = [x-4,y-4,right+4,bottom+4]
+        else:
+            roi = [max(field[0],int(xs.min()+field[0]-10)), field[1],
+                   min(field[2],int(xs.max()+field[0]+11)), field[3]]
+        if (not field[0] <= roi[0] < roi[2] <= field[2] or not field[1] <= roi[1] < roi[3] <= field[3]
+                or xs.min()+field[0] < roi[0]+3 or xs.max()+field[0] >= roi[2]-3
+                or ys.min()+field[1] < roi[1]+3 or ys.max()+field[1] >= roi[3]-3):
+            continue
+        try:
+            mask = cv2.cvtColor(np.array(image.crop(roi).convert('RGB')),cv2.COLOR_RGB2GRAY) > 180
+            recognized, unused = engine(cv2.cvtColor(255-mask.astype('uint8')*255,cv2.COLOR_GRAY2RGB),
+                                        use_det=False,use_cls=False,use_rec=True)
+            if recognized is None or len(recognized) != 1:
+                continue
+            raw, confidence = recognized[0][-2:]
+            raw, confidence = str(raw), float(confidence)
+            title = clean(raw)
+            if (not .90 <= confidence <= 1. or title not in names or not re.fullmatch(r'[\u4e00-\u9fff]{1,8}', title)
+                    or len(title) != len(runs) or primary and clean(primary[0].get('raw_text',primary[0]['text'])) != title):
+                continue
+            result.append({'text': title, 'raw_text': raw, 'confidence': confidence, 'box': roi,
+                'normalization_basis': SUPPLY_TITLE_CONTRAST_BASIS,
+                'normalization_evidence': {'snapshot_id': snapshot_id, 'card_index': index,
+                    'primary_field': field, 'primary_rows': copy.deepcopy(primary),
+                    'recipe': 'gray_gt180_black_on_white_no_resize', 'glyph_runs': [[field[0]+a,field[0]+b] for a,b in runs]}})
+        except Exception:
+            continue
+    return result
+
+
 def option_facts(rows, page):
     """Trusted complete cards, with title and all visible effect/reward rows."""
     cards = []
     if page == 'supply':
+        rows = supply_title_projection(rows)
+        if rows is None:
+            return []
         titles = [rows_in(rows, [box[0]+28, 540, box[2]-28, 600])
                   for box in SUPPLY_FIVE_CARD_LAYOUT]
         if all(len(found) == 1 for found in titles):
@@ -1288,6 +1403,8 @@ class Perception:
                          "box": [round(min(xs)), round(min(ys)), round(max(xs)), round(max(ys))]})
         page = classify(rows)
         if page == 'supply':
+            rows.extend(native_supply_title_fallback(rows, image, engine, digest))
+            supply_rows = supply_title_projection(rows, digest)
             # The retained native controller decoration is read as "）".
             # Normalize only this fixed button, with the full five-card page
             # anchored; raw OCR and provenance remain available.
@@ -1295,7 +1412,7 @@ class Perception:
                       and .90 <= row['confidence'] <= 1.
                       and 800 <= row['box'][0] < row['box'][2] <= 1120
                       and 120 <= row['box'][1] < row['box'][3] <= 190]
-            titles = [rows_in(rows, [box[0]+28, 540, box[2]-28, 600])
+            titles = [rows_in(supply_rows or [], [box[0]+28, 540, box[2]-28, 600])
                       for box in SUPPLY_FIVE_CARD_LAYOUT]
             if len(header) == 1 and all(len(found) == 1 and found[0]['confidence'] >= .90 for found in titles):
                 buttons = [row for row in rows if clean(row['raw_text']) in ('）确认', ')确认')

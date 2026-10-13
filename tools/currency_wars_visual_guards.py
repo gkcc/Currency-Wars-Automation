@@ -17,7 +17,7 @@ import numpy as np
 from PIL import Image
 
 from currency_wars_perception import (ENVIRONMENT_CONFIRM_BOUNDS, OPTION_LAYOUTS,
-                                      SUPPLY_FIVE_CARD_LAYOUT, classify, clean)
+                                      SUPPLY_FIVE_CARD_LAYOUT, classify, clean, supply_title_projection)
 from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
 
 
@@ -907,6 +907,35 @@ def _investment_confirmation_equal(images, bounds):
             and np.max(delta[halo]) <= 7)
 
 
+def _supply_selection_confirmation_equal(images, bounds, original, actual):
+    # A disabled gray caption is a selection prerequisite, not a confirm click.
+    # The complete paired 0/1 field proves that no card is selected yet.
+    if _text_equal(images, bounds):
+        return True
+    if _paired_row(original, actual, r'已选择0/1', [1600,890,1800,946], images) is None:
+        return False
+    x,y,right,bottom = bounds
+    crops = [image[y:bottom,x:right] for image in images]
+    masks = []
+    for crop in crops:
+        hsv = cv2.cvtColor(crop,cv2.COLOR_RGB2HSV)
+        s,v = hsv[:,:,1],hsv[:,:,2]
+        # Retained supply pair has Vmax196, including antialiasing, with
+        # a complete gray caption. Color/state changes remain unverified.
+        mask = (s < 40) & (v >= 100) & (v <= 196)
+        if np.any(v > 196) or np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60:
+            return False
+        masks.append(mask)
+    union = masks[0] | masks[1]
+    delta = np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))
+    halo = cv2.dilate(union.astype(np.uint8),np.ones((5,5),np.uint8)).astype(bool)
+    # Native 29ab->3b2b: identical complete masks, ink max3/mean .0933,
+    # two-pixel halo max3; the distant button/background reaches 4.
+    return (np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) >= .995
+            and np.max(delta[union]) <= 3 and np.mean(delta[union]) <= .10
+            and np.max(delta[halo]) <= 3)
+
+
 def _cards(action, request, actual, images):
     original = request['observation']
     page = original.get('page')
@@ -916,6 +945,12 @@ def _cards(action, request, actual, images):
     fresh = actual.get('semantic', {}).get('options')
     if not isinstance(options, list) or options != fresh:
         return False
+    if page == 'supply' and len(options) == 5:
+        original_rows = supply_title_projection(original.get('rows', []), original.get('snapshot_id'), images[0])
+        actual_rows = supply_title_projection(actual.get('rows', []), actual.get('snapshot_id'), images[1])
+        if original_rows is None or actual_rows is None:
+            return False
+        original, actual = ({**original, 'rows': original_rows}, {**actual, 'rows': actual_rows})
     layout = SUPPLY_FIVE_CARD_LAYOUT if page == 'supply' and len(options) == 5 else OPTION_LAYOUTS.get(page, ())
     if not layout or len(layout) != len(options):
         return False
@@ -927,7 +962,9 @@ def _cards(action, request, actual, images):
     if (_paired_row(original, actual, re.escape(header), header_roi, images) is None
             or _paired_row(original, actual, '确认', confirm_roi, images,
                            ink_guard=(_environment_confirmation_equal if page == 'environment' else
-                                      _investment_confirmation_equal if page == 'investment' else None)) is None):
+                                      _investment_confirmation_equal if page == 'investment' else
+                                      (lambda pair, roi: _supply_selection_confirmation_equal(pair, roi, original, actual))
+                                      if page == 'supply' and len(options) == 5 else None)) is None):
         return False
     proof = action.get('target_evidence', {})
     index = proof.get('card_index')
