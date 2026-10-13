@@ -508,8 +508,33 @@ def _reward_visible_semantics(original, actual, images):
             or _preparation_hud_visible_semantics(*rest, images))
 
 
+def _supervised_reward_facts(original, actual, *, allow_coin_change=False):
+    """Current native resource facts for one explicitly supervised free claim.
+
+    This is not a native detector override or an economic/battle permission.
+    Publication still needs the owning manual intent and exposed orb pixels.
+    """
+    facts = []
+    for obs in (original, actual):
+        semantic = obs.get('semantic', {})
+        hud, coins = semantic.get('player_hud') or {}, semantic.get('coins') or {}
+        deployed = obs.get('fields', {}).get('deployed')
+        if (obs.get('page') != 'preparation'
+                or not re.fullmatch(r'\d+/\d+', deployed or '')
+                or hud.get('snapshot_id') != obs.get('snapshot_id')
+                or hud.get('actor') != 'player' or hud.get('origin') != 'native_player_hud'
+                or type(hud.get('level')) is not int or not isinstance(hud.get('xp'), list)
+                or len(hud['xp']) != 2 or any(type(n) is not int for n in hud['xp'])
+                or coins.get('snapshot_id') != obs.get('snapshot_id')
+                or type(coins.get('value')) is not int or coins['value'] < 0):
+            return False
+        facts.append((deployed, hud['level'], hud['xp'], coins['value']))
+    return (facts[0][:3] == facts[1][:3]
+            and (allow_coin_change or facts[0][3] == facts[1][3]))
+
+
 def _context_images(original, actual, original_png, current_png, *, allow_coin_change=False,
-                    shop_view_only=False):
+                    shop_view_only=False, supervised_target=False):
     """Authenticate exposed page anchors independently of orb recognition.
 
     A native detector's unknown remains unknown. It is neither evidence of an
@@ -555,7 +580,10 @@ def _context_images(original, actual, original_png, current_png, *, allow_coin_c
                     return None
                 image.load()
                 images.append(np.array(image.convert('RGB')))
-        if not shop_view_only and not _reward_visible_semantics(*semantic_pair, images):
+        if supervised_target:
+            if shop_view_only or not _supervised_reward_facts(original, actual, allow_coin_change=allow_coin_change):
+                return None
+        elif not shop_view_only and not _reward_visible_semantics(*semantic_pair, images):
             return None
         shop = original['page'] == 'shop'
         anchors = [('备战阶段', [220, 40, 365, 92] if shop else [410, 20, 540, 65]),
@@ -601,7 +629,8 @@ def stable_shop_view(original, actual, original_png, current_png):
 
 def stable_reward_target(original, actual, original_png, current_png, target):
     """An explicit target stays exposed at its original location; no relocation."""
-    images = _context_images(original, actual, original_png, current_png)
+    images = _context_images(original, actual, original_png, current_png,
+                             supervised_target=target.get('source') == 'supervising_agent')
     return bool(images is not None and original.get('page') == 'preparation'
                 and target_pair_stable(images[0], images[1], target))
 
@@ -767,7 +796,8 @@ def target_effect(original, actual, original_png, current_png, target):
     try:
         if _effect_bounds(target) is None or original.get('page') != 'preparation':
             return {**result, 'reason': 'unsupported_reward_target'}
-        images = _context_images(original, actual, original_png, current_png, allow_coin_change=True)
+        images = _context_images(original, actual, original_png, current_png, allow_coin_change=True,
+                                 supervised_target=target.get('source') == 'supervising_agent')
         if images is None:
             return result
         before, after = images
@@ -800,7 +830,8 @@ def stable_absence(previous, actual, previous_png, current_png, target):
     try:
         if _effect_bounds(target) is None or previous.get('page') != 'preparation':
             return False
-        images = _context_images(previous, actual, previous_png, current_png, allow_coin_change=False)
+        images = _context_images(previous, actual, previous_png, current_png, allow_coin_change=False,
+                                 supervised_target=target.get('source') == 'supervising_agent')
         if images is None:
             return False
         readings = [_reward_background(rgb, target) for rgb in images]
