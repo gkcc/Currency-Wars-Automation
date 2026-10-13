@@ -1877,6 +1877,8 @@ def stable_peace_guide_tab_navigation(reply, request, actual):
             or original.get('page') != 'unknown' or actual.get('page') != 'unknown'
             or original.get('snapshot_id') != request.get('snapshot_id')
             or reply.get('snapshot_id') != request.get('snapshot_id')
+            or canonical_stage(original.get('fields', {}).get('stage')) is not None
+            or canonical_stage(actual.get('fields', {}).get('stage')) is not None
             or not isinstance(actions, list) or len(actions) != 1):
         return False
     action = actions[0]
@@ -1888,11 +1890,11 @@ def stable_peace_guide_tab_navigation(reply, request, actual):
             or proof.get('snapshot_id') != request.get('snapshot_id')):
         return False
     if proof.get('control_id') == 'peace_guide_tab_4':
-        point, roi, caption, detail_label, detail_roi = [720, 212], [670, 174, 785, 251], '生存索引', '规则说明', (1080, 25, 1280, 110)
+        point, roi = [720, 212], [670, 174, 785, 251]
     elif proof.get('control_id') == 'peace_guide_tab_5':
-        point, roi, caption, detail_label, detail_roi = [840, 212], [790, 174, 900, 251], '逐光捡金', '规则说明', (1600, 25, 1800, 110)
+        point, roi = [840, 212], [790, 174, 900, 251]
     elif proof.get('control_id') == 'peace_guide_cosmic_strife_tab':
-        point, roi, caption, detail_label, detail_roi = [600, 212], [550, 174, 650, 251], '开拓历程', '第一幕·雅利洛-VI', (280, 415, 610, 490)
+        point, roi = [600, 212], [550, 174, 650, 251]
     else:
         return False
     if action.get('args') != point or any(type(value) is not int for value in action['args']):
@@ -1901,11 +1903,12 @@ def stable_peace_guide_tab_navigation(reply, request, actual):
     if (not isinstance(bounds, list) or bounds != roi
             or any(type(edge) is not int for edge in bounds)):
         return False
-    return all(_stable_navigation_anchor(original, actual, label, roi) for label, roi in (
-        ('星际和平指南', (80, 25, 280, 80)),
-        (caption, (80, 60, 260, 115)),
-        (detail_label, detail_roi),
-    ))
+    captions = ('每日实训', '行动摘要', '开拓历程', '生存索引', '逐光捡金')
+    source_captions = [caption for caption in captions
+                       if _stable_navigation_anchor(original, original, caption, (80, 60, 260, 115))]
+    return (len(source_captions) == 1
+            and _stable_navigation_anchor(original, actual, '星际和平指南', (80, 25, 280, 80))
+            and _stable_navigation_anchor(original, actual, source_captions[0], (80, 60, 260, 115)))
 
 
 def stable_advantages_navigation(reply, request, actual):
