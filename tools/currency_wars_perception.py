@@ -269,6 +269,12 @@ def _native_battle_stage(rows):
 
 
 def classify(rows):
+    # Guide card descriptions can mention promotion and rewards without being those pages.
+    if (find_text(rows, '星际和平指南', (80, 25, 280, 80), exact=True)
+            and any(find_text(rows, caption, (80, 60, 260, 115), exact=True)
+                    for caption in ('每日实训', '行动摘要', '开拓历程', '生存索引',
+                                    '逐光捡金', '旷宇纷争', '宇宙纷争'))):
+        return 'unknown'
     words = [clean(item["text"]) for item in rows if item["confidence"] >= .72]
     joined = "|".join(words)
     exact = set(words)

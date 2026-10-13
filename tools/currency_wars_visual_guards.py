@@ -614,7 +614,7 @@ def navigation_target(action, request):
     matches = lambda target: label == target or (bool(label) and not action.get('exact', True) and label in target)
     if page == 'opponents' and matches('下一步'):
         return 'opponents_next'
-    if page == 'unknown' and matches('货币战争'):
+    if page == 'unknown' and (matches('货币战争') or matches('前往参与')):
         return 'activity_currency_wars'
     return None
 
@@ -733,7 +733,7 @@ def _navigation(action, request, actual, images):
                         ('阵营', [450, 625, 680, 705]),
                         ('阵营', [750, 625, 980, 705])))
     else:
-        kind, target = 'unknown_page', '货币战争'
+        kind, target = 'unknown_page', clean(action.get('text', ''))
         # Explicit menu semantics, not a generic unknown-page escape hatch.
         # Native dual-frame coverage for these layouts must be recorded
         # separately; synthetic protocol fixtures are not calibration frames.
@@ -743,9 +743,15 @@ def _navigation(action, request, actual, images):
         target_region = [300, 160, 1920, 1000]
         header = [0, 0, 1000, 180]
         menu = [0, 70, 1900, 1000]
-        anchor_sets = ((('星际和平指南', header), ('宇宙纷争', menu)),
+        anchor_sets = ((('星际和平指南', header), ('旷宇纷争', menu)),
+                       (('星际和平指南', header), ('宇宙纷争', menu)),
                        (('星际和平指南', header), ('逐光捡金', menu)),
                        (('旅情事记', header), ('常驻活动', menu)))
+        if target == '前往参与':
+            target_region = [1340, 820, 1660, 940]
+            anchor_sets = ((('星际和平指南', [80, 25, 280, 80]),
+                            ('旷宇纷争', [80, 60, 260, 115]),
+                            ('货币战争', [280, 300, 500, 390])),)
     if action.get('bounds') is not None:
         bounds = action['bounds']
         target_region = [max(target_region[0], bounds[0]), max(target_region[1], bounds[1]),
