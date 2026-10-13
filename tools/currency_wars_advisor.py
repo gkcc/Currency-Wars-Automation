@@ -19,7 +19,7 @@ import re
 import time
 
 from currency_wars_database import normalize_name
-from currency_wars_shop_contract import purchase_slot
+from currency_wars_shop_contract import purchase_slot, priced_read_slot
 
 SCHEMA = 'currency-wars-partial-advice/v1'
 POSITIONS = {'前台': ('front',), '后台': ('back',), '前后台': ('front', 'back')}
@@ -948,6 +948,8 @@ def advise(state, catalogue, policy=None):
         if state.get('page') == 'shop':
             try:
                 verified = purchase_slot(shop, slot_id, snapshot)
+                if type(slot.get('recommended')) is not bool:
+                    verified = None
             except (KeyError, TypeError, ValueError, AttributeError):
                 pass
         observation = copy.deepcopy(slot)
@@ -1129,6 +1131,12 @@ def advise(state, catalogue, policy=None):
                                   comparison_enabled=False, disabled=True, disabled_reason=reason))
     geometry = _dict(_dict(shop.get('page')).get('geometry'))
     frames = geometry.get('frame_scores', [])
+    read_review = state.get('shop_read_review')
+    if 'shop_read_review' not in state:
+        reviews = _dict(_dict(_dict(_dict(state.get('request')).get('context')).get('preparation_review')).get('value'))
+        read_review = _dict(reviews.get('shop_inspection')).get('read_review')
+    if isinstance(read_review, dict) and read_review.get('snapshot_id') != snapshot:
+        read_review = None
     shop_complete = (state.get('page') == 'shop'
         and shop.get('schema') == 'currency-wars-shop-observation/v1'
         and _dict(shop.get('input')).get('sha256') == snapshot
@@ -1138,7 +1146,7 @@ def advise(state, catalogue, policy=None):
         and geometry.get('overlays') == [] and isinstance(frames, list) and len(frames) == 5
         and all(_finite(f, .60, 1.) for f in frames)
         and len(native_offers) == 5 and {s.get('slot') for s in native_offers} == set(range(1, 6))
-        and all(s.get('status') == 'empty' or purchase_slot(shop, s['slot'], snapshot) is not None
+        and all(s.get('status') == 'empty' or priced_read_slot(shop, s['slot'], snapshot, review=read_review) is not None
                 for s in native_offers))
     allocation = _allocate_gold(state, catalogue, policy, wallet, population, locked,
                                 allocation_models, shop_complete)

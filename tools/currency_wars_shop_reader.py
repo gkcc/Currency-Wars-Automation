@@ -35,6 +35,11 @@ def purchase_slot(observation: dict, slot_id: int, snapshot_id: str) -> dict | N
     return validate_slot(observation, slot_id, snapshot_id, resources=RESOURCE_DIR)
 
 
+def priced_read_slot(observation: dict, slot_id: int, snapshot_id: str, *, review=None) -> dict | None:
+    from currency_wars_shop_contract import priced_read_slot as validate_slot
+    return validate_slot(observation, slot_id, snapshot_id, review=review, resources=RESOURCE_DIR)
+
+
 def _unknown_slots(reason: str) -> list[dict]:
     return [dict(slot=i + 1, status="unknown", bounds=None, position=None,
                  name=None, cost=None, recommended=None,

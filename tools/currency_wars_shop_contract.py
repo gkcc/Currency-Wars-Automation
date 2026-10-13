@@ -7,7 +7,7 @@ EXPECTED_SIZE = (1920, 1080)
 SCHEMA = "currency-wars-shop-observation/v1"
 
 
-def purchase_slot(observation: dict, slot_id: int, snapshot_id: str, *, resources=RESOURCE_DIR) -> dict | None:
+def _priced_slot(observation: dict, slot_id: int, snapshot_id: str, *, resources=RESOURCE_DIR, supervised=False, allow_empty=False) -> dict | None:
     """One positive, priced card; incomplete other cards/badges stay unknown."""
     if (type(slot_id) is not int or not 1 <= slot_id <= 5
             or observation.get("schema") != SCHEMA
@@ -32,7 +32,17 @@ def purchase_slot(observation: dict, slot_id: int, snapshot_id: str, *, resource
     x, y, width, height = bounds
     if (not 0 <= x < x + width <= 1920 or not 0 <= y < y + height <= 1080
             or point != [round(x + width / 2), round(y + height / 2)]
-            or slot.get("status") == "empty" or type(slot.get("cost")) is not int
+):
+        return None
+    if allow_empty and slot.get('status') == 'empty':
+        empty = slot.get('evidence', {}).get('empty', {})
+        if (slot.get('name') is None and slot.get('cost') is None and empty.get('aligned') is True
+                and all(type(empty.get(k)) in (int, float) and .87 <= empty[k] <= 1.
+                        for k in ('top_outline_score', 'bottom_outline_score'))
+                and type(empty.get('dark_fraction')) in (int, float) and .60 <= empty['dark_fraction'] <= 1.):
+            return slot
+        return None
+    if (slot.get("status") == "empty" or type(slot.get("cost")) is not int
             or not 1 <= slot["cost"] <= 5 or not isinstance(slot.get("name"), str)):
         return None
     try:
@@ -45,7 +55,8 @@ def purchase_slot(observation: dict, slot_id: int, snapshot_id: str, *, resource
     name, cost = evidence.get("name", {}), evidence.get("cost", {})
     if (name.get("validation") == "not_in_fixed_source_name_list"
             or name.get("method") not in ("ocr", "ocr_case_normalization", "explicit_observed_ocr_alias")
-            or type(name.get("confidence")) not in (int, float) or not .90 <= name["confidence"] <= 1.):
+            or type(name.get("confidence")) not in (int, float) or not 0. <= name["confidence"] <= 1.
+            or name["confidence"] < .90 and not supervised):
         return None
     digit = cost.get("method") == "digit_ocr"
     template = (cost.get("method") == "observed_digit_template"
@@ -68,3 +79,34 @@ def purchase_slot(observation: dict, slot_id: int, snapshot_id: str, *, resource
         return None
     return slot
 
+
+
+def purchase_slot(observation: dict, slot_id: int, snapshot_id: str, *, resources=RESOURCE_DIR) -> dict | None:
+    """Original native purchase threshold; supervisory reads never grant buying."""
+    return _priced_slot(observation, slot_id, snapshot_id, resources=resources)
+
+
+def priced_read_slot(observation: dict, slot_id: int, snapshot_id: str, *, review=None, resources=RESOURCE_DIR) -> dict | None:
+    """Read a native price/name, with explicitly bound ROOT name confirmation if needed."""
+    if observation.get('status') not in ('ok', 'partial') or observation.get('errors'):
+        return None
+    supervised = False
+    if isinstance(review, dict):
+        slots, offers = observation.get('slots', []), review.get('offers', [])
+        if (review.get('source') != 'supervising_agent' or review.get('snapshot_id') != snapshot_id
+                or len(slots) != 5 or len(offers) != 5
+                or any(not isinstance(row, dict) or type(row.get('slot')) is not int for row in slots + offers)
+                or {row['slot'] for row in slots} != set(range(1, 6))
+                or {row['slot'] for row in offers} != set(range(1, 6))):
+            return None
+        for slot in slots:
+            offer = next(row for row in offers if row['slot'] == slot['slot'])
+            if any(offer.get(key) != slot.get(key) for key in ('name', 'cost', 'recommended', 'bounds', 'position')):
+                return None
+        supervised = True
+    slot = _priced_slot(observation, slot_id, snapshot_id, resources=resources, supervised=supervised, allow_empty=True)
+    if slot is None:
+        return None
+    return {**slot, 'read_origin': 'supervising_agent' if supervised else 'current_native_shop',
+            'purchase_eligible': (purchase_slot(observation, slot_id, snapshot_id, resources=resources) is not None
+                                  and type(slot.get('recommended')) is bool)}

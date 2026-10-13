@@ -27,7 +27,7 @@ import currency_wars_manual_stage as manual_stage
 from currency_wars_source_guard import activity, activity_reason, mutation_lock, verify_runtime_sources
 from currency_wars_perception import (Perception, clean, find_text, hash_distance, GOLD_HUD,
                                      valid_population_counts, READ_CONTRACT_VERSION)
-from currency_wars_shop_reader import purchase_slot
+from currency_wars_shop_reader import purchase_slot, priced_read_slot
 from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
 import currency_wars_economy as economy
@@ -4069,6 +4069,9 @@ class Worker:
                 self.economic_navigation_receipts[rid] = {
                     'actions': copy.deepcopy(result['completed']), 'scope': {
                         'match_id': captured_match, 'stage': captured_stage, 'resume_epoch': captured_epoch}}
+                if getattr(self, 'supervised_shop_read', None):
+                    self.shop_read_navigation_receipts[rid] = copy.deepcopy(self.economic_navigation_receipts[rid])
+                    self.economy_read_cache = None
         return observed
 
     def read_frame(self, result, *, scope='full', force=False, reuse_primary=False):
@@ -4145,6 +4148,8 @@ class Worker:
         scope = (self.active_match_id, stage, self.epoch())
         if scope != getattr(self, 'preparation_scope', None):
             self.preparation_scope, self.preparation_reviews = scope, {}
+            self.supervised_shop_read = None
+            self.shop_read_navigation_receipts = {}
         reviews = getattr(self, 'preparation_reviews', {})
         inspection = reviews.get('shop_inspection') or {}
         if (observed is getattr(self, 'last_observation', None) and observed.get('page') == 'shop'
@@ -4158,8 +4163,78 @@ class Worker:
             self.inspect_current_shop(observed)
         return coaching.preparation_status(reviews)
 
+    def current_shop_read_review(self, observed):
+        """Continue only a ROOT read across receipted shop navigation and unchanged glyphs."""
+        saved = getattr(self, 'supervised_shop_read', None)
+        if (not saved or saved['scope'] != getattr(self, 'preparation_scope', None)
+                or observed is not self.last_observation or observed.get('page') != 'shop'):
+            return None
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(saved['observed_at'])).total_seconds()
+        if not 0 <= age <= 180:
+            return None
+        original_snapshot = saved['review']['snapshot_id']
+        if (observed.get('snapshot_id') == original_snapshot
+                and observed.get('capture_request_id') == saved['observation'].get('capture_request_id')):
+            return copy.deepcopy(saved['review'])
+        # Pure reads reuse the phase/publication caller's original submission fence.
+        # In particular review_preparation owns the non-reentrant control lock.
+        try:
+            manual_steps._bound_reward_frame(self.run, self.c, observed, self.frame_path)
+            payload = Path(saved['png']).read_bytes()
+            if hashlib.sha256(payload).hexdigest() != original_snapshot:
+                return None
+            from currency_wars_economic_views import _wallet, _player
+            if (_wallet(saved['observation']) != _wallet(observed)
+                    or _player(saved['observation']) != _player(observed)
+                    or observed.get('fields', {}).get('stage') != saved['observation']['fields'].get('stage')):
+                return None
+            scope = {'match_id': self.active_match_id, 'stage': self.preparation_scope[1], 'resume_epoch': self.epoch()}
+            new_ids = set(self.economy_receipt_watermark()) - set(saved['watermark'])
+            allowed = getattr(self, 'shop_read_navigation_receipts', {})
+            for rid in new_ids:
+                item = await_existing_receipt(self.run, self.c, rid, 0)
+                delivery, actions = manual_receipt_state(item), item['request'].get('actions')
+                if (item['request'].get('chat_id') != self.owner['chat_id']
+                        or item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                        or delivery['unknown_input'] or item['result'].get('ok') is not True
+                        or item['result'].get('completed') != actions):
+                    return None
+                if actions == [{'type': 'observe', 'args': []}]:
+                    if (delivery['state'] != 'zero_input' or item['result'].get('input_attempted') is not False
+                            or item['result'].get('attempted_actions') != []):
+                        return None
+                elif not (delivery['state'] == 'completed' and rid in allowed
+                          and allowed[rid]['scope'] == scope and allowed[rid]['actions'] == actions):
+                    return None
+            if observed.get('capture_request_id') not in new_ids:
+                return None
+            from currency_wars_visual_guards import _navigation_ink_equal
+            import io
+            import numpy as np
+            from PIL import Image
+            images = [np.asarray(Image.open(io.BytesIO(payload)).convert('RGB')),
+                      np.asarray(Image.open(self.frame_path).convert('RGB'))]
+            if any(image.shape != (1080, 1920, 3) for image in images):
+                return None
+            for slot in saved['shop']['slots']:
+                if slot.get('status') == 'empty':
+                    continue
+                evidence = slot.get('evidence', {})
+                for box in (evidence.get('name', {}).get('bounds'),
+                            evidence.get('cost', {}).get('ocr_bounds') or evidence.get('cost', {}).get('bounds')):
+                    if not _navigation_ink_equal(images, box):
+                        return None
+            review = {**copy.deepcopy(saved['review']), 'snapshot_id': observed['snapshot_id'],
+                      'source_snapshot_id': original_snapshot, 'continuation_capture_request_id': observed['capture_request_id']}
+            if any(priced_read_slot(observed.get('shop') or {}, slot, observed['snapshot_id'], review=review) is None
+                   for slot in range(1, 6)):
+                return None
+            return review
+        except (ValueError, OSError, KeyError, TypeError, entry.ObservationUnavailable):
+            return None
+
     def inspect_current_shop(self, observed):
-        """Complete the read phase from this worker's full native frame only."""
+        """Complete a current priced read, preserving any explicitly supervised gaps."""
         shop = observed.get('shop') or {}
         geometry = shop.get('page', {}).get('geometry') or {}
         scores, slots = geometry.get('frame_scores') or [], shop.get('slots') or []
@@ -4167,7 +4242,6 @@ class Worker:
                 or not full_observation(observed) or not self.preparation_scope[1]
                 or canonical_stage(observed.get('fields', {}).get('stage')) != self.preparation_scope[1]
                 or shop.get('schema') != 'currency-wars-shop-observation/v1'
-                or shop.get('ok') is not True or shop.get('status') != 'ok'
                 or shop.get('input', {}).get('sha256') != observed.get('snapshot_id')
                 or shop.get('input', {}).get('size') != [1920, 1080]
                 or shop.get('input', {}).get('format') != 'PNG'
@@ -4178,14 +4252,15 @@ class Worker:
                 or {slot['slot'] for slot in slots} != set(range(1, 6))):
             return False
         offers = []
+        read_review = self.current_shop_read_review(observed)
         for slot in sorted(slots, key=lambda value: value['slot']):
             if slot.get('status') == 'empty':
                 offers.append({'slot': slot['slot'], 'status': 'empty', 'name': None, 'cost': None})
             else:
-                priced = purchase_slot(shop, slot['slot'], observed['snapshot_id'])
+                priced = priced_read_slot(shop, slot['slot'], observed['snapshot_id'], review=read_review)
                 if not priced:
                     return False
-                offers.append({key: priced[key] for key in ('slot', 'name', 'cost')} | {'status': 'recognized'})
+                offers.append({key: priced.get(key) for key in ('slot', 'name', 'cost', 'recommended', 'status', 'purchase_eligible', 'read_origin')})
         # A copied marker or saved old screenshot cannot close this phase.
         # Authenticate its original terminal receipt and immutable PNG without input.
         with self.c.submission_lock():
@@ -4206,18 +4281,21 @@ class Worker:
             else:
                 with path.open('xb') as stream:
                     stream.write(payload)
-            proof = {'source': 'current_native_shop', 'snapshot_id': observed['snapshot_id'],
+            origin = 'supervising_agent' if read_review else 'current_native_shop'
+            proof = {'source': origin, 'snapshot_id': observed['snapshot_id'],
                 'capture_request_id': observed['capture_request_id'], 'frame_id': observed['frame_id'],
                 'evidence_file': str(path), 'match_id': self.preparation_scope[0],
                 'stage': self.preparation_scope[1], 'resume_epoch': self.preparation_scope[2]}
             self.preparation_reviews['shop_inspection'] = {'phase': 'shop_inspection', 'completed': True,
-                'origin': 'current_native_shop', 'stage': self.preparation_scope[1], 'proof': proof,
+                'origin': origin, 'stage': self.preparation_scope[1], 'proof': proof, 'read_review': read_review,
                 'offers': offers, 'completion_receipt': redact(receipt), 'observed_at': now()}
             self.log({'event': 'preparation_phase_verified', 'phase': 'shop_inspection', 'proof': proof})
             return True
 
     def invalidate_preparation(self, effect):
         if effect in ('inventory', 'unknown_inventory', 'economy', 'shop_change'):
+            self.supervised_shop_read = None
+            self.shop_read_navigation_receipts = {}
             self.economic_roster_view = None
             self.economic_navigation_receipts = {}
         reviews = getattr(self, 'preparation_reviews', {})
@@ -4253,8 +4331,8 @@ class Worker:
         if not isinstance(value, dict):
             raise ValueError('准备复核缺少结构化value')
         phase = value.get('phase')
-        if phase == 'shop_inspection':
-            raise ValueError('完整读店仅由当前原生五槽全读完成，不接受监督标记或人工继承')
+        if phase == 'shop_inspection' and manual_record is not None:
+            raise ValueError('历史商店人工标记不能继承；须当前请求ROOT五槽实读')
         if manual_record is not None and (phase != manual_record.get('phase') or value != manual_record.get('review')):
             raise ValueError('人工阶段与原监督复核内容不符；新复核须绑定当前请求单独提交')
         unverified = ManualReviewDeferred if manual_record is not None else ValueError
@@ -4276,6 +4354,48 @@ class Worker:
                 or not (phase == status['phase'] or phase == 'startup_guide' and status['phase'] in ('shop_inspection', 'inventory_cleanup'))
                 or not isinstance(value.get('findings'), str) or not value['findings'].strip()):
             raise ValueError('复核须按当前节点准备顺序、当前请求鲜帧，由监督助手写明实际检查结果')
+        if phase == 'shop_inspection':
+            actual, original = self.last_observation, request.get('observation') or {}
+            if (actual.get('page') != 'shop' or original.get('page') != 'shop'
+                    or original.get('snapshot_id') != source.get('snapshot_id')
+                    or not full_observation(actual) or not full_observation(original)):
+                raise ValueError('ROOT读店须当前请求完整商店原帧及鲜帧')
+            read_review = {'source': 'supervising_agent', 'snapshot_id': source['snapshot_id'],
+                           'offers': copy.deepcopy(value.get('offers'))}
+            if not isinstance(read_review['offers'], list) or any(
+                    priced_read_slot(original.get('shop') or {}, slot, source['snapshot_id'], review=read_review) is None
+                    for slot in range(1, 6)):
+                raise ValueError('ROOT五槽姓名/实价/推荐未知/矩形须完整匹配当前原生证据')
+            with self.c.submission_lock():
+                original_png = Path(request.get('original_png') or '')
+                manual_steps._bound_reward_frame(self.run, self.c, original, original_png)
+                payload = original_png.read_bytes()
+                if hashlib.sha256(payload).hexdigest() != source['snapshot_id']:
+                    raise ValueError('ROOT读店原PNG摘要不符')
+                path = self.records / ('supervised-shop-read-' + source['snapshot_id'] + '.png')
+                if path.exists():
+                    if path.read_bytes() != payload:
+                        raise ValueError('ROOT读店原PNG已变，不覆盖')
+                else:
+                    with path.open('xb') as stream:
+                        stream.write(payload)
+                prior = getattr(self, 'supervised_shop_read', None)
+                self.supervised_shop_read = {'review': read_review, 'png': str(path),
+                    'shop': copy.deepcopy(original['shop']), 'observation': copy.deepcopy(original),
+                    'observed_at': source['observed_at'], 'scope': self.preparation_scope,
+                    'watermark': source.get('shop_read_watermark', [])}
+                if not source.get('shop_read_watermark'):
+                    self.supervised_shop_read = prior
+                    raise ValueError('ROOT读店原请求缺真实收据水位')
+                current_review = self.current_shop_read_review(actual)
+                if current_review is None:
+                    self.supervised_shop_read = prior
+                    raise ValueError('ROOT读店鲜帧卡名价/资源/收据变更，不能继承原缺项复核')
+                self.shop_read_navigation_receipts = {}
+            self.economy_read_cache = None
+            value = {**value, 'read_review': current_review, 'completion_origin': 'supervising_agent',
+                'offers': [priced_read_slot(actual['shop'], slot, actual['snapshot_id'], review=current_review)
+                           for slot in range(1, 6)]}
         if phase == 'rewards':
             if self.pending_reward_step(self.last_observation) or self.pending_reward_capacity():
                 raise ValueError('原领奖/腾位效果仍待验；全场复核不能覆盖原pending')
@@ -5619,6 +5739,7 @@ class Worker:
                 reading['evidence']['xp_cost'] = {'source': 'current_native_experience_offer', 'snapshot_id': actual['snapshot_id']}
         shop, complete = [], actual.get('page') == 'shop'
         native_shop = actual.get('shop') or {}
+        read_review = self.current_shop_read_review(actual) if actual.get('page') == 'shop' else None
         if actual.get('page') == 'shop':
             geometry = native_shop.get('page', {}).get('geometry', {})
             scores = geometry.get('frame_scores', [])
@@ -5630,9 +5751,9 @@ class Worker:
                         and len(scores) == 5 and all(type(value) in (int, float) and .60 <= value <= 1. for value in scores)
                         and geometry.get('overlays') == [])
             for slot_id in range(1, 6):
-                slot = purchase_slot(native_shop, slot_id, actual['snapshot_id'])
+                slot = priced_read_slot(native_shop, slot_id, actual['snapshot_id'], review=read_review)
                 if slot:
-                    shop.append({key: slot[key] for key in ('slot', 'name', 'cost')} | {'status': 'recognized'})
+                    shop.append({key: slot.get(key) for key in ('slot', 'name', 'cost', 'recommended', 'status', 'purchase_eligible', 'read_origin')})
                     continue
                 found = [slot for slot in native_shop.get('slots', []) if slot.get('slot') == slot_id]
                 if len(found) == 1 and found[0].get('status') == 'empty':
@@ -5752,6 +5873,7 @@ class Worker:
             'observation': copy.deepcopy(observed), 'match_id': self.active_match_id, 'resume_epoch': self.epoch()}
         state['decision_request']['comparison_view'] = self.economic_comparison_view(state['decision_request'], observed)
         projected = Adapter(project=PROJECT).project_state(state)
+        projected['shop_read_review'] = self.current_shop_read_review(observed)
         input_sha256 = hashlib.sha256(json.dumps(projected, ensure_ascii=False, allow_nan=False).encode('utf-8')).hexdigest()
         ledger = self.economy_ledger(canonical_stage(observed.get('fields', {}).get('stage')))
         advice = advise(projected, Catalogue(PROJECT / 'data/currency_wars/catalog.sqlite3'),
@@ -7370,7 +7492,7 @@ class Worker:
             'resume_epoch': self.epoch(), 'semantic': copy.deepcopy(observed.get('semantic', {})), 'fields': copy.deepcopy(observed.get('fields', {})),
             'read_contract': copy.deepcopy(observed.get('read_contract')),
             'capture_request_id': observed.get('capture_request_id'), 'frame_id': observed.get('frame_id'),
-            'captured_at': observed.get('captured_at'),
+            'captured_at': observed.get('captured_at'), 'shop_read_watermark': self.economy_receipt_watermark(),
             'preparation_stage': canonical_stage(observed.get('fields', {}).get('stage')) or self.last_preparation_stage}
         if len(self.history) > 256:
             self.history.pop(next(iter(self.history)))
@@ -8287,6 +8409,7 @@ class Worker:
                 'semantic': copy.deepcopy(observed.get('semantic', {})), 'fields': copy.deepcopy(observed.get('fields', {})),
                 'read_contract': copy.deepcopy(observed.get('read_contract')), 'capture_request_id': observed['capture_request_id'],
                 'frame_id': observed['frame_id'], 'captured_at': observed['captured_at'],
+                'shop_read_watermark': self.economy_receipt_watermark(),
                 'preparation_stage': request['battle_stage']}
             if len(self.history) > 256:
                 self.history.pop(next(iter(self.history)))
