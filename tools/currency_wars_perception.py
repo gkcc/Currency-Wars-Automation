@@ -683,6 +683,26 @@ def _gold_digit_boundary(context, crop):
     # Include that edge in the full foreground check: it must contain no digit ink.
     if start == offset[0]+1 and palette['polarity'] == 'light_on_dark':
         start = right
+    elif start == offset[0]+1 and palette['polarity'] == 'dark_on_pale':
+        # The retained pale one-coin HUD has a short antialiased coin rim in
+        # this one column. Authenticate it against the complete colored icon;
+        # a numeral-sized, dark, detached or ROI-edge glyph cannot be excluded.
+        edge = hsv[15:55, right]
+        edge_ink = edge[:, 2] < 160
+        edge_rows = np.flatnonzero(edge_ink)
+        nearby_gold = cv2.dilate(gold, np.ones((5, 5), np.uint8))[15:55, right]
+        _, geometry = _gold_digit_crop(crop)
+        valid_edge = (len(edge_rows) <= 8 and (not len(edge_rows)
+                      or edge_rows[-1]-edge_rows[0]+1 <= 8)
+                      and np.all(edge[edge_ink, 2] >= 128)
+                      and np.all(nearby_gold[edge_ink] == 1)
+                      and geometry.get('reason') is None
+                      and geometry.get('glyph_bounds', [0])[0] >= 3)
+        evidence['pale_rim'] = {'foreground_pixels': int(len(edge_rows)),
+            'foreground_rows': edge_rows.tolist(), 'coin_neighborhood_radius': 2,
+            'digit_gap': geometry.get('glyph_bounds', [0])[0], 'complete': bool(valid_edge)}
+        if valid_edge:
+            start = right+1
     evidence['digit_band_bounds'] = [start+1558, 900, 1687, 940]
     if start > offset[0]:
         return {**evidence, 'reason': 'currency_icon_overlaps_digit_roi'}

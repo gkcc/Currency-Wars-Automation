@@ -184,7 +184,7 @@ def preparation_status(reviews):
                 raw = next(row for row in read_offers if row['slot'] == offer['slot'])
                 bounds, point = raw.get('bounds'), raw.get('position')
                 if (any(offer.get(key) != raw.get(key) for key in ('name', 'cost', 'recommended'))
-                        or offer.get('read_origin') != 'supervising_agent'
+                        or offer.get('status') != 'empty' and offer.get('read_origin') != 'supervising_agent'
                         or type(offer.get('purchase_eligible')) is not bool
                         or offer.get('recommended') is not None and type(offer['recommended']) is not bool
                         or offer.get('recommended') is None and offer['purchase_eligible']
@@ -194,7 +194,9 @@ def preparation_status(reviews):
                         or point != [round(bounds[0] + bounds[2] / 2), round(bounds[1] + bounds[3] / 2)]):
                     return False
                 if offer.get('status') == 'empty':
-                    if offer.get('name') is not None or offer.get('cost') is not None or offer['purchase_eligible']:
+                    if (offer.get('read_origin') not in ('current_native_shop', 'supervising_agent')
+                            or offer.get('name') is not None or offer.get('cost') is not None
+                            or offer.get('recommended') is not False or offer.get('purchase_eligible') is not False):
                         return False
                 elif (offer.get('status') not in ('recognized', 'unknown')
                         or not isinstance(offer.get('name'), str) or not offer['name'].strip()

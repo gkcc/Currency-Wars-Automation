@@ -4255,7 +4255,8 @@ class Worker:
         read_review = self.current_shop_read_review(observed)
         for slot in sorted(slots, key=lambda value: value['slot']):
             if slot.get('status') == 'empty':
-                offers.append({'slot': slot['slot'], 'status': 'empty', 'name': None, 'cost': None})
+                offers.append({'slot': slot['slot'], 'status': 'empty', 'name': None, 'cost': None,
+                               'recommended': False, 'purchase_eligible': False, 'read_origin': 'current_native_shop'})
             else:
                 priced = priced_read_slot(shop, slot['slot'], observed['snapshot_id'], review=read_review)
                 if not priced:

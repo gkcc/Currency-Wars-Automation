@@ -99,7 +99,7 @@ class PreparationReplayTests(TestCase):
             for index, declared in enumerate(read['read_review']['offers']):
                 # The old empty-shop fixture omits geometry; declare valid disjoint cards.
                 x, y, width, height = 20 + index * 300, 59, 244, 273
-                declared.update(bounds=[x, y, width, height],
+                declared.update(bounds=[x, y, width, height], recommended=False,
                                 position=[round(x + width / 2), round(y + height / 2)])
             for offer in read['offers']:
                 offer.update(read_origin='supervising_agent', purchase_eligible=False)
@@ -110,6 +110,27 @@ class PreparationReplayTests(TestCase):
             self.assertEqual(status['phase'], 'inventory_cleanup')
             self.assertFalse(status['economy_allowed'])
             self.assertFalse(status['battle_ready'])
+            # Declared mixed read: four ROOT-confirmed occupied offers and one
+            # native empty. This must advance without granting an unknown buy.
+            mixed = copy.deepcopy(read)
+            for offer in mixed['offers']:
+                raw = next(row for row in mixed['read_review']['offers'] if row['slot'] == offer['slot'])
+                if offer['slot'] == 2:
+                    offer.update(read_origin='current_native_shop', recommended=False)
+                    raw.update(recommended=False)
+                else:
+                    offer.update(status='unknown', name='黄泉', cost=3, recommended=None)
+                    raw.update(name='黄泉', cost=3, recommended=None)
+            reviews = {'rewards': {'completed': True}, 'shop_inspection': mixed}
+            self.assertEqual(runner.coaching.preparation_status(reviews)['phase'], 'inventory_cleanup')
+            for field, value in (('name', '黄泉'), ('cost', 1), ('recommended', None),
+                                 ('purchase_eligible', True), ('read_origin', None)):
+                invalid = copy.deepcopy(reviews)
+                invalid['shop_inspection']['offers'][1][field] = value
+                self.assertEqual(runner.coaching.preparation_status(invalid)['phase'], 'shop_inspection')
+            invalid = copy.deepcopy(reviews)
+            invalid['shop_inspection']['offers'][0]['read_origin'] = 'current_native_shop'
+            self.assertEqual(runner.coaching.preparation_status(invalid)['phase'], 'shop_inspection')
             for missing in ('proof', 'read_review', 'offers'):
                 reviews = copy.deepcopy(worker.preparation_reviews)
                 reviews['shop_inspection'].pop(missing)
