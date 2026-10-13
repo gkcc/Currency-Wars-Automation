@@ -8641,9 +8641,16 @@ class Worker:
         page = observed.get('page')
         if canonical_stage(observed.get('fields', {}).get('stage')) is not None:
             return False
-        if (tokens == ['key:27', 'wait:0.7'] and action
-                and action.get('purpose') == 'daily_supply_close'):
-            return self.daily_supply_close_allowed(observed)
+        if action and action.get('purpose') == 'daily_supply_close':
+            target = find_text(observed.get('rows', []), '点击领取今日补给',
+                               (760, 890, 1160, 970), exact=True)
+            if not target or not self.daily_supply_close_allowed(observed):
+                return False
+            box = target['box']
+            return (action.get('type') == 'click_text'
+                    and action.get('text') == '点击领取今日补给'
+                    and action.get('exact') is True
+                    and tokens == [f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7'])
         if page in ('reward_overlay', 'update_notice'):
             return tokens == ['key:27', 'wait:0.7']
         if page == 'world_entry':
@@ -8663,6 +8670,7 @@ class Worker:
         return (observed.get('page') == 'unknown'
                 and canonical_stage(observed.get('fields', {}).get('stage')) is None
                 and all(find_text(rows, label, exact=True) for label in ('列车补给', '90', '星琼'))
+                and find_text(rows, '点击领取今日补给', (760, 890, 1160, 970), exact=True) is not None
                 and not (self.run / 'runner-daily-supply-close.json').exists())
 
     def account_entry_record(self, label):
@@ -8726,9 +8734,14 @@ class Worker:
                          category='capability', business_step='manual_stage')
             return
         if self.daily_supply_close_allowed(observed):
+            target = find_text(observed['rows'], '点击领取今日补给',
+                               (760, 890, 1160, 970), exact=True)
+            box = target['box']
             self.state['decision_request'] = None
-            self.command(['key:27', 'wait:0.7'], '关闭已核每日补给奖励展示一次并回读，不改变旧局进度',
-                         'unknown', action={'type': 'key', 'args': [27],
+            self.command([f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7'],
+                         '点击关闭已核每日补给奖励展示一次并回读，不改变旧局进度',
+                         'unknown', action={'type': 'click_text', 'text': '点击领取今日补给',
+                                            'exact': True, 'bounds': (760, 890, 1160, 970),
                                             'expected_page': 'unknown', 'purpose': 'daily_supply_close'})
             return
         if self.enter_login_once(observed):
