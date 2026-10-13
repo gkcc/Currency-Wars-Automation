@@ -3690,6 +3690,12 @@ class Worker:
                         and not (action and action.get('type') == 'close_shop_for_observation')
                         and not self.account_navigation_allowed(tokens, action, current)):
                     raise ValueError('发布前局外导航已失配，原业务仍未承接')
+                if action and action.get('purpose') == 'daily_supply_close':
+                    if not self.daily_supply_close_allowed(current):
+                        raise ValueError('当前每日补给奖励展示未核或已尝试关闭；不重发')
+                    self.c.write_json(self.run / 'runner-daily-supply-close.json', {
+                        'input_request_id': value['id'], 'snapshot_id': current['snapshot_id'],
+                        'publication_attempted': True, 'business_resume_accepted': False})
                 if login_navigation:
                     self.guard_login_navigation(tokens, action, current)
                     self.c.write_json(self.account_entry_record(action['text']), {
@@ -8635,6 +8641,9 @@ class Worker:
         page = observed.get('page')
         if canonical_stage(observed.get('fields', {}).get('stage')) is not None:
             return False
+        if (tokens == ['key:27', 'wait:0.7'] and action
+                and action.get('purpose') == 'daily_supply_close'):
+            return self.daily_supply_close_allowed(observed)
         if page in ('reward_overlay', 'update_notice'):
             return tokens == ['key:27', 'wait:0.7']
         if page == 'world_entry':
@@ -8648,6 +8657,13 @@ class Worker:
                 or stable_peace_guide_tab_navigation(reply, request, observed)
                 or (navigation_target(action, request) == 'activity_currency_wars'
                     and stable_semantic_plan(reply, request, observed, self.frame_path)))
+
+    def daily_supply_close_allowed(self, observed):
+        rows = observed.get('rows', [])
+        return (observed.get('page') == 'unknown'
+                and canonical_stage(observed.get('fields', {}).get('stage')) is None
+                and all(find_text(rows, label, exact=True) for label in ('列车补给', '90', '星琼'))
+                and not (self.run / 'runner-daily-supply-close.json').exists())
 
     def account_entry_record(self, label):
         return self.run / ('runner-login-navigation.json' if label == '点击进入'
@@ -8671,6 +8687,9 @@ class Worker:
             raise ValueError('账户导航仅点当前唯一准确文字中心')
 
     def enter_login_once(self, observed):
+        if (find_text(observed.get('rows', []), '列车补给', exact=True)
+                and find_text(observed.get('rows', []), '星琼', exact=True)):
+            return False  # Reward display is never another claim, even after a lease change.
         if observed.get('page') != 'unknown':
             return False
         for label, bounds in (('点击进入', (905, 990, 1015, 1040)),
@@ -8705,6 +8724,12 @@ class Worker:
             else:
                 self.ask(observed, 'manual_stage_review', '两次补观察后仍未核当前节点；保留原桥/待验，核当前HUD。',
                          category='capability', business_step='manual_stage')
+            return
+        if self.daily_supply_close_allowed(observed):
+            self.state['decision_request'] = None
+            self.command(['key:27', 'wait:0.7'], '关闭已核每日补给奖励展示一次并回读，不改变旧局进度',
+                         'unknown', action={'type': 'key', 'args': [27],
+                                            'expected_page': 'unknown', 'purpose': 'daily_supply_close'})
             return
         if self.enter_login_once(observed):
             return
