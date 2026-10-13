@@ -980,6 +980,25 @@ def _shop(action, request, actual, images):
     return True
 
 
+def _panel_list_navigation(action, request, actual, images):
+    """Read-only panel list movement tolerates animation outside stable text."""
+    original = request['observation']
+    page = original.get('page')
+    headers = {'bonds': '羁绊链路', 'income': '预期收益',
+               'promotion': '晋升等级', 'advantages': '优势布局'}
+    proof = action.get('target_evidence', {})
+    bounds, label = proof.get('bounds'), proof.get('text')
+    if (page not in headers or request.get('kind') != 'post_match_' + page
+            or action.get('type') not in ('scroll', 'drag')
+            or action.get('expected_page') != page
+            or proof.get('snapshot_id') != request.get('snapshot_id')
+            or not _box(bounds) or not isinstance(label, str) or not label
+            or any(classify(obs.get('rows', [])) != page for obs in (original, actual))):
+        return False
+    return (_navigation_row(original, actual, headers[page], images, [0, 0, 320, 125]) is not None
+            and _navigation_row(original, actual, label, images, bounds) is not None)
+
+
 def stable_semantic_target(action, request, actual, current_png, diagnostic=None):
     """Eligibility only; caller still enforces epoch, deadline, and broker."""
     try:
@@ -992,6 +1011,8 @@ def stable_semantic_target(action, request, actual, current_png, diagnostic=None
             allowed = False
         elif navigation_target(action, request) is not None:
             allowed = _navigation(action, request, actual, images)
+        elif page in ('bonds', 'income', 'promotion', 'advantages'):
+            allowed = _panel_list_navigation(action, request, actual, images)
         elif page in ('investment', 'environment', 'supply'):
             allowed = _cards(action, request, actual, images)
         elif page == 'settlement':
