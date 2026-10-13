@@ -155,26 +155,35 @@ def literal_cmd_entry(argv):
     # CMD /S /C often wraps a quoted executable in an additional quote pair.
     if command.startswith('""') and command.endswith('"'):
         command = command[1:-1]
+    # A final stderr-to-stdout duplication is a redirect, not command chaining.
+    stderr_merge = bool(re.search(r'\s+2>&1$', command))
+    if stderr_merge:
+        command = command[:-4].rstrip()
     if any(c in command for c in '&|^%!\r\n()'):
         return None
     tokens = []
     pos = 0
-    pattern = re.compile(r'\s*(?:"([^"\r\n]*)"|([^\s"]+))')
+    pattern = re.compile(r'\s*(?:"([^"\r\n]*)"|(>>|[<>])|([^\s"<>]+))')
     while pos < len(command):
         match = pattern.match(command, pos)
         if not match:
             return None
         tokens.append(next(v for v in match.groups() if v is not None))
         pos = match.end()
-        if pos < len(command) and not command[pos].isspace():
+        if (pos < len(command) and not command[pos].isspace()
+                and command[pos] not in '<>' and tokens[-1] not in ('<', '>', '>>')):
             return None
-    redirected = len(tokens) >= 5 and tokens[-4] == '<' and tokens[-2] == '>'
+    redirected = len(tokens) >= 5 and tokens[-4] == '<' and tokens[-2] in ('>', '>>')
     if redirected:
+        if tokens[-2] == '>>' and not stderr_merge:
+            return None
         for path in (tokens[-3], tokens[-1]):
             drive, tail = ntpath.splitdrive(path)
-            if not drive or not tail.startswith(('\\', '/')) or any(c in path for c in '<>'):
+            if path.casefold() != 'nul' and (not drive or not tail.startswith(('\\', '/')) or any(c in path for c in '<>')):
                 return None
         tokens = tokens[:-4]
+    if stderr_merge and not redirected:
+        return None
     if any('<' in token or '>' in token for token in tokens):
         return None
     if (not tokens or not ntpath.isabs(tokens[0])
