@@ -897,8 +897,14 @@ def _investment_confirmation_equal(images, bounds):
             return False
         masks.append(mask)
     union = masks[0] | masks[1]
+    delta = np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))
+    halo = cv2.dilate(union.astype(np.uint8), np.ones((5, 5), np.uint8)).astype(bool)
+    # Native 1ac62->128cc: IoU .98795, ink max4/mean .54779; the
+    # surrounding button/background reaches 7. Compare the complete glyph
+    # union and its two-pixel halo, without treating background as text.
     return (np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) >= .985
-            and np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))) <= 2)
+            and np.max(delta[union]) <= 4 and np.mean(delta[union]) <= .60
+            and np.max(delta[halo]) <= 7)
 
 
 def _cards(action, request, actual, images):

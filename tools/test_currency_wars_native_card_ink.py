@@ -311,6 +311,41 @@ class InvestmentNativeGuardTests(unittest.TestCase):
         action['text'] = '确认'
         self.assertFalse(guards.stable_semantic_target(action, self.request, self.actual, self.current))
 
+    def test_current_disabled_caption_rendering_noise_preserves_selection(self):
+        directory = os.environ.get('CW_NATIVE_INVESTMENT_CURRENT_EVIDENCE_DIR')
+        if not directory:
+            self.skipTest('Current retained investment pair was not supplied')
+        directory = Path(directory)
+        request = json.loads((directory / 'investment-current-original-request.json').read_text('utf8'))
+        current = directory / 'investment-current-guard-original.png'
+        actual = perception.Perception().read(current, scope='full')
+        option = request['observation']['semantic']['options'][1]
+        action = {'type': 'click_text', 'text': option['title'], 'exact': True,
+                  'expected_page': 'investment', 'target_evidence': {
+                      **option, 'text': option['title'], 'snapshot_id': request['snapshot_id']}}
+        self.assertTrue(guards.stable_semantic_target(action, request, actual, current))
+        original = np.array(Image.open(current).convert('RGB'))
+        with runner.artifacts.scratch_directory('investment-caption-regression') as directory:
+            for damage in ('missing', 'appearing', 'covered', 'shifted', 'dimmed', 'enabled'):
+                with self.subTest(damage=damage):
+                    changed = original.copy()
+                    crop = changed[964:1004,913:1010]
+                    if damage in ('missing', 'covered'):
+                        crop[:] = 40
+                    elif damage == 'appearing':
+                        crop[5:25,40:42] = 180
+                    elif damage == 'shifted':
+                        crop[:] = np.roll(crop, 1, axis=1)
+                    elif damage == 'dimmed':
+                        crop[:] = np.rint(crop * .7).astype(np.uint8)
+                    else:
+                        crop[np.max(crop, axis=2) >= 100] = 240
+                    path = Path(directory) / (damage + '.png')
+                    Image.fromarray(changed).save(path)
+                    observation = copy.deepcopy(actual)
+                    observation['snapshot_id'] = hashlib.sha256(path.read_bytes()).hexdigest()
+                    self.assertFalse(guards.stable_semantic_target(action, request, observation, path))
+
     def test_changed_book_quality_caption_or_source_is_refused(self):
         pixels = np.array(Image.open(self.current).convert('RGB'))
         # Mutated PNGs have new identities and declared unchanged OCR premises;
