@@ -763,6 +763,9 @@ def _navigation(action, request, actual, images):
                                   local_unique=control == 'opponents_next' and label == '阵营',
                                   ink_guard=_opponent_faction_caption_equal
                                   if control == 'opponents_next' and label == '阵营'
+                                  else _environment_caption_equal
+                                  if (control == 'activity_currency_wars' and target == '前往参与'
+                                      and label in ('星际和平指南', '货币战争'))
                                   else _navigation_ink_equal) is not None
                    for label, bounds in anchors) for anchors in anchor_sets)
 
