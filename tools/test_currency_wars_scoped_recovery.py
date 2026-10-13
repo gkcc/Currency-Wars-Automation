@@ -33,7 +33,7 @@ class ScopedRecoveryTests(unittest.TestCase):
         self.old_binding = self.root / 'old-binding.json'
         self.old_binding.write_text(json.dumps(dict(pid=80,creation_id=80,hwnd=80)))
         self.actors = [dict(pid=100, ppid=0, image='python.exe', identity='windows:100', role='operator_or_venv_parent', command_sha256='1'*64, image_sha256='2'*64)]
-        self.sources = {name: 'e'*64 for name in (guard.SOURCE_MANIFEST, 'tools/currency_wars_control.py', 'tools/currency_wars_mcp.py', 'tools/currency_wars_scoped_recovery.py', 'tools/currency_wars_source_guard.py', 'tools/currency_wars_broker_entry.py', 'tools/currency_wars_input_bridge.py')}
+        self.sources = {name: 'e'*64 for name in (guard.SOURCE_MANIFEST, 'tools/currency_wars_control.py', 'tools/currency_wars_mcp.py', 'tools/currency_wars_source_guard.py', 'tools/currency_wars_broker_entry.py', 'tools/currency_wars_input_bridge.py')}
         self.sources['tools/currency_wars_mcp.py'] = recovery.MCP_SHA256
         self.stack = contextlib.ExitStack(); self.addCleanup(self.stack.close)
         self.stack.enter_context(patch.object(guard, 'mutation_lock', lambda *a: contextlib.nullcontext()))
@@ -92,6 +92,9 @@ class ScopedRecoveryTests(unittest.TestCase):
             lambda r: r['game_binding'].pop('hwnd'),
             lambda r: r['old_game'].update(sha256='bad'),
             lambda r: r.update(observed_at='invalid'),
+            lambda r: r.pop('operator_provenance'),
+            lambda r: r['operator_provenance']['modules']['operator'].update(sha256='bad'),
+            lambda r: r['operator_provenance']['providers']['psutil'].update(path='different'),
         ]
         for i, change in enumerate(changes):
             with self.subTest(case=i):
@@ -153,6 +156,24 @@ class ScopedRecoveryTests(unittest.TestCase):
         d,p,v=self.manual_fixture()
         with patch.object(Path,'is_symlink',side_effect=lambda: True):
             with self.assertRaises((ValueError,RuntimeError)):recovery.manual_intent_hashes(d)
+
+    def test_canonical_inventory_and_loaded_operator_are_separate(self):
+        self.assertNotIn('tools/currency_wars_scoped_recovery.py',self.sources)
+        self.call(accept_scope=True,apply=True)
+        r=json.loads(recovery.receipt_path(self.root,self.lease).read_text())
+        self.assertEqual(r['sources'],self.sources)
+        actual=Path(recovery.__file__).absolute()
+        self.assertEqual(r['operator_provenance']['modules']['operator'],
+                         dict(path=str(actual),sha256=hashlib.sha256(actual.read_bytes()).hexdigest()))
+        with patch.object(guard,'source_hashes',return_value=dict(self.sources,**{'tools/currency_wars_scoped_recovery.py':'a'*64})):
+            self.assertIsNone(guard.activity_reason(self.root))
+
+    def test_operator_provider_change_refuses_before_write(self):
+        actual=recovery.operator_provenance()
+        with patch.object(recovery,'operator_provenance',side_effect=[actual,{}]):
+            with self.assertRaisesRegex(RuntimeError,'changed'):
+                self.call(accept_scope=True,apply=True)
+        self.assertFalse(recovery.receipt_path(self.root,self.lease).exists())
 
     def test_requires_explicit_scope(self):
         with self.assertRaisesRegex(ValueError, 'acceptance'):

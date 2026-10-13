@@ -395,6 +395,26 @@ def old_binding_evidence(path):
     return dict(path=str(path), sha256=hashlib.sha256(path.read_bytes()).hexdigest(), binding=binding)
 
 
+def operator_provenance():
+    """Actual loaded recovery providers, separate from canonical deployment."""
+    import psutil
+    import currency_wars_broker_entry
+    modules = {'operator': Path(__file__).absolute()}
+    for name, module in list(sys.modules.items()):
+        if name.startswith('currency_wars_') and getattr(module, '__file__', None):
+            modules[name] = Path(module.__file__).absolute()
+    providers = {'psutil': dict(version=psutil.__version__, path=str(Path(psutil.__file__).absolute()))}
+    modules['psutil'] = Path(psutil.__file__).absolute()
+    if len(modules) > 128:
+        raise ValueError('Loaded operator module inventory exceeds bound')
+    facts = {}
+    for name, path in sorted(modules.items()):
+        guard._plain_directory(path.parent)
+        data = guard._source_bytes(path.parent, path.name)
+        facts[name] = dict(path=str(path), sha256=hashlib.sha256(data).hexdigest())
+    return dict(modules=facts, providers=providers)
+
+
 def receipt_path(project, lease):
     return guard._plain_directory(Path(project) / 'docs/source-activity-recovery') / (lease.stem + '.scoped-v1.json')
 
@@ -423,11 +443,31 @@ def validate_proof(r):
         guard._relative(name)
         require(_sha(digest))
     required = {guard.SOURCE_MANIFEST, 'tools/currency_wars_control.py',
-                'tools/currency_wars_mcp.py', 'tools/currency_wars_scoped_recovery.py',
+                'tools/currency_wars_mcp.py',
                 'tools/currency_wars_source_guard.py', 'tools/currency_wars_broker_entry.py',
                 'tools/currency_wars_input_bridge.py'}
     require(required <= sources.keys())
     require(sources['tools/currency_wars_mcp.py'].lower() == MCP_SHA256)
+    provenance = r.get('operator_provenance')
+    require(isinstance(provenance, dict) and set(provenance) == {'modules', 'providers'})
+    modules = provenance['modules']
+    require(isinstance(modules, dict) and 1 <= len(modules) <= 128)
+    require({'operator', 'currency_wars_source_guard', 'currency_wars_artifacts',
+             'currency_wars_input_bridge', 'currency_wars_broker_entry', 'psutil'} <= modules.keys())
+    for name, item in modules.items():
+        require(isinstance(name, str) and (name in {'operator', 'psutil'}
+                or re.fullmatch('currency_wars_[a-z0-9_]+', name) is not None))
+        require(isinstance(item, dict) and set(item) == {'path', 'sha256'}
+                and isinstance(item['path'], str)
+                and (Path(item['path']).is_absolute() or ntpath.isabs(item['path']))
+                and _sha(item['sha256']))
+    providers = provenance['providers']
+    require(isinstance(providers, dict) and set(providers) == {'psutil'})
+    provider = providers['psutil']
+    require(isinstance(provider, dict) and set(provider) == {'version', 'path'}
+            and isinstance(provider['version'], str) and 1 <= len(provider['version']) <= 64
+            and provider['path'] == modules['psutil']['path'])
+
     bridge = r.get('bridge')
     require(isinstance(bridge, dict) and bridge.get('installed') is True
             and bridge.get('instances') == [] and _sha(bridge.get('config_sha256'))
@@ -543,9 +583,11 @@ def recover(project, lease_name, digest, parent_pid, parent_identity, run, owner
         original = run_evidence(run, owner_path, worker_pid, worker_identity)
         pending = bridge_evidence(project)
         actors = census(project)
+        provenance = operator_provenance()
         if (census(project) != actors or bridge_evidence(project) != pending
                 or run_evidence(run, owner_path, worker_pid, worker_identity) != original
                 or old_binding_evidence(old_binding_file) != old_game
+                or operator_provenance() != provenance
                 or guard.source_hashes(project) != sources or guard._activity_snapshot(project) != registry
                 or guard.activity_reason(project, ignore_lease=lease) is not None
                 or guard._dead_start(project, lease, digest, parent_pid, parent_identity)[1] != payload):
@@ -557,6 +599,7 @@ def recover(project, lease_name, digest, parent_pid, parent_identity, run, owner
                  historical_parentage='unknown', assessment='retired_under_supported_control_domain',
                  machine_id=guard.windows_machine_id(), input_sent=False, sources=sources,
                  actors=actors, run_evidence=original, bridge=pending, registry=registry,
+                 operator_provenance=provenance,
                  game_binding=binding, old_game=old_game, other_activity_reason=None)
         from datetime import datetime, timezone
         r['observed_at'] = datetime.now(timezone.utc).isoformat()
