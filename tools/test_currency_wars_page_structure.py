@@ -87,6 +87,35 @@ class PageStructureTests(TestCase):
                     self.assertIsNone(perception._native_battle_stage(partial))
                     self.assertEqual(perception.classify(partial), 'unknown')
 
+    def test_complete_result_header_with_overlapping_streak_reads_only_node_result(self):
+        # Retained 1-4 OCR: loss caption and zero streak are not match victory.
+        rows = json.loads(r'''[{"text": "\u6311\u6218\u7ed3\u675f", "confidence": 0.9689, "box": [832, 198, 1086, 262]}, {"text": "1-4X\u6218\u6597", "confidence": 0.8636, "box": [784, 266, 960, 304]}, {"text": "\u706b\u70ed\u8fde\u80dc\u00d70", "confidence": 0.9512, "box": [950, 268, 1134, 303]}, {"text": "\u5c0f\u961f\u751f\u547d\u503c82", "confidence": 0.9956, "box": [646, 484, 830, 520]}, {"text": "\u83b7\u5f97\u91d1\u5e01\u603b\u89c8", "confidence": 0.9947, "box": [526, 552, 682, 586]}, {"text": "\u6570\u636e\u7edf\u8ba1", "confidence": 0.9992, "box": [1118, 552, 1222, 586]}, {"text": "\u7ee7\u7eed\u6311\u6218", "confidence": 0.9989, "box": [909, 879, 1012, 910]}]''')
+        self.assertEqual(perception.classify(rows), 'node_result')
+        for variant in ('fake_stage', 'low_stage', 'low_badge', 'duplicate_stage',
+                        'duplicate_badge', 'conflict', 'body_stage', 'far_badge', 'missing_caption'):
+            with self.subTest(variant=variant):
+                changed = copy.deepcopy(rows)
+                stage, badge = changed[1], changed[2]
+                if variant == 'fake_stage':
+                    stage['text'] = '9-4X' + stage['text'].split('X')[1]
+                elif variant == 'low_stage':
+                    stage['confidence'] = .849
+                elif variant == 'low_badge':
+                    badge['confidence'] = .899
+                elif variant.startswith('duplicate'):
+                    changed.append(copy.deepcopy(stage if variant == 'duplicate_stage' else badge))
+                elif variant == 'conflict':
+                    other = copy.deepcopy(stage)
+                    other.update(text=stage['text'].replace('1-4', '1-3'), box=[850,266,930,304])
+                    changed.append(other)
+                elif variant == 'body_stage':
+                    stage['box'] = [784,550,960,588]
+                elif variant == 'far_badge':
+                    badge['box'] = [920,268,1104,303]
+                else:
+                    changed.pop(0)
+                self.assertEqual(perception.classify(changed), 'unknown')
+
     def test_modals_and_formal_result_keep_priority_over_background_advantages(self):
         cases = (
             ('reward_overlay', [('获得奖励', [800, 300, 1000, 350])]),

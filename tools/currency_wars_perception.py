@@ -205,7 +205,7 @@ def _native_node_result_stages(rows):
     # and duplicates still pass through the original collection below.
     streaks = [row for row in rows if .90 <= row['confidence'] <= 1.
                and re.fullmatch(r'火热连胜×(?:0|[1-9][0-9]?)', clean(row['text']))
-               and 955 <= row['box'][0] < row['box'][2] <= 1145
+               and 945 <= row['box'][0] < row['box'][2] <= 1145
                and 260 <= row['box'][1] < row['box'][3] <= 315]
     if len(streaks) == 1:
         badge = streaks[0]['box']
@@ -217,7 +217,7 @@ def _native_node_result_stages(rows):
             if (match is not None and minimum <= row['confidence'] <= 1.
                     and 760 <= box[0] < 840 and box[0] < box[2] <= 965
                     and 260 <= box[1] < box[3] <= 315
-                    and -4 <= badge[0] - box[2] <= 20
+                    and -12 <= badge[0] - box[2] <= 20
                     and abs(badge[1] - box[1]) <= 8 and abs(badge[3] - box[3]) <= 8):
                 stages.append(match.group(1))
     # A retained real crop and one agreeing X header describe the same field.
