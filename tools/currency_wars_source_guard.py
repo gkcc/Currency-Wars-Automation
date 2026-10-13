@@ -1,7 +1,7 @@
 """Serialize source updates with registration of GUI/runner lifetimes.
 
-No machine-wide process census, game-window APIs, input, or historical cleanup.
-Explicit recovery requires a persisted intervening reboot and original guards.
+No game input or historical cleanup. Explicit operator recovery supports either
+a verified intervening reboot or the separately reviewed scoped-control protocol.
 """
 import ast
 import contextlib
@@ -488,6 +488,9 @@ def _retired_start(project, path, value):
     Other leases and CURRENT_RUNNER (including broker exit) are still checked.
     A receipt never changes historical parentage, markers, or ready approval.
     """
+    from currency_wars_scoped_recovery import accepted_receipt
+    if accepted_receipt(project, path, value):
+        return True
     receipt_path = _recovery_path(project, path)
     if not receipt_path.exists():
         return False

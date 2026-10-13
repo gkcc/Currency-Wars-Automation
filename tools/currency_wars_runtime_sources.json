@@ -30,6 +30,7 @@
     "tools/currency_wars_shop_contract.py",
     "tools/currency_wars_shop_reader.py",
     "tools/currency_wars_source_guard.py",
+    "tools/currency_wars_scoped_recovery.py",
     "tools/currency_wars_state_reader.py",
     "tools/currency_wars_update.py",
     "tools/currency_wars_visual_guards.py",
