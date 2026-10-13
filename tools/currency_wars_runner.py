@@ -1684,10 +1684,18 @@ def stable_preparation_inspection(action, request, actual, current_png):
     # rendering noise: channel max 2, mean .02896, changed .08023, tile .28889.
     # Original PNG/ROI digests stay exact; only fresh rendering is bounded.
     delta = np.abs(first.astype(np.int16) - second.astype(np.int16))
-    if (int(delta.max()) > 2 or float(delta.mean()) > .04
-            or float(np.any(delta != 0, axis=2).mean()) > .10
+    caps = (2, .04, .10, .30)
+    if action['target'] == {'kind': 'inventory_item', 'slot': 2}:
+        # Only this fixed star tile has the observed flash: max61/mean1.7784,
+        # changed.2192/tile20.7593; all three original RGB frames correlate>.996.
+        caps = (64, 2., .25, 22.)
+        correlation = float(np.corrcoef(first.reshape(-1), second.reshape(-1))[0, 1])
+        if not np.isfinite(correlation) or correlation < .995:
+            raise ValueError('物品槽2闪光外的图标形状不符，零输入')
+    if (int(delta.max()) > caps[0] or float(delta.mean()) > caps[1]
+            or float(np.any(delta != 0, axis=2).mean()) > caps[2]
             or max(float(tile.mean()) for row in np.array_split(delta, 8)
-                   for tile in np.array_split(row, 8, axis=1)) > .30):
+                   for tile in np.array_split(row, 8, axis=1)) > caps[3]):
         raise ValueError('备战图标的新帧ROI渲染差异越界，零输入')
     gray = first.mean(axis=2)
     if min(float(tile.std()) for row in np.array_split(gray, 2) for tile in np.array_split(row, 2, axis=1)) < 20:
