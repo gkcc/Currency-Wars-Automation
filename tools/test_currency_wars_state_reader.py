@@ -119,6 +119,35 @@ class NativePlayerHUDTests(unittest.TestCase):
                                                  'shop', 'frame', player)['buy_cost'])
         self.assertIsNone(native_experience_offer(rows, image, 'battle', 'frame', player)['buy_cost'])
 
+    def test_missing_experience_price_uses_complete_roi_and_conflicts_stay_unknown(self):
+        image = Image.new('RGB', (1920, 1080), (66, 75, 119))
+        image.paste((240, 190, 40), tuple(EXPERIENCE_COIN_ROI))
+        image.paste((220, 220, 230), (310, 984, 322, 1003))
+        rows = self.anchors()
+        player = {'actor': 'player', 'origin': 'native_player_hud', 'snapshot_id': 'frame',
+                  'evidence': {'purchase_experience': rows[0], 'experience_progress': rows[1]}}
+        engine = Mock(return_value=([['4', .99]], None))
+        offer = native_experience_offer(rows, image, 'shop', 'frame', player, engine=engine)
+        self.assertEqual(offer['buy_cost'], 4)
+        self.assertTrue(offer['cost_checked'])
+        self.assertIsNone(offer['buy_gain'])
+        self.assertEqual(offer['evidence']['cost']['raw_text'], '4')
+        for wrong_rows in (
+                rows + [self.row('4', [309, 980, 324, 1008]), self.row('8', [329, 980, 340, 1008])],
+                rows + [self.row('?4', [273, 980, 324, 1008])],
+                rows + [self.row('4', [250, 980, 324, 1008])],
+                rows + [self.row('4', [309, 980, 324, 1008], .89)]):
+            self.assertIsNone(native_experience_offer(wrong_rows, image, 'shop', 'frame', player,
+                                                     engine=engine)['buy_cost'])
+        for box in ((301, 984, 305, 1003), (341, 984, 345, 1003)):
+            extra = image.copy()
+            extra.paste((220, 220, 230), box)
+            self.assertIsNone(native_experience_offer(rows, extra, 'shop', 'frame', player,
+                                                     engine=engine)['buy_cost'])
+        for reading in ([['?4', .99]], [['4', .89]], [['10001', .99]]):
+            self.assertIsNone(native_experience_offer(rows, image, 'shop', 'frame', player,
+                engine=Mock(return_value=(reading, None)))['buy_cost'])
+
     def test_large_native_level_numeral_resolves_font_but_not_conflicting_or_clipped_reads(self):
         image = Image.new('RGB', (1920, 1080), (100, 100, 220))
         image.paste((0, 0, 0), (302, 887, 328, 931))

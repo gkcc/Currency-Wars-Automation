@@ -48,6 +48,7 @@ PLAYER_LEVEL_ROI = [240, 880, 358, 936]
 PLAYER_LEVEL_NUMERAL_ROI = [298, 878, 358, 936]
 EXPERIENCE_PRICE_ROI = [264, 972, 343, 1015]
 EXPERIENCE_COIN_ROI = [273, 978, 309, 1010]
+EXPERIENCE_DIGIT_ROI = [309, 972, 343, 1015]
 # Current parsing support, not a claim about the game's permanent maximum.
 MAX_SUPPORTED_POPULATION = 12
 READ_CONTRACT_VERSION = 2
@@ -1062,7 +1063,7 @@ def native_player_hud(rows, image, page, engine, snapshot_id):
     return result
 
 
-def native_experience_offer(rows, image, page, snapshot_id, player):
+def native_experience_offer(rows, image, page, snapshot_id, player, engine=None):
     """Read the visible XP price only. Gain and upgrade rules stay unknown."""
     result = {'actor': 'player', 'origin': 'native_experience_offer',
               'snapshot_id': snapshot_id, 'cost_checked': False,
@@ -1101,6 +1102,46 @@ def native_experience_offer(rows, image, page, snapshot_id, player):
             result['reason'] = 'experience_price_crosses_native_bounds'
             return result
         candidates.append((row, int(text)))
+    if not candidates and engine is not None:
+        # Authenticate complete glyphs in the whole price field before isolating
+        # the numeral column. The gold icon is never turned into a text alias.
+        patch = np.array(image.crop(EXPERIENCE_PRICE_ROI).convert('RGB'))
+        hsv = cv2.cvtColor(patch, cv2.COLOR_RGB2HSV)
+        # Current native price uses neutral light ink; colored gold is separate.
+        neutral = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 160)
+        unused, unused_labels, stats, unused_centers = cv2.connectedComponentsWithStats(neutral.astype('uint8'), 8)
+        glyphs = stats[1:]
+        dx1, dy1, dx2, dy2 = EXPERIENCE_DIGIT_ROI
+        if (not 1 <= len(glyphs) <= 5 or any(area < 3 or x <= 1 or y <= 1
+                or x + w >= x2 - x1 - 1 or y + h >= y2 - y1 - 1
+                or not dx1 <= x1 + x < x1 + x + w <= dx2
+                for x, y, w, h, area in glyphs)):
+            result['reason'] = 'experience_price_glyphs_incomplete'
+            return result
+        try:
+            recognized, unused = engine(np.array(image.crop(EXPERIENCE_DIGIT_ROI).convert('RGB')),
+                                        use_det=False, use_cls=False, use_rec=True)
+            if recognized is None or len(recognized) != 1:
+                return result
+            raw, confidence = recognized[0][-2:]
+            raw, confidence = str(raw), float(confidence)
+            text = clean(raw)
+            attempt = {'source': 'current_native_experience_price', 'method': 'roi_recognition',
+                'snapshot_id': snapshot_id, 'raw_text': raw, 'confidence': confidence,
+                'bounds': list(EXPERIENCE_DIGIT_ROI), 'context_bounds': list(EXPERIENCE_PRICE_ROI),
+                'glyph_bounds': [[int(x1 + x), int(y1 + y), int(x1 + x + w), int(y1 + y + h)]
+                                 for x, y, w, h, area in glyphs],
+                'inference': 'single_line_recognition_original_RGB_no_resize'}
+            result['evidence']['cost'] = attempt
+            if (not re.fullmatch(r'[0-9]{1,5}', text) or len(text) != len(glyphs)
+                    or not 0 <= int(text) <= 10000 or not .90 <= confidence <= 1.):
+                return result
+            result.update(buy_cost=int(text), cost_checked=True, reason=None)
+            attempt['value'] = int(text)
+            return result
+        except Exception:
+            result['reason'] = 'experience_price_roi_unreadable'
+            return result
     if len(candidates) != 1:
         result['reason'] = 'experience_price_missing_or_conflicting'
         return result
@@ -1381,7 +1422,7 @@ class Perception:
         semantic = semantic_facts(rows, image, page, engine=engine, snapshot_id=digest)
         semantic['player_hud'] = player
         semantic['experience_offer'] = (unread('experience_offer') if effective_scope == 'rewards' else
-            native_experience_offer(rows, image, page, digest, player))
+            native_experience_offer(rows, image, page, digest, player, engine=engine))
         from currency_wars_refresh_offer import read_offer, unread_offer
         semantic['refresh_offer'] = (unread_offer(digest, page) if effective_scope == 'rewards' else
                                      read_offer(rows, image, page, engine, digest))
