@@ -248,6 +248,32 @@ def game_lock(binding, *, exited=False):
         k.CloseHandle(handle)
 
 
+def manual_intent_hashes(directory):
+    """Existing latch_manual data, bound by the enclosing verified run."""
+    from datetime import datetime
+    guard._plain_directory(directory)
+    entries = sorted(directory.iterdir())
+    if len(entries) > 2000:
+        raise ValueError('Manual intent count exceeds original protocol bound')
+    hashes = {}
+    for path in entries:
+        if (not re.fullmatch('[0-9a-f]{32}\\.json', path.name) or not path.is_file()
+                or path.is_symlink() or getattr(path.lstat(), 'st_file_attributes', 0) & 0x400):
+            raise ValueError('Unknown/linked manual intent entry')
+        value = guard.read_object(path, limit=4096)
+        if (set(value) != {'manual_id', 'reason', 'time', 'priority_ns'}
+                or value['manual_id'] != path.stem
+                or not isinstance(value['reason'], str) or not 1 <= len(value['reason']) <= 200
+                or type(value['priority_ns']) is not int or value['priority_ns'] <= 0
+                or not isinstance(value['time'], str) or not 1 <= len(value['time']) <= 64):
+            raise ValueError('Manual intent does not match latch_manual schema')
+        # latch_manual uses now(), which emits a timezone-aware ISO timestamp.
+        if datetime.fromisoformat(value['time']).utcoffset() is None:
+            raise ValueError('Manual intent timestamp lacks timezone')
+        hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashes
+
+
 def run_evidence(run, owner_path, worker_pid, worker_identity):
     run = guard._plain_directory(Path(run).absolute()).resolve()
     marker_path = run / guard.artifacts.MARKER
@@ -274,7 +300,11 @@ def run_evidence(run, owner_path, worker_pid, worker_identity):
     if any(p.name in prohibited for p in files):
         raise RuntimeError('Run reached controller stage; this early-start recovery does not apply')
     hashes = {}
+    manual = None
     for path in files:
+        if path.name == 'manual-intents':
+            manual = manual_intent_hashes(path)
+            continue
         if path.is_symlink() or getattr(path.lstat(), 'st_file_attributes', 0) & 0x400 or not path.is_file():
             raise RuntimeError('Original run contains unknown/linked entry')
         if path.stat().st_size > 2_000_000:
@@ -282,7 +312,7 @@ def run_evidence(run, owner_path, worker_pid, worker_identity):
         hashes[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
     return dict(run_dir=str(run), owner_path=str(owner_path), owner_sha256=hashlib.sha256(owner_path.read_bytes()).hexdigest(),
                 worker_pid=worker_pid, worker_identity=worker_identity, run_id=marker['run_id'],
-                launch_id=owner['launch_id'], files=hashes)
+                launch_id=owner['launch_id'], files=hashes, manual_intents=manual)
 
 
 def bridge_evidence(project):
@@ -323,11 +353,102 @@ def receipt_path(project, lease):
     return guard._plain_directory(Path(project) / 'docs/source-activity-recovery') / (lease.stem + '.scoped-v1.json')
 
 
+def _sha(value):
+    return isinstance(value, str) and re.fullmatch('[0-9a-fA-F]{64}', value) is not None
+
+
+def proof_digest(receipt):
+    """Corruption binding only, not a signature or an authentication claim."""
+    body = {k: v for k, v in receipt.items() if k != 'proof_sha256'}
+    return hashlib.sha256(json.dumps(body, sort_keys=True, ensure_ascii=False,
+                                    separators=(',', ':')).encode()).hexdigest()
+
+
+def validate_proof(r):
+    """Validate historical facts without comparing them to upgraded sources."""
+    def require(ok):
+        if not ok:
+            raise ValueError('Scoped retirement proof is incomplete or contradictory')
+    require(isinstance(r, dict))
+    require(_sha(r.get('proof_sha256')) and r['proof_sha256'] == proof_digest(r))
+    sources = r.get('sources')
+    require(isinstance(sources, dict) and 1 <= len(sources) <= 128)
+    for name, digest in sources.items():
+        guard._relative(name)
+        require(_sha(digest))
+    required = {guard.SOURCE_MANIFEST, 'tools/currency_wars_control.py',
+                'tools/currency_wars_mcp.py', 'tools/currency_wars_scoped_recovery.py',
+                'tools/currency_wars_source_guard.py', 'tools/currency_wars_broker_entry.py',
+                'tools/currency_wars_input_bridge.py'}
+    require(required <= sources.keys())
+    require(sources['tools/currency_wars_mcp.py'].lower() == MCP_SHA256)
+    bridge = r.get('bridge')
+    require(isinstance(bridge, dict) and bridge.get('installed') is True
+            and bridge.get('instances') == [] and _sha(bridge.get('config_sha256'))
+            and _sha(bridge.get('broker_sha256'))
+            and isinstance(bridge.get('task_name'), str)
+            and re.fullmatch('CurrencyWarsInputBridge-[0-9a-f]{16}', bridge['task_name']) is not None)
+    require(bridge['broker_sha256'].upper() == sources['tools/currency_wars_control.py'].upper())
+    registry = r.get('registry')
+    require(isinstance(registry, dict) and set(registry) == {'leases', 'current_runner_sha256'})
+    leases = registry['leases']
+    require(isinstance(leases, dict) and 1 <= len(leases) <= 128)
+    for name, digest in leases.items():
+        require(isinstance(name, str) and re.fullmatch('[0-9a-f]{32}\\.json', name) is not None and _sha(digest))
+    require(leases.get(r.get('lease_name')) == r.get('lease_sha256'))
+    require(registry['current_runner_sha256'] is None or _sha(registry['current_runner_sha256']))
+    old_game = r.get('old_game')
+    require(isinstance(old_game, dict) and isinstance(old_game.get('path'), str)
+            and bool(old_game['path']) and _sha(old_game.get('sha256')))
+    for binding in (r.get('game_binding'), old_game.get('binding')):
+        require(isinstance(binding, dict) and set(binding) == {'pid', 'creation_id', 'hwnd'}
+                and all(type(v) is int and v > 0 for v in binding.values()))
+    require(r['game_binding'] != old_game['binding'])
+    actors = r.get('actors')
+    require(isinstance(actors, list) and 1 <= len(actors) <= 32768)
+    roles = {'operator_or_venv_parent', 'literal_operator_shell_parent',
+             'interactive_operator_parent', 'unrelated_interactive_shell',
+             'reviewed_nonlaunching_mcp', 'unrelated_direct_script'}
+    indexed = {}
+    for actor in actors:
+        require(isinstance(actor, dict) and set(actor) ==
+                {'pid', 'ppid', 'image', 'identity', 'role', 'command_sha256', 'image_sha256'})
+        require(type(actor['pid']) is int and actor['pid'] > 0 and actor['pid'] not in indexed
+                and type(actor['ppid']) is int and actor['ppid'] >= 0 and actor['ppid'] != actor['pid']
+                and isinstance(actor['identity'], str) and re.fullmatch('windows:[1-9][0-9]*', actor['identity']) is not None
+                and isinstance(actor['image'], str) and candidate(actor['image'])
+                and actor['role'] in roles and _sha(actor['command_sha256']) and _sha(actor['image_sha256']))
+        shell = actor['image'].casefold() in SHELLS
+        require((actor['role'] in {'literal_operator_shell_parent', 'interactive_operator_parent',
+                                  'unrelated_interactive_shell'}) == shell)
+        require(actor['image'].casefold() != GUI)
+        indexed[actor['pid']] = actor
+    require(any(a['role'] == 'operator_or_venv_parent' for a in actors))
+    original = r.get('original_lease')
+    evidence = r.get('run_evidence')
+    require(isinstance(original, dict) and isinstance(evidence, dict))
+    known_dead = [(original.get('pid'), original.get('process_identity')),
+                  (evidence.get('worker_pid'), evidence.get('worker_identity'))]
+    require(isinstance(original.get('children'), list))
+    for child in original['children']:
+        require(isinstance(child, dict))
+        known_dead.append((child.get('pid'), child.get('process_identity')))
+    require(not any((a['pid'], a['identity']) in known_dead for a in actors))
+    for actor in actors:
+        parent = indexed.get(actor['ppid'])
+        if parent:
+            require(int(parent['identity'].split(':')[1]) < int(actor['identity'].split(':')[1]))
+    from datetime import datetime
+    require(isinstance(r.get('observed_at'), str))
+    require(datetime.fromisoformat(r['observed_at']).utcoffset() is not None)
+
+
 def accepted_receipt(project, lease, value):
     path = receipt_path(project, lease)
     if not path.exists():
         return False
     r = guard.read_object(path, limit=2_000_000)
+    validate_proof(r)
     payload = lease.read_bytes()
     if (r.get('schema') != SCHEMA or r.get('policy') != POLICY or r.get('project') != str(Path(project).resolve())
             or r.get('lease_name') != lease.name or r.get('original_lease') != value
@@ -391,6 +512,8 @@ def recover(project, lease_name, digest, parent_pid, parent_identity, run, owner
                  game_binding=binding, old_game=old_game, other_activity_reason=None)
         from datetime import datetime, timezone
         r['observed_at'] = datetime.now(timezone.utc).isoformat()
+        r['proof_sha256'] = proof_digest(r)
+        validate_proof(r)
         if apply:
             encoded = json.dumps(r, sort_keys=True, ensure_ascii=False, indent=2).encode()
             if len(encoded) > 2_000_000:

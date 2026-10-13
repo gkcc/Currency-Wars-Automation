@@ -74,3 +74,17 @@ python -B -m unittest test_currency_wars_scoped_recovery test_currency_wars_star
 原生接口依据：
 https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/ns-tlhelp32-processentry32w
 https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot
+
+## 收据完整性与人工暂停意图
+
+消费收据时严格检查来源 SHA 映射、桥接 installed=true/配置哈希/空实例/固定任务名、
+broker 与历史 control 源哈希绑定、每个 actor 的原生身份及合法角色、完整登记快照与
+选定 lease 哈希、旧新游戏原生三键。整份证明另有规范 JSON 的 SHA256，检测字段损坏；
+这不是签名或认证体系。验旧证据不要求当前源码等于旧版本，合法升级后仍可消费。
+
+原 run 仅额外支持 manual-intents 这一明确目录：最多2000个、每个4096字节、
+无链接/reparse/子目录；文件名必须对应32位 manual_id，JSON 恰有 manual_id、reason、
+time、priority_ns 四字段，原因1–200字符、时间可解析且有时区、优先级正整数。
+这是原 latch_manual 的人工暂停意图，归属由已核 run/marker/owner 和完整文件哈希绑定，
+不新增原记录没有的动作或归属字段，不以中文原因匹配替代协议。目录内全部哈希消费时再核，
+其他目录仍拒绝。此变更的 manifest/模块部署仍需原 Rust GUI 实际重建并记录新构建。

@@ -32,7 +32,9 @@ class ScopedRecoveryTests(unittest.TestCase):
                                              runner_pid=13, runner_creation_id='13', launch_id='c' * 32)))
         self.old_binding = self.root / 'old-binding.json'
         self.old_binding.write_text(json.dumps(dict(pid=80,creation_id=80,hwnd=80)))
-        self.actors = [dict(pid=100, identity='windows:100', role='operator_or_venv_parent')]
+        self.actors = [dict(pid=100, ppid=0, image='python.exe', identity='windows:100', role='operator_or_venv_parent', command_sha256='1'*64, image_sha256='2'*64)]
+        self.sources = {name: 'e'*64 for name in (guard.SOURCE_MANIFEST, 'tools/currency_wars_control.py', 'tools/currency_wars_mcp.py', 'tools/currency_wars_scoped_recovery.py', 'tools/currency_wars_source_guard.py', 'tools/currency_wars_broker_entry.py', 'tools/currency_wars_input_bridge.py')}
+        self.sources['tools/currency_wars_mcp.py'] = recovery.MCP_SHA256
         self.stack = contextlib.ExitStack(); self.addCleanup(self.stack.close)
         self.stack.enter_context(patch.object(guard, 'mutation_lock', lambda *a: contextlib.nullcontext()))
         self.stack.enter_context(patch.object(bridge, 'inbox_lock', lambda *a: contextlib.nullcontext()))
@@ -40,8 +42,8 @@ class ScopedRecoveryTests(unittest.TestCase):
         self.stack.enter_context(patch.object(recovery, 'game_lock', lambda *a, **kw: contextlib.nullcontext()))
         self.stack.enter_context(patch.object(guard, 'identity_state', return_value='dead'))
         self.stack.enter_context(patch.object(guard, 'windows_machine_id', return_value='d' * 32))
-        self.stack.enter_context(patch.object(guard, 'source_hashes', return_value={'source': 'e' * 64}))
-        self.stack.enter_context(patch.object(recovery, 'bridge_evidence', return_value={'installed': False}))
+        self.stack.enter_context(patch.object(guard, 'source_hashes', return_value=self.sources))
+        self.stack.enter_context(patch.object(recovery, 'bridge_evidence', return_value=dict(installed=True, config_sha256='f'*64, instances=[], task_name='CurrencyWarsInputBridge-'+'a'*16, broker_sha256='e'*64)))
         self.stack.enter_context(patch.object(recovery, 'census', return_value=self.actors))
 
     def call(self, **kwargs):
@@ -61,6 +63,96 @@ class ScopedRecoveryTests(unittest.TestCase):
         receipt = json.loads(recovery.receipt_path(self.root, self.lease).read_text())
         self.assertEqual(receipt['historical_parentage'], 'unknown')
         self.assertFalse(receipt['input_sent'])
+
+    def test_strict_proof_rejects_invalid_fields_even_with_recomputed_digest(self):
+        import copy
+        self.call(accept_scope=True, apply=True)
+        p = recovery.receipt_path(self.root, self.lease)
+        original = json.loads(p.read_text())
+        changes = [
+            lambda r: r.update(bridge={'installed':False}),
+            lambda r: r['bridge'].update(installed=False),
+            lambda r: r['bridge'].update(config_sha256='bad'),
+            lambda r: r['bridge'].update(instances=[{}]),
+            lambda r: r['bridge'].update(broker_sha256='0'*64),
+            lambda r: r.update(sources={'source':'e'*64}),
+            lambda r: r['sources'].update({'../escape':'e'*64}),
+            lambda r: r['sources'].update({'tools/currency_wars_control.py':'bad'}),
+            lambda r: r['actors'][0].update(role='controller'),
+            lambda r: r['actors'][0].update(pid=True),
+            lambda r: r['actors'][0].update(pid=11, identity='windows:11'),
+            lambda r: r['actors'][0].update(identity='windows:0'),
+            lambda r: r['actors'][0].update(command_sha256='bad'),
+            lambda r: r['actors'][0].pop('ppid'),
+            lambda r: r['actors'].append(r['actors'][0].copy()),
+            lambda r: r.update(registry={}),
+            lambda r: r['registry']['leases'].update({self.lease.name:'0'*64}),
+            lambda r: r['registry'].update(current_runner_sha256=False),
+            lambda r: r['game_binding'].update(pid=True),
+            lambda r: r['game_binding'].pop('hwnd'),
+            lambda r: r['old_game'].update(sha256='bad'),
+            lambda r: r.update(observed_at='invalid'),
+        ]
+        for i, change in enumerate(changes):
+            with self.subTest(case=i):
+                r=copy.deepcopy(original);change(r);r['proof_sha256']=recovery.proof_digest(r)
+                p.write_text(json.dumps(r))
+                self.assertIsNotNone(guard.activity_reason(self.root))
+        p.write_text(json.dumps(original))
+        self.assertIsNone(guard.activity_reason(self.root))
+
+    def test_proof_hash_binds_fields_and_later_source_upgrade_is_allowed(self):
+        self.call(accept_scope=True, apply=True)
+        p=recovery.receipt_path(self.root,self.lease);r=json.loads(p.read_text())
+        with patch.object(guard,'source_hashes',return_value={'later/version.py':'a'*64}):
+            self.assertIsNone(guard.activity_reason(self.root))
+        r['actors'][0]['command_sha256']='3'*64;p.write_text(json.dumps(r))
+        self.assertIsNotNone(guard.activity_reason(self.root))
+
+    def test_invalid_generated_proof_does_not_write_receipt(self):
+        with patch.object(recovery,'bridge_evidence',return_value={'installed':False}):
+            with self.assertRaises(ValueError):self.call(accept_scope=True,apply=True)
+        self.assertFalse(recovery.receipt_path(self.root,self.lease).exists())
+
+    def manual_fixture(self):
+        d=self.run/'manual-intents';d.mkdir()
+        v=dict(manual_id='1'*32,reason='暂停',time='2026-10-13T08:00:00+08:00',priority_ns=1)
+        p=d/('1'*32+'.json');p.write_text(json.dumps(v))
+        return d,p,v
+
+    def test_known_manual_directory_is_preserved_and_rechecked(self):
+        d,p,v=self.manual_fixture();raw=p.read_bytes()
+        self.call(accept_scope=True,apply=True)
+        self.assertEqual(p.read_bytes(),raw)
+        r=json.loads(recovery.receipt_path(self.root,self.lease).read_text())
+        self.assertEqual(r['run_evidence']['manual_intents'],{p.name:hashlib.sha256(raw).hexdigest()})
+        v['reason']='变化';p.write_text(json.dumps(v))
+        self.assertIsNotNone(guard.activity_reason(self.root))
+
+    def test_manual_bad_schema_and_unknown_directories_refuse(self):
+        d,p,v=self.manual_fixture()
+        for changes in ({'manual_id':'2'*32},{'kind':'resume'},{'reason':''},{'priority_ns':True},{'time':'bad'}):
+            with self.subTest(changes=changes):
+                p.write_text(json.dumps(dict(v,**changes)))
+                with self.assertRaises(ValueError):self.call(accept_scope=True)
+        p.write_text(json.dumps(v)); (d/'nested').mkdir()
+        with self.assertRaises(ValueError):self.call(accept_scope=True)
+        (d/'nested').rmdir();(self.run/'unknown').mkdir()
+        with self.assertRaises(RuntimeError):self.call(accept_scope=True)
+
+    def test_manual_size_count_and_filename_bounds(self):
+        d,p,v=self.manual_fixture()
+        p.write_text(' ' * 4097)
+        with self.assertRaises(ValueError):self.call(accept_scope=True)
+        p.write_text(json.dumps(v));p.rename(d/'wrong.json')
+        with self.assertRaises(ValueError):self.call(accept_scope=True)
+        with patch.object(Path,'iterdir',return_value=[p]*2001):
+            with self.assertRaises(ValueError):recovery.manual_intent_hashes(d)
+
+    def test_manual_link_is_rejected(self):
+        d,p,v=self.manual_fixture()
+        with patch.object(Path,'is_symlink',side_effect=lambda: True):
+            with self.assertRaises((ValueError,RuntimeError)):recovery.manual_intent_hashes(d)
 
     def test_requires_explicit_scope(self):
         with self.assertRaisesRegex(ValueError, 'acceptance'):
