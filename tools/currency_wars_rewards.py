@@ -17,7 +17,8 @@ from PIL import Image
 
 
 RESOURCE_DIR = Path(__file__).parent / 'reward_resources'
-SCAN_BOUNDS = (1320, 230, 1660, 500)
+# Actual 1-2 lower-left gray orb spans x1313..1360; keep its full extent.
+SCAN_BOUNDS = (1300, 230, 1660, 500)
 TEMPLATE_ID = 'blue_orb_q01'
 TEMPLATE_SHA256 = '20aa7afcef3c35e05de5347e27925d4806f41bb7d4178ee34b078bbcf77e3b11'
 TEMPLATE_SIZE = (74, 69)
