@@ -7221,6 +7221,15 @@ class Worker:
                                 reason='upgraded_policy_unavailable', phase=phase, policy=policy,
                                 policy_observed=policy_observed, completed_actions=completed_actions, returned=False)
                         return False
+                if not self.joint_allocation_complete(policy):
+                    # A resource change can invalidate the previous model. Return
+                    # to a fresh decision instead of trying its legacy actions;
+                    # the original spending and completion guards still apply.
+                    if flow_id:
+                        self.profile_economy_flow(observed, flow_id=flow_id, origin=origin, point='exit',
+                            reason='joint_model_recomputation_required', phase=phase, policy=policy,
+                            policy_observed=policy_observed, completed_actions=completed_actions, returned=False)
+                    return False
                 if not policy['actions']:
                     completed = self.finish_local_economy(observed, policy)
                     if flow_id:
