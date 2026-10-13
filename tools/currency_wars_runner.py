@@ -1637,6 +1637,56 @@ def _start_cli(args, lease):
         control.k.CloseHandle(mutex)
 
 
+def preparation_inspection_target(action, request):
+    """ROOT selects one fixed visible icon, never supplies executable geometry."""
+    target = action.get('target') if isinstance(action, dict) else None
+    if (not isinstance(action, dict)
+            or set(action) != {'type', 'reason', 'expected_page', 'target', 'roi_sha256'}
+            or action.get('type') != 'inspect_preparation_target' or action.get('expected_page') != 'preparation'
+            or not isinstance(action.get('reason'), str) or not 1 <= len(action['reason'].strip()) <= 1000
+            or not isinstance(action.get('roi_sha256'), str) or not re.fullmatch(r'[0-9a-f]{64}', action['roi_sha256'])
+            or not isinstance(target, dict)):
+        raise ValueError('备战图标检查须独立typed目标、理由与完整原ROI摘要，不接受调用者坐标')
+    if target == {'kind': 'investment_summary'}:
+        geometry = {'bounds': [850, 118, 897, 166], 'point': [873, 141]}
+    elif (set(target) == {'kind', 'slot'} and target['kind'] == 'inventory_item'
+            and type(target['slot']) is int and target['slot'] in (1, 2)):
+        geometry = {'bounds': [1809, 147, 1887, 227], 'point': [1848, 187]} if target['slot'] == 1 else {
+            'bounds': [1809, 233, 1887, 309], 'point': [1848, 271]}
+    else:
+        raise ValueError('备战图标只支持首个投资摘要与当前固定物品列槽1/2')
+    steps = request.get('preparation_checklist', {}).get('steps', [])
+    economies = [step for step in steps if isinstance(step, dict) and step.get('id') == 'economy']
+    if (request.get('kind') != 'preparation_strategy' or request.get('observation', {}).get('page') != 'preparation'
+            or request.get('observation', {}).get('snapshot_id') != request.get('snapshot_id')
+            or request.get('preparation_checklist', {}).get('phase') != 'lineup_equipment'
+            or len(economies) != 1 or economies[0].get('completed') is not True):
+        raise ValueError('备战图标检查只接受当前统一经济已完成的上场/装备阶段')
+    return geometry
+
+
+def stable_preparation_inspection(action, request, actual, current_png):
+    from currency_wars_unit_inspection import _image, _observation, _fresh_request
+    import numpy as np
+    geometry = preparation_inspection_target(action, request)
+    current = _fresh_request(request)
+    original = request['observation']
+    stage = canonical_stage(original.get('fields', {}).get('stage'))
+    for observation in (original, actual):
+        _observation(observation, stage, current)
+    before = _image(request['original_png'], request['snapshot_id'])
+    after = _image(current_png, actual['snapshot_id'])
+    x1, y1, x2, y2 = geometry['bounds']
+    first, second = before[y1:y2, x1:x2], after[y1:y2, x1:x2]
+    if (hashlib.sha256(first.tobytes()).hexdigest() != action['roi_sha256']
+            or not np.array_equal(first, second)):
+        raise ValueError('备战图标的完整原ROI摘要/新帧像素不符，零输入')
+    gray = first.mean(axis=2)
+    if min(float(tile.std()) for row in np.array_split(gray, 2) for tile in np.array_split(row, 2, axis=1)) < 20:
+        raise ValueError('固定图标整tile空白、遮挡或不能确认，零输入')
+    return geometry
+
+
 def validate_plan(reply, request, epoch):
     if not isinstance(reply, dict) or reply.get('request_id') != request['request_id']:
         raise ValueError('回答request_id不匹配')
@@ -1647,6 +1697,13 @@ def validate_plan(reply, request, epoch):
     actions = reply.get('actions')
     if not isinstance(actions, list) or not 1 <= len(actions) <= 8:
         raise ValueError('计划须含1–8个有限语义动作')
+    if any(isinstance(a, dict) and a.get('type') == 'inspect_preparation_target' for a in actions):
+        if (len(actions) != 1 or reply.get('match_id') != request.get('match_id')
+                or reply.get('context_update', {}) != {}
+                or set(reply) - {'request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'actions', 'context_update'}):
+            raise ValueError('备战图标检查只接受当前同局单次显式ROOT授权，不附带完成项')
+        preparation_inspection_target(actions[0], request)
+        return reply
     if any(isinstance(a, dict) and a.get('type') == 'advance_local_preparation' for a in actions):
         if (len(actions) != 1 or set(actions[0]) != {'type', 'reason', 'expected_page', 'limits', 'max_deployments'}
                 or actions[0]['expected_page'] != request.get('observation', {}).get('page')
@@ -3506,6 +3563,11 @@ class Worker:
             if tokens != pending['tokens']:
                 raise ValueError('业务曝光仅允许实际已核收起中心的一次点击')
             return
+        if action.get('type') == 'inspect_preparation_target':
+            pending = self.guard_preparation_inspection(action, observed, request_id=request_id)
+            if tokens != pending['tokens']:
+                raise ValueError('备战图标检查仅允许内部固定点的一次点击，不使用/拖动/重发')
+            return
         if action.get('type') == 'deploy_unit':
             pending = self.guard_deployment(action, observed, request_id=request_id)
             if tokens != pending['tokens']:
@@ -3667,7 +3729,7 @@ class Worker:
         macro = getattr(self, 'economy_macro_active', None)
         if macro:
             submit_deadline = min(submit_deadline, macro['monotonic_deadline'])
-        if action and (action.get('type') in ('close_shop_for_observation', 'deploy_unit')
+        if action and (action.get('type') in ('close_shop_for_observation', 'deploy_unit', 'inspect_preparation_target')
                 or action.get('target_evidence', {}).get('control_id') == 'owned_unit_details'):
             remaining = (datetime.fromisoformat(request['deadline_at']) - datetime.now(timezone.utc)).total_seconds()
             submit_deadline = min(submit_deadline, time.monotonic() + remaining)
@@ -3676,6 +3738,9 @@ class Worker:
             for expires in (request['deadline_at'], context['expires_at']):
                 remaining = (datetime.fromisoformat(expires) - datetime.now(timezone.utc)).total_seconds()
                 submit_deadline = min(submit_deadline, time.monotonic() + remaining)
+        preparation_inspection = getattr(self, 'preparation_inspection_inflight', None)
+        if preparation_inspection is not None:
+            submit_deadline = min(submit_deadline, preparation_inspection['monotonic_deadline'])
         policy = coaching_policy()
         if policy['require_battle_confirmation'] and battle_input(observed, action, tokens):
             with file_lock(self.run, 'decision-submit.lock'):
@@ -3783,6 +3848,10 @@ class Worker:
                 if business_view is not None:
                     business_view['publication_attempted'] = True
                     self.save_business_view(business_view)
+                if preparation_inspection is not None:
+                    preparation_inspection['publication_attempted'] = True
+                    preparation_inspection['broker_actions'] = value['actions']
+                    self.save_preparation_inspection(preparation_inspection)
                 if deployment is not None:
                     deployment['publication_attempted'] = True
                     deployment['broker_actions'] = value['actions']
@@ -3815,6 +3884,9 @@ class Worker:
             pending.update(input_request_id=rid, tokens=tokens)
             self.c.write_json(self.run / 'reward-capacity.json', pending)
             self.c.write_json(self.records / (rid + '-reward-capacity.json'), pending)
+        if preparation_inspection is not None:
+            preparation_inspection['input_request_id'] = rid
+            self.save_preparation_inspection(preparation_inspection)
         business_view = getattr(self, 'business_view_inflight', None)
         if business_view is not None:
             business_view['input_request_id'] = rid
@@ -3864,6 +3936,9 @@ class Worker:
                 self.profile_broker_result(result, timing)
         except Exception as exc:
             retain_macro_delivery()
+            if preparation_inspection is not None:
+                preparation_inspection.update(publication_attempted=guarded.publication_attempted, error=str(exc))
+                self.save_preparation_inspection(preparation_inspection)
             if action and action.get('purpose') == 'reward_capacity' and not guarded.publication_attempted:
                 pending = self.pending_reward_capacity()
                 if pending and pending.get('input_request_id') == rid:
@@ -3901,6 +3976,9 @@ class Worker:
                 if original:
                     archive_business_receipt(self.records, self.owner, original, self.c)
         retain_macro_delivery()
+        if preparation_inspection is not None:
+            preparation_inspection.update(publication_attempted=guarded.publication_attempted, input_receipt=redact(result))
+            self.save_preparation_inspection(preparation_inspection)
         # Persist the input receipt even if its subsequent observation failed.
         # A new read-only observation must never resubmit these input tokens.
         if transaction is not None:
@@ -3935,6 +4013,10 @@ class Worker:
         try:
             observed = self.read_frame(result, scope=read_scope)
         except entry.ObservationUnavailable as exc:
+            if preparation_inspection is not None:
+                # The typed executor obtains one distinct observe after it
+                # authenticates this original input receipt; never retry click.
+                return None
             if business_view is not None:
                 # The typed caller first authenticates this input receipt, then
                 # obtains a separate, bounded observe. Never replay the click.
@@ -4942,13 +5024,15 @@ class Worker:
             return self._execute_reward_target(fresh, target, roi_evidence=evidence)
 
     @contextlib.contextmanager
-    def observation_input_lease(self):
+    def observation_input_lease(self, *, submit_deadline=None):
         original = self.c
         macro = getattr(self, 'economy_macro_active', None)
         lease_deadline = min(self.deadline, macro['monotonic_deadline']) if macro else self.deadline
         node = getattr(self, 'local_preparation_active', None)
         if node:
             lease_deadline = min(lease_deadline, node['monotonic_deadline'])
+        if submit_deadline is not None:
+            lease_deadline = min(lease_deadline, submit_deadline)
         with entry.submission_lease(original, submit_deadline=lease_deadline,
                                     queue_wait=self.profile_queue_wait) as leased:
             self.c = leased
@@ -7283,7 +7367,7 @@ class Worker:
                    'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'deploy_unit',
                                              'finish_inspection', 'confirm_match_result', 'finish_preparation_review',
                                              'refresh_observation', 'close_shop_for_observation', 'advance_local_economy',
-                                             'advance_local_preparation'],
+                                             'advance_local_preparation', 'inspect_preparation_target'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['preparation_checklist'] = self.preparation_checklist(observed)
         request['return_reason'] = {'category': category, 'business_step': business_step or request['preparation_checklist']['phase'],
@@ -7632,6 +7716,8 @@ class Worker:
         request_id = (self.state.get('decision_request') or {}).get('request_id')
         if request_id and getattr(self, 'records', None) is not None and (self.records / ('economy-macro-' + request_id + '.json')).exists():
             raise ValueError('当前父经济宏已执行/消费，禁止并发或重放计划')
+        if any(isinstance(action, dict) and action.get('type') == 'inspect_preparation_target' for action in actions):
+            return self.inspect_preparation_target(reply)
         if any(isinstance(action, dict) and action.get('type') == 'advance_local_preparation' for action in actions):
             return self.advance_local_preparation(reply)
         if any(isinstance(action, dict) and action.get('type') == 'advance_local_economy_macro' for action in actions):
@@ -7711,6 +7797,106 @@ class Worker:
 
     def save_business_view(self, value):
         self.c.write_json(self.records / ('business-view-' + value['request_id'] + '.json'), redact(value))
+
+    def save_preparation_inspection(self, pending):
+        self.c.write_json(self.records / ('preparation-inspection-' + pending['request_id'] + '.json'), redact(pending))
+
+    def guard_preparation_inspection(self, action, observed, *, request_id=None):
+        pending = getattr(self, 'preparation_inspection_inflight', None)
+        request = self.state.get('decision_request') or {}
+        if (not pending or pending['request_id'] != request.get('request_id') or pending['action'] != action
+                or pending['publication_attempted'] is not False
+                or time.monotonic() >= pending['monotonic_deadline']
+                or self.preparation_checklist(observed)['phase'] != 'lineup_equipment'
+                or self.pending_reward_capacity() or self.pending_reward_step(observed)
+                or getattr(self, 'deployment_pending', None)):
+            raise ValueError('备战图标检查意图/阶段/期限已变或原效果待验，不发布')
+        self.source_refresh_guard(request, tuple(pending['broker_identity']), pending_input_id=request_id)
+        stable_preparation_inspection(action, request, observed, self.frame_path)
+        manual_steps._bound_reward_frame(self.run, self.c, observed, pending['before_png'], read_only=True)
+        if request_id is not None:
+            item = optional(self.run / 'request-ledger' / (hashlib.sha256(request_id.encode()).hexdigest() + '.json'))
+            expected = self.c.validate_actions([{'type': p[0], 'args': p[1:]}
+                for p in (token.split(':') for token in pending['tokens'])])
+            if (pending.get('input_request_id') != request_id or not item or item.get('result') is not None
+                    or item.get('id') != request_id or item['request'].get('id') != request_id
+                    or item['request'].get('kind') != 'actions' or item['request'].get('handoff') is not False
+                    or item['request'].get('actions') != expected):
+                raise ValueError('备战图标检查仅允许原Entry尚未发布的一次click ID')
+        return pending
+
+    def inspect_preparation_target(self, reply):
+        request = copy.deepcopy(self.state.get('decision_request') or {})
+        validate_plan(reply, request, self.epoch())
+        action = reply['actions'][0]
+        path = self.records / ('preparation-inspection-' + request['request_id'] + '.json')
+        if path.exists() or getattr(self, 'preparation_inspection_inflight', None):
+            raise ValueError('原图标检查已尝试/未定，不重发原ID')
+        broker = self.source_refresh_guard(request)
+        inspection_deadline = min(self.deadline, time.monotonic()+60)
+        with self.observation_input_lease(submit_deadline=inspection_deadline):
+            actual = self.observe(max_attempts=1)
+            self.source_refresh_guard(request, broker)
+            geometry = stable_preparation_inspection(action, request, actual, self.frame_path)
+            before_png = path.with_suffix('.png')
+            manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path, read_only=True)
+            payload = self.frame_path.read_bytes()
+            with before_png.open('xb') as stream:
+                stream.write(payload)
+            pending = {'schema': 'currency-wars-preparation-inspection/v1', 'request_id': request['request_id'],
+                'match_id': self.active_match_id, 'resume_epoch': self.epoch(), 'action': copy.deepcopy(action),
+                'broker_identity': broker, 'before': copy.deepcopy(actual), 'before_png': str(before_png),
+                'tokens': ['click:' + ':'.join(map(str, geometry['point'])), 'wait:0.7'],
+                'monotonic_deadline': inspection_deadline,
+                'prior_receipt_ids': self.economy_receipt_watermark(), 'input_request_id': None,
+                'publication_attempted': False, 'outcome': 'pending', 'readonly_effect_verified': False,
+                'input_resent': False, 'phase_completion': False}
+            with path.open('x', encoding='utf-8') as stream:
+                json.dump(redact(pending), stream, ensure_ascii=False)
+            self.preparation_inspection_inflight = pending
+            try:
+                self.command(pending['tokens'], action['reason'], 'preparation',
+                    'ROOT单次图标探测；只核原输入，实际是否详情及物品效果待ROOT后图复核', action=action)
+                item = await_existing_receipt(self.run, self.c, pending['input_request_id'], 0)
+                pending['input_receipt'] = redact(item)
+                expected = self.c.validate_actions([{'type': p[0], 'args': p[1:]}
+                    for p in (token.split(':') for token in pending['tokens'])])
+                delivery = manual_receipt_state(item)
+                if (delivery['unknown_input'] or delivery['state'] != 'completed'
+                        or item['request'].get('handoff') is not False or item['request'].get('actions') != expected
+                        or item['result'].get('ok') is not True or item['result'].get('completed') != expected):
+                    raise ValueError('原图标输入交付未证实，只核原ID，不重击')
+                after = self.observe(max_attempts=1)
+                receipt = manual_steps._bound_reward_frame(self.run, self.c, after, self.frame_path, read_only=True)
+                if (after['capture_request_id'] == pending['input_request_id']
+                        or after['frame_id'] == actual['frame_id']
+                        or set(self.economy_receipt_watermark()) - set(pending['prior_receipt_ids'])
+                            != {pending['input_request_id'], after['capture_request_id']}):
+                    raise ValueError('图标后帧不是原单击之后的独立观察，或夹有其他请求')
+                after_png = self.records / ('preparation-inspection-' + request['request_id'] + '-after.png')
+                with after_png.open('xb') as stream:
+                    stream.write(self.frame_path.read_bytes())
+                pending.update(outcome='input_delivered_effect_unverified', after_png=str(after_png),
+                    after_observation=copy.deepcopy(after), after_receipt=redact(receipt))
+            except (ValueError, RuntimeError, OSError, KeyError, TypeError, TimeoutError) as exc:
+                pending.update(outcome='effect_unverified' if pending['publication_attempted'] else 'zero_input_refused', error=str(exc))
+            finally:
+                if pending['publication_attempted']:
+                    # A click on a consumable is not proof of read-only details.
+                    self.invalidate_preparation('unknown_inventory')
+                    (self.run / 'runner-battle-approval.json').unlink(missing_ok=True)
+                self.save_preparation_inspection(pending)
+                self.preparation_inspection_inflight = None
+            # Preserve the original ID even if delivery/effect is unknown.
+            # No automatic dismiss/use/retry, no new human/native phase flags.
+            if pending.get('after_observation'):
+                self.state['decision_request'] = None
+                self.ask(self.last_observation, 'preparation_target_inspection',
+                    '单次图标探测后原独立画面；ROOT实读详情/效果，旧库存经济验收已失效，不自动使用或关闭',
+                    choices={'inspection': redact(pending)}, category='exception', business_step='lineup_equipment')
+            self.publish(preparation_inspection=redact(pending), phase='等待ROOT图标探测核验',
+                reason='图标检查实际结果：' + pending['outcome'])
+            return copy.deepcopy(pending)
 
     def save_deployment(self, value):
         previous = self.business.get('deployment_pending')
