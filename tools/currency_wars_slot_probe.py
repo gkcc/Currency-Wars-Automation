@@ -189,10 +189,13 @@ class SlotProbe:
         # slot rectangle. Keep the fixed slot/glyph geometry unchanged and
         # inspect only this bounded top-right margin for complete badge blocks.
         badge_top = y1 - (8 if definition['location'] == 'board' else 0)
-        badge_bounds = [x2-42, badge_top, x2, y1+47]
+        # Match the retained front glyph grid correction above. The broad
+        # 145px slot steps drift against rendered badges; keep slot geometry fixed.
+        badge_shift = 2 * (definition['slot'] - 1) if definition['row'] == 'front' else 0
+        badge_bounds = [x2-42-badge_shift, badge_top, x2-badge_shift, y1+47]
         badge_sources = [{key: item[key] for key in ('file', 'name', 'source_sha256', 'bounds')}
                          for item, unused in self.reader.templates if item['kind'] == 'badge']
-        badge = badge_evidence(rgb[badge_top:y1+47, x2-42:x2], badge_sources)
+        badge = badge_evidence(rgb[badge_bounds[1]:badge_bounds[3], badge_bounds[0]:badge_bounds[2]], badge_sources)
         if any(max(badge_bounds[0], b[0]) < min(badge_bounds[2], b[2])
                and max(badge_bounds[1], b[1]) < min(badge_bounds[3], b[3]) for b in overlays):
             result['reasons'] = ['slot_intersects_visible_popup']
