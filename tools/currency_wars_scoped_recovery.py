@@ -126,6 +126,9 @@ def literal_powershell_child(argv, child_commands):
     if index != len(argv)-2 or any(a not in ('-noprofile','-noninteractive','-nologo') for a in lower[1:index]):
         return False
     command=argv[-1].strip()
+    utf8_prefix = 'try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}\n'
+    if command.startswith(utf8_prefix):
+        command = command[len(utf8_prefix):].lstrip()
     suffix='; exit $LASTEXITCODE'
     if command.endswith(suffix): command=command[:-len(suffix)].rstrip()
     if command.startswith('& '): command=command[2:].lstrip()
