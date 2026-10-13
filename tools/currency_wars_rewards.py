@@ -411,6 +411,65 @@ def _shop_caption_visible_semantics(original, actual, images):
             or _shop_probability_visible_semantics(*rest, images))
 
 
+def _preparation_hud_visible_semantics(original, actual, images):
+    """Authenticate fixed HUD glyphs before tolerating their OCR jitter.
+
+    Only the observed preparation HUD is covered; shop, gold, reward targets,
+    page anchors and every other row retain their original checks.
+    """
+    import cv2
+    from currency_wars_visual_guards import _navigation_ink_equal, _navigation_visible_semantics
+    if (original.get('page') != 'preparation' or actual.get('page') != 'preparation'
+            or original.get('fields', {}).get('deployed') != actual.get('fields', {}).get('deployed')
+            or not re.fullmatch(r'\d+/\d+', original.get('fields', {}).get('deployed') or '')):
+        return False
+    hud_values = []
+    for obs in (original, actual):
+        hud = obs.get('semantic', {}).get('player_hud') or {}
+        if (hud.get('snapshot_id') != obs.get('snapshot_id')
+                or hud.get('actor') != 'player' or hud.get('origin') != 'native_player_hud'
+                or type(hud.get('level')) is not int or not isinstance(hud.get('xp'), list)
+                or len(hud['xp']) != 2 or any(type(n) is not int for n in hud['xp'])):
+            return False
+        hud_values.append((hud['level'], hud['xp']))
+    if hud_values[0] != hud_values[1]:
+        return False
+    regions = ((248, 876, 345, 941), (260, 972, 340, 1015),
+               (840, 200, 1040, 285), (275, 933, 326, 968), (90, 423, 162, 462),
+               (1507, 867, 1540, 902))
+    for index, bounds in enumerate(regions):
+        if index < 3:
+            ink_bounds = ((885, 204, 1038, 283) if index == 2 else
+                          (248, 881, 345, 938) if index == 0 else bounds)
+            if not _navigation_ink_equal(images, ink_bounds):
+                return False
+            continue
+        x, y, right, bottom = bounds
+        crops = [rgb[y:bottom, x:right] for rgb in images]
+        delta = np.max(np.abs(crops[0].astype(np.int16)-crops[1].astype(np.int16)), axis=2)
+        if index in (4, 5):
+            if (int(delta.max()) > 1
+                    or any(np.count_nonzero(cv2.Canny(crop, 50, 100)) < 24 for crop in crops)):
+                return False
+            continue
+        # The two actual XP frames retain dark glyph RGB (max13), while their
+        # blue background pulse crosses the dark-mask threshold. Authenticate
+        # both foreground sets, not an intersection that could hide a digit.
+        masks = [cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)[:, :, 2] < 80 for crop in crops]
+        if any(np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60 for mask in masks):
+            return False
+        union = masks[0] | masks[1]
+        if (np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) < .80
+                or int(delta[union].max()) > 16):
+            return False
+    # Any row crossing a boundary remains in the strict comparison. Only the
+    # complete fixed population ROI includes its known OCR-prefixed icon.
+    rest = [{**obs, 'rows': [row for row in obs.get('rows', [])
+                           if not any(_inside(row.get('box'), bounds) for bounds in regions)]}
+            for obs in (original, actual)]
+    return _navigation_visible_semantics(*rest)
+
+
 def _reward_visible_semantics(original, actual, images):
     """Keep global semantics strict except one native, non-clicked caption.
 
@@ -445,7 +504,8 @@ def _reward_visible_semantics(original, actual, images):
         return False
     rest = [{**observed, 'rows': [row for row in observed.get('rows', []) if row is not caption]}
             for observed, caption in zip((original, actual), selected)]
-    return _navigation_visible_semantics(*rest)
+    return (_navigation_visible_semantics(*rest)
+            or _preparation_hud_visible_semantics(*rest, images))
 
 
 def _context_images(original, actual, original_png, current_png, *, allow_coin_change=False,

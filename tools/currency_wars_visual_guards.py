@@ -710,7 +710,9 @@ def _navigation_visible_semantics(original, actual):
                 return False
             if score >= .72:
                 visible.append((clean(row.get('text', '')), row['box']))
-        rows.append(sorted(visible))
+        # Equal labels recur vertically (e.g. several 1/3 bond counters).
+        # Order by their row before x; one-pixel x jitter must not swap them.
+        rows.append(sorted(visible, key=lambda item: (item[0], item[1][1], item[1][0], item[1][2], item[1][3])))
     return (bool(rows[0]) and len(rows[0]) == len(rows[1])
             and all(old[0] == fresh[0] and all(abs(a-b) <= 2 for a, b in zip(old[1], fresh[1]))
                     for old, fresh in zip(*rows)))
