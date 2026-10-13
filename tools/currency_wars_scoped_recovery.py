@@ -138,6 +138,45 @@ def literal_powershell_child(argv, child_commands):
     return any([_norm(a) for a in tokens]==[_norm(a) for a in child] for child in child_commands)
 
 
+def literal_cmd_entry(argv):
+    """Parse CMD's supported single literal /C command, not batch semantics."""
+    lower = [a.casefold() for a in argv]
+    if '/c' not in lower:
+        return None
+    index = lower.index('/c')
+    if index == len(argv) - 1 or any(a not in {'/d', '/e:on', '/v:off', '/s'} for a in lower[1:index]):
+        return None
+    command = ' '.join(argv[index + 1:]).strip()
+    # CMD /S /C often wraps a quoted executable in an additional quote pair.
+    if command.startswith('""') and command.endswith('"'):
+        command = command[1:-1]
+    if any(c in command for c in '&|<>^%!\r\n()'):
+        return None
+    tokens = []
+    pos = 0
+    pattern = re.compile(r'\s*(?:"([^"\r\n]*)"|([^\s"]+))')
+    while pos < len(command):
+        match = pattern.match(command, pos)
+        if not match:
+            return None
+        tokens.append(next(v for v in match.groups() if v is not None))
+        pos = match.end()
+        if pos < len(command) and not command[pos].isspace():
+            return None
+    if (not tokens or not ntpath.isabs(tokens[0])
+            or not tokens[0].casefold().endswith(('.exe', '.cmd', '.bat'))):
+        return None
+    return tokens[0]
+
+
+def in_control_domain(entry, project):
+    path = _norm(ntpath.normpath(str(entry)))
+    roots = (project, BRIDGE, INBOX.parent)
+    return (any(path == _norm(ntpath.normpath(str(root))).rstrip('\\')
+                or path.startswith(_norm(ntpath.normpath(str(root))).rstrip('\\') + '\\') for root in roots)
+            or ntpath.basename(path).startswith('currency_wars_'))
+
+
 def classify(rows, details, project, operator_pid, operator_argv):
     """Classify actual entrypoints. Argument strings are never actor identities."""
     table = {r['pid']: r for r in rows}
@@ -173,6 +212,13 @@ def classify(rows, details, project, operator_pid, operator_argv):
               and literal_powershell_child(argv,[d['argv'] for d in details.values()
                     if d['ppid']==pid and (d['pid']==operator_pid or d['pid'] in parents)])):
             role = 'literal_operator_shell_parent'
+        elif name == 'cmd.exe' and '/c' in [a.casefold() for a in argv]:
+            command_entry = literal_cmd_entry(argv)
+            if command_entry is None:
+                raise RuntimeError('CMD entrypoint scope unknown at PID ' + str(pid))
+            if in_control_domain(command_entry, project):
+                raise RuntimeError('Supported CMD control-domain actor is active at PID ' + str(pid))
+            role = 'unrelated_direct_script'
         elif name in SHELLS:
             # Do not call a diagnostic -Command string a controller merely
             # because it contains a filename. Opaque shell programs instead
@@ -189,7 +235,7 @@ def classify(rows, details, project, operator_pid, operator_argv):
             # existing run. It has no start/resume/input entrypoint. Its CLI
             # children, if any, are still inspected independently.
             role = 'reviewed_nonlaunching_mcp'
-        elif _norm(entry).startswith(project_name + '\\') or ntpath.basename(entry).startswith('currency_wars_'):
+        elif in_control_domain(entry, project):
             raise RuntimeError('Supported project actor is active at PID ' + str(pid))
         else:
             role = 'unrelated_direct_script'
@@ -419,8 +465,10 @@ def validate_proof(r):
                 and isinstance(actor['image'], str) and candidate(actor['image'])
                 and actor['role'] in roles and _sha(actor['command_sha256']) and _sha(actor['image_sha256']))
         shell = actor['image'].casefold() in SHELLS
-        require((actor['role'] in {'literal_operator_shell_parent', 'interactive_operator_parent',
-                                  'unrelated_interactive_shell'}) == shell)
+        shell_role = actor['role'] in {'literal_operator_shell_parent', 'interactive_operator_parent',
+                                       'unrelated_interactive_shell'}
+        require(shell_role == shell or (actor['image'].casefold() == 'cmd.exe'
+                                       and actor['role'] == 'unrelated_direct_script'))
         require(actor['image'].casefold() != GUI)
         indexed[actor['pid']] = actor
     require(any(a['role'] == 'operator_or_venv_parent' for a in actors))

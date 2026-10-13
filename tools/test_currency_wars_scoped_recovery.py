@@ -329,6 +329,36 @@ class ProcessClassificationTests(unittest.TestCase):
         details[50]['argv'][-1]+='; Start-Process python.exe'
         with self.assertRaises(RuntimeError): recovery.classify(rows,details,'D:\\repo',100,argv)
 
+    def test_literal_external_cmd_wrappers_allowed(self):
+        for command in ('"C:\\services\\launch_codex_security_mcp.cmd"',
+                        '""C:\\Program Files\\bridge\\browser-bridge.exe" --stdio"',
+                        'C:\\postgres\\postgres.exe -D C:\\data',
+                        'C:\\services\\launch.bat'):
+            with self.subTest(command=command):
+                argv,rows,details=self.base()
+                item=self.facts(200,0,'cmd.exe',['cmd.exe','/D','/E:on','/V:off','/S','/C',command])
+                rows.append(item);details[200]=item
+                self.assertEqual(recovery.classify(rows,details,'D:\\repo',100,argv)[-1]['role'],'unrelated_direct_script')
+
+    def test_cmd_opaque_and_control_domain_refused(self):
+        commands=['relative.cmd','%COMSPEC% /c other','C:\\a.cmd & C:\\b.exe',
+                  'C:\\a.exe | C:\\b.exe','C:\\a.exe > output','C:\\a.exe !X!',
+                  'C:\\a.exe ^& anything','D:\\repo\\tools\\start.cmd',
+                  'D:\\CurrencyWarsInputBridge\\python\\python.exe',
+                  'D:\\Codex\\Workspaces\\CurrencyWars-InputBridge\\run.cmd']
+        for command in commands:
+            with self.subTest(command=command):
+                argv,rows,details=self.base();item=self.facts(200,0,'cmd.exe',['cmd.exe','/c',command])
+                rows.append(item);details[200]=item
+                with self.assertRaises(RuntimeError):recovery.classify(rows,details,'D:\\repo',100,argv)
+
+    def test_external_cmd_does_not_exempt_controller_child(self):
+        argv,rows,details=self.base()
+        for item in (self.facts(200,0,'cmd.exe',['cmd.exe','/c','C:\\other\\a.cmd']),
+                     self.facts(210,200,'python.exe',['python.exe','D:\\repo\\tools\\currency_wars_runner.py','worker'])):
+            rows.append(item);details[item['pid']]=item
+        with self.assertRaises(RuntimeError):recovery.classify(rows,details,'D:\\repo',100,argv)
+
     def test_expected_supported_names(self):
         for name in ('python.exe','pythonw.exe','python3.13.exe','py.exe','powershell.exe','currency-wars-gui.exe'):
             self.assertTrue(recovery.candidate(name))
