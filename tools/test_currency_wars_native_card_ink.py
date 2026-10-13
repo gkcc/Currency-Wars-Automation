@@ -284,5 +284,66 @@ class NativeCardInkTests(unittest.TestCase):
                     self.assertEqual(runner.optional(worker.run / 'reward-step.json')['status'], 'pending')
 
 
+class InvestmentNativeGuardTests(unittest.TestCase):
+    """Original immutable investment pair, supplied separately from public source."""
+    @classmethod
+    def setUpClass(cls):
+        directory = os.environ.get('CW_NATIVE_INVESTMENT_EVIDENCE_DIR')
+        if not directory:
+            raise unittest.SkipTest('Retained investment pair was not supplied')
+        directory = Path(directory)
+        cls.request = json.loads((directory / 'investment-original-cb464-request.json').read_text('utf8'))
+        cls.original = directory / 'cb464f61dd464f6982d57a750bb2d2df-strategy-original.png'
+        cls.current = directory / 'investment-guard-ecf0-original.png'
+        cls.request['original_png'] = str(cls.original.resolve())
+        cls.actual = perception.Perception().read(cls.current, scope='full')
+        option = cls.request['observation']['semantic']['options'][1]
+        cls.action = {'type': 'click_text', 'text': option['title'], 'exact': True,
+                      'expected_page': 'investment', 'target_evidence': {
+                          **option, 'text': option['title'], 'snapshot_id': cls.request['snapshot_id']}}
+
+    def test_mixed_books_and_disabled_caption_allow_only_card_selection(self):
+        self.assertTrue(guards.stable_semantic_target(
+            self.action, self.request, self.request['observation'], self.original))
+        self.assertTrue(guards.stable_semantic_target(
+            self.action, self.request, self.actual, self.current))
+        action = copy.deepcopy(self.action)
+        action['text'] = '确认'
+        self.assertFalse(guards.stable_semantic_target(action, self.request, self.actual, self.current))
+
+    def test_changed_book_quality_caption_or_source_is_refused(self):
+        pixels = np.array(Image.open(self.current).convert('RGB'))
+        # Mutated PNGs have new identities and declared unchanged OCR premises;
+        # this checks pixel/source refusal, not OCR accuracy on invented frames.
+        with runner.artifacts.scratch_directory('investment-guard-regression') as directory:
+            for damage in ('book_disappears', 'book_appears', 'book_cover', 'book_shift',
+                           'quality_cover', 'caption_cover'):
+                with self.subTest(damage=damage):
+                    current = pixels.copy()
+                    if damage == 'book_disappears':
+                        current[210:252,1113:1149] = current[210:252,1613:1649]
+                    elif damage == 'book_appears':
+                        current[210:252,1613:1649] = current[210:252,1113:1149]
+                    elif damage == 'book_cover':
+                        current[222:239,1120:1139] = [172,134,67]
+                    elif damage == 'book_shift':
+                        current[210:252,1113:1149] = np.roll(current[210:252,1113:1149], 1, axis=1)
+                    elif damage == 'quality_cover':
+                        current[211:241,837:937] = [172,134,67]
+                    else:
+                        current[964:1004,913:1010] = 40
+                    path = Path(directory) / (damage + '.png')
+                    Image.fromarray(current).save(path)
+                    actual = copy.deepcopy(self.actual)
+                    actual['snapshot_id'] = hashlib.sha256(path.read_bytes()).hexdigest()
+                    self.assertFalse(guards.stable_semantic_target(self.action, self.request, actual, path))
+        request = copy.deepcopy(self.request)
+        request['snapshot_id'] = '0' * 64
+        self.assertFalse(guards.stable_semantic_target(self.action, request, self.actual, self.current))
+        action = copy.deepcopy(self.action)
+        action['target_evidence']['effect_lines'] = ['shortened effect']
+        self.assertFalse(guards.stable_semantic_target(action, self.request, self.actual, self.current))
+
+
 if __name__ == '__main__':
     unittest.main()

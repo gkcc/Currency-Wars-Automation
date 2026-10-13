@@ -828,6 +828,79 @@ def _environment_structure_labels(original, actual, labels, bounds, images):
     return extra
 
 
+# Retained native investment frame 8d500d2c, full 36x42 book ROI.
+# Both dark circle and gold book/ring silhouettes must match; a failed match
+# is unknown, never evidence of an absent book.
+_INVESTMENT_BOOK_MASKS = (('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8AAAH//gAAP//wAA///8AB///+AB///+AD////AHgH4HgHgDIHgPgAIHwPgAIHwPgAIHwfgAIH4fgAIH4fgAIH4fgAAH4fgAAH4fgAAH4fgAAH4fgAAH4PgAAHwP/wP/wPwf4PwHgHgHgDgHgHAD////AB///+AA///8AAf//4AAH//gAAB/+AAAAHgAAAAAAAAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAAPwAAAD//AAAPgHwAAcAA4ABwAAOADgAAHAHAAADgOAAABwMAAAAwYAAAAYQAAAAIwf4H4Mwf8n4Egf8n4Ggf8n4Ggf8n4Ggf8n4GAf8n4CAf8/4CAf8/4Cgf8/4Ggf8/4Ggf8/4GgP8/wGgAEgAEwAAAAMwPwPwMYAAAAYMAAAAwMAAAAwGAAABgDgAAHABwAAOAA8AA8AAPADwAAD//AAAAf4AAAAAAAAAAAAAA'), ('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/8AAAH//AAAf//gAA///4AB///8AD///+AH///+APAPwPAPAGQPgfAAQPgfAAQPgfAAQPw/AAQPw/AAQPw/AAQPw/AAAPw/AAAPw/AAAPw/AAAPwfAAAPwfAAAPgf/gf/gPwfwfgPAPAPAHgHAPAD///+AD///8AB///4AAf//wAAP//AAAD/8AAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAAfwAAAH/+AAAfAPgAA4AB4ADgAAcAHAAAOAOAAADAMAAABgYAAABwwAAAAwwAAAAYgfwHwYgf5HwMAf5HwMAf5HwMAf5HwEAf5HwEAf5PwGAf5/wGAf5/wGAf5/wEAf5/wEAf5/wMAf5/wMgAAAAMgAAAAYwfwfgYwAAAAwYAAAAwcAAABgOAAADAHAAAGADgAAcAA4AA4AAeAHgAAH/+AAAA/wAAAAAAAAAAAAAA'))
+
+
+def _investment_book_state(crop):
+    if crop.shape != (42, 36, 3):
+        return None
+    hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+    h, s, v = cv2.split(hsv)
+    masks = (v < 85, (h >= 15) & (h <= 40) & (s > 90) & (v > 190))
+    packed = tuple(base64.b64encode(np.packbits(mask).tobytes()).decode() for mask in masks)
+    if packed in _INVESTMENT_BOOK_MASKS:
+        return 'present'
+    # Positively authenticate the complete unobstructed native gold surface.
+    # Its retained channel spans are 8/8/9; a flat gold cover is not absence.
+    surface = (h >= 15) & (h <= 40) & (s > 90) & (v >= 140) & (v <= 180)
+    if np.all(surface) and np.all(np.ptp(crop.astype(np.int16), axis=(0, 1)) >= 4):
+        return 'absent'
+    return None
+
+
+def _investment_book_equal(images, bounds):
+    x, y, right, bottom = bounds
+    crops = [image[y+14:y+56, right-52:right-16] for image in images]
+    states = [_investment_book_state(crop) for crop in crops]
+    return (states[0] is not None and states[0] == states[1]
+            and np.array_equal(crops[0], crops[1]))
+
+
+def _investment_quality_equal(images, bounds):
+    states = [_quality(image, bounds) for image in images]
+    if states[0] is not None:
+        return states[0] == states[1]
+    if states[1] is not None:
+        return False
+    x, y, right, bottom = bounds
+    crops = [image[y+15:y+45, x+80:x+180] for image in images]
+    # This native gold band is V159..176, not the generic bright gold band.
+    # Only an unchanged complete band can use this investment-only appearance.
+    for crop in crops:
+        hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+        h, s, v = cv2.split(hsv)
+        if not np.all((h >= 15) & (h <= 40) & (s > 90) & (v >= 159) & (v <= 176)):
+            return False
+        if not np.all(np.ptp(crop.astype(np.int16), axis=(0, 1)) >= 4):
+            return False
+    return np.array_equal(crops[0], crops[1])
+
+
+def _investment_confirmation_equal(images, bounds):
+    if _text_equal(images, bounds):
+        return True
+    x, y, right, bottom = bounds
+    crops = [image[y:bottom, x:right] for image in images]
+    masks = []
+    for crop in crops:
+        hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+        s, v = hsv[:, :, 1], hsv[:, :, 2]
+        # Retained disabled caption includes one antialiased V191 pixel.
+        # This proves selection prerequisites only, never a confirm click.
+        if np.any(v > 191):
+            return False
+        mask = (s < 40) & (v >= 100) & (v <= 191)
+        if np.count_nonzero(mask) < 24 or not .015 <= np.mean(mask) <= .60:
+            return False
+        masks.append(mask)
+    union = masks[0] | masks[1]
+    return (np.count_nonzero(masks[0] & masks[1]) / np.count_nonzero(union) >= .985
+            and np.max(np.abs(crops[0].astype(np.int16) - crops[1].astype(np.int16))) <= 2)
+
+
 def _cards(action, request, actual, images):
     original = request['observation']
     page = original.get('page')
@@ -847,7 +920,8 @@ def _cards(action, request, actual, images):
     }[page]
     if (_paired_row(original, actual, re.escape(header), header_roi, images) is None
             or _paired_row(original, actual, '确认', confirm_roi, images,
-                           ink_guard=_environment_confirmation_equal if page == 'environment' else None) is None):
+                           ink_guard=(_environment_confirmation_equal if page == 'environment' else
+                                      _investment_confirmation_equal if page == 'investment' else None)) is None):
         return False
     proof = action.get('target_evidence', {})
     index = proof.get('card_index')
@@ -892,15 +966,14 @@ def _cards(action, request, actual, images):
         if not _card_outline_equal(images, bounds):
             return False
         if page == 'investment':
-            old_quality, new_quality = (_quality(image, bounds) for image in images)
-            if old_quality is None or old_quality != new_quality:
+            if not _investment_quality_equal(images, bounds):
                 return False
             if not _text_equal(images, [x+125, y+100, right-125, y+205]):
                 return False
         # Native book badges cannot disappear, appear, or be occluded.
         if page == 'environment' and not _environment_book_equal(images, [right-45, y+21, right-21, y+41]):
             return False
-        if page == 'investment' and not _text_equal(images, [right-45, y+21, right-21, y+41]):
+        if page == 'investment' and not _investment_book_equal(images, bounds):
             return False
     point = action.get('args')
     target = _unique_row(actual, re.escape(clean(selected['title'])), layout[index-1])
