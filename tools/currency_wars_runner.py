@@ -4766,7 +4766,7 @@ class Worker:
             guard()
             with self.profile_span('reward_supervisor_recovery', operation='rules', business_step=pending['kind'],
                                    request_id=pending['request_id']):
-                fresh = self.observe(scope='rewards', max_attempts=1)
+                fresh = self.observe(scope='full' if pending.get('source') == 'supervising_agent' else 'rewards', max_attempts=1)
             guard()
             if (fresh.get('capture_request_id') in watermark
                     or set(self.economy_receipt_watermark()) != set(watermark) | {fresh.get('capture_request_id')}
@@ -4886,7 +4886,7 @@ class Worker:
                     time.sleep(min(.05, remaining))
             with self.profile_span('reward_effect_observe', operation='rules', business_step=pending['kind'],
                                    request_id=pending['request_id']):
-                return self.observe(scope='rewards', max_attempts=1)
+                return self.observe(scope='full' if pending.get('source') == 'supervising_agent' else 'rewards', max_attempts=1)
 
     def verify_reward_effect(self, pending, observed):
         """A receipt and stable visual result are separate obligations."""
@@ -5021,7 +5021,8 @@ class Worker:
         with self.observation_input_lease():
             if manual_steps.unknown_receipts(self.run, self.c):
                 raise ValueError('原输入交付未知；先对账原ID，不以新帧代替交付')
-            fresh = self.observe(scope='rewards')
+            # The supervised glyph guard needs snapshot-bound player HUD facts.
+            fresh = self.observe(scope='full')
             from currency_wars_rewards import stable_reward_target
             if not stable_reward_target(request['observation'], fresh, old_png,
                                         self.frame_path.read_bytes(), target):
@@ -5161,7 +5162,8 @@ class Worker:
                 after = self.command([f'click:{point[0]}:{point[1]}', 'wait:0.7'],
                     '当前单个收店/奖励球控件；稳定后图验证后再定位下一目标', observed['page'],
                     '单控件效果，不代表全部领空', action={'type': 'click_point', 'purpose': 'local_reward',
-                        'args': point, 'expected_page': observed['page']}, read_scope='rewards')
+                        'args': point, 'expected_page': observed['page']},
+                        read_scope='full' if target.get('source') == 'supervising_agent' else 'rewards')
                 if target['kind'] in ('blue_orb', 'gray_orb'):
                     self.invalidate_preparation('inventory')
                 self.verify_reward_effect(pending, after)
