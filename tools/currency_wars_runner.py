@@ -5799,10 +5799,16 @@ class Worker:
         semantic = actual.get('semantic') or {}
         scan = semantic.get('rewards') or {}
         capacity = (semantic.get('team') or {}).get('capacity') or {}
+        overflow = capacity.get('overflow_count')
+        # Unknown native overflow is not a positive overflow observation. The
+        # current economy phase still requires accepted inventory cleanup;
+        # each selected action retains its own model/storage and input guards.
+        # Keep None/overflow_checked unchanged, never manufacture native zero.
         if ((scan.get('snapshot_id') == actual['snapshot_id']
                 and (scan.get('targets') or scan.get('uncertain') or scan.get('interaction_required')))
                 or semantic.get('options')
-                or capacity.get('snapshot_id') == actual['snapshot_id'] and capacity.get('overflow_count', 0) != 0):
+                or (capacity.get('snapshot_id') == actual['snapshot_id'] and overflow is not None
+                    and (type(overflow) is not int or overflow != 0))):
             raise ValueError('经济宏当前奖励/选项/腾位要求出现，返回ROOT')
         pending = ledger.get('pending')
         if pending and (not publication or pending is not getattr(self, 'economy_inflight', None)
