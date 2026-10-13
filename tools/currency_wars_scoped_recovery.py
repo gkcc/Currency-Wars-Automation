@@ -150,7 +150,7 @@ def literal_cmd_entry(argv):
     # CMD /S /C often wraps a quoted executable in an additional quote pair.
     if command.startswith('""') and command.endswith('"'):
         command = command[1:-1]
-    if any(c in command for c in '&|<>^%!\r\n()'):
+    if any(c in command for c in '&|^%!\r\n()'):
         return None
     tokens = []
     pos = 0
@@ -163,8 +163,18 @@ def literal_cmd_entry(argv):
         pos = match.end()
         if pos < len(command) and not command[pos].isspace():
             return None
+    redirected = len(tokens) >= 5 and tokens[-4] == '<' and tokens[-2] == '>'
+    if redirected:
+        for path in (tokens[-3], tokens[-1]):
+            drive, tail = ntpath.splitdrive(path)
+            if not drive or not tail.startswith(('\\', '/')) or any(c in path for c in '<>'):
+                return None
+        tokens = tokens[:-4]
+    if any('<' in token or '>' in token for token in tokens):
+        return None
     if (not tokens or not ntpath.isabs(tokens[0])
-            or not tokens[0].casefold().endswith(('.exe', '.cmd', '.bat'))):
+            or not tokens[0].casefold().endswith(('.exe', '.cmd', '.bat'))
+            or (redirected and not tokens[0].casefold().endswith('.exe'))):
         return None
     return tokens[0]
 

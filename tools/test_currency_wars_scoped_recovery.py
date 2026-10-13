@@ -380,6 +380,22 @@ class ProcessClassificationTests(unittest.TestCase):
             rows.append(item);details[item['pid']]=item
         with self.assertRaises(RuntimeError):recovery.classify(rows,details,'D:\\repo',100,argv)
 
+    def test_external_native_cmd_strict_stdio_suffix(self):
+        argv,rows,details=self.base()
+        item=self.facts(200,0,'cmd.exe',['cmd.exe','/d','/s','/c',
+            'C:\\browser\\browser-bridge.exe --parent-window=0',
+            '<',r'\\.\pipe\input-test','>',r'\\.\pipe\output-test'])
+        rows.append(item);details[200]=item
+        self.assertEqual(recovery.classify(rows,details,'D:\\repo',100,argv)[-1]['role'],'unrelated_direct_script')
+        for tail in (['<','relative','>','C:\\output'],
+                     ['<','C:\\input','>','C:\\output','&','C:\\next.exe'],
+                     ['<','C:\\input','>>','C:\\output'],
+                     ['<','%TEMP%\\input','>','C:\\output'],
+                     ['>','C:\\output'], ['<','C:\\input','>','C:\\out|other']):
+            with self.subTest(tail=tail):
+                details[200]['argv']=item['argv'][:5]+tail
+                self.assertIsNone(recovery.literal_cmd_entry(details[200]['argv']))
+
     def test_expected_supported_names(self):
         for name in ('python.exe','pythonw.exe','python3.13.exe','py.exe','powershell.exe','currency-wars-gui.exe'):
             self.assertTrue(recovery.candidate(name))
