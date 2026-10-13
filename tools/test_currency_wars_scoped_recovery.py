@@ -304,7 +304,7 @@ class ProcessClassificationTests(unittest.TestCase):
 
     def test_project_actor_and_opaque_interpreter_refused(self):
         for args in (['python.exe','D:\\repo\\tools\\currency_wars_runner.py','worker'],
-                     ['python.exe','-c','something'],['python.exe'],['python.exe','-m','other']):
+                     ['python.exe','-c','something'],['python.exe'],['python.exe','-m','currency_wars_runner']):
             argv,rows,details=self.base(); item=self.facts(200,0,'python.exe',args)
             rows.append(item);details[200]=item
             with self.assertRaises(RuntimeError): recovery.classify(rows,details,'D:\\repo',100,argv)
