@@ -506,5 +506,136 @@ class RewardRecoveryTests(unittest.TestCase):
                 handoff_is_not_an_orb_effect=True))
 
 
+class RetainedCurrentRecoveryTests(unittest.TestCase):
+    """Actual pixels/native unknowns, replayed only with inert owned receipt actors."""
+    def test_existing_unknown_blue_sibling_current_continuation_preserves_history(self):
+        import os
+        directory = os.environ.get('CW_REWARD_CURRENT_RECOVERY_EVIDENCE_DIR')
+        if not directory:
+            self.skipTest('Retained current-recovery evidence was not supplied')
+        directory = Path(directory)
+        source = json.loads((directory / 'reward-step-50400de4b4884f169b71fc11e3034ddf.json').read_text('utf8'))
+        current_request = json.loads((directory / 'reward-current-inspect-request.json').read_text('utf8'))
+        native_before = source['before']['observation']
+        native_current = current_request['observation']
+        before_data, current_data = (Path(source['before_png']).read_bytes(),
+                                     Path(current_request['original_png']).read_bytes())
+        original_hash = hashlib.sha256((directory / 'reward-step-50400de4b4884f169b71fc11e3034ddf.json').read_bytes()).hexdigest()
+        for case in ('continue', 'missing_sibling', 'native_origin', 'overlap', 'new_input', 'unknown_delivery', 'lower_coins', 'moved_target', 'covered_target', 'changed_page'):
+            with self.subTest(case=case), transport.protocol_fixture() as bundle:
+                worker, control = bundle.worker, bundle.control
+                # Native observations/unknowns are retained; capture IDs/epoch
+                # belong to this inert fixture, never to the original game lease.
+                frames = {'two': (native_before, before_data), 'one_after': (native_current, current_data),
+                          'one_fresh': (native_current, current_data)}
+                for key, (observed, payload) in frames.items():
+                    bundle.frames[key] = dict(payload=payload, observation=copy.deepcopy(observed))
+                by_digest = {observed['snapshot_id']: observed for observed, payload in frames.values()}
+                def read(path, force=False, *, scope='full', **unused):
+                    observed = copy.deepcopy(by_digest[hashlib.sha256(Path(path).read_bytes()).hexdigest()])
+                    if case == 'lower_coins' and control.orb_index > 0:
+                        observed['semantic']['coins']['value'] = 5
+                    return observed
+                bundle.reader.read = read
+                stage = source['before']['stage']
+                worker.active_match_id = source['match_id']
+                worker.last_preparation_stage = stage
+                worker.preparation_scope = (worker.active_match_id, stage, worker.epoch())
+                worker.preparation_reviews = {}
+                control.write_json(bundle.runtime / 'runner-manual.json',
+                    dict(manual_id='manual-hud', reason='offline retained-current protocol'))
+                publish = worker.publish
+                def persist(**changes):
+                    publish(**changes)
+                    state = runner.optional(bundle.runtime / 'runner-state.json')
+                    state.update(match_id=worker.active_match_id, preparation_stage=stage,
+                                 decision_request=copy.deepcopy(worker.state.get('decision_request')))
+                    control.write_json(bundle.runtime / 'runner-state.json', state)
+                worker.publish = persist
+                persist()
+                before = worker.observe(scope='full')
+                watermark = worker.economy_receipt_watermark()
+                before_path = bundle.records / 'retained-before.png'
+                before_path.write_bytes(before_data)
+                rid = uuid.uuid4().hex
+                # No device: this existing transport records a declared past
+                # one-click receipt and supplies the immutable successor PNG.
+                runner.entry.request(control, 'actions', ['click:1588:401', 'wait:0.7'], rid, False)
+                receipt = runner.await_existing_receipt(bundle.runtime, control, rid, 0)
+                pending = copy.deepcopy(source)
+                pending.update(request_id=rid, resume_epoch=worker.epoch(), before_png=str(before_path),
+                    prior_receipt_ids=watermark, before=dict(stage=stage, coins=6, observation=before),
+                    receipt=receipt['result'], broker_actions=receipt['request']['actions'])
+                worker.save_reward_step(pending)
+                checkpoint = runner.begin_manual_phase(bundle.runtime, bundle.owner, control,
+                    'manual-hud', 'rewards', reader=bundle.reader)
+                observed = worker.observe(scope='full')
+                worker.ask(observed, 'reward_result', 'Offline current recovery; original history stays unknown')
+                request = worker.state['decision_request']
+                evidence = dict(source='supervising_agent',
+                    **{key: request[key] for key in ('request_id', 'snapshot_id', 'match_id', 'resume_epoch', 'deadline_at')},
+                    **{key: observed[key] for key in ('capture_request_id', 'frame_id', 'page')},
+                    stage=stage, checkpoint_id=checkpoint['checkpoint_id'], reward_step_id=pending['step_id'],
+                    input_request_id=rid, prior_outcome_remains_unknown=True, target_now_absent=True,
+                    continue_current_rewards=True, findings='Inert receipt fixture; retained native unknowns unchanged',
+                    existing_siblings=[dict(source='supervising_agent', kind='blue_orb', bounds=[1460,262,1534,331])])
+                if case == 'missing_sibling':
+                    evidence.pop('existing_siblings')
+                elif case == 'native_origin':
+                    evidence['existing_siblings'][0]['source'] = 'native_visual_state_reader'
+                elif case == 'overlap':
+                    evidence['existing_siblings'][0]['bounds'] = pending['target']['bounds']
+                elif case == 'new_input':
+                    runner.entry.request(control, 'actions', ['click:100:100'], uuid.uuid4().hex, False)
+                elif case == 'unknown_delivery':
+                    path = bundle.runtime / 'request-ledger' / (hashlib.sha256(rid.encode()).hexdigest() + '.json')
+                    record = runner.entry.read_json(path)
+                    record['result']['completed'] = []
+                    record['result']['ok'] = False
+                    control.write_json(path, record)
+                if case in ('moved_target', 'covered_target', 'changed_page'):
+                    observed = copy.deepcopy(native_current)
+                    payload = current_data
+                    if case == 'changed_page':
+                        observed['page'] = 'reward_overlay'
+                    else:
+                        with Image.open(io.BytesIO(current_data)) as image:
+                            changed = image.convert('RGB')
+                        if case == 'covered_target':
+                            changed.paste((25,35,55), tuple(pending['target']['bounds']))
+                        else:
+                            with Image.open(io.BytesIO(before_data)) as image:
+                                changed.paste(image.crop(tuple(pending['target']['bounds'])), (1320,260))
+                        stream = io.BytesIO()
+                        changed.save(stream, format='PNG')
+                        changed.close()
+                        payload = stream.getvalue()
+                        observed['snapshot_id'] = hashlib.sha256(payload).hexdigest()
+                    by_digest[observed['snapshot_id']] = observed
+                    bundle.frames['one_fresh'] = dict(payload=payload, observation=observed)
+                archive = bundle.records / ('reward-step-' + pending['step_id'] + '.json')
+                raw, count = archive.read_bytes(), len(control.published)
+                try:
+                    result, unused = job(bundle, 'recover_reward', checkpoint['checkpoint_id'],
+                                          reply={'reward_recovery': evidence})
+                except ValueError:
+                    if case == 'continue':
+                        raise
+                    result = {'status': 'refused'}
+                self.assertEqual(result['status'], 'returned' if case == 'continue' else 'refused', result)
+                self.assertEqual(archive.read_bytes(), raw)
+                if case == 'continue':
+                    self.assertTrue(result['result']['reward_recovery']['continuation_allowed'])
+                    self.assertTrue(result['result']['reward_recovery']['prior_outcome_remains_unknown'])
+                    self.assertFalse(result['result']['reward_recovery']['input_resent'])
+                    self.assertEqual(control.published[count:][0]['actions'], [{'type': 'observe', 'args': []}])
+                    self.assertEqual(len(control.published) - count, 1)
+                    self.assertIsNone(worker.pending_reward_step(worker.last_observation))
+                else:
+                    self.assertFalse(any(action['type'] not in ('observe', 'wait')
+                        for publication in control.published[count:] for action in publication['actions']))
+        self.assertEqual(hashlib.sha256((directory / 'reward-step-50400de4b4884f169b71fc11e3034ddf.json').read_bytes()).hexdigest(), original_hash)
+
+
 if __name__ == '__main__':
     unittest.main()

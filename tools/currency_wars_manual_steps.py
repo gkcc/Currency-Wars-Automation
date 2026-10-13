@@ -225,7 +225,7 @@ def validate_reward_recovery(evidence, request, binding, checkpoint_id, pending)
             'page', 'match_id', 'stage', 'resume_epoch', 'checkpoint_id', 'deadline_at',
             'reward_step_id', 'input_request_id', 'prior_outcome_remains_unknown',
             'target_now_absent', 'continue_current_rewards', 'findings'}
-    if (not isinstance(evidence, dict) or set(evidence) != keys
+    if (not isinstance(evidence, dict) or set(evidence) not in (keys, keys | {'existing_siblings'})
             or evidence.get('source') != 'supervising_agent'
             or any(evidence.get(key) is not True for key in
                    ('prior_outcome_remains_unknown', 'target_now_absent', 'continue_current_rewards'))
@@ -259,7 +259,9 @@ def validate_reward_recovery(evidence, request, binding, checkpoint_id, pending)
     path = Path(request.get('original_png', ''))
     if not path.is_file() or path.stat().st_size > 25_000_000 or hashlib.sha256(path.read_bytes()).hexdigest() != evidence['snapshot_id']:
         raise ValueError('reward recovery current source PNG missing or changed')
-    return _digest({key: evidence[key] for key in sorted(keys - {'findings', 'deadline_at'})})
+    from currency_wars_rewards import validate_current_reward_siblings
+    validate_current_reward_siblings(pending.get('target'), evidence.get('existing_siblings', []))
+    return _digest({key: evidence[key] for key in sorted(set(evidence) - {'findings', 'deadline_at'})})
 
 
 def _recovery_reply(operation, reply):

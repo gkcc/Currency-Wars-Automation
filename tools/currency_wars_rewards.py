@@ -834,6 +834,67 @@ def target_effect(original, actual, original_png, current_png, target):
         return result
 
 
+def validate_current_reward_siblings(target, siblings):
+    """Bounded supervisor READ supplements, never native targets or click points."""
+    if _effect_bounds(target) is None or not isinstance(siblings, list) or len(siblings) > 7:
+        raise ValueError('current reward sibling proof is unsupported')
+    boxes = [target['bounds']]
+    for other in siblings:
+        if (not isinstance(other, dict) or set(other) != {'source', 'kind', 'bounds'}
+                or other.get('source') != 'supervising_agent' or other.get('kind') != target['kind']
+                or _effect_bounds(other) is None):
+            raise ValueError('current reward sibling requires an explicit same-kind bounded READ')
+        x, y, right, bottom = other['bounds']
+        if any(x < box[2] and right > box[0] and y < box[3] and bottom > box[1] for box in boxes):
+            raise ValueError('current reward sibling proof overlaps or duplicates a target')
+        boxes.append(other['bounds'])
+
+
+def current_reward_absence(original, actual, original_png, current_png, target, existing_siblings):
+    """Current continuation only; this cannot settle the old reward's outcome.
+
+    Unknown native siblings remain unknown. A supervisor may identify an orb
+    already exposed in the original frame, but every such complete ROI must
+    remain stable before it can be excluded from the moved-source veto.
+    Historic outside-target animation is not current disappearance evidence.
+    """
+    result = {'state': 'unknown', 'reason': 'current_reward_absence_unverified',
+              'source': 'supervising_agent', 'historical_outcome': 'unknown',
+              'scope': list(SCAN_BOUNDS), 'all_rewards_cleared': None}
+    try:
+        validate_current_reward_siblings(target, existing_siblings)
+        if original.get('page') != 'preparation':
+            return result
+        images = _context_images(original, actual, original_png, current_png, allow_coin_change=True,
+                                 supervised_target=target.get('source') == 'supervising_agent')
+        if images is None:
+            return result
+        before, after = images
+        if not target_pair_stable(before, before, target):
+            return {**result, 'reason': 'original_target_not_exposed'}
+        if target_pair_stable(before, after, target):
+            return {**result, 'reason': 'current_target_still_present'}
+        siblings = _effect_siblings(original, before, after, target)
+        if siblings is None:
+            return {**result, 'reason': 'known_sibling_changed_or_unbound'}
+        for other in existing_siblings:
+            if not target_pair_stable(before, before, other) or not target_pair_stable(before, after, other):
+                return {**result, 'reason': 'supervised_existing_sibling_changed_or_unexposed'}
+            if not any(item['kind'] == other['kind'] and item['bounds'] == other['bounds'] for item in siblings):
+                siblings.append(other)
+        background = _reward_background(after, target)
+        if not background['plausible']:
+            return {**result, 'reason': background['reason'], 'background': background}
+        veto = _source_appearance_veto(before, after, target, siblings)
+        if veto is not None:
+            return {**result, 'reason': veto['reason'], 'source_probe': veto}
+        return {**result, 'state': 'absent', 'reason': 'current_target_absent_with_existing_siblings_bound',
+                'background': background, 'supervised_existing_siblings': existing_siblings,
+                'known_siblings_checked': len(siblings)}
+    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, np.linalg.LinAlgError):
+        return result
+
+
 def stable_absence(previous, actual, previous_png, current_png, target):
     """Compare two exposed empty target regions; caller retains both provenances."""
     try:

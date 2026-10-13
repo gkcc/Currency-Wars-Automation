@@ -5086,11 +5086,11 @@ class Worker:
             reviewed_coins = self.reward_coins(reviewed)
             if (type(before_coins) is not int or reviewed_coins is None or reviewed_coins < before_coins):
                 raise ValueError('reward recovery current native coins unknown or below original; no fee inference')
-            from currency_wars_rewards import target_effect, stable_absence
+            from currency_wars_rewards import current_reward_absence, stable_absence
             before_data = Path(pending['before_png']).read_bytes()
             reviewed_data = Path(request['original_png']).read_bytes()
-            reviewed_effect = target_effect(pending['before']['observation'], reviewed,
-                before_data, reviewed_data, pending['target'])
+            reviewed_effect = current_reward_absence(pending['before']['observation'], reviewed,
+                before_data, reviewed_data, pending['target'], evidence.get('existing_siblings', []))
             if reviewed_effect.get('state') != 'absent':
                 raise ValueError('reviewed current target is not exposed/absent; inspect current page first')
             guard()
@@ -5104,8 +5104,8 @@ class Worker:
                 raise ValueError('reward recovery current capture watermark changed')
             manual_steps._bound_reward_frame(self.run, self.c, fresh, self.frame_path, read_only=True)
             data = self.frame_path.read_bytes()
-            current_effect = target_effect(pending['before']['observation'], fresh,
-                before_data, data, pending['target'])
+            current_effect = current_reward_absence(pending['before']['observation'], fresh,
+                before_data, data, pending['target'], evidence.get('existing_siblings', []))
             coins = self.reward_coins(fresh)
             if (coins != reviewed_coins or current_effect.get('state') != 'absent'
                     or not stable_absence(reviewed, fresh, reviewed_data, data, pending['target'])):
