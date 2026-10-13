@@ -94,7 +94,7 @@ def _norm(value):
     return str(value).replace('/', '\\').casefold()
 
 
-def python_entry(argv):
+def python_entry(argv, *, module=False):
     """Parse interpreter options until the entry, never inspect later data args."""
     index = 1
     while index < len(argv):
@@ -105,7 +105,12 @@ def python_entry(argv):
             index += 1
         elif arg.startswith(('-X', '-W')) and len(arg) > 2:
             index += 1
-        elif not arg.startswith('-') and ntpath.isabs(arg) and arg.casefold().endswith(('.py', '.pyw')):
+        elif module and arg == '-m' and index + 1 < len(argv):
+            name = argv[index + 1]
+            if re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', name):
+                return name, argv[index + 2:]
+            return None, []
+        elif not module and not arg.startswith('-') and ntpath.isabs(arg) and arg.casefold().endswith(('.py', '.pyw')):
             return arg, argv[index + 1:]
         else:
             return None, []
@@ -211,6 +216,7 @@ def classify(rows, details, project, operator_pid, operator_argv):
     result = []
     for pid, item in sorted(details.items()):
         argv = item['argv']; name = item['name'].casefold()
+        module, unused = python_entry(argv, module=True) if name not in SHELLS | {GUI} else (None, [])
         entry, tail = python_entry(argv) if name not in SHELLS | {GUI} else (None, [])
         same_operator = (len(argv) >= len(operator_argv) + 1
                          and [_norm(a) for a in argv[-len(operator_argv):]] == [_norm(a) for a in operator_argv])
@@ -238,6 +244,15 @@ def classify(rows, details, project, operator_pid, operator_argv):
             role = 'interactive_operator_parent' if pid in parents else 'unrelated_interactive_shell'
         elif name == GUI:
             raise RuntimeError('Supported GUI is active at PID ' + str(pid))
+        elif module is not None:
+            # Same cooperative boundary as external direct .py entrypoints.
+            # This records the declared module, not a claim about arbitrary
+            # external code's future behavior; children are checked separately.
+            parts = module.casefold().split('.')
+            if (in_control_domain(item['exe'], project)
+                    or any(part.startswith('currency_wars') or 'bridge' in part for part in parts)):
+                raise RuntimeError('Supported module control-domain actor is active at PID ' + str(pid))
+            role = 'unrelated_direct_module'
         elif entry is None:
             raise RuntimeError('Python entrypoint scope unknown at PID ' + str(pid))
         elif _norm(entry) == mcp:
@@ -252,6 +267,8 @@ def classify(rows, details, project, operator_pid, operator_argv):
         result.append(dict(pid=pid, ppid=item['ppid'], image=item['name'], identity=item['identity'],
                            role=role, command_sha256=hashlib.sha256(json.dumps(argv).encode()).hexdigest(),
                            image_sha256=hashlib.sha256(_norm(item['exe']).encode()).hexdigest()))
+        if role == 'unrelated_direct_module':
+            result[-1]['module'] = module
     return result
 
 
@@ -504,11 +521,18 @@ def validate_proof(r):
     require(isinstance(actors, list) and 1 <= len(actors) <= 32768)
     roles = {'operator_or_venv_parent', 'literal_operator_shell_parent',
              'interactive_operator_parent', 'unrelated_interactive_shell',
-             'reviewed_nonlaunching_mcp', 'unrelated_direct_script'}
+             'reviewed_nonlaunching_mcp', 'unrelated_direct_script', 'unrelated_direct_module'}
     indexed = {}
     for actor in actors:
-        require(isinstance(actor, dict) and set(actor) ==
-                {'pid', 'ppid', 'image', 'identity', 'role', 'command_sha256', 'image_sha256'})
+        require(isinstance(actor, dict))
+        module_actor = actor.get('role') == 'unrelated_direct_module'
+        keys = {'pid', 'ppid', 'image', 'identity', 'role', 'command_sha256', 'image_sha256'}
+        require(set(actor) == (keys | {'module'} if module_actor else keys))
+        if module_actor:
+            require(isinstance(actor['module'], str) and re.fullmatch(
+                r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', actor['module']) is not None)
+            require(not any(part.startswith('currency_wars') or 'bridge' in part
+                            for part in actor['module'].casefold().split('.')))
         require(type(actor['pid']) is int and actor['pid'] > 0 and actor['pid'] not in indexed
                 and type(actor['ppid']) is int and actor['ppid'] >= 0 and actor['ppid'] != actor['pid']
                 and isinstance(actor['identity'], str) and re.fullmatch('windows:[1-9][0-9]*', actor['identity']) is not None
