@@ -1814,6 +1814,8 @@ def stable_world_menu_navigation(reply, request, actual):
     if (request.get('kind') != 'unknown_page'
             or original.get('page') != 'unknown' or actual.get('page') != 'unknown'
             or original.get('snapshot_id') != request.get('snapshot_id')
+            or canonical_stage(original.get('fields', {}).get('stage')) is not None
+            or canonical_stage(actual.get('fields', {}).get('stage')) is not None
             or not isinstance(actions, list) or len(actions) != 1):
         return False
     action = actions[0]
@@ -1823,8 +1825,19 @@ def stable_world_menu_navigation(reply, request, actual):
             or type(action['args'][0]) is not int):
         return False
 
-    # Only these labels/1920x1080 HUD locations were read from the current
-    # original world frame; UID/Enter or text elsewhere cannot establish it.
+    # Read the current scene name from the minimap, without fixing a map or quest.
+    scene_bounds = (20, 0, 330, 100)
+    scene_labels = [clean(row.get('text', '')).strip('·•「」『』')
+                    for row in original.get('rows', [])]
+    scene_labels = [label for label in scene_labels
+                    if re.search(r'[一-鿿]', label)
+                    and _stable_navigation_anchor(original, original, label, scene_bounds)]
+    if (len(scene_labels) == 1
+            and _stable_navigation_anchor(original, actual, scene_labels[0], scene_bounds)
+            and _stable_navigation_anchor(original, actual, 'Enter', (40, 920, 200, 1030))):
+        return True
+
+    # Keep the previously supported world frames compatible.
     return (_stable_navigation_anchor(original, actual, '开拓之尾号', (20, 0, 330, 100))
             and (_stable_navigation_anchor(original, actual, '差分宇宙', (1080, 520, 1440, 710))
                  or _stable_navigation_anchor(original, actual, '参加航线会议，决定列车的下一站', (20, 260, 500, 410))))
