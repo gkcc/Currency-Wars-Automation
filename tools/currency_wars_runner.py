@@ -3588,10 +3588,16 @@ class Worker:
                       'input_sent': False, 'input_resent': False})
 
     def command(self, tokens, reason, expected_page=None, postcondition=None, action=None, *, read_scope='full'):
+        login_navigation = bool(action and action.get('purpose') == 'login_startup')
+        if login_navigation:
+            self.guard_login_navigation(tokens, action, self.last_observation or {})
         if getattr(self, 'business_needs_review', False):
-            if not action or action.get('type') != 'close_shop_for_observation':
+            if login_navigation:
+                pass  # Entering the login screen does not accept old business continuity.
+            elif action and action.get('type') == 'close_shop_for_observation':
+                self.guard_business_view(action, self.last_observation or {})
+            else:
                 raise RuntimeError('新租期尚未用当前帧确认业务归属，不发布游戏输入')
-            self.guard_business_view(action, self.last_observation or {})
         page = (self.last_observation or {}).get('page')
         if (expected_page is not None and page != expected_page
                 or action and action.get('expected_page') not in (None, page)):
@@ -3678,6 +3684,11 @@ class Worker:
                         or self.manual_input_blocked() or (self.run / 'runner-stop').exists() or (self.run / 'broker-stop').exists()):
                     raise RuntimeError('发布前健康/前台/接管/停止检查拒绝，未提交')
                 self.guard_command_intent(tokens, action, current, request_id=value['id'])
+                if login_navigation:
+                    self.guard_login_navigation(tokens, action, current)
+                    self.c.write_json(self.run / 'runner-login-navigation.json', {
+                        'input_request_id': value['id'], 'snapshot_id': current['snapshot_id'],
+                        'publication_attempted': True, 'business_resume_accepted': False})
                 if planned_inputs:
                     pending_reward = self.pending_reward_step(current)
                     first_reward = (reward is not None and pending_reward is not None
@@ -8612,6 +8623,35 @@ class Worker:
         self.publish(control_mode='halted', reason=reason, broker=result)
         self.log({'event': 'input_halt', 'reason': reason, 'broker': result})
 
+    def guard_login_navigation(self, tokens, action, observed):
+        bounds = (905, 990, 1015, 1040)
+        target = find_text(observed.get('rows', []), '点击进入', bounds, exact=True)
+        if (observed.get('page') != 'unknown' or not full_observation(observed)
+                or canonical_stage(observed.get('fields', {}).get('stage')) is not None
+                or not target or action.get('type') != 'click_text'
+                or action.get('text') != '点击进入' or action.get('bounds') != bounds
+                or action.get('purpose') != 'login_startup'
+                or (self.run / 'runner-login-navigation.json').exists()):
+            raise ValueError('当前登录入口未核或本租期已尝试；只回读，不重发')
+        box = target['box']
+        if tokens != [f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7']:
+            raise ValueError('登录导航仅点当前唯一“点击进入”的文字中心')
+
+    def enter_login_once(self, observed):
+        bounds = (905, 990, 1015, 1040)
+        target = find_text(observed.get('rows', []), '点击进入', bounds, exact=True)
+        if (observed.get('page') != 'unknown' or not target
+                or (self.run / 'runner-login-navigation.json').exists()):
+            return False
+        self.state['decision_request'] = None
+        box = target['box']
+        self.command([f'click:{(box[0]+box[2])/2}:{(box[1]+box[3])/2}', 'wait:0.7'],
+            '当前登录页只点击进入一次，再读取新帧；原业务连续性仍未确认', 'unknown',
+            '读取登录入口后的实际页面，不计阶段完成', action={
+                'type': 'click_text', 'text': '点击进入', 'exact': True, 'bounds': bounds,
+                'expected_page': 'unknown', 'purpose': 'login_startup'})
+        return True
+
     def tick(self, observed):
         try:
             if self.consume_manual_stage_bridge(observed):
@@ -8629,6 +8669,8 @@ class Worker:
             else:
                 self.ask(observed, 'manual_stage_review', '两次补观察后仍未核当前节点；保留原桥/待验，核当前HUD。',
                          category='capability', business_step='manual_stage')
+            return
+        if self.enter_login_once(observed):
             return
         if getattr(self, 'business_needs_review', False):
             if observed.get('page') not in BUSINESS_REVIEW_PAGES:
