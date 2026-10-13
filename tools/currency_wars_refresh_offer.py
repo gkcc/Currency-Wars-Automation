@@ -75,6 +75,30 @@ def _coin(image):
         left, top = COIN_SEARCH_BOUNDS[0] + x, COIN_SEARCH_BOUNDS[1] + y
         result.update(score=round(float(score), 6), bounds=[left, top, left + 33, top + 32],
                       present=bool(score >= COIN_MIN_SCORE and float(search[y:y+32, x:x+33].std()) > 1.))
+        if result['present'] is False:
+            # The retained disabled widget changes neutral background, not the
+            # complete coin's chroma bitmap. Keep the normal gray path intact.
+            rgb = np.array(image.crop(COIN_SEARCH_BOUNDS)).astype(np.float32)
+            reference = np.array(template).astype(np.float32)
+            chroma = reference[:, :, 0] - reference[:, :, 2]
+            observed = rgb[:, :, 0] - rgb[:, :, 2]
+            scores = cv2.matchTemplate(observed, chroma, cv2.TM_CCOEFF_NORMED)
+            _, chroma_score, _, (x, y) = cv2.minMaxLoc(scores)
+            patch = rgb[y:y+32, x:x+33]
+            delta = np.abs((patch[:, :, 0] - patch[:, :, 2]) - chroma)
+            interior_delta = float(np.abs(patch-reference)[chroma > 80].mean())
+            background = cv2.cvtColor(np.array(image.crop(NUMBER_GUARD_BOUNDS)), cv2.COLOR_RGB2HSV)
+            dark_fraction = float(np.mean(background[:, :, 2] <= 80))
+            if (dark_fraction >= .75 and np.isfinite(chroma_score) and chroma_score >= .995
+                    and float(delta.max()) <= 4. and float(delta.mean()) <= .30
+                    and interior_delta <= 3.):
+                left, top = COIN_SEARCH_BOUNDS[0]+x, COIN_SEARCH_BOUNDS[1]+y
+                result.update(present=True, score=round(float(chroma_score), 6),
+                    bounds=[left, top, left+33, top+32], appearance='observed_dark_disabled',
+                    chroma_max_delta=round(float(delta.max()), 6),
+                    chroma_mean_delta=round(float(delta.mean()), 6),
+                    interior_rgb_mean_delta=round(interior_delta, 6),
+                    dark_fraction=round(dark_fraction, 6))
     except (OSError, ValueError, cv2.error) as exc:
         result['error'] = str(exc)
     return result
@@ -88,18 +112,87 @@ def _number_extent(image, mode, coin):
     """
     left, top, unused_right, unused_bottom = NUMBER_GUARD_BOUNDS
     gray = cv2.cvtColor(np.array(image.crop(NUMBER_GUARD_BOUNDS)), cv2.COLOR_RGB2GRAY)
-    ink = gray < 100
+    disabled = mode == 'paid' and coin.get('appearance') == 'observed_dark_disabled'
+    if disabled:
+        hsv = cv2.cvtColor(np.array(image.crop(NUMBER_GUARD_BOUNDS)), cv2.COLOR_RGB2HSV)
+        ink = (((hsv[:, :, 0] <= 10) | (hsv[:, :, 0] >= 170))
+               & (hsv[:, :, 1] >= 120) & (hsv[:, :, 2] >= 100))
+        neutral = (hsv[:, :, 1] <= 70) & (hsv[:, :, 2] >= 100)
+    else:
+        ink = gray < 100
     if mode == 'paid':
         x1, y1, x2, y2 = coin['bounds']
         ink[y1-top:y2-top, x1-left:x2-left] = False
+        if disabled:
+            neutral[y1-top:y2-top, x1-left:x2-left] = False
     ys, xs = np.nonzero(ink)
     extent = [int(xs.min()) + left, int(ys.min()) + top,
               int(xs.max()) + left + 1, int(ys.max()) + top + 1] if xs.size else None
-    return {'method': 'observed_dark_numeric_extent', 'bounds': list(NUMBER_GUARD_BOUNDS),
+    result = {'method': 'observed_dark_numeric_extent', 'bounds': list(NUMBER_GUARD_BOUNDS),
             'gray_below': 100, 'rgb_sha256': _rgb_hash(image, NUMBER_GUARD_BOUNDS),
             'excluded_coin_bounds': list(coin['bounds']) if mode == 'paid' else None,
             'foreground_pixels': int(xs.size), 'foreground_bounds': extent,
             'inside_numeric_crop': _inside(extent, NUMBER_BOUNDS[mode])}
+    if disabled:
+        result.update(method='observed_disabled_red_numeric_extent', gray_below=None,
+                      hsv_red_bounds={'hue': [[0, 10], [170, 179]], 'saturation_min': 120, 'value_min': 100})
+        components = cv2.connectedComponentsWithStats(ink.astype(np.uint8), 8)[2][1:]
+        # A pale extra digit must not disappear when isolating the observed red price.
+        complete = (not np.any(neutral) and result['inside_numeric_crop'] and 1 <= len(components) <= 6
+                    and all(2 <= w <= 33 and 14 <= h <= 32 and area >= 25
+                            for x, y, w, h, area in components))
+        padded = [extent[0]-2, extent[1]-2, extent[2]+2, extent[3]+2] if extent else None
+        result.update(component_count=len(components), unsupported_neutral_pixels=int(neutral.sum()), ocr_bounds=padded,
+                      inside_numeric_crop=bool(complete and _inside(padded, NUMBER_BOUNDS[mode])))
+    return result
+
+
+def _shortcut_crop(image, engine):
+    """Only a missing global row may use one complete original shortcut ROI."""
+    found, _ = engine(np.array(image.crop(SHORTCUT_BOUNDS)), use_cls=False)
+    rows = []
+    for points, text, confidence in found or []:
+        polygon = np.array(points)
+        rows.append({'raw_text': str(text), 'confidence': float(confidence),
+                     'box': [int(np.floor(polygon[:, 0].min()))+SHORTCUT_BOUNDS[0],
+                             int(np.floor(polygon[:, 1].min()))+SHORTCUT_BOUNDS[1],
+                             int(np.ceil(polygon[:, 0].max()))+SHORTCUT_BOUNDS[0],
+                             int(np.ceil(polygon[:, 1].max()))+SHORTCUT_BOUNDS[1]]})
+    if len(rows) != 1 or _raw(rows[0]) != 'D' or not _confident(rows[0]['confidence']):
+        return None
+    if not _inside(rows[0]['box'], SHORTCUT_BOUNDS):
+        return None
+    return {**rows[0], 'source': 'current_shortcut_crop_ocr', 'crop_bounds': list(SHORTCUT_BOUNDS),
+            'input_transform': 'original_rgb_crop_no_resize_or_padding',
+            'rgb_sha256': _rgb_hash(image, SHORTCUT_BOUNDS), 'raw_result': rows}
+
+
+def _shortcut_conflict(rows):
+    for row in rows:
+        box = row.get('box')
+        if (isinstance(box, list) and len(box) == 4 and _confident(row.get('confidence'))
+                and max(box[0], SHORTCUT_BOUNDS[0]) < min(box[2], SHORTCUT_BOUNDS[2])
+                and max(box[1], SHORTCUT_BOUNDS[1]) < min(box[3], SHORTCUT_BOUNDS[3])
+                and _raw(row) != 'D'):
+            return True
+    return False
+
+
+def _shortcut_valid(shortcut, original_rows, image, coin):
+    if not (not _shortcut_conflict(original_rows)
+            and _inside(shortcut.get('box'), SHORTCUT_BOUNDS) and _raw(shortcut) == 'D'
+            and _confident(shortcut.get('confidence'))):
+        return False
+    if shortcut in original_rows:
+        return True
+    original = shortcut.get('raw_result')
+    return (coin.get('appearance') == 'observed_dark_disabled'
+            and not any(_inside(row.get('box'), SHORTCUT_BOUNDS) for row in original_rows)
+            and shortcut.get('source') == 'current_shortcut_crop_ocr'
+            and shortcut.get('crop_bounds') == SHORTCUT_BOUNDS
+            and shortcut.get('input_transform') == 'original_rgb_crop_no_resize_or_padding'
+            and shortcut.get('rgb_sha256') == _rgb_hash(image, SHORTCUT_BOUNDS)
+            and original == [{key: shortcut.get(key) for key in ('raw_text', 'confidence', 'box')}])
 
 
 def unread_offer(snapshot_id, page):
@@ -121,17 +214,27 @@ def read_offer(rows, image, page, engine, snapshot_id):
     titles = [row for row in rows if _inside(row.get('box'), TITLE_BOUNDS)]
     shortcuts = [row for row in rows if _inside(row.get('box'), SHORTCUT_BOUNDS)]
     if (len(titles) != 1 or _raw(titles[0]) not in ('免费刷新', '刷新')
-            or not _confident(titles[0].get('confidence')) or len(shortcuts) != 1
-            or _raw(shortcuts[0]) != 'D' or not _confident(shortcuts[0].get('confidence'))):
+            or not _confident(titles[0].get('confidence')) or _shortcut_conflict(rows) or len(shortcuts) > 1
+            or shortcuts and (_raw(shortcuts[0]) != 'D' or not _confident(shortcuts[0].get('confidence')))):
         result['reasons'].append('missing_or_conflicting_native_label')
         return result
     mode = 'free' if _raw(titles[0]) == '免费刷新' else 'paid'
-    result['evidence'].update(title=copy.deepcopy(titles[0]), shortcut=copy.deepcopy(shortcuts[0]))
+    result['evidence']['title'] = copy.deepcopy(titles[0])
     coin = _coin(image)
     result['evidence']['currency_icon'] = coin
     if coin['present'] is None or coin['present'] != (mode == 'paid'):
         result['reasons'].append('currency_icon_missing_or_conflicts_with_label')
         return result
+    shortcut = shortcuts[0] if shortcuts else None
+    if shortcut is None and coin.get('appearance') == 'observed_dark_disabled':
+        try:
+            shortcut = _shortcut_crop(image, engine)
+        except Exception as exc:
+            result['evidence']['shortcut_error'] = type(exc).__name__
+    if shortcut is None:
+        result['reasons'].append('missing_or_conflicting_native_label')
+        return result
+    result['evidence']['shortcut'] = copy.deepcopy(shortcut)
     extent = _number_extent(image, mode, coin)
     result['evidence']['number_extent'] = extent
     if not extent['inside_numeric_crop']:
@@ -142,14 +245,16 @@ def read_offer(rows, image, page, engine, snapshot_id):
     if len(numeric_rows) > 1:
         result['reasons'].append('conflicting_numeric_rows')
         return result
-    bounds = NUMBER_BOUNDS[mode]
+    bounds = extent.get('ocr_bounds', NUMBER_BOUNDS[mode])
     if numeric_rows and _inside(numeric_rows[0]['box'], bounds):
         row = numeric_rows[0]
         number = {'source': 'primary_ocr', 'raw_text': _raw(row), 'confidence': row['confidence'],
                   'bounds': list(row['box']), 'raw_result': [copy.deepcopy(row)]}
     else:
         number = {'source': 'current_numeric_crop_ocr', 'bounds': list(bounds), 'raw_result': [],
-                  'input_transform': 'original_rgb_crop_no_resize_or_padding'}
+                  'input_transform': ('original_rgb_complete_red_glyph_crop_no_resize_or_padding'
+                    if coin.get('appearance') == 'observed_dark_disabled'
+                    else 'original_rgb_crop_no_resize_or_padding')}
         started = time.perf_counter()
         try:
             result['numeric_ocr_calls'] = 1
@@ -167,7 +272,8 @@ def read_offer(rows, image, page, engine, snapshot_id):
     number['rgb_sha256'] = _rgb_hash(image, number['bounds'])
     result['evidence']['number'] = number
     value = _number(number.get('raw_text', '').strip())
-    if value is None or not _confident(number.get('confidence')):
+    if (value is None or not _confident(number.get('confidence'))
+            or extent.get('component_count', len(str(value))) != len(str(value))):
         result['reasons'].append('numeric_read_unknown')
         return result
     if numeric_rows and value != _number(_raw(numeric_rows[0])):
@@ -204,9 +310,8 @@ def consume_offer(offer, image, snapshot_id, page):
     if (offer.get('status') != 'known' or page != 'shop' or mode not in NUMBER_BOUNDS
             or not _inside(title.get('box'), TITLE_BOUNDS) or not _confident(title.get('confidence'))
             or _raw(title) != ('免费刷新' if mode == 'free' else '刷新')
-            or not _inside(shortcut.get('box'), SHORTCUT_BOUNDS) or _raw(shortcut) != 'D'
-            or not _confident(shortcut.get('confidence'))
-            or title not in original_rows or shortcut not in original_rows
+            or not _shortcut_valid(shortcut, original_rows, image, coin)
+            or title not in original_rows
             or coin.get('method') != 'observed_native_coin_template'
             or coin.get('template_rgb_sha256') != COIN_RGB_SHA256
             or coin.get('present') is not (mode == 'paid') or coin != _coin(image)):
@@ -216,8 +321,11 @@ def consume_offer(offer, image, snapshot_id, page):
         raise ValueError('刷新数字范围或当前完整控件像素证据冲突')
     bounds = number.get('bounds')
     primary = number.get('source') == 'primary_ocr' and _inside(bounds, NUMBER_BOUNDS[mode])
-    crop = (number.get('source') == 'current_numeric_crop_ocr' and bounds == NUMBER_BOUNDS[mode]
-            and number.get('input_transform') == 'original_rgb_crop_no_resize_or_padding')
+    normal_crop = (bounds == NUMBER_BOUNDS[mode]
+                   and number.get('input_transform') == 'original_rgb_crop_no_resize_or_padding')
+    disabled_crop = (coin.get('appearance') == 'observed_dark_disabled' and bounds == extent.get('ocr_bounds')
+        and number.get('input_transform') == 'original_rgb_complete_red_glyph_crop_no_resize_or_padding')
+    crop = number.get('source') == 'current_numeric_crop_ocr' and (normal_crop or disabled_crop)
     value = _number(str(number.get('raw_text', '')).strip())
     raw_result = number.get('raw_result')
     original_number = raw_result[0] if isinstance(raw_result, list) and len(raw_result) == 1 else {}
@@ -227,6 +335,7 @@ def consume_offer(offer, image, snapshot_id, page):
         same_raw = same_raw and original_number in original_rows and original_number.get('box') == bounds
     key, other = ('free_remaining', 'paid_cost') if mode == 'free' else ('paid_cost', 'free_remaining')
     if (not (primary or crop) or not same_raw or not _confident(number.get('confidence')) or value is None
+            or extent.get('component_count', len(str(value))) != len(str(value))
             or type(offer.get(key)) is not int or offer[key] != value or offer.get(other) is not None
             or number.get('rgb_sha256') != _rgb_hash(image, bounds)):
         raise ValueError('刷新数字与当前模式、原读数或像素来源冲突')

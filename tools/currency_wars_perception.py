@@ -677,11 +677,15 @@ def _gold_digit_boundary(context, crop):
     if not (45 <= right-x <= 60 and 40 <= bottom-y <= 55
             and 3 <= x < right <= 126 and 3 <= y < bottom <= 62):
         return {**evidence, 'reason': 'complete_currency_icon_boundary_unavailable'}
-    start = right+2  # Native colored rim plus its two-pixel outer dark edge.
+    start = right+2  # Retained pale HUD needs its two-pixel dark outer rim excluded.
+    _, _, palette = _gold_digit_palette(hsv[15:55, offset[0]:offset[0]+49])
+    # The observed dark HUD has one outer-edge pixel before this unchanged ROI.
+    # Include that edge in the full foreground check: it must contain no digit ink.
+    if start == offset[0]+1 and palette['polarity'] == 'light_on_dark':
+        start = right
     evidence['digit_band_bounds'] = [start+1558, 900, 1687, 940]
     if start > offset[0]:
         return {**evidence, 'reason': 'currency_icon_overlaps_digit_roi'}
-    _, _, palette = _gold_digit_palette(hsv[15:55, offset[0]:offset[0]+49])
     evidence['polarity'] = palette['polarity']
     if palette['polarity'] is None:
         return {**evidence, 'reason': 'unsupported_digit_background'}
