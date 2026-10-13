@@ -374,6 +374,200 @@ def resolved_economic_summary(stored, business):
     return projected
 
 
+
+def resolve_stopped_deployment(state, control, reply):
+    """Close one original archived effect; no transport, phase or native rewrite."""
+    from currency_wars_deployment import verify_archived_deployment
+    keys = {'schema', 'chat_id', 'run_id', 'business_revision', 'original_request_id',
+            'original_record_sha256', 'read_review', 'receipt_watermark'}
+    if (not isinstance(reply, dict) or set(reply) != keys
+            or reply.get('schema') != 'currency-wars-deployment-resolution/v1'
+            or state.get('control_mode') not in TERMINAL
+            or any(reply.get(k) != state.get(k) for k in ('chat_id', 'run_id'))
+            or type(reply.get('business_revision')) is not int
+            or not re.fullmatch(r'[0-9a-f]{32}', str(reply.get('original_request_id', '')))
+            or not re.fullmatch(r'[0-9a-f]{64}', str(reply.get('original_record_sha256', '')))):
+        raise ValueError('部署核销须当前已停止原归属、明确原ID及业务CAS')
+    path, business = load_business(state.get('business', {}).get('checkpoint', ''), state['chat_id'])
+    with file_lock(path.parent, 'business.lock'):
+        current = entry.read_json(CURRENT)
+        if (current.get('control_mode') not in TERMINAL
+                or any(current.get(k) != state.get(k) for k in
+                       ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id'))
+                or current.get('business', {}).get('checkpoint') != str(path)):
+            raise ValueError('当前部署核销归属已变化')
+        path, business = load_business(path, state['chat_id'])
+        latest = business['leases'][-1]
+        if (business['revision'] != reply['business_revision']
+                or any(latest.get(k) != state.get(k) for k in
+                       ('chat_id', 'run_id', 'runner_pid', 'runner_creation_id'))
+                or business.get('match_id') != state.get('match_id')):
+            raise ValueError('部署核销业务revision/最新归属已变化')
+        durable_records(state)
+        pointer = business.get('deployment_pending') or {}
+        if (pointer.get('request_id') != reply['original_request_id']
+                or pointer.get('outcome') != 'pending' or pointer.get('publication_attempted') is not True):
+            raise ValueError('不是当前确切原部署pending；不重复核销')
+        leases = business['leases']
+        origins = [i for i, lease in enumerate(leases) if lease.get('run_id') == pointer.get('origin_run_id')]
+        if len(origins) != 1:
+            raise ValueError('原部署租期身份缺失或重复')
+        origin_index = origins[0]
+        watermark = reply['receipt_watermark']
+        if (not isinstance(watermark, dict) or set(watermark) != {'source', 'runs', 'journal_sha256_by_run'}
+                or watermark.get('source') != 'supervising_agent' or not isinstance(watermark.get('runs'), dict)
+                or set(watermark['runs']) != {item['run_id'] for item in leases[origin_index:]}
+                or not isinstance(watermark.get('journal_sha256_by_run'), dict)
+                or set(watermark['journal_sha256_by_run']) != set(watermark['runs'])
+                or any(not re.fullmatch(r'[0-9a-f]{64}', str(v))
+                       for v in watermark['journal_sha256_by_run'].values())):
+            raise ValueError('须ROOT独立审读每个原租期的完整收据hash水位；不是原生manifest')
+        for expected in watermark['runs'].values():
+            if (not isinstance(expected, dict) or not 1 <= len(expected) <= 4096
+                    or any(not isinstance(rid, str) or not 1 <= len(rid) <= 100
+                           or not re.fullmatch(r'[0-9a-f]{64}', str(digest)) for rid, digest in expected.items())):
+                raise ValueError('监督原收据完整hash水位无效')
+        lease = leases[origin_index]
+        records = durable_records(lease)
+        intent_path = records / ('deployment-' + pointer['request_id'] + '.json')
+        if Path(pointer.get('record', '')).resolve() != intent_path.resolve():
+            raise ValueError('原部署记录不属于原租期目录')
+        exits = {item['run_id']: old_lease_exit(item, control) for item in leases[origin_index:]}
+
+        def immutable(file, max_bytes):
+            entry._no_frame_links(file)
+            info = file.stat()
+            if info.st_nlink != 1 or not file.is_file() or not 0 < info.st_size <= max_bytes:
+                raise ValueError('原部署证据文件类型/大小无效')
+            return file.read_bytes()
+
+        payload = immutable(intent_path, 2_000_000)
+        if hashlib.sha256(payload).hexdigest() != reply['original_record_sha256']:
+            raise ValueError('原部署intent字节已变化')
+        pending = json.loads(payload)
+        if (pending.get('schema') != 'currency-wars-deployment-intent/v1'
+                or pending.get('match_id') != business['match_id']
+                or pending.get('request_id') != pointer['request_id']
+                or pending.get('input_request_id') != pointer.get('input_request_id')
+                or pending.get('outcome') != 'pending'
+                or pending.get('publication_attempted') is not True
+                or pending.get('before', {}).get('fields', {}).get('stage')
+                    != business.get('last_observed', {}).get('fields', {}).get('stage')):
+            raise ValueError('原部署intent与当前同局pending不符')
+        archive = entry.read_json(records / 'business-archive.json')
+        if archive.get('run_id') != lease['run_id']:
+            raise ValueError('原部署停止归档归属不符')
+        origin = {k: lease[k] for k in ('run_id', 'chat_id', 'runner_pid', 'runner_creation_id')}
+        receipts, receipt_hashes = {}, {}
+        for index, item in enumerate(leases[origin_index:], origin_index):
+            directory = durable_records(item) / 'business-receipts'
+            files = list(directory.glob('*.json'))
+            if not files or len(files) > 4096:
+                raise ValueError('原部署完整收据水位缺失或超界')
+            run_hashes = {}
+            for file in files:
+                raw = immutable(file, 2_000_000)
+                receipt = json.loads(raw)
+                rid = receipt.get('id')
+                if file.name != hashlib.sha256(str(rid).encode()).hexdigest() + '.json':
+                    raise ValueError('原部署收据文件名/ID不符')
+                run_hashes[rid] = hashlib.sha256(raw).hexdigest()
+                if index == origin_index:
+                    if rid in receipts:
+                        raise ValueError('原部署收据ID重复')
+                    receipts[rid] = receipt
+                    receipt_hashes[rid] = hashlib.sha256(raw).hexdigest()
+                else:
+                    expected_origin = {k: item[k] for k in origin}
+                    request, result = receipt.get('request') or {}, receipt.get('result') or {}
+                    if (receipt.get('origin') != expected_origin or request.get('id') != rid
+                            or request.get('chat_id') != item['chat_id'] or result.get('id') != rid
+                            or request.get('kind') != 'actions' or request.get('handoff') is not False
+                            or request.get('actions') != [{'type': 'observe', 'args': []}]
+                            or result.get('ok') is not True or result.get('completed') != request['actions']
+                            or result.get('input_attempted') is not False or result.get('attempted_actions') != []):
+                        raise ValueError('原部署后续租期存在其他或未知输入')
+            if run_hashes != watermark['runs'][item['run_id']]:
+                raise ValueError('原收据缺失/额外/字节变化，与ROOT独立完整水位不符')
+            journal = immutable(directory.parent / 'journal.jsonl', 32 * 1024 * 1024)
+            if hashlib.sha256(journal).hexdigest() != watermark['journal_sha256_by_run'][item['run_id']]:
+                raise ValueError('原停止journal字节变化，与监督水位不符')
+            events = [json.loads(line) for line in journal.decode('utf8').splitlines() if line.strip()]
+            if any(event.get('run_id') != item['run_id'] for event in events):
+                raise ValueError('原停止journal混有其他归属')
+            observed_ids = {event.get('request_id') for event in events if event.get('event') == 'perception_read'}
+            if not observed_ids <= run_hashes.keys():
+                raise ValueError('原journal读取水位中有收据未归档')
+            for event in events:
+                if event.get('event') != 'decision' or not any(
+                        str(token).split(':', 1)[0] in ('click', 'key', 'drag', 'scroll')
+                        for token in event.get('tokens', [])):
+                    continue
+                if index == origin_index and datetime.fromisoformat(event['time']) < datetime.fromisoformat(
+                        pending['before']['captured_at']):
+                    continue
+                rid = event.get('decision_id')
+                if rid not in run_hashes:
+                    outcomes = [row for row in events if row.get('event') == 'actual_result'
+                                and row.get('decision_id') == rid]
+                    if (len(outcomes) != 1 or outcomes[0].get('classification') != 'control_submission_refused'
+                            or outcomes[0].get('request_published') is not False):
+                        raise ValueError('原journal物理请求无完整收据且未明确零发布拒绝')
+                elif index != origin_index or rid != pending['input_request_id']:
+                    raise ValueError('原journal部署后夹有其他物理发布')
+            run_archive = entry.read_json(directory.parent / 'business-archive.json')
+            manifest = run_archive.get('receipt_manifest')
+            if run_archive.get('run_id') != item['run_id'] or manifest is not None and manifest != run_hashes:
+                raise ValueError('原停止归档manifest与完整收据不符')
+        images = []
+        for key, suffix in (('before_png', '.png'), ('after_png', '-after.png')):
+            expected = records / ('deployment-' + pending['request_id'] + suffix)
+            if Path(pending.get(key, '')).resolve() != expected.resolve():
+                raise ValueError('原部署独立前后PNG路径不符')
+            images.append(immutable(expected, 64 * 1024 * 1024))
+        verification = verify_archived_deployment(pending, images[0], pending['after_observation'],
+            images[1], receipts, origin, read_review=reply['read_review'])
+        if verification['status'] != 'verified_original_effect':
+            raise ValueError('原部署效果仍未知：' + verification.get('reason', 'unknown'))
+        resolutions = business.get('deployment_resolutions', [])
+        if not isinstance(resolutions, list) or len(resolutions) >= 256:
+            raise ValueError('部署核销历史无效或已满')
+        proof = {**verification, 'match_id': business['match_id'], 'read_review': copy.deepcopy(reply['read_review']),
+            'original_record_sha256': reply['original_record_sha256'], 'original_record': str(intent_path),
+            'original_before_sha256': hashlib.sha256(images[0]).hexdigest(),
+            'original_after_sha256': hashlib.sha256(images[1]).hexdigest(),
+            'original_receipt_sha256': receipt_hashes, 'receipt_watermark': copy.deepcopy(watermark),
+            'stopped_identity_evidence': exits,
+            'business_revision_before': business['revision'], 'resolved_at': now(),
+            'needs_fresh_revalidation': True, 'original_intent_unchanged': True}
+        proof_path = records / ('deployment-resolution-' + pending['request_id'] + '-' + uuid.uuid4().hex + '.json')
+        proof_bytes = json.dumps(proof, ensure_ascii=False, sort_keys=True).encode('utf8')
+        with proof_path.open('xb') as stream:
+            stream.write(proof_bytes)
+        proposed = copy.deepcopy(business)
+        proposed['deployment_resolutions'] = [*resolutions, {**proof, 'proof_file': str(proof_path),
+            'proof_sha256': hashlib.sha256(proof_bytes).hexdigest()}]
+        proposed.pop('deployment_pending')
+        proposed['revision'] += 1
+        control.write_json(path, proposed)
+        return {'ok': True, 'request_id': pending['request_id'], 'input_request_id': pending['input_request_id'],
+            'status': verification['status'], 'business_revision': proposed['revision'],
+            'proof_file': str(proof_path), 'input_sent': False, 'input_resent': False,
+            'native_identity_rewritten': False, 'needs_fresh_revalidation': True}
+
+
+def resolve_deployment_cli(args):
+    # No runtime/token remains after STOP. The existing source guard serializes
+    # against any Start, and the durable owner + original actor identities bind CAS.
+    with mutation_lock(PROJECT):
+        reviewed_runtime_sources(args.chat_id)
+        state = entry.read_json(CURRENT)
+        if state.get('chat_id') != args.chat_id:
+            raise ValueError('部署核销当前归属会话不符')
+        reply = entry.read_json(Path(args.reply_file).absolute(), limit=100_000)
+        return resolve_stopped_deployment(state, entry.backend(), reply)
+
+
 def prepare_business_start(state, control, target_chat_id=None):
     pointer = state.get('business', {}).get('checkpoint')
     if pointer:
@@ -9973,7 +10167,7 @@ def command_cli(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['publish-ready', 'start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', 'manual-stage', 'manual-step', '_worker'])
+    parser.add_argument('command', choices=['publish-ready', 'start', 'status', 'pause', 'takeover', 'resume', 'stop', 'decide', 'approve-battle', 'manual-checkpoint', 'manual-result', 'manual-stage', 'manual-step', 'resolve-deployment', '_worker'])
     parser.add_argument('--chat-id', required=True)
     parser.add_argument('--run-dir')
     parser.add_argument('--run-token')
@@ -10009,6 +10203,8 @@ def main():
         result = publish_ready_cli(args)
     elif args.command == 'start':
         result = start_cli(args)
+    elif args.command == 'resolve-deployment':
+        result = resolve_deployment_cli(args)
     else:
         if not args.run_dir or not args.run_token:
             raise ValueError('运行命令须有独占run与token')

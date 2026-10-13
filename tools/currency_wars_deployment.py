@@ -20,7 +20,7 @@ def _population(observation):
     return tuple(map(int, match.groups()))
 
 
-def _slots(observation):
+def _slots(observation, *, reviewed_destination=None):
     snapshot = observation.get('snapshot_id')
     team = observation.get('semantic', {}).get('team', {})
     slots = team.get('slots', [])
@@ -34,8 +34,11 @@ def _slots(observation):
         if key not in expected or key in result or slot.get('snapshot_id') != snapshot:
             raise ValueError('native_slot_set_unbound_or_duplicate')
         if slot.get('status') not in ('empty', 'occupied'):
-            raise ValueError('slot_occupancy_unknown')
-        result[key] = slot
+            if slot.get('status') != 'unknown' or key != reviewed_destination:
+                raise ValueError('slot_occupancy_unknown')
+            result[key] = {**slot, 'status': 'occupied', 'occupancy_origin': 'supervising_agent'}
+        else:
+            result[key] = slot
     if set(result) != expected:
         raise ValueError('native_slot_set_incomplete')
     return result
@@ -171,7 +174,7 @@ def propose_deployment(state, advice):
     return result
 
 
-def verify_deployment_effect(before, after, action):
+def verify_deployment_effect(before, after, action, *, read_review=None):
     """A causal transition, distinct from native OCR of a deployed identity.
 
     Caller must authenticate the one original input receipt and independent
@@ -180,9 +183,27 @@ def verify_deployment_effect(before, after, action):
     """
     try:
         facts = deployment_facts(before, action)
-        old, new = _slots(before), _slots(after)
         source = ('bench', 'bench', action['unit']['slot'])
         destination = ('board', action['destination']['row'], action['destination']['slot'])
+        reviewed = read_review is not None
+        if reviewed:
+            if (not isinstance(read_review, dict) or set(read_review) != {
+                    'source', 'original_request_id', 'input_request_id', 'snapshot_id',
+                    'capture_request_id', 'frame_id', 'destination', 'coins'}
+                    or read_review.get('source') != 'supervising_agent'
+                    or any(read_review.get(key) != after.get(key) for key in
+                           ('snapshot_id', 'capture_request_id', 'frame_id'))
+                    or read_review.get('destination') != {**action['destination'], 'status': 'occupied'}
+                    or type(read_review.get('coins')) is not int or read_review['coins'] < 0
+                    or after.get('semantic', {}).get('coins') is not None):
+                raise ValueError('supervised_effect_read_binding_or_native_wallet_conflict')
+            target = [slot for slot in after.get('semantic', {}).get('team', {}).get('slots', [])
+                      if tuple(slot.get(k) for k in ('location', 'row', 'slot')) == destination]
+            if len(target) != 1 or target[0].get('status') != 'unknown':
+                raise ValueError('supervised_destination_must_be_original_native_unknown')
+        old = _slots(before)
+        new = _slots(after, reviewed_destination=destination if reviewed else None)
+        after_coins = read_review['coins'] if reviewed else (after.get('semantic', {}).get('coins') or {}).get('value')
         if (not before.get('capture_request_id') or not after.get('capture_request_id')
                 or not before.get('frame_id') or not after.get('frame_id')
                 or before['capture_request_id'] == after['capture_request_id']
@@ -193,12 +214,12 @@ def verify_deployment_effect(before, after, action):
                     != after.get('semantic', {}).get('player_hud', {}).get('xp')
                 or _population(after) != (facts['population'][0] + 1, facts['population'][1])
                 or new[source]['status'] != 'empty' or new[destination]['status'] != 'occupied'
-                or after.get('semantic', {}).get('coins', {}).get('value') != facts['coins']
+                or after_coins != facts['coins']
                 or facts['coins'] is None
                 or any(_identity(old[k]) != _identity(new[k]) for k in old if k not in (source, destination))):
             raise ValueError('deployment_observable_effect_not_complete')
-        wallet = after.get('semantic', {}).get('coins', {})
-        if (wallet.get('snapshot_id') != after.get('snapshot_id')
+        wallet = after.get('semantic', {}).get('coins') or {}
+        if not reviewed and (wallet.get('snapshot_id') != after.get('snapshot_id')
                 or not .90 <= wallet.get('confidence', 0) <= 1.
                 or wallet.get('bounds') != [1613, 892, 1687, 950]):
             raise ValueError('after_wallet_not_native_bound')
@@ -208,12 +229,14 @@ def verify_deployment_effect(before, after, action):
         return {'outcome': 'observed_transition', 'native_destination_identity_verified':
                 all(new[destination].get(k) == action['unit'][k] for k in ('name', 'star', 'position')),
                 'causal_identity': copy.deepcopy(action['unit']), 'origin': 'single_deployment_transition_requires_receipt_fence',
-                'destination': copy.deepcopy(action['destination'])}
+                'destination': copy.deepcopy(action['destination']),
+                'effect_read_origin': 'supervising_agent' if reviewed else 'current_native_observation',
+                'native_observation_rewritten': False}
     except (KeyError, TypeError, ValueError) as exc:
         return {'outcome': 'unknown', 'reason': str(exc), 'retry_allowed': False}
 
 
-def verify_archived_deployment(pending, before_png, after, after_png, receipts, origin):
+def verify_archived_deployment(pending, before_png, after, after_png, receipts, origin, *, read_review=None):
     """Verify the ORIGINAL stopped-run receipts and saved independent after PNG.
 
     Input-free and write-free. Caller owns archive path/origin/CAS validation and
@@ -259,7 +282,11 @@ def verify_archived_deployment(pending, before_png, after, after_png, receipts, 
                     or response.get('input_attempted') is not (key == rid)
                     or response.get('attempted_actions') != (expected[:1] if key == rid else [])):
                 raise ValueError('original_archive_has_other_or_unknown_input')
-        effect = verify_deployment_effect(before, after, pending['action'])
+        if read_review is not None and (not isinstance(read_review, dict)
+                or read_review.get('original_request_id') != pending['request_id']
+                or read_review.get('input_request_id') != rid):
+            raise ValueError('supervised_effect_read_original_ID_mismatch')
+        effect = verify_deployment_effect(before, after, pending['action'], read_review=read_review)
         if effect['outcome'] != 'observed_transition':
             raise ValueError(effect.get('reason', 'original_effect_unverified'))
         result.update(status='verified_original_effect', original_run_id=origin['run_id'],

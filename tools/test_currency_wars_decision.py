@@ -436,6 +436,23 @@ class DeploymentProposalTests(unittest.TestCase):
         result = verify_deployment_effect(before, after, action)
         self.assertEqual(result['outcome'], 'observed_transition')
         self.assertFalse(result['native_destination_identity_verified'])
+        gaps = copy.deepcopy(after)
+        gaps['semantic']['team']['slots'][0]['status'] = 'unknown'
+        gaps['semantic'].pop('coins')
+        review = {'source': 'supervising_agent', 'original_request_id': 'synthetic-request',
+            'input_request_id': 'synthetic-input', 'snapshot_id': gaps['snapshot_id'],
+            'capture_request_id': gaps['capture_request_id'], 'frame_id': gaps['frame_id'],
+            'destination': {**action['destination'], 'status': 'occupied'}, 'coins': 6}
+        self.assertEqual(verify_deployment_effect(before, gaps, action)['outcome'], 'unknown')
+        supplemented = verify_deployment_effect(before, gaps, action, read_review=review)
+        self.assertEqual(supplemented['outcome'], 'observed_transition')
+        self.assertEqual(supplemented['effect_read_origin'], 'supervising_agent')
+        self.assertEqual(gaps['semantic']['team']['slots'][0]['status'], 'unknown')
+        self.assertNotIn('coins', gaps['semantic'])
+        for field, value in (('coins', 5), ('source', 'native_visual_state_reader'), ('snapshot_id', 'old')):
+            invalid = {**review, field: value}
+            self.assertEqual(verify_deployment_effect(before, gaps, action, read_review=invalid)['outcome'], 'unknown')
+        self.assertEqual(verify_deployment_effect(before, after, action, read_review=review)['outcome'], 'unknown')
         for kind in ('coins', 'population', 'source', 'destination', 'other'):
             bad = copy.deepcopy(after)
             if kind == 'coins': bad['semantic']['coins']['value'] -= 1
