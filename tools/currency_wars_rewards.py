@@ -99,7 +99,7 @@ def _masked_ncc(left, right, mask):
     return None if denominator < 1. else float(np.sum(a*b) / denominator)
 
 
-def _orb_appearance(crop, reference, kind):
+def _orb_appearance(crop, reference, kind, *, supervised_blue=False):
     """Current appearance comparison; it never supplies a frame or input proof.
 
     A foreground annulus preserves the bright native perimeter while avoiding
@@ -140,7 +140,15 @@ def _orb_appearance(crop, reference, kind):
         result['reasons'].append('foreground_ring_changed')
     if body_score is None or body_score < .90:
         result['reasons'].append('interior_shape_changed')
-    if not patch_delta or max(patch_delta) > 32.:
+    patch_limit = 32.
+    if supervised_blue is True and kind == 'blue_orb' and patch_delta and 32. < max(patch_delta) <= 38.:
+        # Three original same-position supervised frames: patch34.034/37.458,
+        # while body brightness medians differ by only one. This small animation
+        # exception cannot admit uniform dimming; native/gray keep their limit.
+        reference_value = float(np.median(cv2.cvtColor(reference, cv2.COLOR_RGB2HSV)[body, 2]))
+        if abs(value-reference_value) <= 2.:
+            patch_limit = 38.
+    if not patch_delta or max(patch_delta) > patch_limit:
         result['reasons'].append('local_color_or_exposure_changed')
     if (kind == 'blue_orb' and (blue < .70 or value < 210)
             or kind == 'gray_orb' and (neutral < .60 or not 100 <= value <= 235)):
@@ -154,7 +162,7 @@ def _orb_appearance(crop, reference, kind):
 
 
 def target_pair_stable(original_rgb, current_rgb, target):
-    """Same current extent, independently of automatic vs supervisor origin.
+    """Same current extent; only supervised blue supports its bounded animation.
 
     The caller authenticates both immutable frames, page, stage and epoch.
     This comparator never upgrades a supervisor annotation to native reading.
@@ -166,7 +174,7 @@ def target_pair_stable(original_rgb, current_rgb, target):
         return False
     x, y, right, bottom = target['bounds']
     return _orb_appearance(current_rgb[y:bottom, x:right], original_rgb[y:bottom, x:right],
-                           target.get('kind'))['trusted']
+                           target.get('kind'), supervised_blue=target.get('source') == 'supervising_agent')['trusted']
 
 
 def _matches(rgb, template, diagnostics=None):
