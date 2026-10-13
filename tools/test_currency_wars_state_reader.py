@@ -158,6 +158,62 @@ class NativePlayerHUDTests(unittest.TestCase):
             self.assertIsNone(native_experience_offer(rows, image, 'shop', 'frame', player,
                 engine=Mock(return_value=(reading, None)))['buy_cost'])
 
+    def test_native_icon_question_row_requires_complete_coin_and_independent_price(self):
+        from currency_wars_perception import EXPERIENCE_DIGIT_ROI
+        from currency_wars_mcp import Adapter
+        directory = ROOT / 'debug/runner-01a1271b-e37653c130ae'
+        path = directory / '263936d5c80c497ebd8403088c9b26c0-strategy-original.png'
+        if not path.is_file():
+            self.skipTest('Retained XP icon frame unavailable')
+        observed = Perception().read(path,scope='full')
+        offer = observed['semantic']['experience_offer']
+        self.assertEqual(offer['buy_cost'],4)
+        self.assertIsNone(offer['buy_gain'])
+        original = next(row for row in observed['rows'] if row['raw_text']=='?' and row['box']==[274,980,315,1008])
+        self.assertEqual(original['confidence'],.7002)
+        self.assertEqual(offer['evidence']['currency_icon_ocr_rows'],[original])
+        projected = Adapter(project=ROOT).project_state({'observation':observed},offline=True)
+        self.assertTrue(projected['fields']['xp_cost']['known'])
+        self.assertEqual(projected['fields']['xp_cost']['value'],4)
+        image = Image.open(path).convert('RGB')
+        player = observed['semantic']['player_hud']
+        def price(rows=observed['rows'],frame=image,reading='4',confidence=.99):
+            return native_experience_offer(rows,frame,observed['page'],observed['snapshot_id'],player,
+                engine=Mock(return_value=([[reading,confidence]],None)))['buy_cost']
+        for variant in ('wrong_suffix','two_numbers','crossed_number','high_question','duplicate_icon'):
+            with self.subTest(variant=variant):
+                rows=copy.deepcopy(observed['rows'])
+                item=next(row for row in rows if row['box']==original['box'])
+                if variant=='wrong_suffix':
+                    item['raw_text']=item['text']='?8'
+                elif variant=='two_numbers':
+                    rows.extend([self.row('4',[309,980,324,1008]),self.row('8',[329,980,340,1008])])
+                elif variant=='crossed_number':
+                    rows.append(self.row('4',[250,980,324,1008]))
+                elif variant=='high_question':
+                    item['confidence']=.99
+                else:
+                    rows.append(copy.deepcopy(item))
+                self.assertIsNone(price(rows=rows))
+        for variant in ('flat_coin','coin_cover','coin_shift','extra_digit','digit_clip'):
+            with self.subTest(variant=variant):
+                changed=image.copy()
+                if variant=='flat_coin':
+                    changed.paste((240,190,40),tuple(EXPERIENCE_COIN_ROI))
+                elif variant=='coin_cover':
+                    changed.paste((240,190,40),(284,985,297,1005))
+                elif variant=='coin_shift':
+                    crop=np.array(changed.crop(EXPERIENCE_COIN_ROI))
+                    changed.paste(Image.fromarray(np.roll(crop,1,axis=1)),tuple(EXPERIENCE_COIN_ROI))
+                elif variant=='extra_digit':
+                    changed.paste((220,220,230),(330,984,338,1003))
+                else:
+                    changed.paste((220,220,230),(341,984,345,1003))
+                self.assertIsNone(price(frame=changed))
+                changed.close()
+        self.assertIsNone(price(confidence=.89))
+        image.close()
+
     def test_large_native_level_numeral_resolves_font_but_not_conflicting_or_clipped_reads(self):
         image = Image.new('RGB', (1920, 1080), (100, 100, 220))
         image.paste((0, 0, 0), (302, 887, 328, 931))

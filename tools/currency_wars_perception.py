@@ -1202,6 +1202,29 @@ def native_player_hud(rows, image, page, engine, snapshot_id):
     return result
 
 
+# Complete 36x32 native XP currency icon, source PNG b80adce0006c27866418c7537f1a8461e3dddd157f337252f7bea7f8a4c0021c.
+# This authenticates the icon, never a price or an OCR text alias.
+_EXPERIENCE_NATIVE_COIN_RGB = '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'
+
+
+def _native_experience_coin_complete(image):
+    import base64
+    import zlib
+    import cv2
+    reference = np.frombuffer(zlib.decompress(base64.b64decode(_EXPERIENCE_NATIVE_COIN_RGB)),np.uint8).reshape(32,36,3)
+    current = np.array(image.crop(EXPERIENCE_COIN_ROI).convert('RGB'))
+    delta = np.abs(current.astype(np.int16)-reference.astype(np.int16))
+    masks = []
+    for pixels in (reference,current):
+        hsv = cv2.cvtColor(pixels,cv2.COLOR_RGB2HSV)
+        masks.append((hsv[:,:,0]>=15)&(hsv[:,:,0]<=40)&(hsv[:,:,1]>90)&(hsv[:,:,2]>160))
+    # Three actual SHOP/PREP crops: identical complete gold silhouette;
+    # full RGB max16/mean .03097/changed .03125, correlation >=.999967.
+    return bool(np.array_equal(masks[0],masks[1]) and np.max(delta)<=16
+                and np.mean(delta)<=.05 and np.mean(np.any(delta>0,axis=2))<=.04
+                and np.corrcoef(reference.ravel(),current.ravel())[0,1]>=.9999)
+
+
 def native_experience_offer(rows, image, page, snapshot_id, player, engine=None):
     """Read the visible XP price only. Gain and upgrade rules stay unknown."""
     result = {'actor': 'player', 'origin': 'native_experience_offer',
@@ -1226,7 +1249,7 @@ def native_experience_offer(rows, image, page, snapshot_id, player, engine=None)
         result['reason'] = 'experience_currency_icon_unconfirmed'
         return result
     x1, y1, x2, y2 = EXPERIENCE_PRICE_ROI
-    candidates = []
+    candidates, icon_rows, icon_numbers = [], [], []
     for row in rows:
         box = row.get('box')
         if not (isinstance(box, list) and len(box) == 4
@@ -1235,13 +1258,30 @@ def native_experience_offer(rows, image, page, snapshot_id, player, engine=None)
             continue
         text = clean(row.get('raw_text', row.get('text', '')))
         if not re.fullmatch(r'[0-9]{1,5}', text):
+            attached = re.fullmatch(r'\?([0-9]{1,5})?',text)
+            # Only uncertain icon-start OCR, with a complete authenticated
+            # native icon, can defer to the independent full numeral read.
+            # Its raw ?/?digits row is retained, never renamed to a price.
+            if (engine is not None and attached and 0<=row.get('confidence',1)<.78
+                    and 271<=box[0]<=276 and box[0]<box[2]<=341
+                    and 978<=box[1]<box[3]<=1010 and _native_experience_coin_complete(image)):
+                icon_rows.append(copy.deepcopy(row))
+                if attached[1] is not None:
+                    icon_numbers.append(int(attached[1]))
+                continue
             return result
         # A clipped/crossing numeric row cannot be voted away by another row.
         if not (x1 <= box[0] < box[2] <= x2 and y1 <= box[1] < box[3] <= y2):
             result['reason'] = 'experience_price_crosses_native_bounds'
             return result
         candidates.append((row, int(text)))
-    if not candidates and engine is not None:
+    if icon_rows:
+        result['evidence']['currency_icon_ocr_rows'] = icon_rows
+        result['evidence']['currency_icon_authentication'] = 'complete_native_XP_coin_RGB_and_silhouette'
+        if len(icon_rows)!=1 or len(candidates)>1:
+            result['reason'] = 'experience_price_missing_or_conflicting'
+            return result
+    if (not candidates or icon_rows) and engine is not None:
         # Authenticate complete glyphs in the whole price field before isolating
         # the numeral column. The gold icon is never turned into a text alias.
         patch = np.array(image.crop(EXPERIENCE_PRICE_ROI).convert('RGB'))
@@ -1284,7 +1324,9 @@ def native_experience_offer(rows, image, page, snapshot_id, player, engine=None)
                 'inference': 'single_line_recognition_original_RGB_no_resize'}
             result['evidence']['cost'] = attempt
             if (not re.fullmatch(r'[0-9]{1,5}', text) or len(text) != len(glyphs)
-                    or not 0 <= int(text) <= 10000 or not .90 <= confidence <= 1.):
+                    or not 0 <= int(text) <= 10000 or not .90 <= confidence <= 1.
+                    or any(value != int(text) for unused,value in candidates)
+                    or any(value != int(text) for value in icon_numbers)):
                 return result
             result.update(buy_cost=int(text), cost_checked=True, reason=None)
             attempt['value'] = int(text)
