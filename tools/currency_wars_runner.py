@@ -5910,7 +5910,16 @@ class Worker:
         """Cumulative ledger ceilings from this exact selected conditional model."""
         if not self.joint_allocation_complete({'allocation_review': review,
                 'observation': {'snapshot_id': actual['snapshot_id']}}):
-            raise ValueError('当前本地联合模型来源或三维比较未完成')
+            allocation = review.get('allocation') if isinstance(review, dict) else None
+            blocked = allocation.get('blocked_reasons') if isinstance(allocation, dict) else None
+            reasons = ([item[:160] for item in blocked[:8] if isinstance(item, str) and item]
+                       if isinstance(blocked, list) else [])
+            if not reasons:
+                dimensions = allocation.get('complete_dimensions') if isinstance(allocation, dict) else None
+                missing = [key for key in ('purchase', 'experience', 'refresh')
+                           if not isinstance(dimensions, dict) or dimensions.get(key) is not True]
+                reasons = ['missing_dimensions=' + ','.join(missing)] if missing else ['model_source_or_binding_unverified']
+            raise ValueError('当前本地联合模型来源或三维比较未完成：' + '; '.join(reasons))
         model = review['allocation']
         selected, allocation = model['conditional_best'], model['allocation']
         if allocation.get('budget') != selected.get('budget'):
