@@ -6061,6 +6061,28 @@ class Worker:
         except (ValueError, OSError, KeyError, TypeError, entry.ObservationUnavailable):
             return  # Missing native evidence remains unavailable, not inferred.
 
+    def current_economic_roster(self, observed):
+        """Only the exact just-read closed-shop source can justify reopening.
+
+        A prior valid cache is not evidence that an occluded successor was
+        read. Original PNGs and native unknown facts remain unchanged.
+        """
+        from currency_wars_economic_views import _slots, _wallet, _player
+        try:
+            if any(s.get('status') not in ('empty', 'occupied') for s in _slots(observed)):
+                return False
+            _wallet(observed)
+            _player(observed)
+        except (ValueError, KeyError, TypeError):
+            return False
+        cached = getattr(self, 'economic_roster_view', None)
+        scope = {'stage': canonical_stage(observed.get('fields', {}).get('stage')),
+                 'match_id': self.active_match_id, 'resume_epoch': self.epoch()}
+        return bool(observed is self.last_observation and observed.get('page') == 'preparation'
+                    and full_observation(observed) and cached and cached.get('scope') == scope
+                    and all(observed.get(key) and cached.get('observation', {}).get(key) == observed[key]
+                            for key in ('snapshot_id', 'capture_request_id', 'frame_id')))
+
     def economic_comparison_view(self, request, observed):
         from currency_wars_economic_views import compose_view
         cached = getattr(self, 'economic_roster_view', None)
@@ -6637,6 +6659,8 @@ class Worker:
                         or len(board) != 10 or any(s.get('status') not in ('empty', 'occupied') for s in board))
                     pair = child.get('comparison_view')
                     if actual['page'] == 'preparation' or needs_pair and pair is None:
+                        if actual['page'] == 'preparation' and not self.current_economic_roster(actual):
+                            raise ValueError('经济宏当前完整阵容源未知，不开店')
                         label = '收起' if actual['page'] == 'shop' else '商店'
                         bounds = (1554, 943, 1694, 1020) if label == '收起' else None
                         target = find_text(actual['rows'], label, bounds, exact=True)
@@ -6645,7 +6669,7 @@ class Worker:
                         self.guard_economic_macro(macro)
                         after = self.click_text(actual, label, reply['actions'][0]['reason'], bounds=bounds)
                         expected = 'preparation' if label == '收起' else 'shop'
-                        if after.get('page') != expected or label == '收起' and not getattr(self, 'economic_roster_view', None):
+                        if after.get('page') != expected or label == '收起' and not self.current_economic_roster(after):
                             raise ValueError('经济宏导航后页/阵容未知，不重点击')
                         self.acknowledge_economic_macro(macro, economic=False)
                         continue
@@ -6784,8 +6808,10 @@ class Worker:
                         actual = self.click_text(actual, '收起', action['reason'], bounds=(1554, 943, 1694, 1020))
                         attempt['navigation_inputs'] += 1
                         self.source_refresh_guard(request, broker)
-                        if actual.get('page') != 'preparation' or not getattr(self, 'economic_roster_view', None):
+                        if actual.get('page') != 'preparation' or not self.current_economic_roster(actual):
                             raise ValueError('收店后阵容/人口未知；停止导航，不重点击')
+                    if not self.current_economic_roster(actual):
+                        raise ValueError('当前完整阵容源未知；停止导航，不开店')
                     self.source_refresh_guard(request, broker)
                     target = find_text(actual['rows'], '商店', exact=True)
                     if not target or target.get('confidence', 0) < .90:
@@ -7833,6 +7859,9 @@ class Worker:
         except (ValueError, OSError, KeyError, TypeError, entry.ObservationUnavailable) as exc:
             request['comparison_view'] = None
             request['comparison_view_unavailable'] = str(exc)
+        # Freeze the entire assembled source tree: context, checklist proofs,
+        # knowledge, inspections and caller choices must not alias live state.
+        request = copy.deepcopy(request)
         self.c.write_json(self.run / 'decision-request.json', request)
         self.state['statistics']['decisions'] += 1
         profile = getattr(self, 'profile', None)
