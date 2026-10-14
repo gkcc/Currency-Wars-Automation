@@ -1198,6 +1198,41 @@ def stable_reward_box_open(action, request, actual, current_png):
         return False
 
 
+def stable_reward_side_prompt_cancel(action, request, actual, current_png):
+    """Exact current native right-side prompt cancellation, not equipment use."""
+    try:
+        original = request.get('observation', {})
+        if (action.get('type') != 'click_text' or action.get('text') != '取消'
+                or action.get('exact', True) is not True or action.get('expected_page') != 'preparation'
+                or request.get('kind') not in ('preparation_strategy', 'reward_selection')
+                or not re.fullmatch(r'[1-3]-[1-9]', original.get('fields', {}).get('stage') or '')
+                or original.get('fields', {}).get('stage') != actual.get('fields', {}).get('stage')):
+            return False
+        images = _frames(request, actual, current_png)
+        if images is None:
+            return False
+        bounds = [1700, 235, 1890, 295]
+        for observation, image in zip((original, actual), images):
+            scan = observation.get('semantic', {}).get('rewards', {})
+            row = _unique_row(observation, '取消', bounds)
+            if (observation.get('page') != 'preparation' or classify(observation.get('rows', [])) != 'preparation'
+                    or _preparation_modal_row(observation) or row is None
+                    or len([r for r in observation.get('rows', []) if clean(r.get('text', '')) == '取消']) != 1
+                    or scan.get('snapshot_id') != observation.get('snapshot_id') or scan.get('scanned') is not True
+                    or scan.get('scope') != 'native_preparation_orbs_1920' or scan.get('interaction_required') is not True
+                    or scan.get('image_rgb_sha256') != hashlib.sha256(image.tobytes()).hexdigest()
+                    or scan.get('interaction_evidence') != [{'kind': 'native_side_prompt', 'source_row': row,
+                                                          'bounds': [1540, 150, 1890, 295]}]
+                    or action.get('bounds') is not None and not _inside(row['box'], action['bounds'])):
+                return False
+        return (_paired_row(original, actual, '取消', bounds, images, ink_guard=_reward_box_caption_equal) is not None
+                and _paired_row(original, actual, '备战阶段', [390, 20, 550, 65], images,
+                    ink_guard=_preparation_header_equal) is not None
+                and _paired_row(original, actual, r'[1-3]-[1-9]', [390, 58, 550, 103], images) is not None)
+    except (OSError, ValueError, TypeError, KeyError, IndexError, cv2.error):
+        return False
+
+
 def stable_semantic_target(action, request, actual, current_png, diagnostic=None):
     """Eligibility only; caller still enforces epoch, deadline, and broker."""
     try:
@@ -1212,6 +1247,8 @@ def stable_semantic_target(action, request, actual, current_png, diagnostic=None
             allowed = _navigation(action, request, actual, images)
         elif page in ('bonds', 'income', 'promotion', 'advantages'):
             allowed = _panel_list_navigation(action, request, actual, images)
+        elif page == 'preparation' and action.get('type') == 'click_text' and action.get('text') == '取消':
+            allowed = stable_reward_side_prompt_cancel(action, request, actual, current_png)
         elif page == 'preparation' and action.get('type') == 'click_text' and action.get('text') == '开启':
             allowed = stable_reward_box_open(action, request, actual, current_png)
         elif page in ('investment', 'environment', 'supply'):

@@ -34,7 +34,7 @@ import currency_wars_economy as economy
 from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
 from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target, navigation_target,
-    stable_preparation_icon_target, stable_reward_box_open, PREPARATION_GUIDE_CONTROL,
+    stable_preparation_icon_target, stable_reward_box_open, stable_reward_side_prompt_cancel, PREPARATION_GUIDE_CONTROL,
     PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT, TASK_LIST_SCROLL_CONTROL,
     validate_task_list_scroll, stable_task_list_scroll, task_list_scroll_postcondition)
 
@@ -3888,6 +3888,9 @@ class Worker:
             # Do not ask economic_policy to select again: this exact first
             # publication owns its pending, which correctly excludes new work.
             return
+        if status['phase'] == 'rewards' and action.get('type') == 'click_text' and action.get('text') == '取消':
+            self.guard_reward_side_prompt_cancel(action, observed, request_id=request_id)
+            return
         reward_box = action.get('type') == 'click_text' and action.get('text') == '开启'
         if reward_box:
             self.guard_reward_box_open(action, observed, request_id=request_id)
@@ -7491,6 +7494,22 @@ class Worker:
                     error_type=type(exc).__name__)
             raise
 
+    def guard_reward_side_prompt_cancel(self, action, actual, *, request_id=None):
+        if self.pending_reward_capacity():
+            raise ValueError('领奖腾位仍pending；先核原收据，不以推荐取消覆盖结果')
+        request = self.state.get('decision_request') or {}
+        if (self.preparation_checklist(actual)['phase'] != 'rewards' or not full_observation(actual)
+                or request.get('match_id') != self.active_match_id or request.get('resume_epoch') != self.epoch()
+                or not stable_reward_side_prompt_cancel(action, request, actual, self.frame_path)):
+            raise ValueError('取消仅限当前领奖阶段已核原生右侧推荐提示，未核不发布')
+        attempted = getattr(self, 'reward_side_prompt_attempted', {})
+        old = attempted.get(request.get('request_id'))
+        if old is not None and old != request_id:
+            raise ValueError('本请求推荐取消已有原输入意图；核原ID，不重发')
+        if request_id is not None:
+            attempted[request['request_id']] = request_id
+            self.reward_side_prompt_attempted = attempted
+
     def guard_reward_box_open(self, action, actual, *, request_id=None):
         if self.pending_reward_capacity():
             raise ValueError('腾位已尝试；先核原收据，不开启奖励盒覆盖pending')
@@ -7521,6 +7540,8 @@ class Worker:
         reviews = self.preparation_reviews
         if action.get('type') == 'key' and action.get('args') == [69]:
             raise ValueError('当前备战经验键为F70，拒绝旧E69绕过经济守卫')
+        if status['phase'] == 'rewards' and action.get('type') == 'click_text' and action.get('text') == '取消':
+            return self.guard_reward_side_prompt_cancel(action, actual)
         if action.get('type') == 'click_text' and action.get('text') == '开启':
             return self.guard_reward_box_open(action, actual)
         if verified_navigation:
@@ -8699,6 +8720,11 @@ class Worker:
     def _execute_plan(self, reply):
         request = self.state['decision_request']
         validate_plan(reply, request, self.epoch())
+        if (request.get('observation', {}).get('page') == 'preparation'
+                and self.preparation_checklist(request['observation'])['phase'] == 'rewards'
+                and any(a.get('type') == 'click_text' and a.get('text') == '取消' for a in reply['actions'])
+                and len(reply['actions']) != 1):
+            raise ValueError('推荐取消须单独一个动作；后页只回读，不继续旧列表')
         if (any(action.get('type') == 'click_text' and action.get('text') == '开启' for action in reply['actions'])
                 and len(reply['actions']) != 1):
             raise ValueError('奖励盒开启必须是单独一个动作；后页只回读，不执行旧动作列表')
