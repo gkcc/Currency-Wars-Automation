@@ -749,6 +749,7 @@ def _released_prior_allocation(state, catalogue, policy, wallet, population, res
     if reasons or not candidates:
         result['blocked_reasons'] = sorted(set(reasons or ['no_affordable_joint_candidate']))
         return result
+    result['comparison_dimensions'] = {'purchase': True, 'experience': True, 'refresh': True}
     best = result['conditional_best']
     if sum(reserved.values()) > 0 and not any(best['budget'].values()):
         result['blocked_reasons'] = ['zero_spend_with_unscored_board_requires_ROOT_power_review']

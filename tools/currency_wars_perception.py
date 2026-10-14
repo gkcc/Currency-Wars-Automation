@@ -1394,6 +1394,76 @@ def native_deployed_count(rows):
     return None
 
 
+def native_population_row(rows, image, engine):
+    """One fixed complete HUD read; neutral contrast is not a text alias."""
+    anchors = (("备战阶段", (410, 20, 540, 65)), ("出战", (1760, 710, 1875, 790)),
+               ("商店", (1575, 950, 1675, 1020)))
+    if image.size != (1920, 1080) or not all(len([row for row in rows
+            if .90 <= row.get('confidence', 0) <= 1. and clean(row['text']) == label
+            and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
+            and bounds[1] <= row['box'][1] < row['box'][3] <= bounds[3]]) == 1
+            for label, bounds in anchors):
+        return None
+    previous = [_valid_population_match(row.get('raw_text', row['text'])) for row in rows
+                if 820 <= row['box'][0] < row['box'][2] <= 1050
+                and 190 <= row['box'][1] < row['box'][3] <= 300]
+    if native_deployed_count(rows) is not None:
+        return None  # Existing complete confident rows remain authoritative.
+    if sum(.90 <= row.get('confidence', 0) <= 1. and _valid_population_match(row.get('raw_text', row['text'])) is not None
+           for row in rows if 820 <= row['box'][0] < row['box'][2] <= 1050
+           and 190 <= row['box'][1] < row['box'][3] <= 300):
+        return None  # Missing field with credible duplicate/conflicting rows.
+    rgb = np.array(image.crop(DEPLOYED_COUNT_ROI))
+    def recognize(array):
+        result, unused = engine(array, use_det=False, use_cls=False)
+        if result is None or len(result) != 1:
+            return None
+        text, confidence = result[0][-2:]
+        raw, confidence = str(text).strip(), float(confidence)
+        match = _valid_population_match(raw)
+        if (not match or raw != match[1] or not .90 <= confidence <= 1.
+                or any(value is not None and value[1] != raw for value in previous)):
+            return None
+        return {'text': raw, 'raw_text': str(text), 'confidence': confidence,
+                'box': list(DEPLOYED_COUNT_ROI), 'normalization_basis': 'fixed_native_deployed_count_roi'}
+    try:
+        direct = recognize(rgb)
+        if direct is not None:
+            return direct  # Preserve the original high-confidence RGB path.
+        import cv2
+        hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+        mask = ((hsv[:, :, 1] < 80) & (hsv[:, :, 2] > 150)).astype('uint8')
+        count, labels, stats, unused = cv2.connectedComponentsWithStats(mask)
+        # Complete, separated numeral/slash foreground in the full fixed ROI.
+        # Reject noise, edge cuts and extra foreground instead of cropping it off.
+        components = sorted(stats[1:].tolist(), key=lambda value: value[0])
+        if (not 3 <= len(components) <= 5 or any(area < 60 or width < 6 or height < 28
+                or x < 3 or y < 3 or x+width > mask.shape[1]-3 or y+height > mask.shape[0]-3
+                for x, y, width, height, area in components)):
+            return None
+        normalized = cv2.cvtColor(255-mask*255, cv2.COLOR_GRAY2RGB)
+        derived = recognize(normalized)
+        if derived is None or len(derived['text']) != len(components):
+            return None
+        # Closed numeral bowls authenticate 0/6/8/9; a covered or broken bowl
+        # must not become an OCR guess about the original digit.
+        holes = []
+        for character, (x, y, width, height, area) in zip(derived['text'], components):
+            glyph = mask[y:y+height, x:x+width]
+            contours, hierarchy = cv2.findContours(glyph, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+            number = sum(entry[3] >= 0 and cv2.contourArea(contour) >= 4
+                         for contour, entry in zip(contours, hierarchy[0])) if hierarchy is not None else 0
+            if number != {'0': 1, '6': 1, '8': 2, '9': 1}.get(character, 0):
+                return None
+            holes.append(int(number))
+        derived['roi_recognition'] = {'method': 'complete_neutral_population_contrast',
+            'original_rgb_roi_sha256': hashlib.sha256(rgb.tobytes()).hexdigest(),
+            'components': components, 'glyph_holes': holes, 'contrast': {'saturation_below': 80, 'value_above': 150}}
+        return derived
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
 class Perception:
     def __init__(self):
         self.engine = None
@@ -1407,6 +1477,15 @@ class Perception:
         return (OCR_CONTRACT_VERSION, getattr(self.engine, 'use_det', None),
                 getattr(self.engine, 'use_rec', None), getattr(self.engine, 'text_score', None),
                 getattr(postprocess, 'box_thresh', None), getattr(postprocess, 'unclip_ratio', None))
+
+    def ocr_engine(self):
+        if self.engine is None:
+            os.environ['ORT_DISABLE_TELEMETRY'] = '1'
+            import onnxruntime
+            onnxruntime.disable_telemetry_events()
+            from rapidocr_onnxruntime import RapidOCR
+            self.engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
+        return self.engine
 
     def read(self, path, force=False, *, scope='full', reuse_primary=False):
         if scope not in READ_SCOPES:
@@ -1434,16 +1513,7 @@ class Perception:
             if opened.size != (1920, 1080):
                 raise ValueError("1920x1080 broker preview required")
             image = opened.convert("RGB")
-        if self.engine is None:
-            # Offline image reading does not authorize ORT telemetry. Set the
-            # documented initialization switch before importing the runtime;
-            # its API alone can be later than the initial telemetry event.
-            os.environ['ORT_DISABLE_TELEMETRY'] = '1'
-            import onnxruntime
-            onnxruntime.disable_telemetry_events()
-            from rapidocr_onnxruntime import RapidOCR
-            self.engine = RapidOCR(intra_op_num_threads=2, inter_op_num_threads=1)
-        engine = timing.engine(self.engine)
+        engine = timing.engine(self.ocr_engine())
         ocr_contract = self._ocr_contract()
         primary_key = (digest, ocr_contract)
         cached = self._primary_cache
@@ -1566,35 +1636,12 @@ class Perception:
                   'deployed': None}
         if page == "preparation" and effective_scope != 'rewards':
             if native_deployed_count(rows) is None:
-                native_layout = all(len([row for row in rows
-                    if .90 <= row["confidence"] <= 1. and clean(row["text"]) == label
-                    and bounds[0] <= row["box"][0] < row["box"][2] <= bounds[2]
-                    and bounds[1] <= row["box"][1] < row["box"][3] <= bounds[3]]) == 1
-                    for label, bounds in (("备战阶段", (410, 20, 540, 65)),
-                                          ("出战", (1760, 710, 1875, 790)),
-                                          ("商店", (1575, 950, 1675, 1020))))
-                if native_layout:
-                    # One complete native count crop, excluding the blue icon.
-                    # Keep original rows and reject conflicting central counts.
-                    count_bounds = list(DEPLOYED_COUNT_ROI)
-                    try:
-                        result, unused = engine(np.array(image.crop(count_bounds)), use_det=False, use_cls=False)
-                        if result is not None and len(result) == 1:
-                            text, confidence = result[0][-2:]
-                            raw, confidence = str(text).strip(), float(confidence)
-                            count = _valid_population_match(raw)
-                            previous = [_valid_population_match(row["raw_text"])
-                                        for row in rows
-                                        if 820 <= row["box"][0] < row["box"][2] <= 1050
-                                        and 190 <= row["box"][1] < row["box"][3] <= 300]
-                            if (count and raw == count[1] and .90 <= confidence <= 1.
-                                    and all(match is None or match[1] == raw for match in previous)):
-                                derived = {"text": raw, "raw_text": str(text),
-                                           "normalization_basis": "fixed_native_deployed_count_roi",
-                                           "confidence": confidence, "box": count_bounds}
-                                rows.append(derived)
-                    except Exception:
-                        pass  # Read failure leaves the count unknown; no inferred value.
+                try:
+                    derived = native_population_row(rows, image, engine)
+                    if derived is not None:
+                        rows.append(derived)
+                except Exception:
+                    pass  # Read failure remains unknown; no inferred count.
             fields["deployed"] = native_deployed_count(rows)
             # One unscaled, complete native HP crop, only when trusted HP is absent.
             hp_pattern = r"(?:100|[1-9]?[0-9])"

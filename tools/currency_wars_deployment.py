@@ -444,7 +444,34 @@ def verify_archived_deployment(pending, before_png, after, after_png, receipts, 
                 or read_review.get('original_request_id') != pending['request_id']
                 or read_review.get('input_request_id') != rid):
             raise ValueError('supervised_effect_read_original_ID_mismatch')
-        effect = verify_deployment_effect(before, after, pending['action'], read_review=read_review)
+        population_decode = None
+        verification_view = after
+        if after.get('fields', {}).get('deployed') is None:
+            # Re-read ONLY the original immutable PNG. Never alter the saved
+            # observation, accept a caller count or infer it from board occupancy.
+            import io
+            from pathlib import Path
+            from PIL import Image
+            import currency_wars_perception as decoder
+            if (after.get('page') != 'preparation' or pending.get('action', {}).get('type') != 'deploy_occupied_unit'
+                    or (after.get('read_contract') or {}).get('effective_scope') != 'full'):
+                raise ValueError('original_population_decode_requires_full_preparation')
+            with Image.open(io.BytesIO(after_png)) as opened:
+                image = opened.convert('RGB')
+                row = decoder.native_population_row(after['rows'], image, decoder.Perception().ocr_engine())
+            if row is None or decoder.native_deployed_count([row]) is None:
+                raise ValueError('original_population_redecode_still_unknown')
+            population_decode = {'source': 'independent_original_png_population_decode',
+                'snapshot_id': after['snapshot_id'], 'capture_request_id': after['capture_request_id'],
+                'frame_id': after['frame_id'], 'original_population': None,
+                'decoder_sha256': hashlib.sha256(Path(decoder.__file__).read_bytes()).hexdigest(),
+                'row': row, 'current_game_state_claimed': False, 'saved_observation_unchanged': True}
+            verification_view = copy.deepcopy(after)
+            verification_view['fields']['deployed'] = row['text']
+        effect = verify_deployment_effect(before, verification_view, pending['action'], read_review=read_review)
+        if population_decode is not None:
+            effect['effect_read_origin'] = 'original_population_redecoded_projection'
+            effect['population_decode'] = population_decode
         if effect['outcome'] != 'observed_transition':
             raise ValueError(effect.get('reason', 'original_effect_unverified'))
         result.update(status='verified_original_effect', original_run_id=origin['run_id'],

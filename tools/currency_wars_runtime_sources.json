@@ -47,7 +47,8 @@
     "tools/currency_wars_rules.py",
     "tools/currency_wars_mcp.py",
     "tools/currency_wars_session_client.py",
-    "tools/currency_wars_economic_views.py"
+    "tools/currency_wars_economic_views.py",
+    "tools/currency_wars_equipment.py"
   ],
   "resource_roots": [
     {
