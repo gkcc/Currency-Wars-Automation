@@ -542,8 +542,50 @@ def _supervised_reward_facts(original, actual, *, allow_coin_change=False):
             and (allow_coin_change or facts[0][3] == facts[1][3]))
 
 
+def _current_shop_caption_hover_equal(images, bounds):
+    """READ-only caption continuity, not a navigation/click permission.
+
+    The complete dark glyph and its halo may change together between bounded
+    contrast states while the light control surface stays fixed. Authenticate
+    every RGB pixel against one near-neutral affine transform; a correlation
+    score or unchanged OCR alone would accept local covers and altered ink.
+    This cannot distinguish a photometrically identical rendering from hover.
+    """
+    import cv2
+    x, y, right, bottom = bounds
+    crops = [rgb[y:bottom, x:right] for rgb in images]
+    grays = [cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY) for crop in crops]
+    paper = [np.percentile(crop, 75, axis=(0, 1)) for crop in crops]
+    if (any(np.percentile(gray, 75) < 220 or np.percentile(gray, 1) > 32
+            or np.percentile(gray, 75)-np.percentile(gray, 1) < 180 for gray in grays)
+            or np.max(np.abs(paper[0]-paper[1])) > 3):
+        return False
+    normalized = np.empty_like(crops[1])
+    coefficients = []
+    for channel in range(3):
+        old = crops[0][:, :, channel].astype(float).ravel()
+        fresh = crops[1][:, :, channel].astype(float).ravel()
+        slope, offset = np.linalg.lstsq(np.column_stack((old, np.ones_like(old))), fresh,
+                                      rcond=None)[0]
+        residual = np.abs(fresh-(slope*old+offset))
+        if (not .90 <= slope <= 1.11 or abs(offset) > 24
+                or residual.max() > 3 or residual.mean() > .6):
+            return False
+        coefficients.append((slope, offset))
+        normalized[:, :, channel] = np.clip(np.rint((crops[1][:, :, channel]-offset)/slope),
+                                            0, 255).astype(np.uint8)
+    if (np.ptp([value[0] for value in coefficients]) > .01
+            or np.ptp([value[1] for value in coefficients]) > 1):
+        return False
+    masks = [gray < 80 for gray in (grays[0], cv2.cvtColor(normalized, cv2.COLOR_RGB2GRAY))]
+    union = masks[0] | masks[1]
+    return bool(all(np.count_nonzero(mask) >= 24 and .015 <= np.mean(mask) <= .60
+                    for mask in masks)
+                and np.count_nonzero(masks[0] & masks[1])/np.count_nonzero(union) >= .985)
+
+
 def _context_images(original, actual, original_png, current_png, *, allow_coin_change=False,
-                    shop_view_only=False, supervised_target=False):
+                    shop_view_only=False, supervised_target=False, current_continuation=False):
     """Authenticate exposed page anchors independently of orb recognition.
 
     A native detector's unknown remains unknown. It is neither evidence of an
@@ -601,6 +643,15 @@ def _context_images(original, actual, original_png, current_png, *, allow_coin_c
                    ('收起' if original['page'] == 'shop' else '商店', [1554, 943, 1694, 1020])]
         for label, bounds in anchors:
             if _navigation_row(original, actual, label, images, bounds, target=label == '收起') is not None:
+                continue
+            # Only current reward recovery may supplement a non-clicked
+            # preparation shop caption. The default input/history paths stay
+            # strict, and the navigation helper retains unique literal/box gates.
+            if (current_continuation and not shop and label == '商店'
+                    and all(len(_rows(obs.get('rows', []), label, bounds, minimum=.99)) == 1
+                            for obs in (original, actual))
+                    and _navigation_row(original, actual, label, images, bounds,
+                                        ink_guard=_current_shop_caption_hover_equal) is not None):
                 continue
             # q00's native shop title is gray, below the navigation helper's
             # light-ink cutoff. Only this non-clicked header may use exact
@@ -866,7 +917,8 @@ def current_reward_absence(original, actual, original_png, current_png, target, 
         if original.get('page') != 'preparation':
             return result
         images = _context_images(original, actual, original_png, current_png, allow_coin_change=True,
-                                 supervised_target=target.get('source') == 'supervising_agent')
+                                 supervised_target=target.get('source') == 'supervising_agent',
+                                 current_continuation=True)
         if images is None:
             return result
         before, after = images
