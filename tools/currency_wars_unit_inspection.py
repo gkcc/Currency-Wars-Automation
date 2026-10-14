@@ -154,15 +154,21 @@ def _occupied(probe, rgb, slot, rows):
             _fail('目标上出现经济或装备文字控件')
     patch = rgb[y1:y2, x1:x2]
     portrait = cv2.cvtColor(patch[30:118, 10:-10], cv2.COLOR_RGB2GRAY)
-    # Retained five unknown portraits: weakest 4x4 tile std=8.4583 and
-    # weakest 16x16 click-patch std=28.0420. Flat/covered areas stay unknown.
+    # Occupied native card structure and whole-portrait support precede this
+    # check; the caller still authenticates the exact source/current portrait.
+    # Local variance depends on the character artwork, not semantic exposure.
+    # A uniform central 8x8 patch vetoes one opaque-cover class; it does not
+    # prove absence of arbitrary textured/static overlays.
     tile_std = min(float(tile.std()) for row in np.array_split(portrait, 4)
                    for tile in np.array_split(row, 4, axis=1))
     x, y = slot['point']
     point_std = float(gray[y-8:y+8, x-8:x+8].std())
-    if tile_std < 8 or point_std < 25:
-        _fail('头像或点击区域未完整暴露')
-    return {'status': 'occupied', 'portrait_tile_std': tile_std, 'point_std': point_std}
+    point_core = rgb[y-4:y+4, x-4:x+4]
+    point_core_flat = bool(np.all(point_core == point_core[0, 0]))
+    if tile_std < 8 or point_core_flat:
+        _fail('整卡支持不足或点击点平填；目标曝光未知')
+    return {'status': 'occupied', 'portrait_tile_std': tile_std, 'point_std': point_std,
+            'point_core_rgb_flat': point_core_flat}
 
 
 def check_target(action, request, actual, current_png):
