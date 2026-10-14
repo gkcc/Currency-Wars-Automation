@@ -568,9 +568,10 @@ class ReleasedEconomicPrior(unittest.TestCase):
         self.assertEqual(capped['allocation']['refresh_count_max'], 0)
 
     def test_missing_profile_bounds_and_explicit_reserve_remain_visible(self):
-        unmatched = self.compare(threshold=5)
-        self.assertEqual(unmatched['status'], 'incomplete_joint_comparison')
-        self.assertFalse(any(unmatched['complete_dimensions'].values()))
+        observed = self.compare(threshold=5)
+        self.assertEqual(observed['status'], 'conditional_joint_decision')
+        self.assertEqual(observed['current_transition_constraint']['xp'], [0, 5])
+        self.assertFalse(observed['current_transition_constraint']['release_profile_verified'])
         bounded = self.compare(coins=8, max_economy_evaluations=1)
         self.assertEqual(bounded['status'], 'incomplete_joint_comparison')
         self.assertIn('economic_marginal_search_limit', bounded['blocked_reasons'])
@@ -578,6 +579,43 @@ class ReleasedEconomicPrior(unittest.TestCase):
         self.assertEqual(reserved['conditional_best']['refresh_count'], 0)
         limited = self.compare(coins=8, purchase_budget=0)
         self.assertEqual(limited['conditional_best']['future_purchase_budget'], 0)
+
+    def test_observed_threshold_covers_first_crossing_and_keeps_explicit_bound(self):
+        observed = self.compare(coins=40, threshold=40, upgrade_value=True)
+        self.assertEqual(observed['status'], 'conditional_joint_decision')
+        self.assertEqual(observed['current_transition_constraint']['first_crossing_purchases_assumption'], 10)
+        self.assertEqual(observed['conditional_best']['xp_purchases'], 10)
+        self.assertEqual(observed['conditional_best']['level_assumption'], 4)
+        self.assertFalse(observed['native_mechanics_verified'])
+        bounded = self.compare(coins=40, threshold=40, max_xp_purchases=8)
+        self.assertEqual(bounded['status'], 'incomplete_joint_comparison')
+        self.assertFalse(bounded['complete_dimensions']['experience'])
+        self.assertIn('XP_search_bound_excludes_affordable_observed_current_transition', bounded['blocked_reasons'])
+
+    def test_unscored_hold_requires_review_for_matching_and_observed_profiles(self):
+        from currency_wars_advisor import _allocate_gold, _layouts, _policy
+        state = {'binding': {'request_id': 'synthetic', 'snapshot_id': SNAP}, 'snapshot_id': SNAP,
+            'semantic': {'player_hud': {'actor': 'player', 'origin': 'native_player_hud',
+                'snapshot_id': SNAP, 'level': 3, 'xp': [0, 4]},
+                'experience_offer': {'origin': 'native_experience_offer', 'snapshot_id': SNAP,
+                    'cost_checked': True, 'buy_cost': 4, 'buy_gain': None},
+                'refresh_offer': {'schema': 'currency-wars-refresh-offer/v1', 'snapshot_id': SNAP,
+                    'page': 'shop', 'status': 'known', 'mode': 'paid', 'paid_cost': 2}}}
+        policy = _policy({'economy_model': 'released_prior', 'reserve': 8})
+        layouts = _layouts([], 'minimum')
+        models = [{'id': 'hold', 'purchase_spend': 0, 'purchase_refs': [], 'items': [],
+            'minimum': layouts, 'maximum': layouts, 'front_capacity': 4, 'back_capacity': 6,
+            'remaining_bench_slots': 9, 'search': {'exact_for_declared_model': True}}]
+        for threshold in (4, 5):
+            state['semantic']['player_hud']['xp'][1] = threshold
+            result = _allocate_gold(state, Catalogue(), policy, {'verified_native': True, 'value': 8},
+                {'projection_known': True, 'maximum': 3}, {'front': 1, 'back': 0}, models, True)
+            self.assertEqual(result['status'], 'incomplete_joint_comparison')
+            self.assertTrue(result['power_review_required'])
+        known = self.compare(coins=8, reserve=8, upgrade_value=True)
+        self.assertEqual(known['status'], 'conditional_joint_decision')
+        self.assertFalse(any(known['allocation']['budget'].values()))
+        self.assertFalse(known.get('power_review_required', False))
 
     def state(self):
         """Synthetic native geometry for the public read-only advice path."""

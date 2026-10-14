@@ -88,7 +88,7 @@ def _policy(value):
     result = {'bond_weight': 1., 'bond_reference_power': 100.,
               'max_layout_states': 1024, 'max_layout_transitions': 250000,
               'economy_model': 'partial', 'released_profile': 'matching',
-              'max_xp_purchases': 8, 'max_node_refreshes': 3, 'refreshes_used': 0,
+              'max_xp_purchases': 12, 'max_node_refreshes': 3, 'refreshes_used': 0,
               'max_refresh_samples': 8, 'max_economy_evaluations': 4096,
               'candidate_value_modifiers': [], **result}
     if result['mode'] not in ('current', 'replay'):
@@ -105,7 +105,7 @@ def _policy(value):
         raise ValueError('policy.purchase_star_for_scoring')
     for key, minimum, maximum in (('max_layout_states', 35, 8192),
                                   ('max_layout_transitions', 1, 1000000),
-                                  ('max_xp_purchases', 0, 8), ('max_node_refreshes', 0, 8),
+                                  ('max_xp_purchases', 0, 16), ('max_node_refreshes', 0, 8),
                                   ('refreshes_used', 0, 8), ('max_refresh_samples', 1, 8),
                                   ('max_economy_evaluations', 1, 4096)):
         if not _integer(result[key], minimum, maximum):
@@ -566,9 +566,35 @@ def _released_prior_allocation(state, catalogue, policy, wallet, population, res
         current = by_level.get(level, {})
         if current.get('LevelUpExp') == xp[1] and current.get('AvatarMaxNumber') == population['maximum']:
             profiles.append((name, by_level))
-    if not profiles:
-        reasons.append('no_selected_released_profile_matches_current_XP_and_population')
-        return result
+    observed_transition = not profiles
+    if observed_transition:
+        # The bound current HUD is the current threshold, not a release-version
+        # assertion. Future population/rarity remain separate prior scenarios.
+        for name, rows in _dict(config.get('profiles')).items():
+            if policy['released_profile'] not in ('matching', name):
+                continue
+            by_level = {row.get('PlayerLevel', row.get('GridFightLevel')): copy.deepcopy(row)
+                        for row in rows if isinstance(row, dict)}
+            current = by_level.get(level, {})
+            if current.get('AvatarMaxNumber') == population['maximum']:
+                by_level[level]['LevelUpExp'] = xp[1]
+                profiles.append((name, by_level))
+        if not profiles:
+            reasons.append('released_current_population_prior_missing_or_conflicting')
+            return result
+        crossing_count = (xp[1] - xp[0] + gain - 1) // gain
+        affordable = max(0, (wallet['value'] - (policy['reserve'] or 0)) // xp_cost)
+        if crossing_count <= affordable and crossing_count > policy['max_xp_purchases']:
+            reasons.append('XP_search_bound_excludes_affordable_observed_current_transition')
+            return result
+        result['current_transition_constraint'] = {
+            'source': 'current_native_player_hud', 'snapshot_id': snapshot,
+            'binding': copy.deepcopy(state.get('binding')), 'level': level,
+            'xp': copy.deepcopy(xp), 'population': population['maximum'],
+            'XP_increment_origin': 'released_prior_assumption',
+            'max_level_crossings': 1, 'first_crossing_purchases_assumption': crossing_count,
+            'future_population_and_rarity_origin': 'released_prior_assumption',
+            'release_profile_verified': False}
     pool = catalogue.economic_prior_pool() if callable(getattr(catalogue, 'economic_prior_pool', None)) else {}
     cards = pool.get('cards', [])
     if pool.get('database_sha256') != config.get('database_sha256') or not cards or len(cards) > MAX_ENTITIES:
@@ -587,7 +613,7 @@ def _released_prior_allocation(state, catalogue, policy, wallet, population, res
         'refresh_samples': policy['max_refresh_samples'], 'future_buys_per_scenario': 1,
         'max_economy_evaluations': policy['max_economy_evaluations']}
     result['assumptions'] = ['Released XP increment used only as a model assumption, never promoted to native buy_gain.',
-        'Profiles must match observed current XP threshold and population; multiple matches remain separate scenarios.',
+        'Matching profiles remain prior scenarios; an unmatched current native threshold constrains only one crossing, while future population/rarity remain prior assumptions.',
         'Refresh rarity weights come from the same assumed post-XP profile.',
         'Future one-star price comes from the released price table; recheck the actual new shop before buying.',
         'One future card uses additive PowerBase marginal gain; future bond interactions are unscored.',
@@ -598,7 +624,10 @@ def _released_prior_allocation(state, catalogue, policy, wallet, population, res
     candidates = []
     for name, profile in profiles:
         new_level, progress = level, xp[0]
-        for count in range(min(policy['max_xp_purchases'], max(0, (coins-reserve)//xp_cost)) + 1):
+        horizon = min(policy['max_xp_purchases'], max(0, (coins-reserve)//xp_cost))
+        if observed_transition:
+            horizon = min(horizon, crossing_count)
+        for count in range(horizon + 1):
             if count:
                 if new_level >= 10:
                     break
@@ -612,6 +641,8 @@ def _released_prior_allocation(state, catalogue, policy, wallet, population, res
                         break
                     progress -= threshold
                     new_level += 1
+                    if observed_transition:
+                        break  # No unobserved second XP threshold is used.
             row = profile.get(new_level, {})
             capacity = row.get('AvatarMaxNumber')
             if not _integer(capacity, 0, 10) or capacity < sum(reserved.values()):
@@ -718,9 +749,13 @@ def _released_prior_allocation(state, catalogue, policy, wallet, population, res
     if reasons or not candidates:
         result['blocked_reasons'] = sorted(set(reasons or ['no_affordable_joint_candidate']))
         return result
+    best = result['conditional_best']
+    if sum(reserved.values()) > 0 and not any(best['budget'].values()):
+        result['blocked_reasons'] = ['zero_spend_with_unscored_board_requires_ROOT_power_review']
+        result['power_review_required'] = True
+        return result  # A partial hold proxy is not a completed strengthening decision.
     result['status'] = 'conditional_joint_decision'
     result['complete_dimensions'] = {'purchase': True, 'experience': True, 'refresh': True}
-    best = result['conditional_best']
     result['allocation'] = {'budget': copy.deepcopy(best['budget']), 'reserve': reserve,
         'coins_retained_worst_case': best['coins_retained'], 'xp_count': best['xp_purchases'],
         'refresh_count_max': best['refresh_count'], 'node_refresh_count_max': policy['max_node_refreshes'],
