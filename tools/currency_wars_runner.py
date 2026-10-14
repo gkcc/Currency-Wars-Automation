@@ -1801,7 +1801,7 @@ def _start_cli(args, lease):
         if child_state != 'active' or child_identity is None:
             raise RuntimeError('worker创建身份未知；保留原始启动归属')
         lease.children([{'pid': child.pid, 'process_identity': child_identity}], complete=False)
-        deadline = time.monotonic() + 10
+        deadline = time.monotonic() + 45
         lifecycle_transferred = False
         while time.monotonic() < deadline:
             # Registration precedes slow source/resource validation and Worker

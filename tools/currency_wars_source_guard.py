@@ -264,12 +264,66 @@ def read_object(path, *, limit=65536):
     return value
 
 
+def _native_creation_table():
+    """Bounded complete x64 SystemProcessInformation; no process handles."""
+    if os.name != 'nt' or ctypes.sizeof(ctypes.c_void_p) != 8:
+        return None
+    try:
+        query = ctypes.WinDLL('ntdll').NtQuerySystemInformation
+        query.argtypes = [wintypes.ULONG, ctypes.c_void_p, wintypes.ULONG,
+                          ctypes.POINTER(wintypes.ULONG)]
+        query.restype = ctypes.c_long
+        capacity = 65536
+        for unused in range(8):
+            buffer = ctypes.create_string_buffer(capacity)
+            returned = wintypes.ULONG()
+            status = query(5, buffer, capacity, ctypes.byref(returned)) & 0xffffffff
+            if status == 0xc0000004:
+                capacity = max(capacity * 2, int(returned.value))
+                if capacity > 16_777_216:
+                    return None
+                continue
+            if status != 0 or not 256 <= returned.value <= capacity:
+                return None
+            data = buffer.raw[:returned.value]
+            records, offset = {}, 0
+            for unused_record in range(65536):
+                if offset + 256 > len(data):
+                    return None
+                next_offset = int.from_bytes(data[offset:offset + 4], 'little')
+                threads = int.from_bytes(data[offset + 4:offset + 8], 'little')
+                creation = int.from_bytes(data[offset + 32:offset + 40], 'little', signed=True)
+                pid = int.from_bytes(data[offset + 80:offset + 88], 'little')
+                size = next_offset or len(data) - offset
+                if (size < 256 + threads * 80 or size % 8 or offset + size > len(data)
+                        or pid > 0xffffffff or pid in records
+                        or creation < 0 or pid != 0 and creation == 0):
+                    return None
+                records[pid] = creation
+                if next_offset == 0:
+                    observer_state, observer_identity = process_identity(os.getpid())
+                    if (observer_state != 'active' or not isinstance(observer_identity, str)
+                            or not re.fullmatch(r'windows:[1-9][0-9]*', observer_identity)
+                            or records.get(os.getpid()) != int(observer_identity.split(':', 1)[1])):
+                        return None
+                    return records
+                offset += next_offset
+            return None
+        return None
+    except (OSError, ValueError, TypeError, AttributeError, OverflowError):
+        return None
+
+
 def identity_state(pid, identity):
     if type(pid) is not int or not isinstance(identity, str) or not re.fullmatch(r'windows:[0-9]+', identity):
         return 'unknown'
     state, observed = process_identity(pid)
     if state == 'dead' or (state == 'active' and observed is not None and observed != identity):
         return 'dead'
+    if state == 'unknown' and pid > 0 and int(identity.split(':', 1)[1]) > 0:
+        table = _native_creation_table()
+        if table is not None:
+            return 'active' if table.get(pid) == int(identity.split(':', 1)[1]) else 'dead'
     return 'active' if state == 'active' and observed == identity else 'unknown'
 
 
