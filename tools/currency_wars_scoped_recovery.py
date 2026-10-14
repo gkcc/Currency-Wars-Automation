@@ -17,14 +17,22 @@ from pathlib import Path
 import re
 import sys
 
+if __name__ == '__main__' and '--stopped-cleaned-run' in sys.argv:
+    if sys.argv.count('--project') != 1:
+        raise ValueError('One explicit canonical project required')
+    sys.path.insert(0, str(Path(sys.argv[sys.argv.index('--project')+1]).absolute() / 'tools'))
 import currency_wars_source_guard as guard
 
 SCHEMA = 'currency-wars-scoped-retirement-v1'
+STOPPED_SCHEMA = 'currency-wars-stopped-run-retirement-v1'
+MAX_ACTIVITY_RECORDS = 512
+STOPPED_FILES = ('tools/currency_wars_runner.py', 'tools/currency_wars_source_guard.py', 'tools/currency_wars_scoped_recovery.py')
 POLICY = 'standard-python-gui-shell-cooperative-v1'
 SHELLS = {'powershell.exe', 'pwsh.exe', 'cmd.exe', 'wscript.exe', 'cscript.exe', 'mshta.exe'}
 GUI = 'currency-wars-gui.exe'
 SCRIPT = 'currency_wars_scoped_recovery.py'
-MCP_SHA256 = 'a057b12c930f1f09b9473f8afcf39559e9d9d250cc881bf6ea4c142d8ebd0e28'
+MCP_SHA256 = '57d8c9dd274783242c1345383428f3fce46bf9300e911d2758b9fc1ee957e25d'
+HISTORICAL_MCP_SHA256 = 'a057b12c930f1f09b9473f8afcf39559e9d9d250cc881bf6ea4c142d8ebd0e28'
 BRIDGE = Path('D:/CurrencyWarsInputBridge')
 INBOX = Path('D:/Codex/Workspaces/CurrencyWars-InputBridge/inbox')
 
@@ -486,7 +494,8 @@ def validate_proof(r):
                 'tools/currency_wars_source_guard.py', 'tools/currency_wars_broker_entry.py',
                 'tools/currency_wars_input_bridge.py'}
     require(required <= sources.keys())
-    require(sources['tools/currency_wars_mcp.py'].lower() == MCP_SHA256)
+    allowed_mcp = {MCP_SHA256} if r.get('schema') == STOPPED_SCHEMA else {HISTORICAL_MCP_SHA256, MCP_SHA256}
+    require(sources['tools/currency_wars_mcp.py'].lower() in allowed_mcp)
     provenance = r.get('operator_provenance')
     require(isinstance(provenance, dict) and set(provenance) == {'modules', 'providers'})
     modules = provenance['modules']
@@ -517,18 +526,21 @@ def validate_proof(r):
     registry = r.get('registry')
     require(isinstance(registry, dict) and set(registry) == {'leases', 'current_runner_sha256'})
     leases = registry['leases']
-    require(isinstance(leases, dict) and 1 <= len(leases) <= 128)
+    require(isinstance(leases, dict) and 1 <= len(leases) <= MAX_ACTIVITY_RECORDS)
     for name, digest in leases.items():
         require(isinstance(name, str) and re.fullmatch('[0-9a-f]{32}\\.json', name) is not None and _sha(digest))
     require(leases.get(r.get('lease_name')) == r.get('lease_sha256'))
     require(registry['current_runner_sha256'] is None or _sha(registry['current_runner_sha256']))
+    stopped = r.get('schema') == STOPPED_SCHEMA
     old_game = r.get('old_game')
-    require(isinstance(old_game, dict) and isinstance(old_game.get('path'), str)
-            and bool(old_game['path']) and _sha(old_game.get('sha256')))
-    for binding in (r.get('game_binding'), old_game.get('binding')):
+    if not stopped:
+        require(isinstance(old_game, dict) and isinstance(old_game.get('path'), str)
+                and bool(old_game['path']) and _sha(old_game.get('sha256')))
+    for binding in ((r.get('game_binding'),) if stopped else (r.get('game_binding'), old_game.get('binding'))):
         require(isinstance(binding, dict) and set(binding) == {'pid', 'creation_id', 'hwnd'}
                 and all(type(v) is int and v > 0 for v in binding.values()))
-    require(r['game_binding'] != old_game['binding'])
+    if not stopped:
+        require(r['game_binding'] != old_game['binding'])
     actors = r.get('actors')
     require(isinstance(actors, list) and 1 <= len(actors) <= 32768)
     roles = {'operator_or_venv_parent', 'literal_operator_shell_parent',
@@ -567,6 +579,8 @@ def validate_proof(r):
     for child in original['children']:
         require(isinstance(child, dict))
         known_dead.append((child.get('pid'), child.get('process_identity')))
+    if stopped:
+        known_dead.append((evidence.get('broker_pid'), evidence.get('broker_identity')))
     require(not any((a['pid'], a['identity']) in known_dead for a in actors))
     for actor in actors:
         parent = indexed.get(actor['ppid'])
@@ -577,7 +591,199 @@ def validate_proof(r):
     require(datetime.fromisoformat(r['observed_at']).utcoffset() is not None)
 
 
+def stopped_receipt_path(project, lease):
+    return receipt_path(project, lease).with_name(lease.stem + '.stopped-v1.json')
+
+
+def stopped_run_evidence(project, lease, value, terminal_file, owner_file, run, worker_pid, worker_identity, *, require_current=False):
+    terminal_file, owner_file, run = map(lambda p: Path(p).absolute(), (terminal_file, owner_file, run))
+    for path in (terminal_file, owner_file):
+        guard._plain_directory(path.parent)
+    terminal = guard.read_object(terminal_file, limit=2_000_000)
+    owner = guard.read_object(owner_file)
+    if (owner_file.name != 'owner.json' or terminal_file.parent != owner_file.parent
+            or owner.get('owner') != 'currency-wars-runner' or terminal.get('owner') != owner['owner']
+            or not re.fullmatch('[0-9a-f]{32}', str(owner.get('run_id', '')))
+            or owner_file.parent != Path(project) / 'debug' / ('runner-' + str(owner.get('chat_id', ''))[:8] + '-' + owner['run_id'][:12])
+            or any(terminal.get(k) != owner.get(k) for k in ('run_id', 'chat_id', 'launch_id', 'runner_pid', 'runner_creation_id'))
+            or value.get('chat_id') != owner.get('chat_id') or value.get('launch_id') != owner.get('launch_id')
+            or owner.get('runner_pid') != worker_pid or 'windows:' + str(owner.get('runner_creation_id')) != worker_identity
+            or terminal.get('control_mode') != 'stopped' or terminal.get('run_dir') != str(run)):
+        raise ValueError('Stopped terminal/owner/exact start launch does not match')
+    registry = list((Path(project) / 'docs/source-activity').iterdir())
+    if len(registry) > MAX_ACTIVITY_RECORDS:
+        raise ValueError('Activity inventory exceeds its bound')
+    matching = []
+    for path in registry:
+        item = guard.read_object(path)
+        if item.get('kind') == 'start' and item.get('chat_id') == owner['chat_id'] and item.get('launch_id') == owner['launch_id']:
+            matching.append(path)
+    if matching != [lease]:
+        raise ValueError('Stopped owner launch does not identify one exact original start')
+    cleanup, exits = terminal.get('cleanup', {}), terminal.get('exit_evidence', {})
+    worker, broker = exits.get('worker', {}), exits.get('broker', {})
+    broker_id = terminal.get('broker_identity', {})
+    broker_pid, broker_identity = broker_id.get('pid'), 'windows:' + str(broker_id.get('creation_id'))
+    for row, pid, identity in ((worker, worker_pid, worker_identity), (broker, broker_pid, broker_identity)):
+        if (type(pid) is not int or pid <= 0 or not re.fullmatch('windows:[1-9][0-9]*', identity)
+                or row.get('pid') != pid or 'windows:' + str(row.get('expected_creation_id')) != identity
+                or row.get('state') not in ('exited', 'absent')
+                or row.get('state') == 'exited' and (type(row.get('exit_code')) is not int or row['exit_code'] != 0)
+                or guard.identity_state(pid, identity) != 'dead'):
+            raise ValueError('Original worker/broker exit is incomplete, active or unknown')
+    if (cleanup.get('directory') != str(run) or cleanup.get('removed') is not True
+            or cleanup.get('pending_finally') is not False
+            or run.parent != Path(owner.get('runtime_location', {}).get('runtime_root', '')).absolute()
+            or not re.fullmatch('currency-wars-runner-' + re.escape(owner['chat_id'][:8]) + '-[A-Za-z0-9_-]{6,32}', run.name)):
+        raise ValueError('Original owned cleanup path is incomplete')
+    guard._plain_directory(run.parent)
+    try:
+        run.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise ValueError('Original owned runtime still exists')
+    if require_current and (Path(project) / 'docs/CURRENT_RUNNER.json').read_bytes() != terminal_file.read_bytes():
+        raise ValueError('CURRENT no longer matches this original stopped terminal')
+    return dict(kind='stopped_cleaned', terminal_file=str(terminal_file),
+                terminal_sha256=hashlib.sha256(terminal_file.read_bytes()).hexdigest(),
+                owner_file=str(owner_file), owner_sha256=hashlib.sha256(owner_file.read_bytes()).hexdigest(),
+                run_dir=str(run), run_id=owner['run_id'], chat_id=owner['chat_id'], launch_id=owner['launch_id'],
+                worker_pid=worker_pid, worker_identity=worker_identity, broker_pid=broker_pid, broker_identity=broker_identity)
+
+
+def accepted_stopped_receipt(project, lease, value):
+    r = guard.read_object(stopped_receipt_path(project, lease), limit=2_000_000)
+    validate_proof(r)
+    payload = lease.read_bytes()
+    deployment = r.get('deployment', {})
+    candidates, after = deployment.get('candidate_sources', {}), deployment.get('after_sources', {})
+    if (r.get('schema') != STOPPED_SCHEMA or r.get('policy') != POLICY or r.get('project') != str(Path(project).resolve())
+            or r.get('lease_name') != lease.name or r.get('original_lease') != value
+            or r.get('lease_sha256') != hashlib.sha256(payload).hexdigest() or r.get('original_bytes_hex') != payload.hex()
+            or r.get('historical_parentage') != 'unknown' or r.get('input_sent') is not False
+            or r.get('assessment') != 'retired_after_original_stop_cleanup'
+            or r.get('machine_id') != guard.windows_machine_id() or r.get('other_activity_reason') is not None
+            or set(candidates) != set(STOPPED_FILES) or any(not _sha(v) for v in candidates.values())
+            or after != {**r['sources'], **candidates}
+            or r['operator_provenance']['modules']['operator']['sha256'].upper() != candidates['tools/currency_wars_scoped_recovery.py'].upper()):
+        raise ValueError('Stopped retirement proof/approved deployment incomplete or changed')
+    guard._dead_start(Path(project).resolve(), lease, r['lease_sha256'], value['pid'], value['process_identity'])
+    e = r['run_evidence']
+    if stopped_run_evidence(project, lease, value, e['terminal_file'], e['owner_file'], e['run_dir'],
+                            e['worker_pid'], e['worker_identity']) != e:
+        raise ValueError('Immutable original stopped run evidence changed')
+    # CURRENT and every other lease remain the outer activity_reason's domain.
+    return True
+
+
+def _replace_source(project, name, payload):
+    import uuid
+    path = Path(project) / name
+    guard._plain_directory(path.parent)
+    temporary = path.with_name(path.name + '.stopped-' + uuid.uuid4().hex + '.tmp')
+    try:
+        with temporary.open('xb') as stream:
+            stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def recover_stopped(project, lease_name, digest, parent_pid, parent_identity, run, owner_file,
+                    worker_pid, worker_identity, binding, terminal_file, expected_sources_file,
+                    candidate_dir, candidate_hashes_file, *, accept_scope=False, apply=False):
+    """Exact stopped-run bootstrap: old mutex/guard, approved 3 sources, exclusive proof."""
+    if not accept_scope:
+        raise ValueError('Explicit supported-control-domain acceptance required')
+    project = guard._plain_directory(Path(project).absolute()).resolve()
+    candidate_dir = guard._plain_directory(Path(candidate_dir).absolute()).resolve()
+    if candidate_dir == project or project in candidate_dir.parents:
+        raise ValueError('Frozen operator candidate must be outside canonical project')
+    if not re.fullmatch(r'[0-9a-f]{32}\.json', lease_name):
+        raise ValueError('One exact original start required')
+    expected = guard.read_object(Path(expected_sources_file).absolute(), limit=300_000)
+    approved = guard.read_object(Path(candidate_hashes_file).absolute(), limit=300_000)
+    if set(approved) != set(STOPPED_FILES) or any(not _sha(v) for v in (*expected.values(), *approved.values())):
+        raise ValueError('Exact canonical-before and approved three-source hash maps required')
+    expected = {k: v.upper() for k, v in expected.items()}
+    approved = {k: v.upper() for k, v in approved.items()}
+    if (Path(__file__).absolute() != candidate_dir / 'tools/currency_wars_scoped_recovery.py'
+            or hashlib.sha256(Path(__file__).read_bytes()).hexdigest().upper() != approved['tools/currency_wars_scoped_recovery.py']):
+        raise ValueError('Executing operator is not the approved frozen candidate')
+    new = {name: guard._source_bytes(candidate_dir, name) for name in STOPPED_FILES}
+    if any(hashlib.sha256(new[name]).hexdigest().upper() != approved[name] for name in STOPPED_FILES):
+        raise ValueError('Candidate source changed after approval')
+    import currency_wars_input_bridge as bridge
+    lease = project / 'docs/source-activity' / lease_name
+    target = stopped_receipt_path(project, lease)
+    with guard.mutation_lock(project), bridge.inbox_lock(INBOX), game_lock(binding):
+        value, payload = guard._dead_start(project, lease, digest, parent_pid, parent_identity)
+        if target.exists():
+            raise ValueError('Stopped retirement already has an exclusive record; read original result')
+        if guard.activity_reason(project, ignore_lease=lease) is not None:
+            raise RuntimeError('Another activity/current actor is active or unknown')
+        sources = guard.source_hashes(project)
+        if sources != expected:
+            raise ValueError('Canonical old sources differ from approved bootstrap map')
+        registry = guard._activity_snapshot(project)
+        evidence = stopped_run_evidence(project, lease, value, terminal_file, owner_file, run,
+                                        worker_pid, worker_identity, require_current=True)
+        pending, actors, provenance = bridge_evidence(project), census(project), operator_provenance()
+        if (census(project) != actors or bridge_evidence(project) != pending or operator_provenance() != provenance
+                or guard.source_hashes(project) != sources or guard._activity_snapshot(project) != registry
+                or guard.activity_reason(project, ignore_lease=lease) is not None
+                or stopped_run_evidence(project, lease, value, terminal_file, owner_file, run,
+                    worker_pid, worker_identity, require_current=True) != evidence
+                or guard._dead_start(project, lease, digest, parent_pid, parent_identity)[1] != payload):
+            raise RuntimeError('Stopped bootstrap evidence changed; nothing deployed or retired')
+        validate_game(binding)
+        r = dict(schema=STOPPED_SCHEMA, policy=POLICY, project=str(project), lease_name=lease_name,
+                 lease_sha256=digest, original_lease=value, original_bytes_hex=payload.hex(), historical_parentage='unknown',
+                 assessment='retired_after_original_stop_cleanup', machine_id=guard.windows_machine_id(), input_sent=False,
+                 sources=sources, registry=registry, actors=actors, run_evidence=evidence, bridge=pending,
+                 operator_provenance=provenance, game_binding=binding, other_activity_reason=None,
+                 deployment=dict(candidate_sources=approved, after_sources={**sources, **approved}))
+        from datetime import datetime, timezone
+        r['observed_at'] = datetime.now(timezone.utc).isoformat();r['proof_sha256'] = proof_digest(r)
+        validate_proof(r)
+        if not apply:
+            return dict(ok=True, checked_only=True, retired=False, deployed=False, input_sent=False,
+                        before_sources=sources, candidate_sources=approved, evidence=evidence)
+        originals = {name: guard._source_bytes(project, name) for name in STOPPED_FILES}
+        replaced = []
+        try:
+            for name in STOPPED_FILES:
+                _replace_source(project, name, new[name]); replaced.append(name)
+            if guard.source_hashes(project) != r['deployment']['after_sources']:
+                raise RuntimeError('Deployed source hash readback failed')
+            # Once created this proof is retained, including a failed partial write.
+            target.parent.mkdir(parents=True, exist_ok=True);guard._plain_directory(target.parent)
+            encoded = json.dumps(r, sort_keys=True, ensure_ascii=False, indent=2).encode()
+            if len(encoded) > 2_000_000:
+                raise RuntimeError('Stopped bootstrap proof exceeds its bound')
+            with target.open('xb') as stream:
+                stream.write(encoded);stream.flush();os.fsync(stream.fileno())
+            if not accepted_stopped_receipt(project, lease, value):
+                raise RuntimeError('Stopped proof readback failed')
+        except Exception as error:
+            failures = []
+            for name in reversed(replaced):
+                try:
+                    if hashlib.sha256(guard._source_bytes(project, name)).hexdigest().upper() != approved[name]:
+                        raise RuntimeError('Source changed; rollback must not overwrite it')
+                    _replace_source(project, name, originals[name])
+                except Exception as rollback:
+                    failures.append(name + ': ' + str(rollback))
+            raise RuntimeError('Stopped bootstrap failed; original marker retained; rollback=' +
+                               ('verified' if not failures and guard.source_hashes(project) == sources else repr(failures)) + '; ' + str(error)) from error
+        return dict(ok=True, retired=True, deployed=True, input_sent=False, receipt=str(target),
+                    before_sources=sources, after_sources=r['deployment']['after_sources'])
+
+
 def accepted_receipt(project, lease, value):
+    if stopped_receipt_path(project, lease).exists():
+        return accepted_stopped_receipt(project, lease, value)
     path = receipt_path(project, lease)
     if not path.exists():
         return False
@@ -667,14 +873,29 @@ def recover(project, lease_name, digest, parent_pid, parent_identity, run, owner
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    for name in ('project', 'lease', 'lease-sha256', 'parent-identity', 'run-dir', 'owner-file', 'worker-identity', 'old-game-binding-file'):
+    for name in ('project', 'lease', 'lease-sha256', 'parent-identity', 'run-dir', 'owner-file', 'worker-identity'):
         p.add_argument('--' + name, required=True)
     for name in ('parent-pid', 'worker-pid', 'game-pid', 'game-creation-id', 'game-hwnd'):
         p.add_argument('--' + name, type=int, required=True)
+    p.add_argument('--old-game-binding-file')
+    p.add_argument('--stopped-cleaned-run', action='store_true')
+    for name in ('terminal-file', 'expected-sources-file', 'candidate-dir', 'candidate-hashes-file'):
+        p.add_argument('--' + name)
     p.add_argument('--accept-supported-control-domain', action='store_true')
     p.add_argument('--apply', action='store_true')
     a = p.parse_args()
     try:
+        if a.stopped_cleaned_run:
+            if not all((a.terminal_file, a.expected_sources_file, a.candidate_dir, a.candidate_hashes_file)):
+                raise ValueError('Stopped bootstrap requires terminal and both approved source maps')
+            result = recover_stopped(a.project, a.lease, a.lease_sha256, a.parent_pid, a.parent_identity,
+                a.run_dir, a.owner_file, a.worker_pid, a.worker_identity,
+                dict(pid=a.game_pid, creation_id=a.game_creation_id, hwnd=a.game_hwnd),
+                a.terminal_file, a.expected_sources_file, a.candidate_dir, a.candidate_hashes_file,
+                accept_scope=a.accept_supported_control_domain, apply=a.apply)
+            print(json.dumps(result));return 0
+        if not a.old_game_binding_file:
+            raise ValueError('Early-start recovery requires the original old-game binding')
         result = recover(a.project, a.lease, a.lease_sha256, a.parent_pid, a.parent_identity,
                          a.run_dir, a.owner_file, a.worker_pid, a.worker_identity,
                          dict(pid=a.game_pid, creation_id=a.game_creation_id, hwnd=a.game_hwnd), a.old_game_binding_file,

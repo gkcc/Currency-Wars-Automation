@@ -18,6 +18,7 @@ from currency_wars_artifacts import process_identity
 import currency_wars_artifacts as artifacts
 
 SOURCE_MANIFEST = 'tools/currency_wars_runtime_sources.json'
+MAX_ACTIVITY_RECORDS = 512
 
 
 def _source_bytes(project, name, *, max_bytes=4_000_000):
@@ -279,7 +280,7 @@ def activity_reason(project, ignore_lease=None):
         if directory.is_symlink() or getattr(info, 'st_file_attributes', 0) & 0x400:
             return 'Activity directory is linked or unknown; update skipped.'
         files = list(directory.iterdir())
-        if len(files) > 128:
+        if len(files) > MAX_ACTIVITY_RECORDS:
             return 'Activity inventory exceeds its bound; update skipped.'
         for path in files:
             if ignore_lease is not None and path == ignore_lease:
@@ -359,7 +360,7 @@ class Activity:
         """A candidate only: the caller MUST verify native Popen parentage."""
         with mutation_lock(self.project):
             paths = list(self.path.parent.iterdir())
-            if len(paths) > 128:
+            if len(paths) > MAX_ACTIVITY_RECORDS:
                 raise RuntimeError('Activity inventory exceeds its bound')
             matches = []
             for path in paths:
@@ -526,7 +527,7 @@ def _activity_snapshot(project):
     """Hash only the existing bounded registry and CURRENT; not unrelated PIDs."""
     directory = _plain_directory(Path(project) / 'docs/source-activity')
     paths = sorted(directory.iterdir()) if directory.exists() else []
-    if len(paths) > 128:
+    if len(paths) > MAX_ACTIVITY_RECORDS:
         raise ValueError('Activity inventory exceeds its bound')
     hashes = {}
     for path in paths:

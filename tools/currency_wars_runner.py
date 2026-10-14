@@ -26,7 +26,7 @@ import currency_wars_manual_steps as manual_steps
 import currency_wars_manual_stage as manual_stage
 from currency_wars_source_guard import activity, activity_reason, mutation_lock, verify_runtime_sources
 from currency_wars_perception import (Perception, clean, find_text, hash_distance, GOLD_HUD,
-                                     valid_population_counts, READ_CONTRACT_VERSION)
+                                     valid_population_counts, READ_CONTRACT_VERSION, _native_simple_armament_choice)
 from currency_wars_shop_reader import purchase_slot, priced_read_slot
 from currency_wars_state_reader import native_slots
 import currency_wars_coaching as coaching
@@ -3459,8 +3459,28 @@ class Worker:
                         and .90 <= native_coins.get('confidence', 1.) <= 1.
                         and native_coins['value'] != reading['coins']):
                 raise ValueError('承接缺少当前节点/金币/等级/经验/人口独立读数')
-        elif actual.get('page') in BUSINESS_REVIEW_PAGES:
+        elif (actual.get('page') in BUSINESS_REVIEW_PAGES
+                or actual.get('page') == 'unknown' and source.get('page') == 'unknown'
+                    and _native_simple_armament_choice(source.get('rows', []))
+                    and _native_simple_armament_choice(actual.get('rows', []))):
             labels = reading.get('visible_labels')
+            if actual.get('page') == 'unknown':
+                # Same unsupported modal, not a roster or equipment identity.
+                fields = ([950, 35, 1250, 80], [1000, 80, 1200, 120],
+                          *[[left, 266, left+260, 316] for left in (534, 824, 1114, 1404)])
+                required_labels = []
+                for bounds in fields:
+                    pairs = [[clean(row['text']) for row in observation.get('rows', [])
+                              if row.get('confidence', 0) >= .90
+                              and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
+                              and bounds[1] <= row['box'][1] < row['box'][3] <= bounds[3]]
+                             for observation in (source, actual)]
+                    if len(pairs[0]) != 1 or pairs[0] != pairs[1]:
+                        raise ValueError('奖励盒承接源/当前六个可见字段不完整或已变化')
+                    required_labels.extend(pairs[0])
+                if (not isinstance(labels, list) or not set(required_labels) <= set(labels)
+                        or any(not find_text(actual.get('rows', []), label, exact=True) for label in labels)):
+                    raise ValueError('奖励盒承接须双帧实读标题/选择数/四列文字，不继承旧装备事实')
             if (not isinstance(labels, list) or not labels or len(labels) > 32
                     or any(not isinstance(label, str) or not find_text(source.get('rows', []), label, exact=True)
                            for label in labels)):
@@ -9576,10 +9596,11 @@ class Worker:
                 else:
                     self.ask(observed, 'world_entry_unverified', 'F已尝试；只核当前页面，不重复输入')
                 return
-            if page == 'unknown':
+            box_modal = page == 'unknown' and _native_simple_armament_choice(observed.get('rows', []))
+            if page == 'unknown' and not box_modal:
                 self.ask(observed, 'unknown_page', '进入货币战争前只使用已有大世界/手机/指南导航；旧局连续性未确认，不继承XP或执行局内经济。')
                 return
-            if observed.get('page') not in BUSINESS_REVIEW_PAGES:
+            if observed.get('page') not in BUSINESS_REVIEW_PAGES and not box_modal:
                 self.publish(phase='续接只读等待可核页面', decision_request=None,
                              reason='当前战斗/未知过渡页不发输入，沿原硬期限等待新帧')
                 time.sleep(min(2, max(0, self.deadline - time.monotonic())))
