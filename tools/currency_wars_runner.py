@@ -1975,13 +1975,16 @@ def validate_plan(reply, request, epoch):
             or actions[0].get('type') != 'finish_preparation_review'
             or set(reply.get('context_update', {})) != {'business_resume'}):
         raise ValueError('跨租期承接只允许独立当前业务复核，禁止附带旧阶段或游戏输入')
-    if any(action.get('type') == 'deploy_unit' for action in actions):
+    if any(action.get('type') in ('deploy_unit', 'deploy_occupied_unit') for action in actions):
         from currency_wars_deployment import deployment_facts
         if (len(actions) != 1 or reply.get('context_update', {})
                 or reply.get('match_id') != request.get('match_id')
                 or request.get('kind') != 'preparation_strategy'
                 or request.get('preparation_checklist', {}).get('phase') != 'lineup_equipment'):
             raise ValueError('实名部署只允许当前上场阶段独立单动作，不附带预算/交易/完成项')
+        if actions[0].get('type') == 'deploy_occupied_unit':
+            from currency_wars_deployment import validate_occupied_deployment_review
+            validate_occupied_deployment_review(actions[0], request)
         deployment_facts(request['observation'], actions[0])
         return reply
     if 'reward_capacity' in reply.get('context_update', {}) and (
@@ -3765,7 +3768,7 @@ class Worker:
         if retained_effects and not (page == 'reward_overlay' and physical == ['key:27']):
             raise ValueError('原节点业务效果仍pending；完整completed不能清费用/领奖效果，只核原来源')
         deployment_record = getattr(self, 'business', {}).get('deployment_pending')
-        if deployment_record and (not action or action.get('type') != 'deploy_unit'
+        if deployment_record and (not action or action.get('type') not in ('deploy_unit', 'deploy_occupied_unit')
                 or not getattr(self, 'deployment_inflight', None)
                 or deployment_record.get('origin_run_id') != self.owner['run_id']
                 or deployment_record.get('request_id') != self.deployment_inflight.get('request_id')):
@@ -3798,7 +3801,7 @@ class Worker:
             if tokens != pending['tokens']:
                 raise ValueError('备战图标检查仅允许内部固定点的一次点击，不使用/拖动/重发')
             return
-        if action.get('type') == 'deploy_unit':
+        if action.get('type') in ('deploy_unit', 'deploy_occupied_unit'):
             pending = self.guard_deployment(action, observed, request_id=request_id)
             if tokens != pending['tokens']:
                 raise ValueError('实名部署只能使用原生源槽和空目标槽计算的一次拖动')
@@ -3966,7 +3969,7 @@ class Worker:
         macro = getattr(self, 'economy_macro_active', None)
         if macro:
             submit_deadline = min(submit_deadline, macro['monotonic_deadline'])
-        if action and (action.get('type') in ('close_shop_for_observation', 'deploy_unit', 'inspect_preparation_target')
+        if action and (action.get('type') in ('close_shop_for_observation', 'deploy_unit', 'deploy_occupied_unit', 'inspect_preparation_target')
                 or action.get('target_evidence', {}).get('control_id') == 'owned_unit_details'):
             remaining = (datetime.fromisoformat(request['deadline_at']) - datetime.now(timezone.utc)).total_seconds()
             submit_deadline = min(submit_deadline, time.monotonic() + remaining)
@@ -7797,7 +7800,7 @@ class Worker:
                    'resume_epoch': self.epoch(), 'match_id': self.active_match_id,
                    'evidence_file': evidence, 'original_png': str(original_png), 'created_at': now(),
                    'deadline_at': (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat(),
-                   'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'deploy_unit',
+                   'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'deploy_unit', 'deploy_occupied_unit',
                                              'finish_inspection', 'confirm_match_result', 'finish_preparation_review',
                                              'refresh_observation', 'close_shop_for_observation', 'advance_local_economy',
                                              'advance_local_preparation', 'inspect_preparation_target'],
@@ -8362,6 +8365,9 @@ class Worker:
                 or self.pending_reward_capacity() or self.pending_reward_step(observed)):
             raise ValueError('实名部署意图/阶段/原来源已变或仍有其他原效果待验')
         same_deployment_preconditions(request['observation'], observed, action)
+        if action.get('type') == 'deploy_occupied_unit':
+            from currency_wars_deployment import check_occupied_deployment
+            check_occupied_deployment(action, request, observed, pending['before_png'])
         self.source_refresh_guard(request, tuple(pending['broker_identity']), pending_input_id=request_id)
         manual_steps._bound_reward_frame(self.run, self.c, observed, pending['before_png'], read_only=True)
         if request_id is not None:
@@ -8390,6 +8396,9 @@ class Worker:
         if hashlib.sha256(Path(request['original_png']).read_bytes()).hexdigest() != request['snapshot_id']:
             raise ValueError('部署原PNG字节身份已变')
         facts = same_deployment_preconditions(request['observation'], actual, action)
+        if action.get('type') == 'deploy_occupied_unit':
+            from currency_wars_deployment import check_occupied_deployment
+            check_occupied_deployment(action, request, actual, self.frame_path)
         broker = self.source_refresh_guard(request)
         definitions = {(s['location'], s['row'], s['slot']): s for s in native_slots()}
         src = definitions[('bench', 'bench', action['unit']['slot'])]
@@ -8740,7 +8749,7 @@ class Worker:
         original = request['observation']
         if actual['page'] != original['page']:
             raise ValueError('战略回答到达时页面已变，拒绝旧计划')
-        if len(reply['actions']) == 1 and reply['actions'][0].get('type') == 'deploy_unit':
+        if len(reply['actions']) == 1 and reply['actions'][0].get('type') in ('deploy_unit', 'deploy_occupied_unit'):
             return self.execute_deployment(reply, request, actual)
         guide_navigation_verified = False
         if (len(reply['actions']) == 1 and reply['actions'][0].get('target_evidence', {}).get('control_id')

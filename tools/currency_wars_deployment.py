@@ -48,8 +48,128 @@ def _identity(slot):
     return tuple(slot.get(k) for k in ('status', 'name', 'star', 'position'))
 
 
+def _compatible_slot(old, new):
+    return (old['status'] == new['status'] and all(old.get(key) is None or new.get(key) is None
+            or old[key] == new[key] for key in ('name', 'star', 'position')))
+
+
+def _occupied_resources(observation, *, read_review=None, reviewed_destination=None):
+    """Full native occupancy and player resources; no named-team assertion."""
+    from currency_wars_state_reader import native_slots
+    slots = _slots(observation, reviewed_destination=reviewed_destination)
+    definitions = {(s['location'], s['row'], s['slot']): s for s in native_slots()}
+    contract = observation.get('read_contract', {})
+    if (contract.get('version') != 2 or contract.get('effective_scope') != 'full'
+            or contract.get('unread') != []
+            or any(s.get('origin') != 'native_visual_state_reader'
+                   or s.get('bounds') != definitions[key]['bounds']
+                   or s.get('point') != definitions[key]['point'] for key, s in slots.items())):
+        raise ValueError('occupied_deployment_requires_full_native_slot_geometry')
+    population = _population(observation)
+    if population[0] != sum(s['status'] == 'occupied' for k, s in slots.items() if k[0] == 'board'):
+        raise ValueError('native_population_conflicts_with_board')
+    hud = observation.get('semantic', {}).get('player_hud') or {}
+    coins = observation.get('semantic', {}).get('coins') or {}
+    if (hud.get('snapshot_id') != observation.get('snapshot_id')
+            or hud.get('origin') != 'native_player_hud' or hud.get('actor') != 'player'
+            or type(hud.get('level')) is not int or not 1 <= hud['level'] <= 10 or str(hud['level']) != str(observation['fields'].get('level'))
+            or not isinstance(hud.get('xp'), list) or len(hud['xp']) != 2
+            or any(type(n) is not int or n < 0 for n in hud['xp']) or hud['xp'][0] > hud['xp'][1]
+            or read_review is None and (coins.get('snapshot_id') != observation.get('snapshot_id')
+                or type(coins.get('value')) is not int or coins['value'] < 0
+                or not .90 <= coins.get('confidence', 0) <= 1.
+                or coins.get('bounds') != [1613, 892, 1687, 950])):
+        raise ValueError('occupied_deployment_native_resources_unbound')
+    return slots, population, (hud['level'], hud['xp'],
+                               coins['value'] if read_review is None else read_review['coins'])
+
+
+def validate_occupied_deployment_review(action, request):
+    """Explicit current supervisor exposure READ; never a native identity."""
+    review = action.get('source_card_review')
+    keys = {'source', 'request_id', 'snapshot_id', 'match_id', 'resume_epoch',
+            'capture_request_id', 'frame_id', 'row', 'slot', 'bounds', 'unobstructed', 'findings'}
+    if (not isinstance(review, dict) or set(review) != keys
+            or review.get('source') != 'supervising_agent' or review.get('unobstructed') is not True
+            or review.get('row') != 'bench' or type(review.get('slot')) is not int
+            or review.get('slot') != action.get('unit', {}).get('slot')
+            or not isinstance(review.get('bounds'), list) or len(review['bounds']) != 4
+            or any(type(v) is not int for v in review['bounds'])
+            or not isinstance(review.get('findings'), str) or not 1 <= len(review['findings'].strip()) <= 1000
+            or any(not isinstance(review.get(k), str) or not review[k] for k in BINDING_KEYS
+                   + ('capture_request_id', 'frame_id'))):
+        raise ValueError('current_supervised_source_card_exposure_required')
+    if request is not None:
+        if (any(review[k] != request.get(k) for k in BINDING_KEYS)
+                or any(review[k] != request.get('observation', {}).get(k)
+                       for k in ('snapshot_id', 'capture_request_id', 'frame_id'))):
+            raise ValueError('supervised_source_card_exposure_not_current_request')
+    return review
+
+
+def occupied_deployment_facts(observation, action):
+    slots, population, resources = _occupied_resources(observation)
+    if (set(action) != {'type', 'reason', 'expected_page', 'unit', 'destination', 'source_card_review'}
+            or action.get('type') != 'deploy_occupied_unit' or action.get('expected_page') != 'preparation'
+            or not isinstance(action.get('reason'), str) or not 1 <= len(action['reason'].strip()) <= 1000
+            or not isinstance(action.get('unit'), dict) or set(action['unit']) != {'slot'}
+            or type(action['unit']['slot']) is not int or not 1 <= action['unit']['slot'] <= 9
+            or not isinstance(action.get('destination'), dict) or set(action['destination']) != {'row', 'slot'}
+            or action['destination'].get('row') not in ('front', 'back')
+            or type(action['destination'].get('slot')) is not int):
+        raise ValueError('occupied_deployment_action_shape_invalid')
+    source = slots[('bench', 'bench', action['unit']['slot'])]
+    target = slots.get(('board', action['destination']['row'], action['destination']['slot']))
+    review = validate_occupied_deployment_review(action, None)
+    if review['bounds'] != source['bounds']:
+        raise ValueError('supervised_source_card_exposure_bounds_mismatch')
+    if source['status'] != 'occupied' or not target or target['status'] != 'empty':
+        raise ValueError('occupied_source_or_native_empty_destination_missing')
+    if source.get('position') not in {'front': ('前台', '前后台'), 'back': ('后台', '前后台')}[action['destination']['row']]:
+        raise ValueError('source_native_role_unknown_or_illegal')
+    if population[0] >= population[1]:
+        raise ValueError('population_full')
+    return dict(source=copy.deepcopy(source), destination=copy.deepcopy(target),
+                population=list(population), stage=observation['fields'].get('stage'), coins=resources[2])
+
+
+def check_occupied_deployment(action, request, actual, current_png):
+    """Reuse the audited current-card exposure and byte-continuity contract.
+
+    The constructed click intent is passed only to the pure image checker; it
+    is never published. The real executor computes one drag from native slots.
+    """
+    import cv2
+    from currency_wars_unit_inspection import check_target, ANCHORS
+    from currency_wars_slot_probe import SlotProbe
+    from currency_wars_unit_inspection import _image
+    validate_occupied_deployment_review(action, request)
+    facts = same_deployment_preconditions(request['observation'], actual, action)
+    source, target = facts['source'], facts['destination']
+    exposure = check_target(dict(type='click_point', args=source['point'], expected_page='preparation',
+        guard_texts=[a[0] for a in ANCHORS], reason=action['reason'], target_evidence=dict(
+            control_id='owned_unit_details', snapshot_id=request['snapshot_id'], row='bench',
+            slot=source['slot'], bounds=source['bounds'])), request, actual, current_png)
+    probe = SlotProbe()
+    if not probe.reader._load():
+        raise ValueError('occupied_deployment_native_resources_missing')
+    for observed, path in ((request['observation'], request['original_png']), (actual, current_png)):
+        rgb = _image(path, observed['snapshot_id'])
+        gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY).astype('float32')
+        overlays = probe.reader._overlays(rgb)
+        src = probe._slot(rgb, gray, source, True, overlays)
+        dst = probe._slot(rgb, gray, target, True, overlays)
+        if (src['status'] != 'occupied' or src.get('position') != source['position']
+                or dst['status'] != 'empty'):
+            raise ValueError('current_card_role_or_empty_target_pixels_unproved')
+    return dict(source_card=exposure, native_destination=copy.deepcopy(target),
+                native_identity_inferred=False, input_sent=False)
+
+
 def deployment_facts(observation, action):
     """Current named bench unit, legal empty destination and bounded capacity."""
+    if isinstance(action, dict) and action.get('type') == 'deploy_occupied_unit':
+        return occupied_deployment_facts(observation, action)
     slots = _slots(observation)
     deployed, maximum = _population(observation)
     if deployed != sum(s['status'] == 'occupied' for k, s in slots.items() if k[0] == 'board'):
@@ -93,6 +213,15 @@ def deployment_facts(observation, action):
 
 def same_deployment_preconditions(before, fresh, action):
     """Compare relevant current facts, not animated decorative text boxes."""
+    if action.get('type') == 'deploy_occupied_unit':
+        a, b = deployment_facts(before, action), deployment_facts(fresh, action)
+        old, unused_pop, old_resources = _occupied_resources(before)
+        new, unused_pop, new_resources = _occupied_resources(fresh)
+        if (a['population'] != b['population'] or a['stage'] != b['stage']
+                or old_resources != new_resources or a['source']['position'] != b['source']['position']
+                or any(not _compatible_slot(old[k], new[k]) for k in old)):
+            raise ValueError('current_occupied_deployment_facts_changed')
+        return b
     a, b = deployment_facts(before, action), deployment_facts(fresh, action)
     old, new = _slots(before), _slots(fresh)
     if (a['population'] != b['population'] or a['stage'] != b['stage'] or a['coins'] != b['coins']
@@ -216,13 +345,32 @@ def verify_deployment_effect(before, after, action, *, read_review=None):
                 or new[source]['status'] != 'empty' or new[destination]['status'] != 'occupied'
                 or after_coins != facts['coins']
                 or facts['coins'] is None
-                or any(_identity(old[k]) != _identity(new[k]) for k in old if k not in (source, destination))):
+                or any((not _compatible_slot(old[k], new[k]) if action.get('type') == 'deploy_occupied_unit'
+                        else _identity(old[k]) != _identity(new[k]))
+                       for k in old if k not in (source, destination))):
             raise ValueError('deployment_observable_effect_not_complete')
         wallet = after.get('semantic', {}).get('coins') or {}
         if not reviewed and (wallet.get('snapshot_id') != after.get('snapshot_id')
                 or not .90 <= wallet.get('confidence', 0) <= 1.
                 or wallet.get('bounds') != [1613, 892, 1687, 950]):
             raise ValueError('after_wallet_not_native_bound')
+        if action.get('type') == 'deploy_occupied_unit':
+            unused_slots, unused_population, after_resources = _occupied_resources(
+                after, read_review=read_review, reviewed_destination=destination if reviewed else None)
+            unused_slots, unused_population, old_resources = _occupied_resources(before)
+            if after_resources != old_resources:
+                raise ValueError('deployment_observable_resources_changed')
+            for key in ('name', 'star', 'position'):
+                if (facts['source'].get(key) is not None and new[destination].get(key) is not None
+                        and facts['source'][key] != new[destination][key]):
+                    raise ValueError('destination_native_identity_conflicts')
+            return {'outcome': 'observed_transition', 'native_destination_identity_verified': False,
+                    'causal_identity': None, 'causal_card': {'location': 'bench', 'row': 'bench',
+                        'slot': action['unit']['slot'], 'source_snapshot_id': before['snapshot_id']},
+                    'origin': 'single_deployment_transition_requires_receipt_fence',
+                    'destination': copy.deepcopy(action['destination']),
+                    'effect_read_origin': 'supervising_agent' if reviewed else 'current_native_observation',
+                    'native_observation_rewritten': False, 'source_exposure_origin': 'supervising_agent'}
         for key in ('name', 'star', 'position'):
             if new[destination].get(key) not in (None, action['unit'][key]):
                 raise ValueError('destination_native_identity_conflicts')
@@ -265,6 +413,16 @@ def verify_archived_deployment(pending, before_png, after, after_png, receipts, 
                     or any(meta.get(a) != observation[b] for a, b in (
                         ('snapshot_sha256', 'snapshot_id'), ('frame_id', 'frame_id'), ('captured_at', 'captured_at')))):
                 raise ValueError('original_capture_receipt_and_native_frame_mismatch')
+        if pending['action'].get('type') == 'deploy_occupied_unit':
+            review = validate_occupied_deployment_review(pending['action'], None)
+            source_receipt = receipts.get(review['capture_request_id'], {})
+            meta = source_receipt.get('result', {}).get('observation') or {}
+            if (review['request_id'] != pending['request_id'] or review['match_id'] != pending['match_id']
+                    or review['resume_epoch'] != pending['resume_epoch']
+                    or review['capture_request_id'] not in prior
+                    or meta.get('snapshot_sha256') != review['snapshot_id']
+                    or meta.get('frame_id') != review['frame_id']):
+                raise ValueError('original_supervised_source_read_receipt_unbound')
         unit, destination = pending['action']['unit'], pending['action']['destination']
         old = _slots(before)
         src, dst = old[('bench', 'bench', unit['slot'])], old[('board', destination['row'], destination['slot'])]
