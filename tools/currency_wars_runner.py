@@ -34,7 +34,7 @@ import currency_wars_economy as economy
 from currency_wars_progression import progression_plan
 from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
 from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target, navigation_target,
-    stable_preparation_icon_target, PREPARATION_GUIDE_CONTROL,
+    stable_preparation_icon_target, stable_reward_box_open, PREPARATION_GUIDE_CONTROL,
     PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT, TASK_LIST_SCROLL_CONTROL,
     validate_task_list_scroll, stable_task_list_scroll, task_list_scroll_postcondition)
 
@@ -3868,6 +3868,10 @@ class Worker:
             # Do not ask economic_policy to select again: this exact first
             # publication owns its pending, which correctly excludes new work.
             return
+        reward_box = action.get('type') == 'click_text' and action.get('text') == '开启'
+        if reward_box:
+            self.guard_reward_box_open(action, observed, request_id=request_id)
+            return
         if status['phase'] == 'rewards' and action.get('type') == 'click_text' and (
                 page != 'shop' or not resolved or clean(resolved['text']) != '收起'):
             raise ValueError('奖励未空；只允许当前收店/原生领奖或必要恢复，不点未知备战文字')
@@ -7467,6 +7471,23 @@ class Worker:
                     error_type=type(exc).__name__)
             raise
 
+    def guard_reward_box_open(self, action, actual, *, request_id=None):
+        if self.pending_reward_capacity():
+            raise ValueError('腾位已尝试；先核原收据，不开启奖励盒覆盖pending')
+        request = self.state.get('decision_request') or {}
+        if (self.preparation_checklist(actual)['phase'] != 'rewards'
+                or request.get('match_id') != self.active_match_id
+                or request.get('resume_epoch') != self.epoch()
+                or not stable_reward_box_open(action, request, actual, self.frame_path)):
+            raise ValueError('开启仅限当前领奖阶段完整原生备战席奖励盒；文字/盒体/原帧未核实')
+        attempted = getattr(self, 'reward_box_attempted', {})
+        old = attempted.get(request['request_id'])
+        if old is not None and old != request_id:
+            raise ValueError('本请求奖励盒已有原输入意图；核原ID，不重发')
+        if request_id is not None:
+            attempted[request['request_id']] = request_id
+            self.reward_box_attempted = attempted
+
     def guard_preparation_action(self, action, actual, *, loot_pickup=False, verified_navigation=False):
         if self.pending_reward_capacity():
             raise ValueError('腾位已尝试；先按原收据回读空位/钱/溢出，不再发送输入')
@@ -7480,6 +7501,8 @@ class Worker:
         reviews = self.preparation_reviews
         if action.get('type') == 'key' and action.get('args') == [69]:
             raise ValueError('当前备战经验键为F70，拒绝旧E69绕过经济守卫')
+        if action.get('type') == 'click_text' and action.get('text') == '开启':
+            return self.guard_reward_box_open(action, actual)
         if verified_navigation:
             if status['phase'] not in ('startup_guide', 'inventory_cleanup') or reviews.get('rewards', {}).get('completed') is not True:
                 raise ValueError('须先领奖领空，再进入第二创业指南；固定图标不跳过准备顺序')
@@ -8656,6 +8679,9 @@ class Worker:
     def _execute_plan(self, reply):
         request = self.state['decision_request']
         validate_plan(reply, request, self.epoch())
+        if (any(action.get('type') == 'click_text' and action.get('text') == '开启' for action in reply['actions'])
+                and len(reply['actions']) != 1):
+            raise ValueError('奖励盒开启必须是单独一个动作；后页只回读，不执行旧动作列表')
         policy = coaching_policy()
         if policy['require_battle_confirmation']:
             battle_actions = [action for action in reply['actions'] if battle_input(request['observation'], action)]

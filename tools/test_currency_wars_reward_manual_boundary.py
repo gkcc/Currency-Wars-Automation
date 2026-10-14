@@ -5,6 +5,7 @@ reward sequence is exercised. Imported old test modules supply fixtures only.
 """
 import ast
 import copy
+import contextlib
 import hashlib
 import io
 import json
@@ -274,6 +275,85 @@ class RewardManualBoundaryTests(unittest.TestCase):
             worker.preparation_reviews.pop('rewards')
             worker.advance_economy(worker.last_observation)
             self.assertEqual(control.action_index, 0)
+
+    def test_exact_open_caption_without_a_native_reward_box_does_not_publish(self):
+        # A high-confidence label inside the bench is not a positive box proof.
+        with economy_fixture.EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
+            worker.preparation_reviews = {}
+            read = worker.perception.read
+            def read_nonbox(path, force=False, *, scope='full'):
+                result = read(path, force, scope=scope)
+                result['page'] = 'preparation'
+                result['rows'] = [
+                    {'text': '开启', 'confidence': .999, 'box': [663, 939, 714, 968]},
+                    {'text': '备战阶段', 'confidence': .999, 'box': [430, 33, 513, 60]},
+                    {'text': '2-3', 'confidence': .999, 'box': [441, 60, 500, 94]},
+                    {'text': '出战', 'confidence': .999, 'box': [1784, 730, 1852, 771]}]
+                return result
+            worker.perception.read = read_nonbox
+            worker.strategy_reads = {}
+            worker.observe()
+            worker.state['decision_request'] = None
+            worker.ask(worker.last_observation, 'preparation_strategy', 'declared non-box caption')
+            request = worker.state['decision_request']
+            reply = {'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'],
+                     'resume_epoch': worker.epoch(), 'actions': [
+                         {'type': 'click_text', 'text': '开启', 'exact': True,
+                          'bounds': [635, 920, 745, 975], 'expected_page': 'preparation',
+                          'reason': 'a label must not bypass the reward gate'}]}
+            with self.assertRaises(ValueError):
+                worker.execute_plan(reply)
+            self.assertEqual(control.action_index, 0)
+
+    def test_reward_box_capacity_pending_at_publication_does_not_publish(self):
+        with economy_fixture.EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
+            worker.preparation_reviews = {}
+            read = worker.perception.read
+            def read_box_protocol(path, force=False, *, scope='full'):
+                result = read(path, force, scope=scope)
+                result['page'] = 'preparation'
+                result['rows'] = [
+                    {'text': '开启', 'confidence': .999, 'box': [663, 939, 714, 968]},
+                    {'text': '备战阶段', 'confidence': .999, 'box': [430, 33, 513, 60]},
+                    {'text': '2-3', 'confidence': .999, 'box': [441, 60, 500, 94]},
+                    {'text': '出战', 'confidence': .999, 'box': [1784, 730, 1852, 771]}]
+                return result
+            worker.perception.read = read_box_protocol
+            worker.strategy_reads = {}
+            worker.observe()
+            worker.state['decision_request'] = None
+            worker.ask(worker.last_observation, 'preparation_strategy', 'declared publication-race fixture')
+            request = worker.state['decision_request']
+            validate = control.validate_actions
+            lock = control.submission_lock
+            physical_validated = []
+            def validate_actions(actions):
+                if any(item['type'] == 'click' for item in actions):
+                    physical_validated.append(True)
+                return validate(actions)
+            @contextlib.contextmanager
+            def publication_lock():
+                with lock():
+                    if physical_validated:
+                        control.write_json(worker.run / 'reward-capacity.json', {
+                            'run_id': worker.owner['run_id'], 'status': 'unknown',
+                            'input_request_id': 'original-capacity-input', 'publication_attempted': True})
+                    yield
+            control.validate_actions = validate_actions
+            control.submission_lock = publication_lock
+            reply = {'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'],
+                     'resume_epoch': worker.epoch(), 'actions': [
+                         {'type': 'click_text', 'text': '开启', 'exact': True,
+                          'bounds': [635, 920, 745, 975], 'expected_page': 'preparation',
+                          'reason': 'box input must retain the capacity pending fence'}]}
+            # Isolate the publication fence; retained native pixel acceptance is
+            # independently checked with actual before/fresh PNGs.
+            with patch.object(runner, 'stable_reward_box_open', return_value=True):
+                with self.assertRaises((ValueError, RuntimeError)):
+                    worker.execute_plan(reply)
+            self.assertTrue(physical_validated)
+            self.assertEqual(control.action_index, 0)
+            self.assertEqual(worker.pending_reward_capacity()['input_request_id'], 'original-capacity-input')
 
     def test_actual_widget_labels_shortcuts_prices_and_background_require_the_same_budget_intent(self):
         # Declared semantic-negative cases: neither these rows nor their

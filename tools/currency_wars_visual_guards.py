@@ -1117,6 +1117,87 @@ def _panel_list_navigation(action, request, actual, images):
             and _navigation_row(original, actual, label, images, bounds) is not None)
 
 
+# Complete silver reward-box lid/body from native 6203 / 60c96, bench3.
+# This 16x16 luminance profile covers [640,853,738,937], not the caption.
+_REWARD_BOX_BODY = 'MjEwMDAwMTQ3OkFJUltjcDc3NjY2NjY9OjU2OT1ARFA9PT08OkdIUUlCRU1HRUlYQ0JERFeCiYmIe29tcFJMXkpIS1CHjoiLh5GNpqueamNQT06AjpOMhYqWkae1nHVqV1J1kIyCi4aXrrO1uJBibl1qmo+MlpGincTBz6Zwi21fjKSjqqu+urzH1c6OXY51Y2d3pLy609fK5OfTZW9yf3hWW1h6s9/t8/PpvlaFcISEamtKQ2Juqurj8XJ7e3yLh4BkXlI2SmFuteRtqHWDiI6JhHRkbVc4UYGsx5WBmZKVjouFg3hrX2Rotc9/iJ+knJWQjIqKindhdMCZjJClpA=='
+
+
+def _reward_box_body(image, left):
+    reference = np.frombuffer(base64.b64decode(_REWARD_BOX_BODY), dtype=np.uint8).reshape(16, 16)
+    # The retained box bobs by one pixel. Search only its fixed bench tile,
+    # checking the whole lid/body and every quadrant, never a caption alone.
+    for dy in range(-3, 4):
+        for dx in range(-3, 4):
+            crop = image[853+dy:937+dy, left+9+dx:left+107+dx]
+            hsv = cv2.cvtColor(crop, cv2.COLOR_RGB2HSV)
+            if ((hsv[:, :, 1] < 75) & (hsv[:, :, 2] > 100)).mean() < .40:
+                continue
+            small = cv2.resize(cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY), (16, 16), interpolation=cv2.INTER_AREA)
+            if np.abs(small.astype(np.int16)-reference).mean() > 12:
+                continue
+            score = cv2.matchTemplate(small, reference, cv2.TM_CCOEFF_NORMED)[0, 0]
+            quads = [cv2.matchTemplate(small[y:y+8, x:x+8], reference[y:y+8, x:x+8],
+                        cv2.TM_CCOEFF_NORMED)[0, 0] for y in (0, 8) for x in (0, 8)]
+            if np.isfinite(score) and score >= .94 and all(np.isfinite(v) and v >= .90 for v in quads):
+                return True
+    return False
+
+
+def _reward_box_caption_equal(images, bounds):
+    masks = []
+    x, y, right, bottom = bounds
+    for image in images:
+        hsv = cv2.cvtColor(image[y:bottom, x:right], cv2.COLOR_RGB2HSV)
+        masks.append((hsv[:, :, 1] < 70) & (hsv[:, :, 2] > 190))
+    union = masks[0] | masks[1]
+    return (min(m.sum() for m in masks) >= 24 and union.any()
+            and (masks[0] & masks[1]).sum() / union.sum() >= .94)
+
+
+def stable_reward_box_open(action, request, actual, current_png):
+    """One exact native bench-box caption; eligibility, never reward completion."""
+    try:
+        original = request.get('observation', {})
+        if (action.get('type') != 'click_text' or action.get('text') != '开启'
+                or action.get('exact', True) is not True or action.get('expected_page') != 'preparation'
+                or request.get('kind') != 'preparation_strategy'
+                or not re.fullmatch(r'[1-3]-[1-9]', original.get('fields', {}).get('stage') or '')
+                or any(obs.get('page') != 'preparation' or classify(obs.get('rows', [])) != 'preparation'
+                    or _preparation_modal_row(obs) for obs in (original, actual))):
+            return False
+        images = _frames(request, actual, current_png)
+        if images is None:
+            return False
+        rows = [[r for r in obs.get('rows', []) if clean(r.get('text', '')) == '开启']
+                for obs in (original, actual)]
+        if any(len(r) != 1 for r in rows):
+            return False
+        from currency_wars_state_reader import native_slots
+        for slot in native_slots():
+            if slot['row'] != 'bench':
+                continue
+            left = slot['bounds'][0]
+            caption = [left+8, 938, left+108, 971]
+            if not all(_inside(r[0].get('box'), caption) for r in rows):
+                continue
+            if (action.get('bounds') is not None and not all(_inside(r[0]['box'], action['bounds']) for r in rows)
+                    or _paired_row(original, actual, '开启', caption, images, ink_guard=_reward_box_caption_equal) is None
+                    or _paired_row(original, actual, '备战阶段', [390, 20, 550, 65], images,
+                        ink_guard=_preparation_header_equal) is None
+                    or _paired_row(original, actual, r'[1-3]-[1-9]', [390, 58, 550, 103], images) is None
+                    or original.get('fields', {}).get('stage') != actual.get('fields', {}).get('stage')):
+                return False
+            for image in images:
+                hsv = cv2.cvtColor(image[938:970, left+8:left+108], cv2.COLOR_RGB2HSV)
+                cyan = (hsv[:, :, 0] >= 90) & (hsv[:, :, 0] <= 110) & (hsv[:, :, 1] > 100) & (hsv[:, :, 2] > 200)
+                if cyan.mean() < .65 or not _reward_box_body(image, left):
+                    return False
+            return True
+        return False
+    except (OSError, ValueError, TypeError, KeyError, IndexError, cv2.error):
+        return False
+
+
 def stable_semantic_target(action, request, actual, current_png, diagnostic=None):
     """Eligibility only; caller still enforces epoch, deadline, and broker."""
     try:
@@ -1131,6 +1212,8 @@ def stable_semantic_target(action, request, actual, current_png, diagnostic=None
             allowed = _navigation(action, request, actual, images)
         elif page in ('bonds', 'income', 'promotion', 'advantages'):
             allowed = _panel_list_navigation(action, request, actual, images)
+        elif page == 'preparation' and action.get('type') == 'click_text' and action.get('text') == '开启':
+            allowed = stable_reward_box_open(action, request, actual, current_png)
         elif page in ('investment', 'environment', 'supply'):
             allowed = _cards(action, request, actual, images)
         elif page == 'settlement':
