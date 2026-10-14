@@ -269,7 +269,31 @@ def _native_battle_stage(rows):
     return matched_fields[0].group(1)
 
 
+def _native_simple_armament_choice(rows):
+    """Current four-column equipment-box modal, not an adapted supply page."""
+    def unique(pattern, bounds):
+        matches = [row for row in rows if re.fullmatch(pattern, clean(row.get('text', '')))
+                   and isinstance(row.get('box'), (list, tuple)) and len(row['box']) == 4
+                   and bounds[0] <= row['box'][0] < row['box'][2] <= bounds[2]
+                   and bounds[1] <= row['box'][1] < row['box'][3] <= bounds[3]]
+        return (len(matches) == 1 and type(matches[0].get('confidence')) in (int, float)
+                and .90 <= matches[0]['confidence'] <= 1.)
+    if not (unique('简易武装箱', [950, 35, 1250, 80])
+            and unique('请选择1个', [1000, 80, 1200, 120])):
+        return False
+    # Titles prove four separate fields only; they are not catalogue identities
+    # or permission to select. A supervisor still binds one current exact row.
+    title = (r'(?!(?:Q?查看详情|简易武装箱|请选择1个|确认|取消|关闭|返回|开启|出售|'
+             r'购买经验|刷新|出战|商店)$)[\u4e00-\u9fffA-Za-z0-9·]{2,16}')
+    return all(unique(title, [left, 266, left+260, 316])
+               and unique(r'Q?查看详情', [left+30, 320, left+230, 365])
+               for left in (534, 824, 1114, 1404))
+
+
 def classify(rows):
+    # The full native selection overlay wins over its visible preparation/shop background.
+    if _native_simple_armament_choice(rows):
+        return 'unknown'
     # Guide card descriptions can mention promotion and rewards without being those pages.
     if (find_text(rows, '星际和平指南', (80, 25, 280, 80), exact=True)
             and any(find_text(rows, caption, (80, 60, 260, 115), exact=True)
