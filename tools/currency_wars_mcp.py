@@ -100,37 +100,6 @@ def propose_economic_macro(state, limits, ranking_policy=None):
     return {**result, 'actions': [action], 'reply': {**result['binding'], 'actions': [action], 'context_update': {}}}
 
 
-def propose_preparation_continuation(state, limits, max_deployments):
-    """Build one explicit node authority; reading a proposal sends no input."""
-    from currency_wars_economy import validate_macro_limits
-    result = {'schema': 'currency-wars-preparation-proposal/v1', 'status': 'blocked',
-              'input_sent': False, 'execution_eligible': False, 'actions': [], 'reply': None}
-    binding, decision = state.get('binding') or {}, state.get('decision') or {}
-    if (state.get('local_preparation') or {}).get('status') == 'active':
-        return {**result, 'reason': 'local_preparation_authority_active'}
-    if (state.get('status') != 'observed' or state.get('source') != 'authenticated_runner_status'
-            or state.get('control_mode') != 'waiting_decision'
-            or state.get('page') not in ('preparation', 'shop')
-            or decision.get('kind') not in ('preparation_strategy', 'shop_strategy')
-            or any(binding.get(key) is None or binding.get(key) == ''
-                   for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id'))):
-        return {**result, 'reason': 'current_authenticated_preparation_request_required'}
-    if 'advance_local_preparation' not in (decision.get('allowed_action_types') or []):
-        return {**result, 'status': 'unsupported', 'reason': 'executor_does_not_advertise_node_continuation'}
-    try:
-        caps = validate_macro_limits(limits)
-        if type(max_deployments) is not int or not 0 <= max_deployments <= 10:
-            raise ValueError('max_deployments must be an integer in 0..10')
-    except ValueError as exc:
-        return {**result, 'reason': str(exc)}
-    action = {'type': 'advance_local_preparation', 'expected_page': state['page'],
-              'limits': caps, 'max_deployments': max_deployments,
-              'reason': '当前节点内本地重算并连续执行，原收据逐笔核效；真实缺项及出战验收返回ROOT。'}
-    return {**result, 'status': 'proposed', 'binding': dict(binding), 'actions': [action],
-            'reply': {**binding, 'actions': [action], 'context_update': {}},
-            'scope': 'One bounded current node; no phase completion or battle approval is implied.'}
-
-
 class Adapter:
     def __init__(self, project=PROJECT, runner_python=sys.executable, offline_image=None,
                  enable_candidate_economy=False, scratch=None):
@@ -630,18 +599,6 @@ def main():
         independently; this tool never fills their missing facts.
         """
         return await adapter.advice(policy, macro_limits, ranking_policy)
-
-    @server.tool(annotations=readonly)
-    async def get_preparation_plan(limits: dict, max_deployments: int) -> dict:
-        """Propose bounded local node continuation; does not submit, resume or start.
-
-        Missing rewards/inventory/equipment evidence returns to ROOT. Battle
-        approval remains separate. Pass the returned reply to submit_plan only
-        under current authorization; submission is not proof of effects.
-        """
-        state = await adapter.state()
-        proposal = propose_preparation_continuation(state, limits, max_deployments)
-        return adapter.carry_cleanup(proposal, state)
 
     @server.tool(annotations=mutation)
     async def submit_plan(reply: dict) -> dict:
