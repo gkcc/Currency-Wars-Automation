@@ -72,8 +72,140 @@ def _match_graphics(before,after):
     return match(0,0)
 
 def wear_slots(rgb,card):
-    x,y,r,b=card['bounds']
-    return _squares(rgb,[x,b-12,r,b+42],maximum=3,minimum=24,largest=42)
+    # Empty is a native positive supplied by the caller's full-roster contract,
+    # never inferred from absent graphics on the animated board background.
+    if card.get('status')=='empty':return []
+    if card.get('status')=='unknown':raise ValueError('wear_card_occupancy_unknown')
+    patch,quad,unused=_card_outline(rgb,card)
+    x,y,r,b=card['bounds'];quad=quad+np.float32([x-24,y-24])
+    bottom=quad[2:];edge=float(bottom[:,1].mean());center=float(bottom[:,0].mean())
+    left=int(np.floor(quad[:,0].min()))-42;right=int(np.ceil(quad[:,0].max()))+42
+    top=int(np.floor(bottom[:,1].min()))-3;end=int(np.ceil(bottom[:,1].max()))+50
+    if left<0 or top<0 or right>rgb.shape[1] or end>rgb.shape[0]:
+        raise ValueError('wear_row_outside_original_PNG')
+    boxes=_squares(rgb,[left,top,right,end],maximum=3,minimum=24,largest=42)
+    if (any(float(cv2.cvtColor(_patch(rgb,box,3),cv2.COLOR_RGB2GRAY).std())<8 for box in boxes)
+            or any(not edge-3<=box[1]<=edge+8 for box in boxes)
+            or boxes and (max(box[1] for box in boxes)-min(box[1] for box in boxes)>3
+                or abs((boxes[0][0]+boxes[-1][2])/2-center)>6
+                or any(b[0]-a[2]<0 or b[0]-a[2]>8 for a,b in zip(boxes,boxes[1:])))):
+        raise ValueError('wear_graphics_not_single_card_attached_row')
+    return boxes
+
+
+def _rendering_equal(first, second, mask, *, peak, mean, tile):
+    """Bound finite render residuals locally; correlation is not identity."""
+    if first.shape != second.shape or not mask.any():return False
+    delta=np.abs(first.astype(np.int16)-second.astype(np.int16))
+    if delta[mask].max()>peak or delta[mask].mean()>mean:return False
+    for rows, masks in zip(np.array_split(delta,8,axis=0),np.array_split(mask,8,axis=0)):
+        for part, selected in zip(np.array_split(rows,8,axis=1),np.array_split(masks,8,axis=1)):
+            if selected.any() and part[selected].mean()>tile:return False
+    return True
+
+
+def _same_visible_item(first, second):
+    if first.shape != second.shape or min(first.shape[:2])<64:return False
+    core=np.zeros(first.shape[:2],bool);core[6:-6,6:-6]=True
+    # The complete square was independently parsed on both frames. Keep its
+    # content and frame, with separate limited edge/illumination residuals.
+    return (_rendering_equal(first,second,core,peak=6,mean=.20,tile=4)
+        and _rendering_equal(first,second,~core,peak=32,mean=1.25,tile=6))
+
+
+def _card_outline(rgb, slot):
+    """Find a complete card frame near native geometry, never any screen ROI."""
+    x,y,r,b=slot['bounds'];padding=24
+    patch=rgb[y-padding:b+padding,x-padding:r+padding]
+    if patch.shape[:2]!=(b-y+2*padding,r-x+2*padding):raise ValueError('card_frame_outside_original_PNG')
+    edges=cv2.Canny(cv2.cvtColor(patch,cv2.COLOR_RGB2GRAY),30,80)
+    contours,_=cv2.findContours(edges,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+    nearby=cv2.dilate(edges,np.ones((3,3),np.uint8))
+    candidates=[]
+    def consider(quad):
+        if (len(quad)!=4 or not cv2.isContourConvex(quad)
+                or not .65*(r-x)*(b-y)<cv2.contourArea(quad)<1.6*(r-x)*(b-y)):return
+        vertices=quad.reshape(4,2).astype(np.float32)
+        center=vertices.mean(axis=0)
+        if np.max(np.abs(center-np.array([(r-x)/2+padding,(b-y)/2+padding])))>padding:return
+        # Order all four complete corners consistently. No portrait-only mask.
+        top=vertices[np.argsort(vertices[:,1])[:2]];bottom=vertices[np.argsort(vertices[:,1])[2:]]
+        top=top[np.argsort(top[:,0])];bottom=bottom[np.argsort(bottom[:,0])]
+        ordered=np.array([top[0],top[1],bottom[1],bottom[0]],np.float32)
+        width=(np.linalg.norm(ordered[1]-ordered[0])+np.linalg.norm(ordered[2]-ordered[3]))/2
+        height=(np.linalg.norm(ordered[3]-ordered[0])+np.linalg.norm(ordered[2]-ordered[1]))/2
+        if abs((height/width)/((b-y)/(r-x))-1)>.10:return
+        if (min(np.linalg.norm(ordered[1]-ordered[0]),np.linalg.norm(ordered[2]-ordered[3]))<.75*(r-x)
+                or min(ordered[3,1]-ordered[0,1],ordered[2,1]-ordered[1,1])<.85*(b-y)):return
+        supported=True
+        for start,end in zip(ordered,np.roll(ordered,-1,axis=0)):
+            points=np.rint(start+(end-start)*np.linspace(.02,.98,60)[:,None]).astype(int)
+            if np.mean(nearby[points[:,1],points[:,0]]>0)<.65:supported=False
+        if supported:candidates.append((cv2.contourArea(quad),ordered))
+    for contour in contours:
+        # A role badge may notch an otherwise complete selection frame.
+        outline=cv2.convexHull(contour)
+        consider(cv2.approxPolyDP(outline,.02*cv2.arcLength(outline,True),True))
+    if not candidates:
+        # Three attached frames may join the outer edge contour. Independently
+        # parse that complete centred row first, then separate only its edges
+        # when locating the card. Raw pixels and all card/glyph checks stay intact.
+        rough=_squares(rgb,[x-42,b-32,r+42,b+50],maximum=6,minimum=24,largest=42)
+        rows=[]
+        for box in rough:
+            row=sorted([other for other in rough if abs(other[1]-box[1])<=3],key=lambda item:item[0])
+            if (row not in rows and 1<=len(row)<=3
+                    and max(item[1] for item in row)-min(item[1] for item in row)<=3
+                    and abs((row[0][0]+row[-1][2])/2-(x+r)/2)<=12
+                    and all(0<=bb[0]-aa[2]<=8 for aa,bb in zip(row,row[1:]))
+                    and all(b-32<=item[1]<=b+10 for item in row)):
+                rows.append(row)
+        if len(rows)==1:
+            separated=edges.copy()
+            cutoff=min(box[1] for box in rows[0])-1-(y-padding)
+            separated[max(0,cutoff):]=0
+            parts,_=cv2.findContours(separated,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
+            for part in parts:
+                outline=cv2.convexHull(part)
+                consider(cv2.approxPolyDP(outline,.02*cv2.arcLength(outline,True),True))
+    if not candidates:raise ValueError('complete_native_card_frame_not_visible')
+    candidates.sort(key=lambda v:v[0],reverse=True);quad=candidates[0][1]
+    if any(np.max(np.abs(other.mean(axis=0)-quad.mean(axis=0)))>3
+            or np.max(np.abs(other-quad))>3 and any(
+                cv2.pointPolygonTest(quad,tuple(map(float,point)),True)<-1.5 for point in other)
+            for unused,other in candidates[1:]):
+        raise ValueError('native_card_frame_ambiguous')
+    mask=np.zeros(patch.shape[:2],np.uint8);cv2.fillConvexPoly(mask,quad.astype(np.int32),1)
+    return patch,quad,mask
+
+
+def _same_occupied_card(first, second, slot):
+    """Occupied portrait/role/star/frame continuity; no native identity inference."""
+    try:
+        x,y,r,b=slot['bounds']
+        if slot['row']=='bench':
+            # Bench frames are axis-aligned native rectangles. Their full
+            # original ROI includes the portrait, badge, stars and selection.
+            a=first[y:b,x:r];z=second[y:b,x:r]
+            return _rendering_equal(a,z,np.ones(a.shape[:2],bool),peak=8,mean=.10,tile=.50)
+        a,quad,mask=_card_outline(first,slot);z,new_quad,new_mask=_card_outline(second,slot)
+        if np.max(np.abs(quad-new_quad))>1:return False
+        # Six-pixel frame band separates animated outer antialiasing from the
+        # actual portrait. It is still checked, including selection/quality.
+        core=cv2.erode(mask,np.ones((13,13),np.uint8)).astype(bool)
+        rim=(mask|new_mask).astype(bool)&~core
+        if (not _rendering_equal(a,z,core,peak=4,mean=.10,tile=.50)
+                or not _rendering_equal(a,z,rim,peak=48,mean=.75,tile=12)):return False
+        # Explicit full role and star fields also include glyph parts touching
+        # the frame band. Same source warp on both images does not align away a
+        # moved badge/star or changed portrait; a new selection shape fails above.
+        warp=cv2.getPerspectiveTransform(quad,np.float32([[0,0],[127,0],[127,143],[0,143]]))
+        aa=cv2.warpPerspective(a,warp,(128,144));zz=cv2.warpPerspective(z,warp,(128,144))
+        for lx,ly,rx,by in ((99,7,124,39),(16,115,112,139)):
+            one,two=aa[ly:by,lx:rx],zz[ly:by,lx:rx]
+            if not _rendering_equal(one,two,np.ones(one.shape[:2],bool),peak=4,mean=.10,tile=.50):return False
+        return True
+    except (ValueError,cv2.error,IndexError):return False
 
 def validate_equipment_action(action,request):
     expected={'type','reason','expected_page','item','destination','equipment_read_review'}
@@ -116,16 +248,24 @@ def check_equipment(action,request,actual,current_png):
     old=equipment_facts(request['observation'],action,request['original_png']);new=equipment_facts(actual,action,current_png)
     if old['population']!=new['population'] or old['resources']!=new['resources']:raise ValueError('equipment_resources_changed')
     if any(not _compatible_slot(slot,new['slots'][key]) for key,slot in old['slots'].items()):raise ValueError('equipment_roster_changed')
+    for key,slot in old['slots'].items():
+        if slot['status']=='occupied' and not _same_occupied_card(first,second,slot):
+            raise ValueError('equipment_current_occupied_card_structure_changed')
+        if not _match_graphics([_patch(first,t,2) for t in wear_slots(first,slot)],
+                               [_patch(second,t,2) for t in wear_slots(second,new['slots'][key])]):
+            raise ValueError('equipment_current_character_wear_changed')
     for key,digest in (('item','item_roi_sha256'),('target','target_roi_sha256')):
         box=old[key]['bounds'];x,y,r,b=box
         if box!=new[key]['bounds'] or hashlib.sha256(first[y:b,x:r].tobytes()).hexdigest()!=review[digest]:
             raise ValueError('equipment_original_ROI_digest_or_geometry_changed')
-        if not np.array_equal(first[y:b,x:r],second[y:b,x:r]):raise ValueError('equipment_current_source_or_target_ROI_changed')
+        if not (_same_visible_item(first[y:b,x:r],second[y:b,x:r]) if key=='item'
+                else _same_occupied_card(first,second,old['target'])):
+            raise ValueError('equipment_current_source_or_target_structure_changed')
     if not _match_graphics([_patch(first,t['bounds']) for t in visible_inventory(first)],
                            [_patch(second,t['bounds']) for t in visible_inventory(second)]):raise ValueError('equipment_inventory_changed')
     return new
 
-def verify_equipment_effect(pending,after,after_png,review,*,reviewed_observation=None):
+def verify_equipment_effect(pending,after,after_png,review,*,reviewed_observation=None,reviewed_png=None):
     """ROOT named graphic READ supplement; native names/stars stay untouched."""
     action=pending['action'];validate_equipment_action(action,None)
     reviewed = after if reviewed_observation is None else reviewed_observation
@@ -141,6 +281,14 @@ def verify_equipment_effect(pending,after,after_png,review,*,reviewed_observatio
         or not isinstance(review['findings'],str) or not review['findings'].strip()):
         raise ValueError('current_independent_target_wear_review_required')
     before=pending['before'];a=_image(pending['before_png'],before['snapshot_id']);b=_image(after_png,after['snapshot_id'])
+    reviewed_rgb=b
+    independent_review=reviewed.get('snapshot_id')!=after.get('snapshot_id')
+    if independent_review:
+        if reviewed_png is None:raise ValueError('ROOT_original_reviewed_PNG_required_for_fresh_continuation')
+        reviewed_rgb=_image(reviewed_png,reviewed['snapshot_id'])
+        # Authenticate the literal original ROOT digests against the exact
+        # reviewed after frame. A later capture never receives invented digests.
+        verify_equipment_effect(pending,reviewed,reviewed_png,review)
     old=equipment_facts(before,action,pending['before_png']);slots,pop,res=_occupied_resources(after)
     if after.get('page')!='preparation' or after['fields'].get('stage')!=before['fields'].get('stage') or old['population']!=pop or old['resources']!=res:
         raise ValueError('equipment_effect_resources_or_page_changed')
@@ -151,11 +299,14 @@ def verify_equipment_effect(pending,after,after_png,review,*,reviewed_observatio
         if key == target_key:
             # A completed drop can select/expand its current portrait. Target
             # continuity is the explicit current ROOT graphic READ, not fake
-            # native identity. Other eighteen native card bodies remain exact.
-            if hashlib.sha256(b[y:bottom,x:r].tobytes()).hexdigest()!=review['target_roi_sha256']:
-                raise ValueError('ROOT_target_card_read_not_exact_current_ROI')
-        elif not np.array_equal(a[y:bottom,x:r],b[y:bottom,x:r]):
-            raise ValueError('equipment_effect_other_card_body_changed')
+            # native identity. Other occupied cards retain portrait/role/star/frame structure;
+            # native empty positives do not compare an animated scene background.
+            if hashlib.sha256(reviewed_rgb[y:bottom,x:r].tobytes()).hexdigest()!=review['target_roi_sha256']:
+                raise ValueError('ROOT_target_card_read_not_exact_reviewed_ROI')
+            if independent_review and not _same_occupied_card(reviewed_rgb,b,slots[key]):
+                raise ValueError('ROOT_reviewed_target_card_structure_changed_in_fresh_capture')
+        elif slot['status']=='occupied' and not _same_occupied_card(a,b,slot):
+            raise ValueError('equipment_effect_other_occupied_card_structure_changed')
         if key!=target_key:
             if not _match_graphics([_patch(a,t,2) for t in wear_slots(a,slot)],[_patch(b,t,2) for t in wear_slots(b,slots[key])]):
                 raise ValueError('other_character_equipment_changed')
@@ -166,8 +317,17 @@ def verify_equipment_effect(pending,after,after_png,review,*,reviewed_observatio
     if len(new_wear)!=len(old_wear)+1 or len(new_wear)>3 or review['wear_slot']>len(new_wear):raise ValueError('target_wear_increment_not_proved')
     added=new_wear[review['wear_slot']-1]
     x,y,r,bottom=added
-    if hashlib.sha256(b[y:bottom,x:r].tobytes()).hexdigest()!=review['wear_roi_sha256']:
-        raise ValueError('ROOT_wear_graphic_read_not_exact_current_ROI')
+    reviewed_wear=wear_slots(reviewed_rgb,slots[target_key])
+    if (len(reviewed_wear)!=len(new_wear) or reviewed_wear[review['wear_slot']-1]!=added):
+        raise ValueError('ROOT_reviewed_wear_slot_geometry_changed')
+    if hashlib.sha256(reviewed_rgb[y:bottom,x:r].tobytes()).hexdigest()!=review['wear_roi_sha256']:
+        raise ValueError('ROOT_wear_graphic_read_not_exact_reviewed_ROI')
+    if independent_review:
+        one,two=reviewed_rgb[y:bottom,x:r],b[y:bottom,x:r]
+        core=np.zeros(one.shape[:2],bool);core[3:-3,3:-3]=True
+        if (not _rendering_equal(one,two,core,peak=6,mean=.20,tile=4)
+                or not _rendering_equal(one,two,~core,peak=32,mean=1.25,tile=6)):
+            raise ValueError('ROOT_reviewed_new_wear_graphic_changed_in_fresh_capture')
     # Inventory and equipped icons have distinct scales/frame ratios: actual
     # same-star RGB correlation .845. Identity is the explicit bound ROOT READ,
     # not a lowered global image threshold or a claim of native catalogue name.
@@ -217,3 +377,97 @@ def verify_archived_equipment(pending,before_png,after,after_png,receipts,origin
                       effect=effect,receipt_ids_checked=sorted(remaining),native_identity_rewritten=False)
     except (KeyError,TypeError,ValueError,AttributeError,OSError) as exc:result['reason']=str(exc)
     return result
+
+
+def plain_equipment_tooltip(observation):
+    """A bounded right-side equipment tooltip, not arbitrary Escape navigation."""
+    if observation.get('page') != 'preparation':
+        raise ValueError('equipment_tooltip_not_preparation')
+    contract = observation.get('read_contract', {})
+    if contract.get('version') != 2 or contract.get('effective_scope') != 'full' or contract.get('unread') != []:
+        raise ValueError('equipment_tooltip_not_full_read')
+    rows = observation.get('rows', [])
+    categories = [row for row in rows if row.get('text') in ('简易装备', '进阶装备')]
+    if len(categories) != 1 or categories[0].get('confidence', 0) < .90:
+        raise ValueError('plain_equipment_tooltip_category_not_unique')
+    category = categories[0]; x,y,r,b = category['box']
+    if not (1200 <= x < r <= 1780 and 100 <= y < b <= 700 and b-y >= 15):
+        raise ValueError('equipment_tooltip_category_outside_right_panel')
+    titles = [row for row in rows if row.get('confidence', 0) >= .90
+        and 2 <= len(row.get('text', '')) <= 20
+        and abs(row['box'][0]-x) <= 15 and y-65 <= row['box'][1]
+        and row['box'][3] <= y and 15 <= row['box'][3]-row['box'][1] <= 50]
+    if (len(titles) != 1 or any(row.get('text') in ('确认', '取消', '挑战结束', '退出战斗', '请选择1个')
+                               and row.get('confidence', 0) >= .72 for row in rows)):
+        raise ValueError('equipment_tooltip_title_or_modal_ambiguous')
+    return {'title':copy.deepcopy(titles[0]), 'category':copy.deepcopy(category)}
+
+
+def _inspection_resources(observation):
+    # Tooltip may cover an empty board slot. It must not cover/mutate these HUD
+    # facts; full roster is checked only after the independent closed capture.
+    hud = observation.get('semantic', {}).get('player_hud') or {}
+    coins = observation.get('semantic', {}).get('coins') or {}
+    snapshot = observation.get('snapshot_id')
+    from currency_wars_deployment import _population
+    if (hud.get('snapshot_id') != snapshot or hud.get('origin') != 'native_player_hud'
+            or hud.get('actor') != 'player' or type(hud.get('level')) is not int
+            or str(hud['level']) != str(observation.get('fields', {}).get('level'))
+            or not isinstance(hud.get('xp'), list) or len(hud['xp']) != 2
+            or any(type(v) is not int or v < 0 for v in hud['xp']) or hud['xp'][0] > hud['xp'][1]
+            or coins.get('snapshot_id') != snapshot or type(coins.get('value')) is not int
+            or coins['value'] < 0 or not .90 <= coins.get('confidence', 0) <= 1.
+            or coins.get('bounds') != [1613,892,1687,950]):
+        raise ValueError('inspection_resources_not_native_bound')
+    return (observation['fields'].get('stage'), hud['level'], hud['xp'], coins['value'], _population(observation))
+
+
+def _same_tool_counts(first, second):
+    # Complete fixed counter fields, separate from animated metal/background.
+    # This proves unchanged glyphs, not a fabricated native numeric value.
+    for x,y,r,b in ((1784,198,1809,228),(1862,198,1888,228)):
+        a,bgr = first[y:b,x:r], second[y:b,x:r]
+        masks=[]
+        for crop in (a,bgr):
+            hsv=cv2.cvtColor(crop,cv2.COLOR_RGB2HSV)
+            mask=(hsv[:,:,1]<60)&(hsv[:,:,2]>200)
+            yy,xx=np.where(mask)
+            if len(xx)<12 or min(xx.min(), yy.min(), crop.shape[1]-1-xx.max(), crop.shape[0]-1-yy.max())<2:
+                return False
+            masks.append(mask)
+        if not np.array_equal(*masks) or not np.array_equal(a[masks[0]],bgr[masks[1]]):return False
+    return True
+
+
+def verify_inspection_roundtrip(before, before_png, tooltip, tooltip_png, closed, closed_png):
+    """Read-only qualification after real click/Escape; caller seals receipts."""
+    facts=plain_equipment_tooltip(tooltip)
+    images=[_image(path,obs['snapshot_id']) for obs,path in
+            ((before,before_png),(tooltip,tooltip_png),(closed,closed_png))]
+    if (len({obs.get('capture_request_id') for obs in (before,tooltip,closed)}) != 3
+            or len({obs.get('frame_id') for obs in (before,tooltip,closed)}) != 3
+            or _inspection_resources(before) != _inspection_resources(tooltip)
+            or _inspection_resources(before) != _inspection_resources(closed)
+            or any(row.get('text') in ('简易装备','进阶装备','确认','取消','挑战结束','退出战斗','请选择1个')
+                   and row.get('confidence',0)>=.72 for obs in (before,closed) for row in obs.get('rows',[]))):
+        raise ValueError('inspection_roundtrip_resources_or_closed_page_changed')
+    old,pop,resources=_occupied_resources(before)
+    new,new_pop,new_resources=_occupied_resources(closed)
+    if pop != new_pop or resources != new_resources or any(not _compatible_slot(slot,new[k]) for k,slot in old.items()):
+        raise ValueError('inspection_roundtrip_roster_changed')
+    a,_,c=images
+    for key,slot in old.items():
+        if slot['status']=='occupied' and not _same_graphic(_patch(a,slot['bounds']),_patch(c,new[key]['bounds'])):
+            raise ValueError('inspection_roundtrip_card_graphic_changed')
+        if not _match_graphics([_patch(a,t,2) for t in wear_slots(a,slot)],
+                               [_patch(c,t,2) for t in wear_slots(c,new[key])]):
+            raise ValueError('inspection_roundtrip_character_equipment_changed')
+    if (not _match_graphics([_patch(a,t['bounds']) for t in visible_inventory(a)],
+                            [_patch(c,t['bounds']) for t in visible_inventory(c)])
+            or not _same_tool_counts(a,c)):
+        raise ValueError('inspection_roundtrip_inventory_or_tool_count_changed')
+    return {'outcome':'verified_equipment_information_roundtrip', 'origin':'original_receipt_and_native_graphic_continuity',
+        'before_snapshot_id':before['snapshot_id'],'tooltip_snapshot_id':tooltip['snapshot_id'],
+        'closed_snapshot_id':closed['snapshot_id'],'closed_capture_request_id':closed['capture_request_id'],
+        'closed_frame_id':closed['frame_id'],'tooltip_title':facts['title']['text'],
+        'native_identity_inferred':False,'phase_completion':False,'input_resent':False}

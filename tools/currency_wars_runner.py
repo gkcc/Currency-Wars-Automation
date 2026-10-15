@@ -3839,6 +3839,9 @@ class Worker:
             if tokens != pending['tokens']:
                 raise ValueError('业务曝光仅允许实际已核收起中心的一次点击')
             return
+        if action.get('purpose') == 'equipment_inspection_dismissal':
+            self.guard_equipment_inspection_dismissal(tokens, action, observed, request_id=request_id)
+            return
         if action.get('type') == 'inspect_preparation_target':
             pending = self.guard_preparation_inspection(action, observed, request_id=request_id)
             if tokens != pending['tokens']:
@@ -4028,6 +4031,9 @@ class Worker:
                 submit_deadline = min(submit_deadline, time.monotonic() + remaining)
         equipment = getattr(self, 'equipment_inflight', None)
         preparation_inspection = getattr(self, 'preparation_inspection_inflight', None)
+        inspection_dismissal = getattr(self, 'inspection_dismissal_inflight', None)
+        if inspection_dismissal is not None:
+            submit_deadline = min(submit_deadline, inspection_dismissal['monotonic_deadline'])
         if preparation_inspection is not None:
             submit_deadline = min(submit_deadline, preparation_inspection['monotonic_deadline'])
         policy = coaching_policy()
@@ -4141,6 +4147,9 @@ class Worker:
                     preparation_inspection['publication_attempted'] = True
                     preparation_inspection['broker_actions'] = value['actions']
                     self.save_preparation_inspection(preparation_inspection)
+                if inspection_dismissal is not None:
+                    inspection_dismissal['dismissal']['publication_attempted'] = True
+                    self.save_preparation_inspection(inspection_dismissal)
                 if equipment is not None:
                     equipment['publication_attempted'] = True
                     equipment['broker_actions'] = value['actions']
@@ -4180,6 +4189,9 @@ class Worker:
         if preparation_inspection is not None:
             preparation_inspection['input_request_id'] = rid
             self.save_preparation_inspection(preparation_inspection)
+        if inspection_dismissal is not None:
+            inspection_dismissal['dismissal']['input_request_id'] = rid
+            self.save_preparation_inspection(inspection_dismissal)
         business_view = getattr(self, 'business_view_inflight', None)
         if business_view is not None:
             business_view['input_request_id'] = rid
@@ -4233,6 +4245,9 @@ class Worker:
                 self.profile_broker_result(result, timing)
         except Exception as exc:
             retain_macro_delivery()
+            if inspection_dismissal is not None:
+                inspection_dismissal['dismissal'].update(publication_attempted=guarded.publication_attempted, error=str(exc))
+                self.save_preparation_inspection(inspection_dismissal)
             if preparation_inspection is not None:
                 preparation_inspection.update(publication_attempted=guarded.publication_attempted, error=str(exc))
                 self.save_preparation_inspection(preparation_inspection)
@@ -4273,6 +4288,9 @@ class Worker:
                 if original:
                     archive_business_receipt(self.records, self.owner, original, self.c)
         retain_macro_delivery()
+        if inspection_dismissal is not None:
+            inspection_dismissal['dismissal'].update(publication_attempted=guarded.publication_attempted, input_receipt=redact(result))
+            self.save_preparation_inspection(inspection_dismissal)
         if preparation_inspection is not None:
             preparation_inspection.update(publication_attempted=guarded.publication_attempted, input_receipt=redact(result))
             self.save_preparation_inspection(preparation_inspection)
@@ -4310,7 +4328,7 @@ class Worker:
         try:
             observed = self.read_frame(result, scope=read_scope)
         except entry.ObservationUnavailable as exc:
-            if preparation_inspection is not None:
+            if preparation_inspection is not None or inspection_dismissal is not None:
                 # The typed executor obtains one distinct observe after it
                 # authenticates this original input receipt; never retry click.
                 return None
@@ -8455,7 +8473,7 @@ class Worker:
                 or not isinstance(evidence['effect_lines'], list) or not evidence['effect_lines']):
             raise ValueError('装备实名须绑定原物品检查及完整原效果文字')
         old = optional(self.records / ('preparation-inspection-' + evidence['inspection_request_id'] + '.json'))
-        if (not old or old.get('outcome') != 'input_delivered_effect_unverified'
+        if (not old or old.get('outcome') not in ('input_delivered_effect_unverified','readonly_inspection_verified')
                 or old.get('match_id') != self.active_match_id or old.get('resume_epoch') != self.epoch()
                 or old.get('action', {}).get('target', {}).get('kind') != 'inventory_visible_item'
                 or old.get('after_observation', {}).get('fields', {}).get('stage') != actual.get('fields', {}).get('stage')):
@@ -8555,7 +8573,9 @@ class Worker:
             'before_png':str(path.with_suffix('.png')), 'broker_identity':broker,
             'prior_receipt_ids':self.economy_receipt_watermark(), 'input_request_id':None,
             'tokens':['drag:'+':'.join(map(str,facts['item']['point']+facts['target']['point'])), 'wait:0.7'],
-            'publication_attempted':False, 'outcome':'pending', 'input_resent':False}
+            'publication_attempted':False, 'outcome':'pending', 'input_resent':False,
+            'preparation_continuity':{'scope':list(self.preparation_scope),
+                'reviews':copy.deepcopy(self.preparation_reviews)}}
         with Path(pending['before_png']).open('xb') as stream:stream.write(self.frame_path.read_bytes())
         with path.open('x', encoding='utf-8') as stream:json.dump(redact(pending),stream,ensure_ascii=False)
         self.equipment_inflight = pending
@@ -8598,15 +8618,101 @@ class Worker:
             manual_steps._bound_reward_frame(self.run,self.c,request['observation'],request['original_png'],read_only=True)
             verify_equipment_effect(pending,request['observation'],request['original_png'],supplied_review)
             effect = verify_equipment_effect(pending,actual,self.frame_path,supplied_review,
-                                             reviewed_observation=request['observation'])
+                                             reviewed_observation=request['observation'],reviewed_png=request['original_png'])
             proof = self.records / ('equipment-resolution-' + pending['request_id'] + '-' + uuid.uuid4().hex + '.json')
             value={'effect':effect,'review':copy.deepcopy(reply['actions'][0]['wear_review']), 'input_resent':False}
             with proof.open('x',encoding='utf-8') as stream:json.dump(value,stream,ensure_ascii=False)
             pending.update(outcome='confirmed',effect=effect,resolution_proof=str(proof))
             self.save_equipment(pending)
+            self.continue_equipment_preparation(pending,actual,str(proof),effect)
         self.state['decision_request'] = None
-        self.ask(actual,'preparation_strategy','原穿戴graphic+ROOT实名来源已核；重新验库存/经济/阵容，不恢复旧出战批准')
+        self.ask(actual,'preparation_strategy','原穿戴graphic+ROOT实名来源已核；已验证的前序以本次实际增量续接，仍须当前阵容/装备/出战复核')
         return effect
+
+    def continue_equipment_preparation(self, pending, actual, proof_path, effect):
+        """Carry validated earlier decisions across this proven item transfer only."""
+        prior = pending.get('preparation_continuity') or {}
+        scope = [self.active_match_id,canonical_stage(actual.get('fields',{}).get('stage')),self.epoch()]
+        reviews = prior.get('reviews') or {}
+        keys = ('shop_inspection','inventory_cleanup','economy')
+        if (prior.get('scope') != scope or list(self.preparation_scope or ()) != scope
+                or not all(reviews.get(key,{}).get('completed') is True for key in keys)
+                or effect.get('outcome') != 'wear_graphic_and_supervised_name_observed'
+                or effect.get('snapshot_id') != actual.get('snapshot_id')):
+            return False  # Older intents without lineage still require normal review.
+        for key in keys:
+            value=copy.deepcopy(reviews[key])
+            value['verified_continuation']={'source':'verified_single_equipment_transition',
+                'original_request_id':pending['request_id'],'proof_file':proof_path,
+                'snapshot_id':actual['snapshot_id'],'capture_request_id':actual['capture_request_id'],
+                'frame_id':actual['frame_id'],'resume_epoch':self.epoch(),'match_id':self.active_match_id,
+                'phase_completion':False,'spending_authorization_restored':False}
+            self.preparation_reviews[key]=value
+        # Never restore old budget bindings, shop indices, team/gear or battle flags.
+        return True
+
+    def inspection_receipt_fence(self, pending, closed):
+        dismissal=pending['dismissal']
+        physical={pending['input_request_id']:pending['tokens'],dismissal['input_request_id']:['key:27','wait:0.7']}
+        if len(physical)!=2:raise ValueError('inspection_requires_two_distinct_original_input_IDs')
+        new=set(self.economy_receipt_watermark())-set(pending['prior_receipt_ids'])
+        if not set(physical)|{pending['after_observation']['capture_request_id'],closed['capture_request_id']} <= new:
+            raise ValueError('inspection_roundtrip_independent_observations_missing')
+        for rid in new:
+            receipt=await_existing_receipt(self.run,self.c,rid,0)
+            expected=self.c.validate_actions([{'type':p[0],'args':p[1:]} for p in
+                (token.split(':') for token in physical[rid])]) if rid in physical else [{'type':'observe','args':[]}]
+            response=receipt.get('result') or {};state=manual_receipt_state(receipt)
+            if (state['unknown_input'] or state['state']!=('completed' if rid in physical else 'zero_input')
+                    or receipt['request'].get('kind')!='actions' or receipt['request'].get('handoff') is not False
+                    or receipt['request'].get('actions')!=expected or response.get('completed')!=expected
+                    or response.get('input_attempted') is not (rid in physical)
+                    or response.get('attempted_actions')!=(expected[:1] if rid in physical else []) or response.get('ok') is not True):
+                raise ValueError('inspection_roundtrip_other_or_unknown_input')
+        manual_steps._bound_reward_frame(self.run,self.c,closed,self.frame_path,read_only=True)
+        return sorted(new)
+
+    def guard_equipment_inspection_dismissal(self, tokens, action, observed, *, request_id=None):
+        from currency_wars_equipment import plain_equipment_tooltip, _inspection_resources
+        pending=getattr(self,'inspection_dismissal_inflight',None)
+        request=self.state.get('decision_request') or {}
+        child=(pending or {}).get('dismissal') or {}
+        if (not pending or action!=child.get('action') or tokens!=['key:27','wait:0.7']
+                or pending['action'].get('target',{}).get('kind')!='inventory_visible_item'
+                or pending['request_id']!=request.get('request_id') or child.get('publication_attempted') is not False
+                or time.monotonic()>=pending['monotonic_deadline'] or pending.get('outcome')!='input_delivered_effect_unverified'
+                or observed.get('snapshot_id')!=pending['after_observation']['snapshot_id']
+                or observed.get('capture_request_id')!=pending['after_observation']['capture_request_id']
+                or self.pending_reward_capacity() or self.pending_reward_step(observed)
+                or self.business.get('deployment_pending') or self.business.get('equipment_pending')
+                or any(getattr(self,name,None) for name in ('economy_inflight','reward_inflight','business_view_inflight','task_scroll_inflight','startup_navigation_inflight'))):
+            raise ValueError('equipment_information_dismissal_not_original_bounded_tooltip')
+        self.source_refresh_guard(request,tuple(pending['broker_identity']),pending_input_id=request_id)
+        allowed={pending['input_request_id'],pending['after_observation']['capture_request_id']}
+        if request_id is not None:allowed.add(request_id)
+        if set(self.economy_receipt_watermark())-set(pending['prior_receipt_ids']) != allowed:
+            raise ValueError('equipment_information_dismissal_has_intervening_request')
+        plain_equipment_tooltip(observed)
+        if _inspection_resources(pending['before'])!=_inspection_resources(observed):
+            raise ValueError('equipment_information_resources_changed_before_dismissal')
+        manual_steps._bound_reward_frame(self.run,self.c,observed,pending['after_png'],read_only=True)
+        # Re-authenticate the completed click: no dismissal for unknown delivery.
+        original=await_existing_receipt(self.run,self.c,pending['input_request_id'],0)
+        expected=self.c.validate_actions([{'type':p[0],'args':p[1:]} for p in (token.split(':') for token in pending['tokens'])])
+        result=original.get('result') or {}
+        if (manual_receipt_state(original)['unknown_input'] or manual_receipt_state(original)['state']!='completed'
+                or original['request'].get('actions')!=expected or original['request'].get('handoff') is not False
+                or result.get('completed')!=expected or result.get('input_attempted') is not True
+                or result.get('attempted_actions')!=expected[:1] or result.get('ok') is not True):
+            raise ValueError('equipment_information_original_click_not_delivered')
+        if request_id is not None:
+            ledger=optional(self.run/'request-ledger'/(hashlib.sha256(request_id.encode()).hexdigest()+'.json'))
+            if (child.get('input_request_id')!=request_id or not ledger or ledger.get('result') is not None
+                    or ledger['request'].get('id')!=request_id or ledger['request'].get('kind')!='actions'
+                    or ledger['request'].get('handoff') is not False
+                    or ledger['request'].get('actions')!=[{'type':'key','args':[27]},{'type':'wait','args':[.7]}]):
+                raise ValueError('equipment_information_dismissal_not_original_unpublished_ID')
+        return pending
 
     def save_preparation_inspection(self, pending):
         self.c.write_json(self.records / ('preparation-inspection-' + pending['request_id'] + '.json'), redact(pending))
@@ -8662,7 +8768,9 @@ class Worker:
                 'monotonic_deadline': inspection_deadline,
                 'prior_receipt_ids': self.economy_receipt_watermark(), 'input_request_id': None,
                 'publication_attempted': False, 'outcome': 'pending', 'readonly_effect_verified': False,
-                'input_resent': False, 'phase_completion': False}
+                'input_resent': False, 'phase_completion': False,
+                'preparation_continuity':{'scope':list(self.preparation_scope),
+                    'reviews':copy.deepcopy(self.preparation_reviews)}}
             with path.open('x', encoding='utf-8') as stream:
                 json.dump(redact(pending), stream, ensure_ascii=False)
             self.preparation_inspection_inflight = pending
@@ -8690,21 +8798,49 @@ class Worker:
                     stream.write(self.frame_path.read_bytes())
                 pending.update(outcome='input_delivered_effect_unverified', after_png=str(after_png),
                     after_observation=copy.deepcopy(after), after_receipt=redact(receipt))
+                if action.get('target',{}).get('kind') == 'inventory_visible_item':
+                    from currency_wars_equipment import plain_equipment_tooltip, verify_inspection_roundtrip
+                    plain_equipment_tooltip(after)
+                    self.preparation_inspection_inflight=None
+                    pending['dismissal']={'input_request_id':None,'publication_attempted':False,
+                        'action':{'type':'key','args':[27],'reason':'关闭已实读的原装备信息tooltip并独立核无业务变化',
+                            'expected_page':'preparation','purpose':'equipment_inspection_dismissal'}}
+                    self.inspection_dismissal_inflight=pending
+                    try:
+                        self.command(['key:27','wait:0.7'],'原装备信息检查有界返回','preparation',
+                            '关闭后独立全读核资源/19槽/库存/装备一致；未知仍失效',action=pending['dismissal']['action'])
+                        closed=self.observe(max_attempts=1)
+                        self.source_refresh_guard(request,broker)
+                        receipt_ids=self.inspection_receipt_fence(pending,closed)
+                        closed_png=path.with_name(path.stem+'-closed.png')
+                        with closed_png.open('xb') as stream:stream.write(self.frame_path.read_bytes())
+                        continuation=verify_inspection_roundtrip(actual,before_png,after,after_png,closed,closed_png)
+                        pending.update(outcome='readonly_inspection_verified',readonly_effect_verified=True,
+                            closed_observation=copy.deepcopy(closed),closed_png=str(closed_png),
+                            readonly_continuation={**continuation,'receipt_ids_checked':receipt_ids})
+                    finally:
+                        self.inspection_dismissal_inflight=None
             except (ValueError, RuntimeError, OSError, KeyError, TypeError, TimeoutError) as exc:
                 pending.update(outcome='effect_unverified' if pending['publication_attempted'] else 'zero_input_refused', error=str(exc))
             finally:
                 if pending['publication_attempted']:
-                    # A click on a consumable is not proof of read-only details.
-                    self.invalidate_preparation('unknown_inventory')
+                    # Only a sealed click/tooltip/Escape/full-read roundtrip can
+                    # retain prior decisions. Delivery alone remains unknown.
+                    if pending.get('readonly_effect_verified') is not True:
+                        self.invalidate_preparation('unknown_inventory')
                     (self.run / 'runner-battle-approval.json').unlink(missing_ok=True)
                 self.save_preparation_inspection(pending)
                 self.preparation_inspection_inflight = None
             # Preserve the original ID even if delivery/effect is unknown.
-            # No automatic dismiss/use/retry, no new human/native phase flags.
+            # No retry/use or new human/native phase completion. One equipment
+            # information Escape is separately sealed above; other icons unchanged.
             if pending.get('after_observation'):
                 self.state['decision_request'] = None
-                self.ask(self.last_observation, 'preparation_target_inspection',
-                    '单次图标探测后原独立画面；ROOT实读详情/效果，旧库存经济验收已失效，不自动使用或关闭',
+                self.ask(self.last_observation,
+                    'preparation_strategy' if pending.get('readonly_effect_verified') else 'preparation_target_inspection',
+                    ('原装备信息往返已独立核无业务变化；ROOT实读保留的原tooltip，当前前序保持，不授予穿戴/出战'
+                     if pending.get('readonly_effect_verified') else
+                     '单次图标探测实际后图；效果未知，旧库存经济失效，不自动使用/重击'),
                     choices={'inspection': redact(pending)}, category='exception', business_step='lineup_equipment')
             self.publish(preparation_inspection=redact(pending), phase='等待ROOT图标探测核验',
                 reason='图标检查实际结果：' + pending['outcome'])
