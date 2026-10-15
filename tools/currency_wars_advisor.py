@@ -296,6 +296,19 @@ def _comparison_view(state):
         return result
     prior, current = _dict(view.get('roster_provenance')), _dict(view.get('current_provenance'))
     binding, snapshot = _dict(state.get('binding')), state.get('snapshot_id')
+    if view.get('origin') == 'authenticated_runner_roster_read':
+        valid = (view.get('schema') == 'currency-wars-comparison-view/v1'
+            and state.get('page')=='preparation' and view.get('binding')==binding
+            and view.get('raw_native_unchanged') is True and prior==current
+            and current.get('snapshot_id')==snapshot
+            and _dict(view.get('team')).get('snapshot_id')==snapshot
+            and _dict(view.get('population')).get('snapshot_id')==snapshot
+            and view.get('roster_read',{}).get('execution_authority') is False)
+        if valid:
+            return {**result,'accepted_for_comparison':True,'scope':'supervised_roster_READ_with_raw_native',
+                'roster_snapshot_id':snapshot,'source_view':copy.deepcopy(view)}
+        result['diagnostics'].append('supervised_roster_projection_scope_invalid')
+        return result
     valid = (view.get('schema') == 'currency-wars-comparison-view/v1'
         and view.get('origin') == 'authenticated_runner_view_pair' and view.get('binding') == binding
         and view.get('raw_native_unchanged') is True and current.get('snapshot_id') == snapshot
@@ -458,7 +471,8 @@ def _candidate_value_modifiers(state, policy=None, valid_entities=None):
 def _score_item(entry, policy, assumed_star=None, value_modifiers=None):
     resolution = entry['catalogue']
     legal = resolution['legal_positions_guaranteed']
-    observed_position = entry['observed'].get('position')
+    scored_observed = entry.get('scoring_observed', entry['observed'])
+    observed_position = scored_observed.get('position')
     if isinstance(observed_position, str) and observed_position in POSITIONS:
         legal = [zone for zone in legal if zone in POSITIONS[observed_position]]
     powers = resolution['power_interval']
@@ -470,7 +484,7 @@ def _score_item(entry, policy, assumed_star=None, value_modifiers=None):
     if (entry.get('source_usable') is not True or entry.get('conflicts')
             or not legal or any(zone not in powers for zone in legal)):
         return None
-    return {'ref': entry['entity_ref'], 'family': normalize_name(entry['observed']['name']),
+    return {'ref': entry['entity_ref'], 'family': normalize_name(scored_observed['name']),
             'powers': {zone: powers[zone] for zone in legal},
             'bench_weight': policy['bench_weight'], 'assumed_star': assumed_star}
 
@@ -918,10 +932,48 @@ def advise(state, catalogue, policy=None):
     empty_bench = [slot for slot in usable_slots if slot['row'] == 'bench' and slot.get('status') == 'empty']
     wallet, population = _wallet(state, snapshot), _population(state, comparison)
     native_cap = _dict(team.get('capacity'))
+    root_rows={}
+    if comparison.get('accepted_for_comparison'):
+        projection=comparison['source_view'].get('roster_read') or {}
+        try:
+            from currency_wars_economic_views import validate_roster_read, ROSTER_READ_SCHEMA
+            proof=projection['review'];source_native=projection['source_observation']
+            if (projection.get('schema')!=ROSTER_READ_SCHEMA or projection.get('source')!='supervising_agent'
+                    or projection.get('binding')!=state.get('binding')
+                    or projection.get('native_unchanged') is not True or projection.get('execution_authority') is not False
+                    or projection.get('usage')!='comparison_scoring_only'
+                    or any(proof[k]!=state['binding'][k] for k in ('match_id','resume_epoch'))):
+                raise ValueError('root_roster_projection_envelope_invalid')
+            root_rows=validate_roster_read(proof,source_native,{k:proof[k] for k in ('request_id','snapshot_id','match_id','resume_epoch')})
+            from currency_wars_economic_views import continued_roster_resources
+            current_resources=continued_roster_resources(projection)
+            source_time=datetime.fromisoformat(source_native['captured_at'].replace('Z','+00:00'))
+            current_time=datetime.fromisoformat(comparison['source_view']['current_provenance']['captured_at'].replace('Z','+00:00'))
+            if (not 0<=(current_time-source_time).total_seconds()<=180
+                    or projection.get('scope',{}).get('stage')!=proof['stage']
+                    or any(projection.get('scope',{}).get(k)!=state['binding'][k] for k in ('match_id','resume_epoch'))
+                    or current_resources['coins']!=wallet['value']
+                    or current_resources['population']!=f"{population['deployed']}/{population['maximum']}"
+                    or current_resources['level']!=_dict(semantic.get('player_hud')).get('level')
+                    or current_resources['xp']!=_dict(semantic.get('player_hud')).get('xp')):
+                raise ValueError('root_roster_projection_resource_or_time_conflict')
+            current_slots={tuple(slot.get(k) for k in ('location','row','slot')):slot for slot in slots}
+            if any(address not in current_slots or current_slots[address].get('status')!=row['status']
+                    or any(current_slots[address].get(k) is not None and current_slots[address][k]!=row[k] for k in ('name','star'))
+                    for address,row in root_rows.items()):raise ValueError('root_roster_projection_native_conflict')
+        except (KeyError,ValueError,TypeError):
+            root_rows={};comparison['diagnostics'].append('supervised_roster_READ_invalid')
     for entry in entities:
         observed = entry['observed']
+        root_row=root_rows.get(tuple(observed.get(k) for k in ('location','row','slot')))
+        scored_observed=copy.deepcopy(observed)
+        if root_row and root_row['status']=='occupied' and root_row['name'] is not None:
+            scored_observed.update(name=root_row['name'],star=root_row['star'])
+            entry['scoring_observed']=scored_observed
+            entry['scoring_source']='supervising_agent_current_roster_READ'
+            entry['scoring_trial_read']=root_row['trial']
         star = observed.get('star') if _integer(observed.get('star'), 1, 4) else None
-        entry['catalogue'] = _character(catalogue, observed.get('name'), star, cache)
+        entry['catalogue'] = _character(catalogue, scored_observed.get('name'), scored_observed.get('star'), cache)
         entry['source_usable'] = (_native_slot(observed, roster_snapshot) and observed.get('status') == 'occupied'
                                  and (observed.get('location') == 'bench' or state.get('page') == 'preparation'
                                       or comparison['accepted_for_comparison']))
@@ -1131,7 +1183,7 @@ def advise(state, catalogue, policy=None):
                        if entry['catalogue']['database_sha256'] is not None}
         if definitions and definitions != {coverage['database_sha256']}:
             raise ValueError('catalogue.changed_during_advice')
-        ref_names = {entry['entity_ref']: entry['observed'].get('name') for entry in entities + offers}
+        ref_names = {entry['entity_ref']: entry.get('scoring_observed',entry['observed']).get('name') for entry in entities + offers}
         by_id = {portfolio['id']: portfolio for portfolio in portfolios}
         scenarios = []
         for preference in best_by_cap:

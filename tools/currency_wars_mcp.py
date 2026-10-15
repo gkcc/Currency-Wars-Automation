@@ -43,7 +43,7 @@ def read_object(path, limit=2_000_000):
     return result
 
 
-def propose_economic_step(state):
+def propose_economic_step(state, ranking_policy=None):
     """Authorize a local recomputation, never caller-selected spending or input."""
     result = {'schema': 'currency-wars-economic-step-proposal/v1', 'status': 'blocked',
               'input_sent': False, 'execution_eligible': False, 'actions': []}
@@ -66,18 +66,22 @@ def propose_economic_step(state):
                    for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id'))):
         result['reason'] = 'current_authenticated_economy_phase_and_completed_predecessors_required'
         return result
+    from currency_wars_economy import normalize_ranking_policy
+    ranking = normalize_ranking_policy(ranking_policy) if ranking_policy is not None else None
     action = {'type': 'advance_local_economy', 'expected_page': state['page'],
               'reason': '本地联合比较当前购牌、升级和有界刷新；最多一笔经济输入，原收据回读后重新决策。'}
+    if ranking is not None:
+        action['ranking_policy'] = ranking
     result.update(status='proposed', binding=dict(binding), actions=[action],
                   reply={**binding, 'actions': [action], 'context_update': {}},
                   scope='Original executor revalidates current evidence and derives its own budget; proposal alone sends no input.')
     return result
 
 
-def propose_economic_macro(state, limits):
+def propose_economic_macro(state, limits, ranking_policy=None):
     """Optional explicit macro caps; the original executor alone owns the loop."""
     from currency_wars_economy import MACRO_CONTRACT, validate_macro_limits
-    result = propose_economic_step(state)
+    result = propose_economic_step(state, ranking_policy)
     result['schema'] = 'currency-wars-economic-macro-proposal/v1'
     if result['status'] != 'proposed':
         return result
@@ -91,6 +95,8 @@ def propose_economic_macro(state, limits):
         return {**result, 'status': 'blocked', 'actions': [], 'reply': None, 'reason': str(exc)}
     action = {'type': 'advance_local_economy_macro', 'expected_page': state['page'], 'limits': caps,
               'reason': '显式上限内逐笔本地联合重算，原收据与效果核验后继续；任何未决或控制变化立即结束。'}
+    if 'ranking_policy' in result['actions'][0]:
+        action['ranking_policy'] = result['actions'][0]['ranking_policy']
     return {**result, 'actions': [action], 'reply': {**result['binding'], 'actions': [action], 'context_update': {}}}
 
 
@@ -169,7 +175,7 @@ class Adapter:
         # No automatic submit: proposals never bypass original request/epoch guards.
         return self.redact(result)
 
-    async def advice(self, policy=None, macro_limits=None):
+    async def advice(self, policy=None, macro_limits=None, ranking_policy=None):
         """Conditional local suggestions; never an executable runner plan."""
         state = await self.state()
         if state.get('status') not in ('observed', 'offline'):
@@ -177,12 +183,22 @@ class Adapter:
         try:
             from currency_wars_advisor import advise
             from currency_wars_deployment import propose_deployment
+            if ranking_policy is not None:
+                from currency_wars_economy import normalize_ranking_policy
+                ranking_policy = normalize_ranking_policy(ranking_policy)
+                if policy is not None and not isinstance(policy, dict):
+                    raise ValueError('policy must be an object')
+                policy = dict(policy or {})
+                for key in ('gold_weight', 'reserve'):
+                    if key in policy and policy[key] != ranking_policy[key]:
+                        raise ValueError('advice and execution ranking preferences conflict')
+                    policy[key] = ranking_policy[key]
             result = advise(state, self.catalogue(), policy)
             result['state_status'] = state.get('status')
             result['deployment_proposal'] = propose_deployment(state, result)
-            result['economic_step_proposal'] = propose_economic_step(state)
+            result['economic_step_proposal'] = propose_economic_step(state, ranking_policy)
             if macro_limits is not None:
-                result['economic_macro_proposal'] = propose_economic_macro(state, macro_limits)
+                result['economic_macro_proposal'] = propose_economic_macro(state, macro_limits, ranking_policy)
             return self.redact(result)
         except (OSError, ValueError, TypeError, KeyError, AttributeError, sqlite3.Error) as exc:
             return self.result('unavailable', input_sent=False,
@@ -604,7 +620,8 @@ def main():
         return await adapter.decision(policy)
 
     @server.tool(annotations=readonly)
-    async def get_advice(policy: dict | None = None, macro_limits: dict | None = None) -> dict:
+    async def get_advice(policy: dict | None = None, macro_limits: dict | None = None,
+                         ranking_policy: dict | None = None) -> dict:
         """Local conditional suggestions with explicit unknowns and per-action requirements.
 
         Published power is an approximate proxy. This tool sends no game input;
@@ -612,7 +629,7 @@ def main():
         get_decision and original submission/ownership/budget/battle guards apply
         independently; this tool never fills their missing facts.
         """
-        return await adapter.advice(policy, macro_limits)
+        return await adapter.advice(policy, macro_limits, ranking_policy)
 
     @server.tool(annotations=readonly)
     async def get_preparation_plan(limits: dict, max_deployments: int) -> dict:

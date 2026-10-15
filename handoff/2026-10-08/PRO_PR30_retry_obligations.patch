@@ -1,0 +1,575 @@
+diff --git a/tools/currency_wars_manual_steps.py b/tools/currency_wars_manual_steps.py
+--- a/tools/currency_wars_manual_steps.py
++++ b/tools/currency_wars_manual_steps.py
+@@ -294,3 +294,93 @@
++def _check_recovery_retry(run, owner, control, records, pending, evidence, request, binding, existing):
++    """Under manual-checkpoint.lock, retain attempts even without continuation.
++
++    A mailbox job records accepted intent before its first read. A new job ID,
++    prose change or extended deadline cannot renew that source. PNG bytes may
++    repeat: freshness is an authenticated later inspect/capture/frame instead.
++    This function performs no capture, input or history write.
++    """
++    r = _runner()
++    if len(existing) > 128:
++        raise ValueError('recovery mailbox exceeds its existing bound')
++    jobs, previous = [], []
++    for path in existing:
++        job = r.entry.read_json(path)
++        jobs.append(job)
++        if job.get('payload', {}).get('operation') != 'recover_reward':
++            continue
++        old = job.get('payload', {}).get('reply', {}).get('reward_recovery')
++        if not isinstance(old, dict):
++            raise ValueError('prior recovery intent is incomplete; no new recovery read')
++        if (old.get('reward_step_id') != pending.get('step_id')
++                and old.get('input_request_id') != pending.get('request_id')):
++            continue
++        old_binding, result = job.get('binding') or {}, job.get('result') or {}
++        if (job.get('schema') != SCHEMA or job.get('run_id') != owner['run_id']
++                or Path(path) != _path(run, job.get('step_id'))
++                or old_binding.get('run_id') != owner['run_id']
++                or old_binding.get('match_id') != pending.get('match_id')
++                or old_binding.get('stage') != pending.get('before', {}).get('stage')
++                or old.get('match_id') != pending.get('match_id')
++                or old.get('reward_step_id') != pending.get('step_id')
++                or old.get('input_request_id') != pending.get('request_id')
++                or job.get('status') != 'refused'
++                or result.get('receipt_watermark_verified') is not True
++                or result.get('receipt_delivery_verified') is not True
++                or result.get('input_receipt_ids') != []
++                or result.get('evidence_errors') or result.get('prior_unknown_receipt_ids')
++                or job.get('finalization_errors')
++                or not isinstance(result.get('receipt_states'), list)
++                or any(state.get('state') != 'zero_input'
++                       or state.get('unknown_input') is not False for state in result['receipt_states'])
++                or r.entry.read_json(Path(records) / ('manual-step-' + job['step_id'] + '.json')) != r.redact(job)):
++            raise ValueError('prior recovery is not a retained, terminal zero-input refusal')
++        # Compare against every accepted attempt, not just a persisted result.
++        if any(not isinstance(old.get(key), str) or not old[key]
++               or evidence.get(key) == old[key]
++               for key in ('request_id', 'capture_request_id', 'frame_id')):
++            raise ValueError('recovery source already used; a new inspect/request/capture/frame is required')
++        previous.append(job)
++    if not previous:
++        return
++    if unknown_receipts(run, control):
++        raise ValueError('original receipt is unknown; no recovery retry')
++    # Do not accept IDs merely changed by a caller. The current proof must be
++    # the result of a later, completed, read-only inspect in this manual lease.
++    completed = [datetime.fromisoformat(job['finished_at']) for job in previous]
++    if any(value.tzinfo is None for value in completed):
++        raise ValueError('prior recovery has no authenticated terminal time')
++    inspected = []
++    for job in jobs:
++        result = job.get('result') or {}
++        if (job.get('payload', {}).get('operation') != 'inspect'
++                or result.get('decision_request_id') != evidence['request_id']):
++            continue
++        if (job.get('schema') != SCHEMA or job.get('run_id') != owner['run_id']
++                or job.get('binding') != binding or job.get('status') != 'returned'
++                or result.get('receipt_watermark_verified') is not True
++                or result.get('receipt_delivery_verified') is not True
++                or result.get('input_receipt_ids') != []
++                or result.get('evidence_errors') or result.get('prior_unknown_receipt_ids')
++                or job.get('finalization_errors')
++                or any(result.get(key) != evidence[key]
++                       for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'page', 'stage'))
++                or not isinstance(result.get('receipt_states'), list)
++                or not result['receipt_states']
++                or any(state.get('state') != 'zero_input'
++                       or state.get('unknown_input') is not False for state in result['receipt_states'])
++                or r.entry.read_json(Path(records) / ('manual-step-' + job['step_id'] + '.json')) != r.redact(job)):
++            raise ValueError('recovery retry lacks its retained read-only inspect result')
++        started = datetime.fromisoformat(job['started_at'])
++        ended = datetime.fromisoformat(job['finished_at'])
++        if (started.tzinfo is None or ended.tzinfo is None or started > ended
++                or any(started < value for value in completed)):
++            raise ValueError('recovery retry inspect predates the prior terminal refusal')
++        inspected.append(job)
++    if len(inspected) != 1:
++        raise ValueError('recovery retry needs one genuinely new inspect before submission')
++    _bound_reward_frame(run, control, request['observation'], request['original_png'], read_only=True)
++
++
+ def _prepare_recovery_record(run, control, records, pending, evidence):
+     """Retain a failed read-only report before an explicit NEW current review.
+ 
+@@ -415,3 +505,5 @@
+                 intent = validate_reward_recovery(recovery, request, binding, checkpoint_id, pending)
++                _check_recovery_retry(run, owner, control, records, pending, recovery,
++                                      request, binding, existing)
+                 _prepare_recovery_record(run, control, records, pending, recovery)
+             if guide is not None:
+diff --git a/tools/currency_wars_runner.py b/tools/currency_wars_runner.py
+--- a/tools/currency_wars_runner.py
++++ b/tools/currency_wars_runner.py
+@@ -5790,17 +5790,63 @@
+         if path.exists():
+             raise ValueError('本次创业指南请求已有原尝试；读取原记录，不重发')
+         previous = optional(self.run / 'startup-navigation.json') or {}
+-        if (previous.get('match_id') == self.active_match_id and previous.get('status') == 'pending'
+-                and previous.get('publication_attempted') is True):
+-            if (previous.get('run_id') != self.owner['run_id'] or optional(self.records /
+-                    ('guide-navigation-' + previous['request_id'] + '.json')) != previous):
+-                raise ValueError('原导航记录归属/归档不符；不绕过pending')
+-            self.startup_navigation_delivery(previous)
+-            # A later explicitly reviewed current target is a new manual
+-            # intent. The prior navigation's historical unknown is retained.
+-            if (action.get('target_evidence', {}).get('source') != 'supervising_agent'
+-                    or any(request.get('observation', {}).get(key) == previous.get('source_frame', {}).get(key)
+-                           for key in ('capture_request_id', 'frame_id'))):
+-                raise ValueError('原导航后继未知；只读/当前ManualPhase复核，不能自动再点原图标')
+-            return previous['request_id']
++        visited, sources = set(), []
++        while previous and previous.get('match_id') == self.active_match_id:
++            rid = previous.get('request_id')
++            if (not isinstance(rid, str) or not re.fullmatch(r'[0-9a-f]{32}', rid)
++                    or rid in visited or len(visited) >= 128
++                    or previous.get('schema') != 'startup-guide-navigation/v1'
++                    or previous.get('run_id') != self.owner['run_id']
++                    or previous.get('record_file') != str(self.records / ('guide-navigation-' + rid + '.json'))
++                    or optional(self.records / ('guide-navigation-' + rid + '.json')) != previous):
++                raise ValueError('原导航未决链的归属/归档/边界不符；不绕过pending')
++            visited.add(rid)
++            source = previous.get('source_frame') or {}
++            if any(not isinstance(source.get(key), str) or not source[key]
++                   for key in ('snapshot_id', 'capture_request_id', 'frame_id')):
++                raise ValueError('原导航未决链缺少原帧身份')
++            source_png = Path(previous.get('source_png', ''))
++            source_receipt = await_existing_receipt(self.run, self.c, source['capture_request_id'], 0)
++            result = source_receipt.get('result') or {}
++            frame = result.get('observation') or {}
++            if (source_png.resolve().parent != self.records.resolve()
++                    or hashlib.sha256(source_png.read_bytes()).hexdigest() != source['snapshot_id']
++                    or result.get('ok') is not True or manual_receipt_state(source_receipt)['unknown_input']
++                    or frame.get('frame_protocol') != 1
++                    or frame.get('request_id') != source_receipt.get('id')
++                    or source_receipt.get('id') != source['capture_request_id']
++                    or frame.get('frame_id') != source['frame_id']
++                    or frame.get('snapshot_sha256') != source['snapshot_id']):
++                raise ValueError('原导航未决链的不可变源帧/原回执不符')
++            sources.append(source)
++            if previous.get('status') == 'pending':
++                # This also refuses missing/unknown original delivery. Never
++                # turn an unfinished prepublication attempt into a retry.
++                self.startup_navigation_delivery(previous)
++                if (action.get('target_evidence', {}).get('source') != 'supervising_agent'
++                        or any(request.get('observation', {}).get(key) == old[key]
++                               for old in sources for key in ('capture_request_id', 'frame_id'))):
++                    raise ValueError('原导航后继未知；只读/当前ManualPhase复核，不能自动再点原图标')
++                return rid
++            if previous.get('status') == 'observed' and previous.get('outcome') == 'expected_title_observed':
++                return None  # Current title evidence, not completion of startup_guide.
++            if (previous.get('status') != 'refused' or previous.get('outcome') != 'zero_input'
++                    or previous.get('publication_attempted') is not False):
++                raise ValueError('原导航尝试终态不明；保留未决，不再点击')
++            # A refused successor did not discharge the older obligation.
++            # Validate its zero-input receipt when an Entry ID was allocated.
++            input_id = previous.get('input_request_id')
++            if input_id is not None:
++                refused = await_existing_receipt(self.run, self.c, input_id, 0)
++                state = manual_receipt_state(refused)
++                if state['state'] != 'zero_input' or state['unknown_input']:
++                    raise ValueError('导航拒绝的原交付仍未确定；不能跳过未决链')
++            prior = previous.get('prior_unknown_navigation_request_id')
++            if prior is None:
++                return None
++            if not isinstance(prior, str) or not re.fullmatch(r'[0-9a-f]{32}', prior):
++                raise ValueError('原导航未决链接无效')
++            previous = optional(self.records / ('guide-navigation-' + prior + '.json'))
++            if not previous or previous.get('request_id') != prior or previous.get('match_id') != self.active_match_id:
++                raise ValueError('原导航未决归档缺失或跨局；不能清除主管要求')
+         return None
+diff --git a/handoff/2026-10-08/RETRY_OBLIGATION_FIX.md b/handoff/2026-10-08/RETRY_OBLIGATION_FIX.md
+new file mode 100644
+--- /dev/null
++++ b/handoff/2026-10-08/RETRY_OBLIGATION_FIX.md
+@@ -0,0 +1,50 @@
++# PR30 后的恢复去重与导航未决链修正
++
++唯一基线：`51798ecf7a62d8f778a799c130fc111fc2f836a5`（PR30）。本包是完整可应用的源补丁，不是已发布 PR；ROOT 在隔离目录应用后负责冻结提交、发布、独立验收与部署。PR24 不在此基线链中。
++
++## 两项生产修改
++
++### PR29-R1
++
++`currency_wars_manual_steps.py` 在原 `manual-checkpoint.lock` 内、排入新作业之前枚举已有有界 mailbox。按原 `reward_step_id`/`input_request_id` 与 run/match/stage 识别义务；不依赖 continuation 是否曾经落盘。
++
++旧来源 request/capture/frame 中任何一个被重复使用，拒绝新作业，不捕获、不释放 blocker。findings 或 deadline 变化不是新来源。相同 job ID 仍只读原结果。
++
++允许重试必须同时具备：旧作业 terminal refused、完整水位/交付、零输入、无未知/证据错误，持久报告与 mailbox 相符；当前 proof 来自这些拒绝之后本 manual binding 中一次真实完成的 inspect；其新 request/capture/frame 与每次旧尝试均不同，原 PNG 和纯观察原收据再次认证。PNG SHA 可以完全相同。旧结果文件不删除，原 `_prepare_recovery_record` 继续保留已经写出的失败 continuation。
++
++### PR30-R1
++
++`currency_wars_runner.py` 的 `check_startup_navigation_attempt` 从最新指针沿 `prior_unknown_navigation_request_id` 跟踪原归档。中间零输入拒绝不能解除更早 pending。逐段核 schema/run/match、归档相等、原 PNG SHA、capture/frame 及同 owner 的原收据；缺失、循环、超出128边界或未知交付全部拒绝。存在已分配 Entry ID 的零输入拒绝，也须核实原零输入收据。
++
++找到 pending 后仍要求原单输入 completed，以及当前显式 supervising_agent 的原17字段流程；不能用普通 native plan 再点。完整 proof、当前前台/owner/epoch/deadline/ROI/单动作/准备顺序和后继读取，仍由原消费者执行。新记录继续指向原 pending。原 unknown 归档、输入、两次只读预算不改变。只见“创业指南”标题仍不关闭 startup_guide。
++
++不改视觉校准、OCR、经济、GUI、manifest、资源/provider、READY、控制器、操作类型或现有 proof 字段。
++
++## 固定最小验收
++
++```powershell
++python -B -X utf8 tools/replay_currency_wars_retry_obligations.py --output retry-obligations-windows.json
++```
++
++只运行两个新增生产消费者回归和原一项受影响的“continuation 已落盘后失败再恢复”检查，共3个方法。没有重新运行 PR29 8项、PR30 9项或旧经济/视觉/GUI套件。新模块只复用旧原生裁片和原声明协议，不引入图片。
++
++1. 首次恢复在 continuation 写盘前因金币未知拒绝；同 ID 只读、旧 proof 换 ID/说明零额外捕获；新 inspect 可以同 PNG 字节而不同身份；新恢复一次只读，旧 pending 和失败报告不变。
++2. pending 导航 -> 新主管意图 -> 发布前失去前台/零输入拒绝 -> 再 inspect 的普通 native plan 零额外捕获/输入 -> 新主管 proof 可继续；原归档与预算不变。缺失旧链源拒绝，只见标题不完成阶段。
++3. 保留原“落盘之后报告失败”回归，防止新去重把合法新 inspect 恢复封死。
++
++报告生成37项源码（24 production、原PR30的11支持文件、新driver/回归各1）、19项原素材/证据摘要与实际 loaded-source closure。无.git归档中 head=null 合法；测试前后字节实际计算，不伪填commit。完整消费者结果以ROOT在完整隔离PR30基础运行此入口所得报告为准；本制作环境无法materialize完整仓库，未宣称这些完整消费者已执行。
++
++## 原接口和退出
++
++- 奖励：保持原 `manual-step recover_reward --checkpoint-id ... --reply-file ... --request-id ...`。同ID查询原结果。首次失败且未写 continuation，也必须先 `manual-step inspect`，核返回原帧及新 request/capture/frame，再依据真实当前状态填原17字段。无需改金币/checked/native。
++- 导航：正常首动作仍用原 decide；曾有已发布未知导航时，只允许当前 startup_guide ManualPhase 的新 inspect + 原17字段 `reviewed_plan`。新尝试零输入拒绝后，下一次仍需新主管 proof，不能改回无source的普通 native plan。guard_texts 保持原三个锚点。
++- 接管后执行物理步骤前仍须原 broker explicit handoff；inspect 不伪造阶段。unknown delivery 先对账原请求。归档缺失、来源冲突或新页面不适用则只读/回ROOT，不删锁、不重置预算、不重发未知球或导航。
++- 业务推进、全场领空、创业指南任务验证和每次出战仍是原合同；这两项修正不改变连续整局授权。
++
++## 应用与发布
++
++附带严格检查器先验证原35源码和19素材的冻结SHA，再在临时目录以 git apply --check/实际apply 验证整份patch、编译新/改Python，并与明确的字节替换计划逐项比较。--check不写输入目录；--apply只用于ROOT指定的隔离归档/checkout，不操作生产/READY。
++
++应用后生成的来源报告包含所有新源码SHA、候选source-set和补丁SHA；这是新全文件字节的真实摘要。当前包不伪造未读取的完整runner新摘要，也不伪造远端head。ROOT在基于上述PR30的独立分支上只提交本补丁的5个路径，才能确保唯一父为PR30。
++
++本批不改 manifest 或GUI编译输入。已有PR30/组合PR29 Windows结果由ROOT报告提供，不能冒称本修正通过。最终冻结候选仍须ROOT独立review、Windows、本机24源码+64素材/provider/GUI inputs绑定、READY/check-launch及真实导航。
+diff --git a/tools/replay_currency_wars_retry_obligations.py b/tools/replay_currency_wars_retry_obligations.py
+new file mode 100644
+--- /dev/null
++++ b/tools/replay_currency_wars_retry_obligations.py
+@@ -0,0 +1,118 @@
++"""Only PR29-R1, PR30-R1 and the affected post-persistence recovery regression.
++
++Uses the frozen PR30 fixture/source inventory without rerunning its old suite,
++visual calibration, economy, GUI or Rust. No OCR/download/capture/game process.
++Full canvases and successors are declared inert protocols, not live evidence.
++"""
++from __future__ import annotations
++
++import argparse
++import hashlib
++import io
++import json
++import os
++from pathlib import Path
++import platform
++import subprocess
++import sys
++import time
++import unittest
++
++import replay_currency_wars_guide_actionability as base
++
++ROOT = Path(__file__).resolve().parents[1]
++PARENT = '51798ecf7a62d8f778a799c130fc111fc2f836a5'
++SELECTION = (
++    'test_currency_wars_retry_obligations.RetryObligationTests.test_pre_persistence_refusal_requires_new_inspect_not_new_job_id',
++    'test_currency_wars_retry_obligations.RetryObligationTests.test_refused_navigation_successor_preserves_prior_supervisor_obligation',
++    'test_currency_wars_reward_recovery.RewardRecoveryTests.test_failed_read_only_report_retained_and_only_new_current_proof_may_retry',
++)
++
++
++def sources():
++    values, runtime = base.sources()
++    for name in ('tools/replay_currency_wars_retry_obligations.py',
++                 'tools/test_currency_wars_retry_obligations.py'):
++        values[name] = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
++    return dict(sorted(values.items())), runtime
++
++
++def test_ids(suite):
++    for item in suite:
++        if isinstance(item, unittest.TestSuite):
++            yield from test_ids(item)
++        else:
++            yield item.id()
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output', type=Path, required=True)
++    args = parser.parse_args()
++    os.environ['ORT_DISABLE_TELEMETRY'] = '1'
++    os.environ['CW_NATIVE_REWARD_EVIDENCE_DIR'] = str(ROOT / 'handoff/2026-10-08/ROOT_NATIVE_REWARDS')
++    report = dict(schema='currency-wars-retry-obligations/v1', basis_commit=PARENT,
++        game_inputs=0, controllers_started=0, new_game_captures=0, native_ocr_calls=0,
++        candidate_installed=False, ready_changed=False, whole_game_speedup=None,
++        source_binding_authority='Exact before/after file bytes; no fabricated tested HEAD.',
++        environment=dict(system=platform.system(), python=platform.python_version()),
++        execution_scope='Two new consumer regressions plus one affected old method; inert parent fixtures only.')
++    try:
++        report['tested_checkout_head'] = subprocess.check_output(
++            ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, stderr=subprocess.DEVNULL, timeout=5).strip()
++    except (OSError, subprocess.SubprocessError):
++        report['tested_checkout_head'] = None
++    stream = io.StringIO()
++    try:
++        before, runtime = sources()
++        artifacts_before = base.artifacts()
++        report.update(source_sha256=before, source_file_count=len(before),
++            runtime_source_files=runtime, runtime_source_count=len(runtime),
++            artifact_sha256=artifacts_before, artifact_file_count=len(artifacts_before))
++        loader = unittest.TestLoader()
++        suite = loader.loadTestsFromNames(SELECTION)
++        if loader.errors or tuple(test_ids(suite)) != SELECTION:
++            raise ValueError('Exact three-method selection did not resolve: ' + repr(loader.errors))
++        started = time.perf_counter()
++        result = unittest.TextTestRunner(stream=stream, verbosity=2, resultclass=base.Result).run(suite)
++        report['focused_checks'] = dict(selection=list(SELECTION), tests=result.testsRun,
++            failures=len(result.failures), errors=len(result.errors), skips=len(result.skipped),
++            seconds=time.perf_counter() - started, results=getattr(result, 'outcomes', []),
++            failure_details=[dict(test=test.id(), traceback=trace)
++                             for test, trace in result.failures + result.errors])
++        import test_currency_wars_retry_obligations as checks
++        import test_currency_wars_reward_recovery as prior
++        report['new_consumer_evidence'] = checks.EVIDENCE
++        report['affected_parent_evidence'] = prior.EVIDENCE
++        after, runtime_after = sources()
++        artifacts_after = base.artifacts()
++        loaded = sorted({Path(module.__file__).resolve().relative_to(ROOT).as_posix()
++            for module in tuple(sys.modules.values()) if getattr(module, '__file__', None)
++            and str(module.__file__).endswith('.py') and Path(module.__file__).resolve().is_relative_to(ROOT)})
++        report.update(source_set_sha256_before=base.digest(before), source_set_sha256_after=base.digest(after),
++            source_sha256_after_differences={name: dict(before=before.get(name), after=after.get(name))
++                for name in sorted(set(before) | set(after)) if before.get(name) != after.get(name)},
++            source_unchanged=before == after and runtime == runtime_after,
++            artifacts_unchanged=artifacts_before == artifacts_after,
++            loaded_source_files=loaded, loaded_source_closure_missing=sorted(set(loaded) - set(before)),
++            manifest_unchanged_from_pr30=after['tools/currency_wars_runtime_sources.json'] == base.BASE_MANIFEST_SHA256)
++        report['ok'] = bool(result.wasSuccessful() and not result.skipped and report['source_unchanged']
++            and report['artifacts_unchanged'] and not report['loaded_source_closure_missing']
++            and report['manifest_unchanged_from_pr30'] and len(runtime) == 24)
++    except Exception as error:
++        import traceback
++        report.update(ok=False, setup_or_finalization_error=dict(type=type(error).__name__,
++            message=str(error), traceback=traceback.format_exc()))
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
++    args.output.with_suffix('.tests.txt').write_text(stream.getvalue(), encoding='utf-8')
++    print(json.dumps({key: report.get(key) for key in ('ok', 'source_file_count', 'artifact_file_count',
++        'source_set_sha256_before', 'source_set_sha256_after', 'loaded_source_closure_missing')}
++        | {key: (report.get('focused_checks') or {}).get(key) for key in ('tests', 'failures', 'errors', 'skips', 'seconds')}))
++    if not report['ok']:
++        print(stream.getvalue())
++    return 0 if report['ok'] else 1
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())
+diff --git a/tools/test_currency_wars_retry_obligations.py b/tools/test_currency_wars_retry_obligations.py
+new file mode 100644
+--- /dev/null
++++ b/tools/test_currency_wars_retry_obligations.py
+@@ -0,0 +1,209 @@
++"""Two consumer regressions for PR29-R1 / PR30-R1 on the frozen PR30 stack.
++
++Reuse the real existing Worker, Entry, mailbox, ManualPhase and saved receipts.
++The parent fixtures supply declared pixels/OCR/successors and inert transport;
++no new native image, real game input or elapsed-game-time claim is made here.
++The driver selects exact methods, never this module's imported parent classes.
++"""
++from __future__ import annotations
++
++import copy
++import json
++from pathlib import Path
++import unittest
++from unittest.mock import patch
++import uuid
++
++import currency_wars_manual_steps as steps
++import currency_wars_runner as runner
++import replay_currency_wars_rewards as transport
++import test_currency_wars_reward_recovery as recovery
++import test_currency_wars_guide_actionability as guide
++from test_currency_wars_reward_hud_flow import job
++
++EVIDENCE = []
++
++
++class RetryObligationTests(unittest.TestCase):
++    def test_pre_persistence_refusal_requires_new_inspect_not_new_job_id(self):
++        with transport.protocol_fixture() as bundle:
++            case = recovery.prepare_exhausted(bundle)
++            worker, control = bundle.worker, bundle.control
++            old_reply = recovery.recovery_reply(bundle, case)
++            old_q = copy.deepcopy(worker.state['decision_request'])
++            raw = case['archive'].read_bytes()
++            pointer = (bundle.runtime / 'reward-step.json').read_bytes()
++            before = len(control.published)
++            case['state']['mutation'] = 'unknown_coins'
++            failed, failed_args = recovery.recover(bundle, case, reply=old_reply)
++            self.assertEqual(failed['status'], 'refused', failed)
++            self.assertEqual(len(control.published) - before, 1)
++            self.assertEqual(failed['result']['input_receipt_ids'], [])
++            self.assertTrue(failed['result']['receipt_watermark_verified'])
++            self.assertTrue(failed['result']['receipt_delivery_verified'])
++            self.assertFalse(recovery.recovery_path(bundle, case).exists())
++            self.assertEqual(worker.state['decision_request']['request_id'], old_q['request_id'])
++            mailbox = bundle.runtime / 'manual-steps' / (failed_args['step_id'] + '.json')
++            archived = bundle.records / ('manual-step-' + failed_args['step_id'] + '.json')
++            failed_bytes, archived_bytes = mailbox.read_bytes(), archived.read_bytes()
++            case['state']['mutation'] = None
++            before = len(control.published)
++            same_id = steps.submit(bundle.runtime, bundle.owner, control, **failed_args)
++            self.assertEqual(same_id['status'], 'refused')
++            self.assertFalse(steps.process(worker))
++            for edit in ('same_proof', 'findings_only'):
++                with self.subTest(edit=edit):
++                    reply = copy.deepcopy(old_reply)
++                    if edit == 'findings_only':
++                        reply['reward_recovery']['findings'] = 'Different prose, still the same already-used source.'
++                    with self.assertRaises(ValueError):
++                        recovery.recover(bundle, case, reply=reply)
++                    self.assertEqual(len(control.published), before)
++                    self.assertEqual(control.action_index, 1)
++                    self.assertFalse(recovery.recovery_path(bundle, case).exists())
++                    self.assertIsNotNone(worker.pending_reward_step(worker.last_observation))
++            self.assertEqual(mailbox.read_bytes(), failed_bytes)
++            self.assertEqual(archived.read_bytes(), archived_bytes)
++            self.assertEqual((bundle.runtime / 'reward-step.json').read_bytes(), pointer)
++            recovery.RewardRecoveryTests.assert_original_unchanged(self, bundle, case, raw)
++
++            inspected, inspect_args = job(bundle, 'inspect')
++            self.assertEqual(inspected['status'], 'returned', inspected)
++            fresh_reply = recovery.recovery_reply(bundle, case)
++            fresh = fresh_reply['reward_recovery']
++            # These parent fixtures deliberately reuse the same image bytes.
++            self.assertEqual(fresh['snapshot_id'], old_reply['reward_recovery']['snapshot_id'])
++            for key in ('request_id', 'capture_request_id', 'frame_id'):
++                self.assertNotEqual(fresh[key], old_reply['reward_recovery'][key])
++            # A changed assertion or an incomplete old report cannot replace
++            # its archived known-zero-input result. This sends no new input.
++            before = len(control.published)
++            altered = json.loads(failed_bytes)
++            altered['result']['receipt_delivery_verified'] = False
++            control.write_json(mailbox, altered)
++            try:
++                with self.assertRaises(ValueError):
++                    recovery.recover(bundle, case, reply=fresh_reply)
++                self.assertEqual(len(control.published), before)
++            finally:
++                mailbox.write_bytes(failed_bytes)
++            recovered, unused = recovery.recover(bundle, case, reply=fresh_reply)
++            self.assertEqual(recovered['status'], 'returned', recovered)
++            self.assertEqual(len(control.published) - before, 1)
++            self.assertEqual(control.action_index, 1)
++            self.assertTrue(recovered['result']['reward_recovery']['continuation_allowed'])
++            self.assertTrue(recovered['result']['reward_recovery']['prior_outcome_remains_unknown'])
++            self.assertEqual(recovered['result']['input_receipt_ids'], [])
++            self.assertEqual(mailbox.read_bytes(), failed_bytes)
++            self.assertEqual(archived.read_bytes(), archived_bytes)
++            self.assertEqual((bundle.runtime / 'reward-step.json').read_bytes(), pointer)
++            recovery.RewardRecoveryTests.assert_original_unchanged(self, bundle, case, raw)
++            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'rewards')
++            EVIDENCE.append(dict(regression='PR29-R1', first_refusal_before_continuation=True,
++                stale_proof_extra_captures=0, stale_proof_extra_inputs=0,
++                same_id_result_only=True, genuinely_new_inspect=True,
++                same_png_sha_new_capture_frame=True, fresh_recovery_captures=1,
++                original_effect='unknown', original_auto_read_budget=2,
++                original_record_and_failed_report_unchanged=True, game_input=False))
++
++    def test_refused_navigation_successor_preserves_prior_supervisor_obligation(self):
++        with guide.worker_fixture(manual=True, successor='unknown') as bundle:
++            worker, control = bundle.worker, bundle.control
++            first, first_args = guide.manual_job(bundle)
++            self.assertEqual(first['status'], 'returned', first)
++            first_result = first['result']['startup_navigation']
++            self.assertEqual((first_result['status'], first_result['outcome'],
++                              first_result['verification_reads']), ('pending', 'unknown', 2))
++            original_path = Path(first_result['record_file'])
++            original_bytes = original_path.read_bytes()
++            original = json.loads(original_bytes)
++            self.assertEqual(control.action_index, 1)
++
++            def inspect_current():
++                control.current_frame = 'original'
++                kwargs = dict(manual_id='manual-one', step_id=uuid.uuid4().hex,
++                    operation='inspect', checkpoint_id=None, reply=None, wait_seconds=0)
++                steps.submit(bundle.runtime, bundle.owner, control, **kwargs)
++                self.assertTrue(steps.process(worker))
++                result = steps.submit(bundle.runtime, bundle.owner, control, **kwargs)
++                self.assertEqual(result['status'], 'returned', result)
++                q = worker.state['decision_request']
++                self.assertEqual(q['snapshot_id'], bundle.request['snapshot_id'])
++                return q
++
++            def make_reply(q, supervising):
++                reply = {key: q[key] for key in ('request_id', 'snapshot_id', 'resume_epoch')}
++                reply['actions'] = [guide.action_for(q,
++                    checkpoint_id=bundle.checkpoint['checkpoint_id'] if supervising else None)]
++                return reply
++
++            second_q = inspect_current()
++            begin = worker.begin_startup_navigation
++            def lose_foreground(*args, **kwargs):
++                value = begin(*args, **kwargs)
++                control.foreground = False
++                return value
++            try:
++                with patch.object(worker, 'begin_startup_navigation', side_effect=lose_foreground):
++                    refused, refused_args = guide.manual_job(bundle, reply=make_reply(second_q, True))
++            finally:
++                control.foreground = True
++            self.assertEqual(refused['status'], 'refused', refused)
++            latest = runner.entry.read_json(bundle.runtime / 'startup-navigation.json')
++            self.assertEqual((latest['status'], latest['outcome'], latest['publication_attempted']),
++                             ('refused', 'zero_input', False))
++            self.assertEqual(latest['prior_unknown_navigation_request_id'], original['request_id'])
++            self.assertEqual(control.action_index, 1)
++            refused_archive = Path(latest['record_file'])
++            refused_bytes = refused_archive.read_bytes()
++            before = len(control.published)
++            self.assertEqual(steps.submit(bundle.runtime, bundle.owner, control, **refused_args)['status'], 'refused')
++            self.assertFalse(steps.process(worker))
++            self.assertEqual(len(control.published), before)
++
++            native_q = inspect_current()
++            before = len(control.published)
++            native_reply = make_reply(native_q, False)
++            native, native_args = guide.manual_job(bundle, reply=native_reply)
++            self.assertEqual(native['status'], 'refused', native)
++            self.assertEqual(len(control.published), before)
++            self.assertEqual(control.action_index, 1)
++            self.assertFalse((bundle.records / ('guide-navigation-' + native_q['request_id'] + '.json')).exists())
++            self.assertEqual(original_path.read_bytes(), original_bytes)
++            self.assertEqual(refused_archive.read_bytes(), refused_bytes)
++            self.assertEqual(steps.submit(bundle.runtime, bundle.owner, control, **native_args)['status'], 'refused')
++            self.assertFalse(steps.process(worker))
++            self.assertEqual(len(control.published), before)
++
++            fresh_q = inspect_current()
++            fresh_reply = make_reply(fresh_q, True)
++            # Broken ancestry must fail before another capture or publication.
++            original_path.unlink()
++            try:
++                with self.assertRaises(ValueError):
++                    worker.check_startup_navigation_attempt(fresh_reply['actions'][0], fresh_q)
++            finally:
++                original_path.write_bytes(original_bytes)
++            self.assertEqual(worker.check_startup_navigation_attempt(fresh_reply['actions'][0], fresh_q),
++                             original['request_id'])
++            control.successor_mode = 'title'
++            returned, unused = guide.manual_job(bundle, reply=fresh_reply)
++            self.assertEqual(returned['status'], 'returned', returned)
++            result = returned['result']['startup_navigation']
++            new_record = runner.entry.read_json(Path(result['record_file']))
++            self.assertEqual(result['source'], 'supervising_agent')
++            self.assertEqual(result['outcome'], 'expected_title_observed')
++            self.assertEqual(new_record['prior_unknown_navigation_request_id'], original['request_id'])
++            self.assertEqual(control.action_index, 2)
++            self.assertEqual(original_path.read_bytes(), original_bytes)
++            self.assertEqual(refused_archive.read_bytes(), refused_bytes)
++            self.assertFalse(result['automatic_phase_completion'])
++            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'startup_guide')
++            self.assertNotIn('startup_guide', worker.preparation_reviews)
++            EVIDENCE.append(dict(regression='PR30-R1', original_effect='unknown', original_reads=2,
++                refused_successor_inputs=0, subsequent_native_inputs=0, subsequent_native_captures=0,
++                same_id_result_only=True, missing_ancestor_refused=True,
++                new_explicit_supervisor_inputs=1, prior_link_preserved=True,
++                original_pending_and_refused_archive_unchanged=True,
++                final_outcome='expected_title_observed', automatic_phase_completion=False,
++                game_input=False))

@@ -1,0 +1,106 @@
+--- /mnt/data/R4_reconstructed_currency_wars_advisor.py	2026-10-12 17:01:21.966118121 +0000
++++ /mnt/data/R5_final_currency_wars_advisor.py	2026-10-12 17:01:22.464610944 +0000
+@@ -360,8 +360,8 @@
+ def _candidate_value_modifiers(state, policy=None, valid_entities=None):
+     """Read declared comparison assumptions from policy only.
+ 
+-    Assumptions affect comparison only. They never become observed state and
+-    never authorize execution.
++    These are hypothetical comparison modifiers. They never become observed
++    state, native facts, or execution authorization.
+     """
+     policy = _dict(policy)
+     raw = policy.get('candidate_value_modifiers', [])
+@@ -371,50 +371,74 @@
+         return accepted, diagnostics
+     if not isinstance(raw, list) or len(raw) > 32:
+         return accepted, ['candidate_value_modifiers_invalid']
++
+     binding = _dict(state.get('binding'))
++    # A modifier must bind to a complete current observation envelope. Do not
++    # allow None==None or bool/int aliasing to satisfy the binding.
++    required_binding = ('request_id', 'match_id', 'snapshot_id')
++    for key in required_binding:
++        if not _text(binding.get(key)):
++            diagnostics.append('binding_invalid:' + key)
++            return accepted, diagnostics
++    binding_epoch = binding.get('resume_epoch')
++    if type(binding_epoch) is not int or binding_epoch < 0:
++        diagnostics.append('binding_invalid:resume_epoch')
++        return accepted, diagnostics
++    if (binding.get('snapshot_id') != state.get('snapshot_id')
++            or binding.get('match_id') != state.get('match_id')):
++        diagnostics.append('binding_invalid:state_mismatch')
++        return accepted, diagnostics
++
+     valid_entities = _dict(valid_entities)
+     for index, item in enumerate(raw):
++        prefix = f'{index}:'
+         if not isinstance(item, dict):
+-            diagnostics.append(f'{index}:not_object')
++            diagnostics.append(prefix + 'not_object')
+             continue
+         required = ('request_id', 'match_id', 'resume_epoch', 'snapshot_id',
+                     'entity_ref', 'utility_multiplier')
+         if any(k not in item for k in required):
+-            diagnostics.append(f'{index}:missing_required_field')
++            diagnostics.append(prefix + 'missing_required_field')
+             continue
+-        if type(item.get('resume_epoch')) is not type(binding.get('resume_epoch')):
+-            diagnostics.append(f'{index}:epoch_type_mismatch')
++        if not all(_text(item.get(k)) for k in ('request_id', 'match_id', 'snapshot_id')):
++            diagnostics.append(prefix + 'invalid_binding_text')
++            continue
++        if type(item.get('resume_epoch')) is not int or item.get('resume_epoch') < 0:
++            diagnostics.append(prefix + 'invalid_epoch')
+             continue
+         if (item.get('request_id') != binding.get('request_id')
+                 or item.get('match_id') != binding.get('match_id')
+-                or item.get('resume_epoch') != binding.get('resume_epoch')):
+-            diagnostics.append(f'{index}:binding_mismatch')
+-            continue
+-        if item.get('snapshot_id') != state.get('snapshot_id'):
+-            diagnostics.append(f'{index}:snapshot_mismatch')
++                or item.get('resume_epoch') != binding_epoch
++                or item.get('snapshot_id') != binding.get('snapshot_id')):
++            diagnostics.append(prefix + 'binding_mismatch')
+             continue
+         if item.get('status') != 'hypothetical':
+-            diagnostics.append(f'{index}:not_hypothetical')
++            diagnostics.append(prefix + 'not_hypothetical')
+             continue
+         entity = valid_entities.get(item.get('entity_ref'))
+         if entity is None:
+-            diagnostics.append(f'{index}:entity_not_current')
++            diagnostics.append(prefix + 'entity_not_current')
+             continue
+-        if item.get('role_id') is not None and item.get('role_id') != entity.get('role_id'):
+-            diagnostics.append(f'{index}:role_mismatch')
++        if item.get('role_id') != entity.get('role_id'):
++            diagnostics.append(prefix + 'role_mismatch')
+             continue
+         value = item.get('utility_multiplier')
+         if type(value) not in (int, float) or isinstance(value, bool):
+-            diagnostics.append(f'{index}:invalid_multiplier_type')
++            diagnostics.append(prefix + 'invalid_multiplier_type')
++            continue
++        try:
++            numeric = float(value)
++        except (OverflowError, ValueError, TypeError):
++            diagnostics.append(prefix + 'invalid_multiplier')
+             continue
+-        if not math.isfinite(value) or value <= 0 or value > 2:
+-            diagnostics.append(f'{index}:invalid_multiplier')
++        if not math.isfinite(numeric) or numeric <= 0 or numeric > 2:
++            diagnostics.append(prefix + 'invalid_multiplier')
+             continue
+         if item['entity_ref'] in accepted:
+-            diagnostics.append(f'{index}:duplicate_entity')
++            diagnostics.append(prefix + 'duplicate_entity')
+             continue
+         accepted[item['entity_ref']] = {
+-            'utility_multiplier': float(value),
++            'utility_multiplier': numeric,
+             'source': 'declared_hypothetical',
+         }
+     return accepted, diagnostics

@@ -1161,6 +1161,31 @@ def native_player_hud(rows, image, page, engine, snapshot_id):
     candidates = [(row, re.fullmatch(r'Lv\.?([0-9]+)', clean(row.get('raw_text', row.get('text'))), re.I))
                   for row in rows if inside(row, [235, 875, 363, 943])]
     candidates = [(row, int(match[1])) for row, match in candidates if match]
+    # A detection covering only the foot of the large numeral is not a full
+    # level reading (for example, the lower half of 7 can look like 1).
+    # Exclude it only when current pixels prove a complete, bounded numeral;
+    # keep the original row and every full conflicting reading unchanged.
+    try:
+        import cv2
+        patch = np.array(image.crop(PLAYER_LEVEL_ROI))
+        unused, unused_labels, stats, unused_centroids = cv2.connectedComponentsWithStats(
+            (patch.max(axis=2) < 100).astype('uint8'))
+        level_glyphs = [(int(x + PLAYER_LEVEL_ROI[0]), int(y + PLAYER_LEVEL_ROI[1]), int(w), int(h))
+                        for x, y, w, h, area in stats[1:] if h >= 28 and w >= 6 and area >= 70]
+        x1, y1, x2, y2 = PLAYER_LEVEL_NUMERAL_ROI
+        if (1 <= len(level_glyphs) <= 2 and all(x1 + 2 <= x and x + w <= x2 - 2
+                and y1 + 2 <= y and y + h <= y2 - 2 for x, y, w, h in level_glyphs)):
+            partial = [(row, value) for row, value in candidates
+                       if re.fullmatch(r'Lv\.?([1-9]|10)', clean(row.get('raw_text', row.get('text'))), re.I)
+                       and not all(row['box'][0] <= x and row['box'][1] <= y
+                                   and x + w <= row['box'][2] and y + h <= row['box'][3]
+                                   for x, y, w, h in level_glyphs)]
+            if partial:
+                result['evidence']['partial_level_rows'] = [row for row, unused in partial]
+                result['evidence']['level_glyph_bounds'] = [list(g) for g in level_glyphs]
+                candidates = [item for item in candidates if item not in partial]
+    except Exception:
+        pass  # Without pixel evidence no conflicting row is discarded.
     if len(candidates) > 1 or any(not re.fullmatch(r'Lv\.?([1-9]|10)',
             clean(row.get('raw_text', row.get('text'))), re.I) for row, unused in candidates):
         result['reason'] = 'conflicting_or_invalid_player_level'

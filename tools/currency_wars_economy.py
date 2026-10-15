@@ -6,6 +6,8 @@ may reuse a read; changed ROIs must be read again, never copied into native OCR.
 from __future__ import annotations
 
 import hashlib
+import json
+import math
 import re
 
 SCHEMA = 'currency-wars-economy/v1'
@@ -19,6 +21,39 @@ MACRO_CONTRACT = 'currency-wars-economic-macro/v1'
 MACRO_LIMITS = {'max_economic_actions': (1, 32), 'max_total_spent': (0, 1000000),
                 'max_paid_refreshes': (0, 32), 'max_navigation_clicks': (0, 64),
                 'max_wall_seconds': (1, 300)}
+
+
+
+RANKING_POLICY_CONTRACT = 'currency-wars-economic-ranking-policy/v1'
+
+
+def normalize_ranking_policy(value=None):
+    """Ranking preference only; absent policy preserves the historical default."""
+    if value is None:
+        return {'schema': RANKING_POLICY_CONTRACT, 'gold_weight': 20.0, 'reserve': None}
+    if (type(value) is not dict or set(value) != {'schema', 'gold_weight', 'reserve'}
+            or value['schema'] != RANKING_POLICY_CONTRACT):
+        raise ValueError('economic ranking policy schema/keys')
+    weight, reserve = value['gold_weight'], value['reserve']
+    if (type(weight) not in (int, float) or not 0 <= weight <= 10000
+            or not math.isfinite(weight)):
+        raise ValueError('economic ranking policy gold_weight')
+    if reserve is not None and (type(reserve) is not int or not 0 <= reserve <= 50):
+        raise ValueError('economic ranking policy reserve')
+    return {'schema': RANKING_POLICY_CONTRACT,
+            'gold_weight': 0.0 if weight == 0 else float(weight), 'reserve': reserve}
+
+
+def ranking_policy_digest(value=None):
+    encoded = json.dumps(normalize_ranking_policy(value), sort_keys=True,
+                         separators=(',', ':'), allow_nan=False).encode('utf-8')
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def action_ranking_policy(action):
+    if 'ranking_policy' in action and action['ranking_policy'] is None:
+        raise ValueError('explicit economic ranking policy must be typed')
+    return normalize_ranking_policy(action.get('ranking_policy'))
 
 
 def validate_macro_limits(limits):
@@ -184,6 +219,10 @@ def validate_budget(plan, observed, ledger, *, trusted_local=False):
     if (ledger.get('policy') is not None and {key: plan[key] for key in POLICY_FIELDS} != ledger['policy']
             and plan['revision'] <= ledger['revision']):
         raise ValueError('角色目标、停止条件、储备或人口目标变化须显式提高修订号')
+    ranking = action_ranking_policy(plan)
+    if (ranking != normalize_ranking_policy(ledger.get('ranking_policy'))
+            and plan['revision'] <= ledger['revision']):
+        raise ValueError('经济排序政策变化须显式提高预算修订号')
     coins = observed['values'].get('coins')
     if coins is None:
         raise ValueError('新帧金币未知，不能分配预算')

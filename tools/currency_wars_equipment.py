@@ -184,15 +184,32 @@ def _same_occupied_card(first, second, slot):
     try:
         x,y,r,b=slot['bounds']
         if slot['row']=='bench':
-            # Bench frames are axis-aligned native rectangles. Their full
-            # original ROI includes the portrait, badge, stars and selection.
+            # Native bench geometry includes a six-pixel outer frame. Keep
+            # every pixel, but do not use its AA distribution as portrait ink.
             a=first[y:b,x:r];z=second[y:b,x:r]
-            return _rendering_equal(a,z,np.ones(a.shape[:2],bool),peak=8,mean=.10,tile=.50)
+            core=np.zeros(a.shape[:2],bool);core[6:-6,6:-6]=True
+            if (not _rendering_equal(a,z,core,peak=8,mean=.10,tile=.50)
+                    or not _rendering_equal(a,z,~core,peak=8,mean=.10,tile=12)):
+                return False
+            # Complete native role field: preserve the actual white glyphs,
+            # including any glyph ink touching the frame band independently.
+            one,two=a[:47,-42:],z[:47,-42:]
+            masks=[]
+            for crop in (one,two):
+                hsv=cv2.cvtColor(crop,cv2.COLOR_RGB2HSV)
+                masks.append((hsv[:,:,1]<60)&(hsv[:,:,2]>200))
+            if (not np.array_equal(*masks) or np.count_nonzero(masks[0])<24
+                    or not _rendering_equal(one,two,masks[0],peak=4,mean=.10,tile=.50)):
+                return False
+            one,two=a[-49:-5,27:-27],z[-49:-5,27:-27]
+            return _rendering_equal(one,two,np.ones(one.shape[:2],bool),peak=4,mean=.10,tile=.50)
         a,quad,mask=_card_outline(first,slot);z,new_quad,new_mask=_card_outline(second,slot)
-        if np.max(np.abs(quad-new_quad))>1:return False
-        # Six-pixel frame band separates animated outer antialiasing from the
-        # actual portrait. It is still checked, including selection/quality.
-        core=cv2.erode(mask,np.ones((13,13),np.uint8)).astype(bool)
+        # Each frame must independently expose a complete native card outline.
+        # Contour corner fits are not identity: AA can change a hull vertex while
+        # the fixed-slot portrait is identical. Compare both full content regions
+        # at their original coordinates; never align/warp away a real card move.
+        core=(cv2.erode(mask,np.ones((13,13),np.uint8))
+              |cv2.erode(new_mask,np.ones((13,13),np.uint8))).astype(bool)
         rim=(mask|new_mask).astype(bool)&~core
         if (not _rendering_equal(a,z,core,peak=4,mean=.10,tile=.50)
                 or not _rendering_equal(a,z,rim,peak=48,mean=.75,tile=12)):return False

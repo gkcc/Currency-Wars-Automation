@@ -1,0 +1,1738 @@
+diff --git a/handoff/2026-10-08/New-TaskScrollReply.ps1 b/handoff/2026-10-08/New-TaskScrollReply.ps1
+new file mode 100644
+index 0000000000000000000000000000000000000000..1860a9d697b1bdf209f655dbcccea63c1426ca62
+--- /dev/null
++++ b/handoff/2026-10-08/New-TaskScrollReply.ps1
+@@ -0,0 +1,55 @@
++param(
++    [Parameter(Mandatory = $true)][string]$Python,
++    [Parameter(Mandatory = $true)][string]$RequestFile,
++    [Parameter(Mandatory = $true)][string]$ChapterText,
++    [Parameter(Mandatory = $true)][string]$OutputFile,
++    [string]$TargetText = '0/2',
++    [int]$Delta = -120
++)
++
++# Local plan construction only. The original manual-step CLI owns submission.
++# Never infer a chapter label or copy an old capture/epoch into a new request.
++$cwRepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
++$cwBuilder = @'
++import json
++from pathlib import Path
++import sys
++
++root, request_file, chapter_text, target_text, delta, output_file = sys.argv[1:]
++sys.path.insert(0, str(Path(root) / 'tools'))
++import currency_wars_runner as runner
++from currency_wars_visual_guards import TASK_LIST_SCROLL_CONTROL
++
++request = json.loads(Path(request_file).read_bytes().decode('utf-8-sig'))
++observed = request['observation']
++def unique(label):
++    row = runner.find_text(observed['rows'], label, exact=True)
++    if row is None:
++        raise ValueError('Current complete text is absent or ambiguous: ' + label)
++    return row
++
++unique('\u521b\u4e1a\u6307\u5357')
++target, chapter = unique(target_text), unique(chapter_text)
++bounds = list(target['box'])
++action = dict(type='scroll', args=[(bounds[0]+bounds[2])/2, (bounds[1]+bounds[3])/2, int(delta)],
++    expected_page=observed['page'], guard_texts=['\u521b\u4e1a\u6307\u5357', chapter['text'], target['text']],
++    target_evidence=dict(control_id=TASK_LIST_SCROLL_CONTROL, source='observed_screen',
++        snapshot_id=request['snapshot_id'], capture_request_id=observed['capture_request_id'],
++        frame_id=observed['frame_id'], text=target['text'], bounds=bounds,
++        chapter_text=chapter['text'], chapter_bounds=list(chapter['box'])),
++    reason='\u6eda\u52a8\u5f53\u524d\u521b\u4e1a\u6307\u5357\u7684\u975e\u5173\u952e\u4efb\u52a1\u5217\u8868\uff0c\u6838\u5b9e\u7ae0\u8282\u672b\u5c3e\u9886\u53d6\u72b6\u6001\uff1b\u4e0d\u5ba3\u544a\u4efb\u52a1\u5b8c\u6210')
++reply = {key: request[key] for key in ('request_id', 'snapshot_id', 'resume_epoch')}
++reply['actions'] = [action]
++runner.validate_plan(reply, request, request['resume_epoch'])
++output = Path(output_file).resolve()
++with output.open('xb') as stream:
++    stream.write((json.dumps(reply, ensure_ascii=False, indent=2) + '\n').encode('utf-8'))
++print(json.dumps(dict(reply_file=str(output), request_id=request['request_id'],
++    target_text=target['text'], chapter_text=chapter['text'], args=action['args'],
++    input_submitted=False), ensure_ascii=False))
++'@
++
++& $Python -B -X utf8 -c $cwBuilder $cwRepoRoot $RequestFile $ChapterText $TargetText $Delta $OutputFile
++if ($LASTEXITCODE -ne 0) {
++    throw 'Plan construction failed before submission; no Worker job or game input was created.'
++}
+diff --git a/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/.gitattributes b/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/.gitattributes
+new file mode 100644
+index 0000000000000000000000000000000000000000..76fc40160430cec23db251258b66864b5a7dc705
+--- /dev/null
++++ b/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/.gitattributes
+@@ -0,0 +1,2 @@
++# Preserve ROOT's frozen JSON bytes, including its original CRLF endings.
++diagnosis.json -text -diff
+diff --git a/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/actual-progress.png b/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/actual-progress.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..8c54c851331e7c1c5f12e54d8b9a6e758294f189
+GIT binary patch
+literal 1649
+zcmV-%29EiOP)<h;3K|Lk000e1NJLTq001-q001Kh0ssI2RLQ=d000I!Nkl<Zc%1E5
+z`EOH45Z>K)`NbC`zDv|JIFQ7-dZej18bE>~juZ?2H>Canl`5g4BB3@ARJ9F({s1Th
+zXhRY^5EC3bPD1S1kN3PY)$;@6`l19;A+__{J7)HqZ}yv=rS0uu@@|Y$N(e;)1h*N1
+zk#}x%+n)adxb5428ytNLU$M~#MC6<UAY-ibgp3J-@S0=*01+u=jM2K$1c8~c5Y1R-
+z<TnQg0Foqjb?t6%Z+E$zobz-#6N|-@$)vd~txpF43=IwR^mM0Esb7AX1OQ90oO4MM
+zJ3Bw>==jj>b`^`om6g=o+`{T=MihlN0|x+3r!yKIi$r=AMYh;7jN;~I_UhGZQ&Trf
+z+*IQ$ks<EizpuZ)cYOSsVHkp7F3f?u-LA2*lYM=?s;XL!hGDF&t^fGrmD{)PG~urr
+z93qOM7>$m7^2reAd~<Vib#+aWM8DtXayiGwP8AA;Tet353s<ES3I#)<KrWY?oqcE}
+zfQX8$oI4jC80Z5qqdj}JsVK_MojcmvTF;$3lh5ZLJovK_f7ReP=izWT66xWbudJlL
+z{r0<La)mKAGBSMf<Z(rj4;}jQk3VKLO{*dg5kLNT(CKt05>Mjs#TT@3J~%iKiSz)#
+zlP6CvT=+hfT9sw_@Zr(@`@c|C^~jM!u~^(NjJjK;no>lvXU}d$Q4n!*aw;BQ<ecle
+ze*OB5SS(Hm@p#(2UJn3NA(LgfqvJzD$o=~dwzjq`+9;*LU;qF(=Rf^)b$&jsY1;bw
+z`jsmasZ<&f{eG{@<wC^QGlz(hB(}A+5`wy}FE2k81d*1^FpOk!rMI_7lBCww)-pHc
+zn(o^5K`0b_{#>(iFpUyH5Ptpjw|n>Q`F!43EH29urBo0EP17=&Oeho-MNyWee+15C
+zk};c2MKpoxx?U!`^k`6Oo|uXv*YJ%)Ljw+nBauivdbIQsw<*<pzL3pk<MBmNH1jOe
+z>~^~mNwLUv-DuPetIJ9$wYI0#nJV27%~CQ(1)-X6o6XkI(Lo5AnR$@Q<tjIjMU^C(
+zoLO%;=UrW4zu!kG$z(FQT&}7qHU#%_nyAAwfc4VsuvqaO00MzPFzDAbZDAo^3A;89
+z=iKA*oH+57EK8j88#jK>=ktvkXCrX+&B9dm9T5iy`y38?I=z}mBwp>sngjvBX0t`3
+zrvm{$rEGfo?wvc+wOy$hxHmFHY-wrf?Cd0j-n~0hRnw|J2_Z+19_j0g5JDCgAN}yd
+z<wi}UA-G1`DXI3w50qBc)E@}=N;O?<k_PAe^UsG59y~w@SzBAbaN**{#zqs`>Vqrw
+zFl+I@<y6*MNhq%}>F@8e+gnnp)#c^oMvE1T#jdXKsZ+-#Nh}l!7cX8~T1tpw!?B}2
+zH~=VVyDZx>i>Bx-G{s`EjLdGghr?D)?`E^vx;5gQd%d2sXU{ks4$k@b_{7Z2{pOt2
+z0Y|AhL0J7=5JbD(UM?|Xw56rRqOGhi&P|>AeBMH#u&@xTiwpo&)fSC@9Sr&jAyZQ~
+zCnv89Lc`If8FQTTL}D2cWLb(tdaMaT*YzDcc64@jAfl#esZ`nuO)2T`kJ#;|PM<za
+z){<eJV8@Of?d|Ob!0G9kOP4O|y1_XwzO+VLyv_+B2yAwCc4On2+wC46{*(~<@Zp@Q
+z+J=We^Ljm$vbnkWOlFNS1^{-uy{jush`DMuo0BA|CRG?289s1u9{>~z+QLF?&z^8a
+z4io_5@x|IPqCPmrgmgMRK7Q@YnNzB&j*cGKw{L`*L$JwlBJpH=d;$O%W1RC)DCqNf
+z^ZCO3{6d2Xk9BwNRb*M$bw!a+pFUC9z!{^@pX=w(f3vhy(H)zBv+&)#`TN$^*68Q~
+zkH;g+G9nZTh57l|#Kh0(blM6;DedmwD~jUd$B&Z9l_omXb-k>i%5et3+~Q5jN*i6O
+zIp>O^IGs*awOJy_W^<fF<u$_V^{T3x&2Fx(t=Fv!rL3*Z<8Y`|BUafEF_~N`O&Imu
+zo80)Vn~0T}H8@p;fEU*p^R%s>I%NO^u=wKOt7lCvCC%DkEt=Z6<aNf(pM)m0YvxPd
+vV`KlyD)jvXhi~Kje_6L{|8;P<ZP&j5STS4DGYl-%00000NkvXXu0mjf+XON+
+
+literal 0
+HcmV?d00001
+
+diff --git a/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/diagnosis.json b/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/diagnosis.json
+new file mode 100644
+index 0000000000000000000000000000000000000000..66d4eaabd959ae76f57393ac8354e8c97f570599
+GIT binary patch
+literal 1635
+zcmZuxO>5mo6x|#AABMM%V~wO4N$IYub`>byl_KuU+|d)(lhm2ft4#<Lg6oE2LZHwT
+z(^AtyvM4Ss{c>>dpYgMwSN#he>FGIk=thW{d(ZutbIzm94MHYXPH_g42V`QJ#%<N$
+z$~kUXX_~6qDmpM~OO;U6jV<l=oKEfySrTehDsb2*sxVFxr4z|`7--}HkKzCWp7J;p
+znx}CbGhkY*b1Sg6)TQ*Lnz{#g{{bnmMgtX*O=DE)yFl{M!w*Sk(Gs!ea0_=qI)6QD
+z!IZYC3229gbanYzheUS9VC{&*UANsfrT=aHJo-J4^6+EgK5s}_m#*{`%6bk}sYqKv
+zZHXM4K}9TjXkWP6Bj7Kfsyx1IYU@lV`&J1W(-=FBVVllK%nkbb*5#!dRzWi^LI`x4
+z>NpTG3st~n7KMN*6REtLYo`!0-sfSODy}t?fs~07nTQijBOxNGAfhS>kumDeB2JYM
+zTIw`RIZJg$F_Mf$Bd%Xj2URYib)9*)H!f42L~#}-9$sq>La78;A}E&$Q*amKR&QJf
+zDa*15V?m>og(8re3rdr|*Eo?{0|L#GOlDdIGDa03DBvs;Qb*ZcTy0>6<F<fBf+q>*
+zk%~M?P%sSvW13N>Q>1FlbYKc}c?ANiep$hGc=tv$U9GIY`lKf(AvET}z*9n^FdqLX
+zqv86HWqshMD=rUoxt*NybzDsEvs;mJ3Uz@hZ_8b*azDvH3!fU?4_FjtJPB^TYz00;
+zsB;iDH-*SmsWp0@%3d~oPC(O$zWuIqVE6x1R-;VXPE@0Ma&Qi3t;3#u8Y+w9Ow&E<
+zL#liw<lK63+>IEx?2jf_M<<s*9(b`WPJX!lZh!Ij?~7+I{yjTd?7v$4_Dp>McDg)&
+zesOko@z3G%$(zfkr;CFxFTZ_x{l(Mk<J0jWR<@DXFfWTi*17GZMB6{gqt&BKn$CIo
+z4vvAlElS^X?n+l--Uy3k?q?YHJ}K+AbMHtigIH>YSsFncb4o$TNa&Ob9x@R}qq}%V
+z>ph~v9$or1?es0sHL$k_1Nj`yjsN&6FmPwhm<e>QnfW1P-cG?{KH{ysYS?i<(Bsvj
+zi=NHaK{3olw{8q_>NSX_UvNC`$Qx2&Rx6qC?PNSP-hI6_)kW^W?hFs|$FIwi<BK=v
+zSKqt}FMm0{dU|^K{gdUNUthfbYH@hHI6Sy|{c?GJbp7J5<xl&IpASZ)K0m)*<gHFx
+zQ_j7!<+`f|-p<ey5}hwR5XT$b$QuE2r!c*oa;VFG3r+3q#M^M+neFWA-R_aP860+w
+XwYO(72!gESL7-}CoNR79-rV>PGISHN
+
+literal 0
+HcmV?d00001
+
+diff --git a/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/source-progress.png b/handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/source-progress.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..32bef4308f595939e0428e4faac7df30bb35034e
+GIT binary patch
+literal 1631
+zcmV-l2B7(gP)<h;3K|Lk000e1NJLTq001-q001Kh0ssI2RLQ=d000IiNkl<Zc%0=|
+z{ZA7~7@nE^>e4Ty-#v*Owj5Bt^bWZI9%|xg6bVHBH<SAVOfDg3G%<=|E*eDqK?$IE
+z2(%yt`auC{X_wv3%w@Y??Umhf#$2w+JwI%+yEE@R@AJ<4&O5NaJ^=n5z`~P$g#`qv
+z7zk7`5cofngI_V1HTpp*#TXMp5kiGGiV(vv$2da>p_D?15Q4ha7zU}fC{=B#mcN`F
+zA%x@DVDNN(eZ9?Q#TX}(sc<+Fi^bGsp}ri1kgl$dmX_v3BJuRuB*8=*hp}p{vGLo6
+zhEsOCEuYWF<B6rEmF?{m%Q9a^ju2wCT1Q5PLZMbc;5D@rCBMI)e*E~!)YNoAn{s{y
+zG1$Jo-uCv^@$n~$tT2qaFeb!qw+#(lZ)<B6MNylmD9X;x?t=%9Uca8HpkFyTN-4{-
+zBO^m+&vs#q_xJa=w|6*>^?2Min{{YtFqg}{dNrdhT;`JB@ALb;nM`JJ@xAIm!J5GH
+zqoX4o9c_fD);@mR7X;zNiCTxFZgg}wo6RmP{9&YDIXR4RAP@+JS}?}(c;fc$Ut_U2
+zLa3*w`}*~(g1}$6@YB0@i;^UjiAO0tbEea3wML^Gk;v*N+48uvvm+F0A%tvfY>kcm
+zmPl;#Jb&@xKwsaFq9|UvbRis$D2k%HRmvr$6f`xR76gG(IypHNiL7FbWm$gy{6#n%
+z0RT9i4wuVG2q|O6^L#_YDFDFRw+jac2M|IE07TH|_Yy)d#t$DpUS5t!lC-<K`{>a`
+zB9Ww&dOR+h%|<CbUO7rB$FUAa9RO68<;~44hGAg=ilW3~@z&NBj^pa;>WbPFV|w!B
+zH-5kG@KDlx(7-Uvv!|19-YmG?u5dWQ^BjbbVHio0QmK^R?_*h(=ed7GPE`^ilS!mh
+zB`V8uQS8F20wI793IcybZ`#$>VX;`E(dgRRdMWR0Hk;05B9T>=RsAf=Y`5Df1^GOd
+zWyPo(mWLHWsBKTJGL=rFR1GCUkYUR8HknKf4GjQ*`T2!RCR4hBG^sdF)lB<>F%AX;
+z9*-MBkV>U8nM_$xG$f~)(`_aQ(LSmbmX`b{gm}GPpU)#n(#p!`nCb#!>~uP>UAw~b
+z9LD&?i<jAK)~IkAk<*99sq8<cw6n9#VlgL^+tFzBXq72-!(=jzjNI^gJrJVV*}0jS
+z*$U&o_H3n;*3{HAHZ}qP=jP_iVp=v50C4&8rM9*Z0AO`>?e5+CMn%MsoKfx+vi8#e
+z2uow?@p|2bn66fE17m#dT=)6&{Q!WSo!zmqJ9~S36=c&VSEymy;(zn0m}`YZ`Rqx1
+zdz;x@lSpiDZf+Vame1#d!NB0)RgPnGx!j#Q_tw{=ENj?y=#wLa6mq+mwnY`yq|?~s
+z^Z6n(v)LR7Xfd5jr_;JI!Wg?;uA4W9Efx#Lczk?fe*SG`&2-2?2r<T5eP<ZfY&I7|
+zj1a7;snKLB<`>3lp1R$xTrRh=64qr#2ocpJ81nf%0D!5f>B-6G3}e{ZR8kIO9F1;L
+zN_d_Ng<7-@LYC#)+S<m(21=<UNr^;KGYuhVZx5NxYMyRw#g2-h^)EkPx!l^?ObDHw
+zoxgYQzAP&k<NRMR+TuDV1jC@k#l^k7k9NDgyZd_p;QRMWqG;;w{=wyPLWq`@mQ$%6
+zgb*RbY&Hjj0RYrh)9DPyapkTO(sQo6zrU9dlFLaeE8(W5K#32K5E6;39&ID^$sxof
+zlgaV%C&R;oq9_gw^!N7mAhiirHI7C%#>XcJAqXLivET1=yIt9AZh3h{zr#bQxj85Z
+zoGdGXz~8uWt+aq61P>48Tep5$U)QgWI{AVSGd=zC;NW0jpx^0q@;px|$>nm(%i)QM
+z-;>FtW(Y#q-25HOvL8OI#bR;eJXKH6Vh)wIGlZyHyh2!^(WM$=EC_<tY86G3mIUc^
+z24hlsjc~bKq9~@*`#U?kx^aO3I2;bM<#S?{fl?Za#S0yV-t-DLe(ffr+0`1SG85#}
+zbw)jH^<6KFA;#KheUMS+Rw{!>*&MYCjswzeZ^w?)oeQcM2vji;sA3>c#Xz8nfj|`l
+d{nrF4;ZGjMPte_SkB<NV002ovPDHLkV1ixpAd3J1
+
+literal 0
+HcmV?d00001
+
+diff --git a/handoff/2026-10-08/TASK_SCROLL_FIX.md b/handoff/2026-10-08/TASK_SCROLL_FIX.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..0280397bd710cb33d59f347bfac6bb63464aba07
+--- /dev/null
++++ b/handoff/2026-10-08/TASK_SCROLL_FIX.md
+@@ -0,0 +1,128 @@
++# 创业指南任务列表局部滚动守卫修复
++
++## 交付结论与冻结依据
++
++本补丁只以 d2477df7c5620fe606340e068642bf684445a5fb 为父基线；它是 PR31 后继，不重做 PR29/30，也不重测已验收的原生导航。交付形式为完整二进制 Git patch 和逐文件 SHA256 清单，没有声称已推送候选、发布 PR、安装或部署。下一步由 ROOT 独立复核、Windows 验收、安装并验证真实滚动。
++
++已实际读取该父提交中的 runner.check_target_roi、Worker/Entry 发布链及当前手操调用入口。已读取证据提交 0e43fadea064a52141fdd3b322ba4a8b14b04a62 中的 diagnosis.json、两张原生裁片、ROOT_PR31_INDEPENDENT_REVIEW.json、ROOT_PR31_DEPLOYMENT.json 及其保留的 ROOT_PR30_RETRY_FIX_WINDOWS_ACCEPTANCE.json；上一验收清单的 37 源码和 19 素材逐项与父提交字节匹配，无缺项。
++
++原合法接口是所属 Worker 的 manual-step / reviewed_plan。普通 scroll 可携带当前唯一文字、完整 ROI 和 ROI 内输入点，但父提交最后仍要求目标 RGB 逐字节相同。因此，[1460,324,1512,359] 中心 [1486,341.5] 的合法“0/2”计划对本次原生配对仍会被拒绝；没有可受检使用的现成动画容忍参数。最初 missing text、point-outsideROI 两个坏计划分别是调用者构造错误，并非该守卫缺口的证据。
++
++当前 runtime 已清理，历史 request/capture/frame/epoch 不能带入新运行。ROOT 验收后按原机制正常 start / business_resume，同一局当前创业指南阶段的新请求才可生成计划；不需要为本次滚动重新执行完整准备扫描或原第二图标导航。历史 unknown 档案不改写。
++
++## 局部契约
++
++本次只修改三个生产文件：currency_wars_visual_guards.py、currency_wars_runner.py、currency_wars_manual_steps.py；其余新增项是两份消费者入口、调用示例、说明和原生测试素材。
++
++| 条件 | 本次实现 |
++| --- | --- |
++| 动作范围 | 单个 reviewed_plan，唯一 scroll，滚轮量仅 -120 或 +120，无 context_update；标记 startup_guide_task_list |
++| 当前业务归属 | 原生 page 和 expected_page 都必须为 unknown，当前 request.kind 为 unknown_page；同 match、stage、epoch、manual owner，pending checkpoint 与 Worker 当前 phase 均为 startup_guide |
++| 不可转用 | 标记不能批准 D/F、经济、战略选择、点击、拖动或出战；普通无标记滚动保留原逐字节守卫 |
++| 来源 | 原 request、snapshot、capture、frame、完整 PNG SHA；实际复核帧必须来自同 Worker 的新 capture/frame 和原 Entry 收据 |
++| 目标 | 当前原始完整 OCR 行，不准扩大 ROI；唯一完整文本，置信度沿用局部唯一行的 0.90 门槛，点须在 ROI 内；目标宽不超过 800、高不超过 100 |
++| 页面与覆盖 | “创业指南”和当前准确章节行均唯一，原生识别结果仍为 unknown；固定锚点框不动，沿用已有弹层否决并核其完整像素与真实轮廓 |
++| 目标输入前几何 | 新旧目标文字和完整框必须相同；不能以低幅阈值容忍目标移动 |
++| 局部像素上限 | 完整 RGB ROI 同时满足 max_abs_rgb ≤ 4、mean_abs_rgb ≤ 0.06、changed_fraction ≤ 0.06；RGB 差值单位为 0–255 通道值，没有除以 255 |
++| 发布边界 | 仍经同 Worker、GuardedSubmission 和原 Entry 提交租约；实际发布前再次核归属、局部证据和期限，记录 I/O 后再核期限 |
++| 动作后条件 | 原 Entry 必须确认该唯一 scroll 完整交付；同一唯一文字宽高和横坐标不变，纵向位移绝对值 2–240，方向与滚轮量相符；移动后的对应 RGB ROI 再核同一上限 |
++
++这些阈值仅围绕已提供的原生反例设置，没有修改全局 dHash、全局像素/置信度或关键动作守卫。标题/章节复用相同的保守局部界限，真实完整标题与章节尚待 ROOT 实机确认；公开裁片不足以保证它们必然通过。
++
++任务文字源帧与当前帧的实测为：changed_fraction = 0.053296703296703295，mean_abs_rgb = 0.050183150183150185，max_abs_rgb = 4。两张裁片为原样 52×35 PNG。仅凭这些数值不能判断是抗锯齿、动画还是其他渲染因素。
++
++正常路径复用原 scroll + wait 返回帧，额外复核读取为 0。仅返回帧缺失且原输入完整交付已核实时，最多额外 observe 一次，并在调用前将 verification_reads 记为 1；不重复滚动。输入前的新观察仍必须执行，不以旧帧代替。
++
++## 调用端预检与结果
++
++新 reviewed_plan 在 manual_steps.submit 创建 job 之前调用生产 validate_plan；原 decide 入口也继续使用同一校验器。普通 scroll 和标记 scroll 的 missing target_evidence.text、非有限坐标、非法滚轮量及 point-outsideROI 会先拒绝，不创建手操 job，不触发 Worker 观察或暂停。实际输入前的守卫仍独立执行。
++
++同一 step ID 重查优先返回原 job，不会因为新请求或期限变化要求重新提交。给同一原决策请求更换 step ID、文案或章节声明也不能再发标记滚动。下一次人工决定滚动必须使用新当前观察所产生的新请求。
++
++| task_scroll.status / outcome | 含义和后续 |
++| --- | --- |
++| verified / 位移已核实 | 核实同一文字发生有向位移；不等于已到底、奖励领空、章节完成或任务完成 |
++| pending / 效果未确认 | 输入可能已经交付，但无位移、反向、文字消失/变化、覆盖、帧或来源不足等未满足后置条件；保留原证据，交 ROOT 检查，不自动重发 |
++| refused / 未发布 | 输入发布前受检拒绝；读本步错误与原记录，不换 ID 重放旧请求 |
++
++结果沿原 manual-step 返回，在 result.task_scroll 中含 input_request_id、status、outcome、shift_y、record_file、verification_reads、input_resent=false、automatic_phase_completion=false。原始受检前帧和结果位于所属 records/task-scroll-<decision_request_id>-before.png 与同名 JSON。早于 begin_task_scroll 的拒绝可能没有这份任务滚动记录，原 manual-step 错误及收据仍为依据。
++
++## Windows 最小验收入口
++
++在隔离目录确认 HEAD 精确等于唯一父提交，保持该隔离目录干净。只给 Git 进程指定行尾策略；不改全局 autocrlf，不改补丁。
++
++    git rev-parse HEAD
++    git -c core.autocrlf=false -c core.eol=lf apply --check --index --binary --whitespace=error <patch绝对路径>
++    git -c core.autocrlf=false -c core.eol=lf apply --index --binary --whitespace=error <patch绝对路径>
++
++原 evidence diagnosis.json 为 CRLF。其目录新增的局部 .gitattributes 只对这一原始 JSON 指定 -text -diff，使二进制补丁保留冻结 SHA；PNG 也按二进制保存。源代码和脚本保持交付的准确字节。应用后按包中 manifest.json 比对全部变更文件 SHA256。
++
++使用 ROOT 已有、依赖齐全的 Python，仓库根为当前目录：
++
++    & $py -B -X utf8 tools/replay_currency_wars_task_scroll.py --output $acceptanceJson
++    if ($LASTEXITCODE -ne 0) { throw 'Task scroll acceptance failed' }
++
++此入口只执行 10 个精确的新消费者方法，覆盖 26 个声明场景（其中 23 个 unittest subTest）；不能把 26 当作顶层测试个数。它使用真实 manual_steps.submit/process、Worker、GuardedSubmission 和 Entry 租约/收据消费者，底层读帧和输入发布边界为不向游戏发送动作的 fixture。
++
++在实际资源完整目录，可追加 --require-runtime-resources，要求生产 resource_snapshot 与 provider 的绑定也成功。报告记录实际资源 SHA 和数量，不预填 64。此次 Linux 源码目录缺少 tools/shop_reader_resources，报告明确 runtime_resource_binding_complete=false；这不替代 ROOT 的实际 24 源码/64 资源/provider 及安装检查。没有修改 runtime 源码清单、资源/provider、GUI 或旧 check-launch 实现；是否通过新候选的 Windows/安装门仍由 ROOT 判定。
++
++### 已执行的本机结果
++
++- 10/10，failure=0、error=0、skip=0，12.400245427 秒。
++- 28 源码，其中 24 个生产清单路径；3 份冻结原生证据。测试前后 SHA 相同，实际载入源码闭包 missing=[]。
++- source_set_sha256：886f329c479100c41168a9e919107b6e87a687351a1be120c7f44f2dda4a8803。
++- 覆盖低幅正例及实际位移、输入前目标移动/覆盖/变字/弹层、错原图/capture/frame、排队后及 Entry 锁内 phase 失效、请求/手操期限在最终局部守卫期间跨越、动作后无位移/反向/变字/覆盖、缺图一次只读补帧、调用端坏 payload、关键动作挪用标记、普通滚动仍严格拒绝。
++- 另一次代码独立复核与定点越期消费者报告随包提供；这不是 ROOT 的下一轮独立 Windows review。
++
++原生部分仅两张未编辑任务裁片；完整 1920×1080 画布、标题/章节 OCR、历史档案及滚动后继是声明 fixture。没有新游戏截图、原生 OCR、真实游戏输入、控制器启动、Windows 执行、安装、真实滚动验收或整局提速结论。生产三文件和消费者文件的准确 SHA 绑定在报告及交付 manifest 中。
++
++## 当前所属接口的精确调用示例
++
++以下由 ROOT 在正常 start / business_resume 和安装门通过后使用。$py、$chatId、$runDir、$runToken、$manualId、$checkpointId 来自当前所属运行与 pending startup_guide 手操阶段，不是已清理 runtime 的历史值。沿用原受检手操机制，不创建第二控制器。
++
++物理步骤还要求所属 broker 已按原合法交接流程完成显式 handoff，处于 ready、game_foreground、paused=false、input_halted=false。pending checkpoint 本身不会恢复 broker；若仍暂停，先由 ROOT 完成原交接，再重新取得当前绑定和请求，不先排物理 job 等待超时。当前手册不替代原 handoff 的守卫参数或批准过程。
++
++    $cwAuth = @('--chat-id', $chatId, '--run-dir', $runDir, '--run-token', $runToken)
++    $requestFile = Join-Path $runDir 'decision-request.json'
++
++如果当前还没有可用请求，或已有请求已过期，原接口的一次 inspect 可取得同 Worker 当前帧；它不触发整套准备流程。为该 inspect 保存一个固定 ID，重复查询保持这个 ID。
++
++    $inspectStepId = [guid]::NewGuid().ToString('N')
++    & $py -B -X utf8 tools/currency_wars_runner.py manual-step @cwAuth --manual-id $manualId --operation inspect --request-id $inspectStepId
++
++从当前请求列出实际 OCR，只取其中完整且唯一的章节行。不要根据公开的“章节4”摘要臆造精确文本：
++
++    $q = [IO.File]::ReadAllText($requestFile, [Text.Encoding]::UTF8) | ConvertFrom-Json
++    $q.observation.rows | Select-Object text, confidence, box | Format-Table -AutoSize
++    $chapterText = Read-Host '复制当前OCR中完整且唯一的章节行文本'
++
++生成器默认选择当前唯一“0/2”，自动使用该真实行完整框的中心。它不固定旧坐标、不读取旧 frame ID、不改 page；在生产 validate_plan 通过之前不创建输出文件，输出文件已存在则拒绝覆盖。PowerShell 脚本全部为 ASCII，中文常量由嵌入 Python 的 Unicode 转义表达，兼容旧 PowerShell 对无 BOM 文件的解析。
++
++    $replyFile = Join-Path $env:TEMP ('cw-task-scroll-' + [guid]::NewGuid().ToString('N') + '.json')
++    $cwBuildArgs = @{
++        Python = $py
++        RequestFile = $requestFile
++        ChapterText = $chapterText
++        OutputFile = $replyFile
++        TargetText = '0/2'
++        Delta = -120
++    }
++    & ./handoff/2026-10-08/New-TaskScrollReply.ps1 @cwBuildArgs
++    if ($LASTEXITCODE -ne 0) { throw 'No plan was submitted' }
++
++若当前文字行确实还是 ROI [1460,324,1512,359]，生成 args 正是 [1486,341.5,-120]；如框已变，必须以新请求实际框为准。生成文件供 ROOT 检查，内容中的 request_id/snapshot_id/resume_epoch 和 source/capture/frame 均从当前请求复制。
++
++随后只提交这一笔，并保存 ID；超时、待确认或重复查询都复用同一个 ID 和同一份 reply：
++
++    $scrollStepId = [guid]::NewGuid().ToString('N')
++    & $py -B -X utf8 tools/currency_wars_runner.py manual-step @cwAuth --manual-id $manualId --checkpoint-id $checkpointId --operation reviewed_plan --reply-file $replyFile --request-id $scrollStepId
++
++需要只读查询时，重复最后一行，不能重跑生成 ID 那一行。页面始终保留原生实读结果：成功滚动仍为 unknown；实际识别到其他页时后置条件不通过，不强制改回 unknown。ROOT 从返回帧检查末尾领取状态；本补丁不会将当前 6/7 或“累计使用2次特权赋予卡升级进阶装备”0/2 改写为完成。
++
++## 通用实践取舍
++
++- Playwright actionability 将唯一性、可见性、稳定几何和输入点是否接收事件分别检查，支持把像素噪声与控件身份分开核验的做法：https://playwright.dev/docs/actionability 。
++- pixelmatch 分开描述单像素色差、差异像素数量及抗锯齿处理，说明不能由“非零变化比例”直接推断控件已换，也不能直接据此认定变化原因：https://github.com/mapbox/pixelmatch 。
++- Playwright mouse.wheel 说明调用返回不保证滚动已完成，支持保留实际位移后置核验：https://playwright.dev/docs/api/class-mouse#mouse-wheel 。
++
++这些资料只帮助补足现有局部守卫与后置条件，未引入浏览器自动化框架，也未照搬第三方阈值。当前严格几何、唯一文本和颜色上限仍可能拒绝本次公开素材之外的渲染变化；届时应保留新的原生配对供复核，不自动扩大容忍或重发。
+diff --git a/tools/currency_wars_manual_steps.py b/tools/currency_wars_manual_steps.py
+index e868228d8f332e24340cfc63c5ee61c4c8d897dd..869225c6756b63172aae1163752ec10fc22af8ee 100644
+--- a/tools/currency_wars_manual_steps.py
++++ b/tools/currency_wars_manual_steps.py
+@@ -65,6 +65,24 @@ def _guide_roi(operation, reply):
+     return None
+ 
+ 
++def _task_scroll(operation, reply):
++    """Recognize the bounded list intent; pixels remain the Worker's guard."""
++    if operation != 'reviewed_plan' or not isinstance(reply, dict):
++        return None
++    actions = reply.get('actions')
++    if not isinstance(actions, list):
++        return None
++    marked = [action for action in actions if isinstance(action, dict)
++              and isinstance(action.get('target_evidence'), dict)
++              and action['target_evidence'].get('control_id') == 'startup_guide_task_list']
++    if marked:
++        if (len(actions) != 1 or len(marked) != 1 or marked[0].get('type') != 'scroll'
++                or reply.get('context_update')):
++            raise ValueError('task list scroll requires one reviewed scroll without context updates')
++        return marked[0]
++    return None
++
++
+ def validate_guide_roi(action, request, binding, checkpoint_id):
+     """Bind a current supervisor target without changing native recognition.
+ 
+@@ -470,6 +488,7 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
+     annotation = _reward_roi(operation, reply)
+     recovery = _recovery_reply(operation, reply)
+     guide = _guide_roi(operation, reply)
++    task_scroll = _task_scroll(operation, reply)
+     if (operation == 'reviewed_plan' and not isinstance(reply, dict)
+             or operation not in ('reviewed_plan', 'collect_rewards', 'recover_reward') and reply is not None):
+         raise ValueError('only reviewed_plan, annotated collect_rewards or recover_reward accepts a reply')
+@@ -487,13 +506,31 @@ def submit(run, owner, control, *, manual_id, step_id, operation, checkpoint_id=
+                     raise ValueError('native reward loop belongs only to the rewards checkpoint')
+                 if guide is not None and checkpoint.get('phase') != 'startup_guide':
+                     raise ValueError('supervised guide ROI belongs only to the startup-guide checkpoint')
++                if task_scroll is not None and checkpoint.get('phase') != 'startup_guide':
++                    raise ValueError('task list scroll belongs only to the startup-guide checkpoint')
++            intent, request = None, None
++            if operation == 'reviewed_plan':
++                actions = reply.get('actions')
++                if reply.get('context_update') or not isinstance(actions, list) or len(actions) != 1:
++                    raise ValueError('manual plan is one existing guarded action; budgets/reviews use the ordinary current decision')
++                unused_records, state = r._manual_records(run, owner)
++                request = state.get('decision_request')
++                if not isinstance(request, dict) or not request:
++                    raise ValueError('manual plan has no current Worker request; inspect first')
++                r.validate_plan(reply, request, binding['old_epoch'])
+             path.parent.mkdir(exist_ok=True)
+             existing = list(path.parent.glob('*.json'))
+             if len(existing) >= 128:
+                 raise ValueError('manual-step mailbox reached its bounded capacity')
+             if any(r.entry.read_json(p).get('status') in ('queued', 'running') for p in existing):
+                 raise ValueError('a manual-step is already pending; inspect that original ID')
+-            intent, request = None, None
++            if task_scroll is not None:
++                for prior_path in existing:
++                    prior_payload = r.entry.read_json(prior_path).get('payload', {})
++                    prior_reply = prior_payload.get('reply')
++                    if (_task_scroll(prior_payload.get('operation'), prior_reply) is not None
++                            and prior_reply.get('request_id') == request['request_id']):
++                        raise ValueError('task list scroll already used this request; read its original step or inspect a new current request')
+             if annotation is not None:
+                 unused_records, state = r._manual_records(run, owner)
+                 request = state.get('decision_request')
+@@ -544,6 +581,7 @@ def summary(item):
+                     or ((result.get('reward_step') or {}).get('pending') is True
+                         and (result.get('reward_recovery') or {}).get('continuation_allowed') is not True)
+                     or (result.get('startup_navigation') or {}).get('pending') is True
++                    or (result.get('task_scroll') or {}).get('status') == 'pending'
+                     or bool(result.get('prior_unknown_receipt_ids'))
+                     or bool(item.get('finalization_errors'))
+                     or any(value.get('unknown_input') for value in result.get('receipt_states', [])),
+@@ -567,6 +605,9 @@ def active(worker):
+             if (_guide_roi(item['payload']['operation'], item['payload'].get('reply')) is not None
+                     and checkpoint.get('phase') != 'startup_guide'):
+                 return False
++            if (_task_scroll(item['payload']['operation'], item['payload'].get('reply')) is not None
++                    and checkpoint.get('phase') != 'startup_guide'):
++                return False
+         return (current.get('status') == 'running' and current.get('binding') == item['binding'] == binding
+                 and current.get('payload') == item['payload']
+                 and binding['match_id'] == worker.active_match_id
+@@ -681,6 +722,11 @@ def _finish_result(worker, item, before_ids, evidence_errors):
+             ('request_id', 'input_request_id', 'manual_step_id', 'status', 'outcome', 'pending',
+              'source', 'verification_reads', 'expected_title', 'record_file', 'input_resent',
+              'automatic_phase_completion')}
++    task_scroll = getattr(worker, 'task_scroll_result', None)
++    if isinstance(task_scroll, dict) and task_scroll.get('manual_step_id') == item['step_id']:
++        item['result']['task_scroll'] = {key: copy.deepcopy(task_scroll.get(key)) for key in
++            ('request_id', 'input_request_id', 'manual_step_id', 'status', 'outcome', 'shift_y',
++             'record_file', 'input_resent', 'automatic_phase_completion', 'verification_reads')}
+     if item['payload']['operation'] == 'recover_reward':
+         try:
+             evidence = item['payload']['reply']['reward_recovery']
+@@ -803,6 +849,10 @@ def process(worker):
+                     raise ValueError('original input outcome is unknown; only inspect or emergency controls may continue')
+                 if not worker.state.get('decision_request'):
+                     raise ValueError('manual plan has no current Worker request; inspect first')
++                if _task_scroll(operation, reply) is not None:
++                    checkpoint = _checkpoint(worker.run, binding, item['payload']['checkpoint_id'])
++                    if checkpoint.get('phase') != 'startup_guide':
++                        raise ValueError('task list scroll requires its current startup-guide checkpoint')
+                 guide = _guide_roi(operation, reply)
+                 if guide is not None:
+                     checkpoint = _checkpoint(worker.run, binding, item['payload']['checkpoint_id'])
+diff --git a/tools/currency_wars_runner.py b/tools/currency_wars_runner.py
+index 3a8a801827d0626d23415b666a53eb66e2d9f54e..e47501cdc7746b2f31bf31270e6a66388e2bbe18 100644
+--- a/tools/currency_wars_runner.py
++++ b/tools/currency_wars_runner.py
+@@ -7,6 +7,7 @@ import copy
+ import ctypes
+ import hashlib
+ import json
++import math
+ import os
+ import re
+ import secrets
+@@ -34,7 +35,8 @@ from currency_wars_progression import progression_plan
+ from currency_wars_profile import ProfileRecorder, read_events, summarize_events, write_report
+ from currency_wars_visual_guards import (stable_semantic_plan, stable_semantic_target, navigation_target,
+     stable_preparation_icon_target, PREPARATION_GUIDE_CONTROL,
+-    PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT)
++    PREPARATION_GUIDE_BOUNDS, PREPARATION_GUIDE_POINT, TASK_LIST_SCROLL_CONTROL,
++    validate_task_list_scroll, stable_task_list_scroll, task_list_scroll_postcondition)
+ 
+ artifacts = entry.artifacts
+ PROJECT = Path(__file__).resolve().parent.parent
+@@ -1419,6 +1421,10 @@ def validate_plan(reply, request, epoch):
+             raise ValueError('每个动作须有具体中文理由')
+         if action['type'] not in ('finish_inspection', 'confirm_match_result', 'finish_preparation_review') and not action.get('expected_page'):
+             raise ValueError('游戏输入须指定实际页面前置条件')
++        if isinstance(action.get('target_evidence'), dict) and action['target_evidence'].get('control_id') == TASK_LIST_SCROLL_CONTROL:
++            if len(actions) != 1 or reply.get('context_update'):
++                raise ValueError('任务列表滚动须独立单动作，不附带预算或阶段完成项')
++            validate_task_list_scroll(action, request)
+         if action['type'] == 'click_text' and (not isinstance(action.get('text'), str)
+                 or not clean(action['text']) or type(action.get('exact', True)) is not bool):
+             raise ValueError('文字点击须有非空目标及布尔exact，不能用空子串或隐式类型匹配')
+@@ -1436,6 +1442,16 @@ def validate_plan(reply, request, epoch):
+             if (not isinstance(box, list) or len(box) != 4 or any(type(x) is not int for x in box)
+                     or not 0 <= box[0] < box[2] <= 1920 or not 0 <= box[1] < box[3] <= 1080):
+                 raise ValueError('目标ROI边界无效')
++            if action['type'] == 'scroll':
++                values = action.get('args')
++                if not isinstance(proof.get('text'), str) or not clean(proof['text']):
++                    raise ValueError('滚动计划缺少target_evidence.text，调用端未提交')
++                if (not isinstance(values, list) or len(values) != 3
++                        or any(type(v) not in (int, float) or not math.isfinite(v) for v in values)
++                        or abs(values[2]) > 1200 or not float(values[2]).is_integer()):
++                    raise ValueError('滚动计划须含两个有限坐标与有界整数滚轮量，调用端未提交')
++                if not box[0] <= values[0] < box[2] or not box[1] <= values[1] < box[3]:
++                    raise ValueError('输入点不在指定目标ROI内，调用端未提交')
+             if proof.get('control_id') == PREPARATION_GUIDE_CONTROL and (
+                     action['type'] != 'click_point' or len(actions) != 1
+                     or request.get('kind') != 'preparation_strategy'
+@@ -3127,6 +3143,13 @@ class Worker:
+             self.manual_stage_business_pending = retained_effects
+         if retained_effects and not (page == 'reward_overlay' and physical == ['key:27']):
+             raise ValueError('原节点业务效果仍pending；完整completed不能清费用/领奖效果，只核原来源')
++        if isinstance(action, dict) and action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
++            pending = getattr(self, 'task_scroll_inflight', None)
++            if (physical != ['scroll:' + ':'.join(map(str, action.get('args', [])))]
++                    or not pending or pending.get('input_request_id') != request_id
++                    or pending.get('action') != action or pending.get('publication_attempted') is not False):
++                raise ValueError('任务列表意图与实际单滚动不符')
++            self.guard_task_scroll(action, self.state.get('decision_request') or {}, observed)
+         if page not in ('preparation', 'shop', 'unit_gear'):
+             return
+         if not isinstance(action, dict):
+@@ -3268,6 +3291,11 @@ class Worker:
+         captured_stage = battle_stage(request)
+         approval = None
+         submit_deadline = self.deadline
++        if action and action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
++            context = self.task_scroll_binding(action, request)
++            for expires in (request['deadline_at'], context['expires_at']):
++                remaining = (datetime.fromisoformat(expires) - datetime.now(timezone.utc)).total_seconds()
++                submit_deadline = min(submit_deadline, time.monotonic() + remaining)
+         policy = coaching_policy()
+         if policy['require_battle_confirmation'] and battle_input(observed, action, tokens):
+             with file_lock(self.run, 'decision-submit.lock'):
+@@ -3351,12 +3379,22 @@ class Worker:
+                 if navigation is not None:
+                     navigation.update(publication_attempted=True, broker_actions=value['actions'])
+                     self.save_startup_navigation(navigation)
++                if task_scroll is not None:
++                    task_scroll.update(publication_attempted=True, broker_actions=value['actions'])
++                    self.save_task_scroll(task_scroll)
+                 if hasattr(self, 'business'):
+                     self.save_business()  # Original lease CAS still owns this publication.
+                     # This is an intent before the actual publisher. A crash
+                     # here is unknown, never proof of input or zero effect.
+                     archive_business_receipt(self.records, self.owner,
+                         {'id': value['id'], 'request': value, 'result': None}, self.c)
++                if task_scroll is not None:
++                    # Local PNG/receipt checks can themselves cross the short
++                    # request/manual deadline. Recheck after their IO, before
++                    # returning to the sole publisher; never just worker age.
++                    self.task_scroll_binding(action, current_request)
++                    if time.monotonic() >= submit_deadline:
++                        raise entry.SubmissionDeadlineExpired('任务列表滚动在发布前已到原请求/手操期限')
+ 
+         rid = uuid.uuid4().hex
+         if action and action.get('purpose') == 'reward_capacity':
+@@ -3378,6 +3416,10 @@ class Worker:
+         if navigation is not None:
+             navigation['input_request_id'] = rid
+             self.save_startup_navigation(navigation)
++        task_scroll = getattr(self, 'task_scroll_inflight', None)
++        if task_scroll is not None:
++            task_scroll['input_request_id'] = rid
++            self.save_task_scroll(task_scroll)
+         self.worker_request_ids = getattr(self, 'worker_request_ids', set())
+         self.worker_request_ids.add(rid)
+         before = self.save_frame(rid, 'before')
+@@ -3411,6 +3453,11 @@ class Worker:
+                     status='pending' if guarded.publication_attempted else 'refused',
+                     outcome='unknown' if guarded.publication_attempted else 'zero_input')
+                 self.save_startup_navigation(navigation)
++            if task_scroll is not None:
++                task_scroll.update(publication_attempted=guarded.publication_attempted, error=str(exc),
++                    status='pending' if guarded.publication_attempted else 'refused',
++                    outcome='效果未确认' if guarded.publication_attempted else '未发布')
++                self.save_task_scroll(task_scroll)
+             self.log({'event': 'actual_result', 'decision_id': rid, 'request_id': rid,
+                       'classification': 'control_outcome_unverified' if guarded.publication_attempted else 'control_submission_refused',
+                       'request_published': None if guarded.publication_attempted else False, 'error': str(exc),
+@@ -3461,9 +3508,15 @@ class Worker:
+             # This fallback is part of the SAME reward's two-read budget.
+             # Original input delivery must be known before a successor frame
+             # replaces the broker notification; observe never repeats input.
+-            observed = (self.observe_reward_result(reward) if reward is not None
+-                        else self.observe_startup_navigation(navigation) if navigation is not None
+-                        else self.observe(scope=read_scope))
++            if task_scroll is not None:
++                self.task_scroll_delivery(task_scroll)
++                task_scroll['verification_reads'] += 1
++                self.save_task_scroll(task_scroll)
++                observed = self.observe(scope=read_scope, max_attempts=1)
++            else:
++                observed = (self.observe_reward_result(reward) if reward is not None
++                            else self.observe_startup_navigation(navigation) if navigation is not None
++                            else self.observe(scope=read_scope))
+         self.log({'event': 'actual_result', 'decision_id': rid, 'page': observed['page'],
+                   'fields': observed['fields'], 'snapshot_id': observed['snapshot_id'],
+                   'after_evidence': after, 'expected_change': postcondition,
+@@ -5748,6 +5801,103 @@ class Worker:
+         self.log({'event': 'strategy_request', 'request': request})
+         self.publish(control_mode='waiting_decision', phase=kind, reason=reason, decision_request=request)
+ 
++    def task_scroll_binding(self, action, request):
++        """Current manual phase, not a flag granting input on an unknown page."""
++        context = getattr(self, 'manual_step_context', None) or {}
++        if (request != self.state.get('decision_request') or request.get('match_id') != self.active_match_id
++                or request.get('resume_epoch') != self.epoch() or not manual_steps.active(self)
++                or context.get('payload', {}).get('operation') != 'reviewed_plan'
++                or context['payload'].get('reply', {}).get('actions') != [action]):
++            raise ValueError('任务列表滚动只接受当前同Worker的受检手操请求')
++        validate_plan(context['payload']['reply'], request, self.epoch())
++        binding = context['binding']
++        checkpoint = manual_steps._checkpoint(self.run, binding, context['payload']['checkpoint_id'])
++        if (checkpoint.get('phase') != 'startup_guide' or binding.get('stage') != battle_stage(request)
++                or self.preparation_checklist(self.last_observation)['phase'] != 'startup_guide'):
++            raise ValueError('当前创业指南phase/章节复核归属已失效，未批准滚动')
++        return context
++
++    def guard_task_scroll(self, action, request, actual):
++        self.task_scroll_binding(action, request)
++        if (not full_observation(request['observation']) or not full_observation(actual)
++                or any(actual.get(key) != (self.last_observation or {}).get(key)
++                       for key in ('snapshot_id', 'capture_request_id', 'frame_id', 'page'))
++                or any(not actual.get(key) or actual.get(key) == request['observation'].get(key)
++                       for key in ('capture_request_id', 'frame_id'))):
++            raise ValueError('任务列表必须用当前同Worker的新capture/frame完整复核')
++        manual_steps._bound_reward_frame(self.run, self.c, request['observation'], request['original_png'])
++        manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
++        diagnostic = {}
++        if not stable_task_list_scroll(action, request, actual, self.frame_path, diagnostic):
++            self.log({'event': 'task_scroll_guard_rejected', 'request_id': request['request_id'],
++                      'diagnostic': diagnostic, 'input_sent': False})
++            raise ValueError('任务列表当前唯一文字、几何、章节、覆盖或局部像素守卫未通过')
++        return diagnostic
++
++    def save_task_scroll(self, value):
++        value.update(record_file=str(self.records / ('task-scroll-' + value['request_id'] + '.json')),
++                     input_resent=False, automatic_phase_completion=False)
++        self.c.write_json(Path(value['record_file']), value)
++        self.task_scroll_result = copy.deepcopy(value)
++        self.state['task_scroll_result'] = copy.deepcopy(value)
++
++    def begin_task_scroll(self, action, request, actual):
++        diagnostic = self.guard_task_scroll(action, request, actual)
++        record = self.records / ('task-scroll-' + request['request_id'] + '.json')
++        if record.exists():
++            raise ValueError('该原请求已经尝试任务列表滚动；只读原结果，不重发')
++        before = self.records / ('task-scroll-' + request['request_id'] + '-before.png')
++        with before.open('xb') as stream:
++            stream.write(self.frame_path.read_bytes())
++        value = dict(schema='task-list-scroll/v1', request_id=request['request_id'],
++            manual_step_id=self.manual_step_context['step_id'], match_id=self.active_match_id,
++            resume_epoch=self.epoch(), action=copy.deepcopy(action), before=copy.deepcopy(actual),
++            before_png=str(before), input_request_id=None, publication_attempted=False,
++            status='pending', outcome='效果未确认', shift_y=None, verification_reads=0,
++            local_guard=diagnostic)
++        self.save_task_scroll(value)
++        self.task_scroll_inflight = value
++        return value
++
++    def task_scroll_delivery(self, value):
++        receipt = await_existing_receipt(self.run, self.c, value['input_request_id'], 0)
++        issued = receipt.get('request') or {}
++        physical = [item for item in issued.get('actions', []) if item.get('type') not in ('observe', 'wait')]
++        if (manual_receipt_state(receipt)['state'] != 'completed'
++                or (receipt.get('result') or {}).get('ok') is not True
++                or issued.get('handoff') is not False or issued.get('kind') != 'actions'
++                or issued.get('actions') != value.get('broker_actions')
++                or physical != [{'type': 'scroll', 'args': value['action']['args']}]):
++            raise ValueError('原Entry收据未核实为唯一完整滚动；不重发')
++
++    def finish_task_scroll(self, value, action, request):
++        """Use the existing command's returned frame; no automatic retry/read loop."""
++        try:
++            self.task_scroll_binding(action, request)
++            self.task_scroll_delivery(value)
++            actual = self.last_observation
++            if (not full_observation(actual)
++                    or any(not actual.get(key) or actual.get(key) == value['before'].get(key)
++                           for key in ('capture_request_id', 'frame_id'))):
++                raise ValueError('滚动后缺少新capture/frame，不以旧帧证明位移')
++            manual_steps._bound_reward_frame(self.run, self.c, value['before'], value['before_png'])
++            after_receipt = manual_steps._bound_reward_frame(self.run, self.c, actual, self.frame_path)
++            if actual['capture_request_id'] != value['input_request_id']:
++                # The existing missing-notification fallback may only observe;
++                # its new frame cannot stand in for unknown input delivery.
++                if (actual['capture_request_id'] not in self.worker_request_ids
++                        or after_receipt.get('request', {}).get('actions') != [{'type': 'observe', 'args': []}]):
++                    raise ValueError('滚动后继不是原返回或同Worker只读回帧')
++            measured = task_list_scroll_postcondition(action, value['before'], value['before_png'], actual, self.frame_path)
++            value.update(postcondition=measured, shift_y=measured['shift_y'],
++                         after_snapshot_id=actual['snapshot_id'], after_capture_request_id=actual['capture_request_id'],
++                         after_frame_id=actual['frame_id'])
++            if measured['verified']:
++                value.update(status='verified', outcome='位移已核实')
++        except (OSError, ValueError, KeyError, TypeError, RuntimeError, TimeoutError) as error:
++            value['error'] = str(error)
++        self.save_task_scroll(value)
++
+     def guard_startup_navigation(self, action, request, actual):
+         """One current fixed control; a supervisor identity is never native OCR."""
+         proof = action.get('target_evidence') or {}
+@@ -5957,6 +6107,15 @@ class Worker:
+ 
+     def execute_plan(self, reply):
+         actions = reply.get('actions', []) if isinstance(reply, dict) else []
++        if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
++               == TASK_LIST_SCROLL_CONTROL for action in actions):
++            request = self.state.get('decision_request') or {}
++            validate_plan(reply, request, self.epoch())
++            self.task_scroll_binding(actions[0], request)
++            if manual_steps.unknown_receipts(self.run, self.c):
++                raise ValueError('原输入交付未知；先对账，不以任务滚动覆盖原结果')
++            with self.observation_input_lease():
++                return self._execute_plan(reply)
+         if any(isinstance(action, dict) and action.get('target_evidence', {}).get('control_id')
+                == PREPARATION_GUIDE_CONTROL for action in actions):
+             request = self.state.get('decision_request') or {}
+@@ -6190,6 +6349,24 @@ class Worker:
+                               'input_sent': False, 'retry_allowed': False})
+                 if action.get('purpose') == 'reward_capacity':
+                     self.begin_reward_capacity(capacity_review, action, actual)
++                if action.get('target_evidence', {}).get('control_id') == TASK_LIST_SCROLL_CONTROL:
++                    scroll = self.begin_task_scroll(action, request, actual)
++                    try:
++                        self.command([command + ':' + ':'.join(map(str, values)), 'wait:0.7'],
++                                     action['reason'], actual['page'], '核实同一任务文字的有向位移', action=action)
++                        self.finish_task_scroll(scroll, action, request)
++                    except Exception as error:
++                        scroll['error'] = str(error)
++                        if not scroll['publication_attempted']:
++                            scroll.update(status='refused', outcome='未发布')
++                        self.save_task_scroll(scroll)
++                        raise
++                    finally:
++                        self.task_scroll_inflight = None
++                    self.log({'event': 'task_scroll_result', 'request_id': request['request_id'],
++                              'result': copy.deepcopy(scroll), 'input_resent': False})
++                    self.publish(control_mode='auto', decision_request=None, reason=None)
++                    return  # manual-step presents this same returned frame for the next review.
+                 if guide_navigation:
+                     navigation = self.begin_startup_navigation(action, request, actual)
+                     try:
+@@ -6278,6 +6455,9 @@ class Worker:
+         reference = Path(request['original_png'])
+         if hashlib.sha256(reference.read_bytes()).hexdigest() != request['snapshot_id']:
+             raise ValueError('本次请求原始帧已更换，拒绝坐标计划')
++        if proof.get('control_id') == TASK_LIST_SCROLL_CONTROL:
++            self.guard_task_scroll(action, request, actual)
++            return
+         if proof.get('control_id') == 'reward_capacity_sale':
+             self.reward_capacity_action(action, actual, pixels=True)
+             return
+diff --git a/tools/currency_wars_visual_guards.py b/tools/currency_wars_visual_guards.py
+index 249761ef270c548a0eed827412d0cbd6c4e1a4a4..6a24912d1aa82ab957feae5c09add6f217584005 100644
+--- a/tools/currency_wars_visual_guards.py
++++ b/tools/currency_wars_visual_guards.py
+@@ -27,6 +27,7 @@ from currency_wars_shop_reader import purchase_slot, stable_purchase_slot
+ PREPARATION_GUIDE_CONTROL = 'prep_startup_guide_2'
+ PREPARATION_GUIDE_BOUNDS = [1650, 39, 1727, 94]
+ PREPARATION_GUIDE_POINT = [1687, 65]
++TASK_LIST_SCROLL_CONTROL = 'startup_guide_task_list'
+ _PREPARATION_GUIDE_MASK = (
+     'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAA/gAAAAD/4AAAAP/8AAAAf//AAAB///wAAH/z/8AAP/x/+AAP/h/+AAH/g/8AAH/A/4AAD/Af4AAD8EHwAABwMDgAAAgeAgAAAA/gAAAAA/gAAAAgOBgAAB4MDwAAD8EPwAAD/Af4AAH/A/8AAH/g/8AAP/h/+AAP/x/+AAD/7/4AAB///gAAAf//AAAAH/8AAAAB/wAAAAA/AAAAAAOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+ )
+@@ -213,6 +214,160 @@ def _preparation_modal_row(observation):
+     return None
+ 
+ 
++def validate_task_list_scroll(action, request):
++    """Static contract only; the owning Worker still authenticates both frames.
++
++    The chapter label is selected from current OCR by the supervisor. It is a
++    local anchor, never a new native page classification or a completed task.
++    """
++    proof = action.get('target_evidence', {})
++    original = request.get('observation', {})
++    keys = {'control_id', 'source', 'snapshot_id', 'capture_request_id', 'frame_id',
++            'text', 'bounds', 'chapter_text', 'chapter_bounds'}
++    if (not isinstance(proof, dict) or set(proof) != keys
++            or proof.get('control_id') != TASK_LIST_SCROLL_CONTROL
++            or proof.get('source') != 'observed_screen'
++            or action.get('type') != 'scroll' or action.get('expected_page') != 'unknown'
++            or request.get('kind') != 'unknown_page' or original.get('page') != 'unknown'
++            or request.get('preparation_checklist', {}).get('phase') != 'startup_guide'
++            or proof.get('snapshot_id') != request.get('snapshot_id')
++            or original.get('snapshot_id') != request.get('snapshot_id')):
++        raise ValueError('任务列表滚动仅限当前创业指南复核的原生unknown页和原帧证据')
++    for key in ('capture_request_id', 'frame_id'):
++        if (not isinstance(proof.get(key), str) or not proof[key]
++                or proof[key] != original.get(key)):
++            raise ValueError('任务列表滚动的原capture/frame来源不符')
++    values, box = action.get('args'), proof.get('bounds')
++    if (not isinstance(values, list) or len(values) != 3
++            or any(type(v) not in (int, float) or not np.isfinite(v) for v in values)
++            or values[2] not in (-120, 120) or not _box(box)
++            or not box[0] <= values[0] < box[2] or not box[1] <= values[1] < box[3]):
++        raise ValueError('任务列表只允许目标ROI内单次正负120滚动')
++    label, chapter = proof.get('text'), proof.get('chapter_text')
++    if (not isinstance(label, str) or not clean(label)
++            or not isinstance(chapter, str) or not clean(chapter)
++            or len({clean(label), clean(chapter), '创业指南'}) != 3
++            or not _box(proof.get('chapter_bounds'))
++            or not isinstance(action.get('guard_texts'), list)
++            or not {clean(label), clean(chapter), '创业指南'}.issubset(
++                {clean(value) for value in action['guard_texts'] if isinstance(value, str)})):
++        raise ValueError('任务列表滚动须提供不同的当前唯一目标、章节行和创业指南标题')
++    for text, bounds in ((label, box), (chapter, proof['chapter_bounds'])):
++        row = _unique_row(original, re.escape(clean(text)), [0, 0, 1920, 1020])
++        if row is None or row['box'] != bounds:
++            raise ValueError('任务列表ROI必须来自当前完整唯一OCR行，不能扩大ROI稀释差异')
++    if box[2] - box[0] > 800 or box[3] - box[1] > 100:
++        raise ValueError('任务列表滚动目标不是有界的单行文字')
++    return proof
++
++
++def _low_amplitude_rgb_equal(before, after, diagnostic=None):
++    """Bounded local color noise, calibrated from the frozen PR31 counter pair.
++
++    The native 52x35 pair has max=4, mean=.05018315 and changed=.05329670.
++    These bounds apply only after identity/geometry/exposure checks. They do
++    not identify a rendering cause and never alter global image thresholds.
++    """
++    if (before.shape != after.shape or before.ndim != 3 or before.shape[2] != 3
++            or not before.size or before.dtype != np.uint8 or after.dtype != np.uint8):
++        return False
++    delta = np.abs(before.astype(np.int16) - after.astype(np.int16))
++    metrics = dict(max_abs_rgb=int(np.max(delta)), mean_abs_rgb=float(np.mean(delta)),
++                   changed_fraction=float(np.mean(np.any(delta != 0, axis=2))))
++    if diagnostic is not None:
++        diagnostic.update(metrics)
++    return (metrics['max_abs_rgb'] <= 4 and metrics['mean_abs_rgb'] <= .06
++            and metrics['changed_fraction'] <= .06)
++
++
++def _task_scroll_anchors(action, original, actual, images):
++    proof = action['target_evidence']
++    if (actual.get('page') != 'unknown' or original.get('page') != 'unknown'
++            or any(classify(obs.get('rows', [])) != 'unknown' for obs in (original, actual))
++            or original.get('fields', {}).get('stage') != actual.get('fields', {}).get('stage')
++            or any(_preparation_modal_row(obs) is not None for obs in (original, actual))):
++        return False
++    for label, expected in (('创业指南', None), (proof['chapter_text'], proof['chapter_bounds'])):
++        rows = [_unique_row(obs, re.escape(clean(label)), [0, 0, 1920, 1020])
++                for obs in (original, actual)]
++        if (any(row is None for row in rows) or rows[0]['box'] != rows[1]['box']
++                or expected is not None and rows[0]['box'] != expected):
++            return False
++        anchor, target = rows[0]['box'], proof['bounds']
++        if (max(anchor[0], target[0]) < min(anchor[2], target[2])
++                and max(anchor[1], target[1]) < min(anchor[3], target[3])):
++            return False
++        x, y, right, bottom = anchor
++        # These labels can be gray. Require real contours and the same tight
++        # complete-ROI color bound, not an uncalibrated white/dark-ink model.
++        if (np.count_nonzero(_edges(images[0], anchor)) < 24
++                or not _low_amplitude_rgb_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right])):
++            return False
++    return True
++
++
++def stable_task_list_scroll(action, request, actual, current_png, diagnostic=None):
++    """One noncritical list scroll: same text and geometry, tiny RGB changes."""
++    result = dict(allowed=False, reason='任务列表局部证据未通过')
++    try:
++        proof = validate_task_list_scroll(action, request)
++        images = _frames(request, actual, current_png)
++        if images is None or not _task_scroll_anchors(action, request['observation'], actual, images):
++            result['reason'] = '当前页面、章节、覆盖或PNG来源已变'
++            return False
++        row = _unique_row(actual, re.escape(clean(proof['text'])), [0, 0, 1920, 1020])
++        if row is None or row['box'] != proof['bounds']:
++            result['reason'] = '当前唯一文字或完整几何已变'
++            return False
++        x, y, right, bottom = proof['bounds']
++        if np.count_nonzero(_edges(images[0], proof['bounds'])) < 24:
++            result['reason'] = '原目标缺少可核实的文字轮廓'
++            return False
++        allowed = _low_amplitude_rgb_equal(images[0][y:bottom, x:right], images[1][y:bottom, x:right], result)
++        result.update(allowed=bool(allowed), reason='局部低幅变化已核实' if allowed else '局部像素变化超出已证范围')
++        return allowed
++    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
++        return False
++    finally:
++        if diagnostic is not None:
++            diagnostic.update(result)
++
++
++def task_list_scroll_postcondition(action, before, before_png, actual, current_png):
++    """Measure a signed displacement from the actual pre-input frame, once.
++
++    Disappearance or a changed string is not success. The caller authenticates
++    the original input receipt, fresh capture/frame and current manual phase.
++    """
++    result = dict(verified=False, shift_y=None, reason='滚动后位移未核实')
++    try:
++        pair = dict(observation=before, snapshot_id=before['snapshot_id'], original_png=before_png)
++        images = _frames(pair, actual, current_png)
++        if images is None or not _task_scroll_anchors(action, before, actual, images):
++            result['reason'] = '滚动后页面、章节、覆盖或PNG来源已变'
++            return result
++        proof = action['target_evidence']
++        rows = [_unique_row(obs, re.escape(clean(proof['text'])), [0, 0, 1920, 1020])
++                for obs in (before, actual)]
++        if any(row is None for row in rows) or rows[0]['box'] != proof['bounds']:
++            return result
++        old, fresh = rows[0]['box'], rows[1]['box']
++        shift = fresh[1] - old[1]
++        result['shift_y'] = shift
++        if (fresh[0] != old[0] or fresh[2] != old[2] or fresh[3] - old[3] != shift
++                or not 2 <= abs(shift) <= 240 or shift * action['args'][2] <= 0):
++            result['reason'] = '未观察到方向一致的有界纵向位移'
++            return result
++        if not _low_amplitude_rgb_equal(images[0][old[1]:old[3], old[0]:old[2]],
++                                        images[1][fresh[1]:fresh[3], fresh[0]:fresh[2]], result):
++            result['reason'] = '移动后的同一文字轮廓或颜色未核实'
++            return result
++        result.update(verified=True, reason='位移已核实')
++        return result
++    except (OSError, ValueError, TypeError, KeyError, IndexError, AttributeError, cv2.error):
++        return result
++
++
+ def stable_preparation_icon_target(action, request, actual, current_png, diagnostic=None):
+     """One fixed navigation action, anchored to current native preparation.
+ 
+diff --git a/tools/replay_currency_wars_task_scroll.py b/tools/replay_currency_wars_task_scroll.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..b03876c53feeb3f4a02caee1057274e43a6d1742
+--- /dev/null
++++ b/tools/replay_currency_wars_task_scroll.py
+@@ -0,0 +1,218 @@
++"""Focused offline acceptance for the PR31 task-list scroll successor.
++
++Run only the ten exact new consumer methods. No old guide-navigation suite,
++native OCR, controller, live capture, installation, GUI, or readiness mutation.
++The two 52x35 native crops calibrate the target; complete frames, source rows,
++historical unknown records, and scroll successors remain declared protocols.
++"""
++from __future__ import annotations
++
++import argparse
++import hashlib
++import importlib.metadata
++import io
++import json
++from pathlib import Path
++import platform
++import subprocess
++import sys
++import time
++import unittest
++
++
++ROOT = Path(__file__).resolve().parents[1]
++PARENT = 'd2477df7c5620fe606340e068642bf684445a5fb'
++EVIDENCE_COMMIT = '0e43fadea064a52141fdd3b322ba4a8b14b04a62'
++MANIFEST_SHA256 = '1c90624daed8f1a3ff58656238685b901174a7ad7fc927427f511cedae0b0668'
++SELECTION = (
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_native_pair_scroll_once_verifies_displacement_and_preserves_unknown',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_changed_position_cover_text_and_overlay_refuse_before_input',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_request_and_manual_deadline_crossed_during_final_local_guard_refuse',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unverified_postconditions_return_pending_without_extra_reads_or_replay',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_missing_notification_counts_one_readonly_fallback_without_resending_scroll',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_critical_actions_cannot_reuse_task_scroll_marker',
++    'test_currency_wars_task_scroll.TaskScrollConsumerTests.test_unmarked_scroll_still_requires_byte_identical_target',
++)
++SUPPORT = (
++    'tools/test_local_runtime_compatibility.py',
++    'tools/replay_currency_wars_preparation.py',
++    'tools/test_currency_wars_task_scroll.py',
++    'tools/replay_currency_wars_task_scroll.py',
++)
++
++
++def sha(path):
++    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
++
++
++def digest(value):
++    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
++
++
++def sources():
++    from currency_wars_source_guard import production_files
++    runtime = sorted(production_files(ROOT))
++    names = sorted(set(runtime) | set(SUPPORT))
++    return {name: sha(ROOT / name) for name in names}, runtime
++
++
++def artifacts():
++    names = ['handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD/' + name
++             for name in ('diagnosis.json', 'source-progress.png', 'actual-progress.png')]
++    if (ROOT / 'docs/GAME_KNOWLEDGE.json').exists():
++        names.append('docs/GAME_KNOWLEDGE.json')
++    return {name: sha(ROOT / name) for name in sorted(names)}
++
++
++def runtime_binding():
++    from currency_wars_source_guard import resource_snapshot, runtime_provider
++    value = dict(resource_inventory=None, resource_sha256=None, runtime_provider=None,
++                 resource_binding_error=None, runtime_provider_error=None)
++    try:
++        resources = resource_snapshot(ROOT)
++        value.update(resource_inventory=resources['resource_inventory'], resource_sha256=resources['hashes'])
++    except (OSError, ValueError) as error:
++        value['resource_binding_error'] = dict(type=type(error).__name__, message=str(error))
++    try:
++        value['runtime_provider'] = runtime_provider()
++    except (OSError, ValueError) as error:
++        value['runtime_provider_error'] = dict(type=type(error).__name__, message=str(error))
++    return value
++
++
++def test_ids(suite):
++    for item in suite:
++        if isinstance(item, unittest.TestSuite):
++            yield from test_ids(item)
++        else:
++            yield item.id()
++
++
++class Result(unittest.TextTestResult):
++    """Exact method outcomes and subcase counts, using normal unittest results."""
++    def startTest(self, test):
++        self.started = time.perf_counter()
++        self.before_problems = len(self.failures) + len(self.errors) + len(self.skipped)
++        if not hasattr(self, 'outcomes'):
++            self.outcomes, self.subcases = [], []
++        super().startTest(test)
++
++    def addSubTest(self, test, subtest, err):
++        self.subcases.append(dict(test=subtest.id(), status='failed' if err is not None else 'passed'))
++        super().addSubTest(test, subtest, err)
++
++    def stopTest(self, test):
++        failed = len(self.failures) + len(self.errors) + len(self.skipped) != self.before_problems
++        self.outcomes.append(dict(test=test.id(), status='failed' if failed else 'passed',
++                                 seconds=time.perf_counter()-self.started))
++        super().stopTest(test)
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output', type=Path, required=True)
++    parser.add_argument('--require-runtime-resources', action='store_true',
++        help='Also require a complete actual runtime resource/provider binding; public source archives may omit resources')
++    args = parser.parse_args()
++    packages = {}
++    for name in ('numpy', 'Pillow', 'psutil', 'opencv-python'):
++        try:
++            packages[name] = importlib.metadata.version(name)
++        except importlib.metadata.PackageNotFoundError:
++            packages[name] = None
++    report = dict(schema='currency-wars-task-scroll/v1', basis_commit=PARENT,
++        evidence_commit=EVIDENCE_COMMIT,
++        source_binding_authority='Exact before/after bytes; HEAD alone does not certify uncommitted source.',
++        environment=dict(system=platform.system(), python=platform.python_version(), packages=packages),
++        execution_scope='Ten exact new methods through existing manual mailbox, Worker and Entry consumers.',
++        game_inputs=0, controllers_started=0, new_game_captures=0, native_ocr_calls=0,
++        online_model_called=False, candidate_installed=False, ready_changed=False,
++        require_runtime_resources=args.require_runtime_resources,
++        old_navigation_suite_rerun=False, public_original_full_game_pngs_available=False,
++        natural_scroll_success_verified=False, whole_game_speedup=None,
++        native_scope='Two unedited 52x35 crops only; complete canvases/OCR/successors/historical records are declared fixtures.')
++    try:
++        report['tested_checkout_head'] = subprocess.check_output(
++            ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True, stderr=subprocess.DEVNULL, timeout=5).strip()
++    except (OSError, subprocess.SubprocessError):
++        report['tested_checkout_head'] = None
++    stream = io.StringIO()
++    try:
++        before, runtime = sources()
++        data_before, binding_before = artifacts(), runtime_binding()
++        report.update(source_sha256=before, source_file_count=len(before),
++            runtime_source_files=runtime, runtime_source_count=len(runtime),
++            artifact_sha256=data_before, artifact_file_count=len(data_before),
++            runtime_resource_sha256=binding_before['resource_sha256'],
++            runtime_resource_count=(len(binding_before['resource_sha256'])
++                                    if binding_before['resource_sha256'] is not None else None),
++            runtime_resource_inventory=binding_before['resource_inventory'],
++            runtime_provider=binding_before['runtime_provider'],
++            runtime_resource_binding_complete=binding_before['resource_sha256'] is not None,
++            runtime_resource_binding_error=binding_before['resource_binding_error'],
++            runtime_provider_error=binding_before['runtime_provider_error'],
++            optional_static_knowledge_present='docs/GAME_KNOWLEDGE.json' in data_before)
++        loader = unittest.TestLoader()
++        suite = loader.loadTestsFromNames(SELECTION)
++        if loader.errors or tuple(test_ids(suite)) != SELECTION:
++            raise ValueError('The exact ten-method selection did not resolve: ' + repr(loader.errors))
++        from test_currency_wars_task_scroll import EVIDENCE
++        EVIDENCE.clear()
++        started = time.perf_counter()
++        result = unittest.TextTestRunner(stream=stream, verbosity=2, resultclass=Result).run(suite)
++        report['focused_checks'] = dict(selection=list(SELECTION), tests=result.testsRun,
++            failures=len(result.failures), errors=len(result.errors), skips=len(result.skipped),
++            seconds=time.perf_counter()-started, results=result.outcomes,
++            subcase_count=len(result.subcases), subcases=result.subcases,
++            failure_details=[dict(test=test.id(), traceback=trace)
++                             for test, trace in result.failures + result.errors])
++        report['native_and_consumer_evidence'] = EVIDENCE
++        after, runtime_after = sources()
++        data_after, binding_after = artifacts(), runtime_binding()
++        loaded = sorted({Path(module.__file__).resolve().relative_to(ROOT).as_posix()
++            for module in tuple(sys.modules.values()) if getattr(module, '__file__', None)
++            and str(module.__file__).endswith('.py') and Path(module.__file__).resolve().is_relative_to(ROOT)})
++        report.update(source_set_sha256_before=digest(before), source_set_sha256_after=digest(after),
++            source_sha256_after_differences={name: dict(before=before.get(name), after=after.get(name))
++                for name in sorted(set(before) | set(after)) if before.get(name) != after.get(name)},
++            source_unchanged=before == after and runtime == runtime_after,
++            artifacts_unchanged=data_before == data_after,
++            optional_runtime_bindings_unchanged=binding_before == binding_after,
++            runtime_resources_unchanged=(binding_before['resource_sha256'] == binding_after['resource_sha256']
++                and binding_before['resource_inventory'] == binding_after['resource_inventory']
++                if binding_before['resource_sha256'] is not None else None),
++            runtime_provider_unchanged=(binding_before['runtime_provider'] == binding_after['runtime_provider']
++                if binding_before['runtime_provider'] is not None else None),
++            loaded_source_files=loaded, loaded_source_closure_missing=sorted(set(loaded)-set(before)),
++            manifest_unchanged_from_pr31=after['tools/currency_wars_runtime_sources.json'] == MANIFEST_SHA256)
++        report['ok'] = bool(result.wasSuccessful() and not result.skipped
++            and report['source_unchanged'] and report['artifacts_unchanged']
++            and report['optional_runtime_bindings_unchanged']
++            and (not args.require_runtime_resources or report['runtime_resource_binding_complete']
++                 and report['runtime_provider'] is not None)
++            and not report['loaded_source_closure_missing']
++            and report['manifest_unchanged_from_pr31'] and len(runtime) == 24)
++    except Exception as error:
++        import traceback
++        report.update(ok=False, setup_or_finalization_error=dict(type=type(error).__name__,
++            message=str(error), traceback=traceback.format_exc()))
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
++    args.output.with_suffix('.tests.txt').write_text(stream.getvalue(), encoding='utf-8')
++    print(json.dumps({key: report.get(key) for key in ('ok', 'source_file_count', 'artifact_file_count',
++        'runtime_source_count', 'runtime_resource_count', 'source_set_sha256_before',
++        'source_set_sha256_after', 'loaded_source_closure_missing')}
++        | {key: (report.get('focused_checks') or {}).get(key)
++           for key in ('tests', 'subcase_count', 'failures', 'errors', 'skips', 'seconds')}))
++    if not report['ok']:
++        print(stream.getvalue())
++        if report.get('setup_or_finalization_error'):
++            print(report['setup_or_finalization_error']['traceback'])
++    return 0 if report['ok'] else 1
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())
+diff --git a/tools/test_currency_wars_task_scroll.py b/tools/test_currency_wars_task_scroll.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..c17be80b1c45efa5d134eb5fc3ad3e9f8e1e83df
+--- /dev/null
++++ b/tools/test_currency_wars_task_scroll.py
+@@ -0,0 +1,614 @@
++"""Focused task-list scroll consumers; no game, controller, or native OCR.
++
++Only source-progress.png and actual-progress.png are native evidence, each a
++52x35 unedited crop. Full canvases, title/chapter strokes, OCR rows, historical
++effect records, and post-scroll frames below are DECLARED protocol fixtures.
++The production mailbox, ManualPhase, Worker, GuardedSubmission, Entry lease,
++immutable receipts, and frame readers consume those fixtures unchanged.
++"""
++from __future__ import annotations
++
++import contextlib
++import copy
++from datetime import datetime, timedelta, timezone
++import hashlib
++import io
++import json
++from pathlib import Path
++import threading
++from types import SimpleNamespace
++import unittest
++from unittest.mock import patch
++import uuid
++
++import numpy as np
++from PIL import Image, ImageDraw
++
++import currency_wars_broker_entry as entry
++import currency_wars_manual_steps as steps
++import currency_wars_perception as perception
++import currency_wars_runner as runner
++import currency_wars_visual_guards as guards
++import replay_currency_wars_preparation as preparation_fixture
++import test_local_runtime_compatibility as compatibility
++
++
++ROOT = Path(__file__).resolve().parents[1]
++PARENT = 'd2477df7c5620fe606340e068642bf684445a5fb'
++EVIDENCE_DIR = ROOT / 'handoff/2026-10-08/ROOT_PR31_SCROLL_GUARD'
++NATIVE_SHA256 = {
++    'diagnosis.json': 'a38fe6da05d2f061a146aafce5271ed4cc04d9312f7ae3c365b3631fcad7f2b6',
++    'source-progress.png': '161df85362d5c3094bf93963290726123aaab077a13cc27ea025a3de10a27a8d',
++    'actual-progress.png': 'd3475e5e4fd339a2a0205df120496090f70d4688f03bb94e4e12a1a8e72a3062',
++}
++BOUNDS = [1460, 324, 1512, 359]
++POINT = [1486, 341.5]
++TITLE_BOUNDS = [760, 120, 1020, 160]
++CHAPTER_TEXT = '第4章'
++CHAPTER_BOUNDS = [700, 205, 810, 240]
++EVIDENCE = []
++
++
++def native_sources():
++    payloads = {}
++    for name, expected in NATIVE_SHA256.items():
++        payload = (EVIDENCE_DIR / name).read_bytes()
++        if hashlib.sha256(payload).hexdigest() != expected:
++            raise ValueError('native scroll evidence bytes changed: ' + name)
++        payloads[name] = payload
++    diagnosis = json.loads(payloads['diagnosis.json'].decode('utf-8-sig'))
++    if (diagnosis.get('candidate') != PARENT or diagnosis.get('target_bounds') != BOUNDS
++            or diagnosis.get('point') != POINT or diagnosis.get('target_label') != '0/2'):
++        raise ValueError('native scroll diagnosis is not the frozen PR31 pair')
++    pixels = {}
++    for side in ('source', 'actual'):
++        with Image.open(io.BytesIO(payloads[side + '-progress.png'])) as image:
++            if image.format != 'PNG' or image.size != (52, 35):
++                raise ValueError('native scroll crop dimensions changed')
++            pixels[side] = np.array(image.convert('RGB'))
++    return diagnosis, pixels
++
++
++def _strokes(draw, row):
++    """Declared high-contrast strokes; never a native OCR accuracy premise."""
++    left, top, right, bottom = row['box']
++    draw.rectangle([left-2, top-2, right+2, bottom+2], fill=(45, 45, 45))
++    for index, unused in enumerate(row['text']):
++        x = left + 5 + index * 14
++        if x + 8 >= right:
++            break
++        draw.rectangle([x, top+6, x+2, bottom-6], fill=(242, 242, 242))
++        draw.rectangle([x, top+6, x+8, top+8], fill=(242, 242, 242))
++        draw.rectangle([x, bottom-8, x+8, bottom-6], fill=(242, 242, 242))
++
++
++def canvas(side='source', *, change=None, post=False):
++    """Unchanged native pixels in a declared 1920x1080 protocol canvas."""
++    unused, pixels = native_sources()
++    image = Image.new('RGB', (1920, 1080), (45, 45, 45))
++    draw = ImageDraw.Draw(image)
++    if side == 'ready':
++        rows = [dict(text='备战阶段', confidence=.99, box=[420, 28, 520, 64]),
++                dict(text='1-1', confidence=.99, box=[530, 28, 610, 64]),
++                dict(text='商店', confidence=.99, box=[60, 750, 130, 790]),
++                dict(text='出战', confidence=.99, box=[1680, 950, 1800, 990])]
++        for row in rows:
++            _strokes(draw, row)
++        page = 'preparation'
++    else:
++        shift = (-80 if post else 0)
++        if change == 'move':
++            shift = -6
++        elif post and change in ('no_motion', 'text'):
++            shift = 0
++        elif post and change == 'reverse':
++            shift = 80
++        target = [BOUNDS[0], BOUNDS[1]+shift, BOUNDS[2], BOUNDS[3]+shift]
++        rows = [dict(text='创业指南', confidence=.99, box=TITLE_BOUNDS.copy()),
++                dict(text=CHAPTER_TEXT, confidence=.99, box=CHAPTER_BOUNDS.copy()),
++                dict(text='0/2', confidence=.99, box=target)]
++        for row in rows[:2]:
++            _strokes(draw, row)
++        with Image.fromarray(pixels['source' if side == 'source' else 'actual']) as crop:
++            image.paste(crop, (target[0], target[1]))
++        if change == 'cover':
++            ImageDraw.Draw(image).rectangle([target[0], target[1], target[2]-1, target[3]-1],
++                                             fill=(65, 65, 65))
++        elif change == 'text':
++            rows[-1]['text'] = '1/2'
++            _strokes(ImageDraw.Draw(image), rows[-1])
++        elif change == 'overlay':
++            rows.append(dict(text='是否确认', confidence=.99, box=[750, 300, 910, 340]))
++            _strokes(ImageDraw.Draw(image), rows[-1])
++        page = 'unknown'
++    output = io.BytesIO()
++    image.save(output, format='PNG')
++    payload = output.getvalue()
++    observation = dict(page=page, rows=rows,
++        fields=dict(stage='1-1', coins=6, level=3, xp='0/4', deployed='0/3'),
++        semantic={}, elapsed_ms=0., snapshot_id=hashlib.sha256(payload).hexdigest(),
++        fingerprint=perception.fingerprint(image),
++        read_contract=dict(version=runner.READ_CONTRACT_VERSION, effective_scope='full', unread=[]))
++    image.close()
++    return dict(payload=payload, observation=observation)
++
++
++def action_for(request, *, marked=True):
++    proof = dict(snapshot_id=request['snapshot_id'], text='0/2', bounds=BOUNDS.copy())
++    if marked:
++        proof.update(control_id=guards.TASK_LIST_SCROLL_CONTROL, source='observed_screen',
++            capture_request_id=request['observation']['capture_request_id'],
++            frame_id=request['observation']['frame_id'], chapter_text=CHAPTER_TEXT,
++            chapter_bounds=CHAPTER_BOUNDS.copy())
++    return dict(type='scroll', args=POINT + [-120], expected_page='unknown',
++        guard_texts=['创业指南', CHAPTER_TEXT, '0/2'], target_evidence=proof,
++        reason='声明协议：从当前完整唯一任务文字中心滚动一次，核实同一目标的实际位移')
++
++
++@contextlib.contextmanager
++def worker_fixture(*, before_change=None, after_change=None, marked=True):
++    """Actual one-owner consumers over inert publisher/reader boundaries."""
++    fixture = compatibility.RuntimeCompatibilityTests()
++    frames = dict(ready=canvas('ready'), source=canvas(),
++        current=canvas('actual', change=before_change),
++        after=canvas('actual', change=after_change, post=True))
++    by_digest = {item['observation']['snapshot_id']: item for item in frames.values()}
++    with fixture.manual_bridge_fixture() as (runtime, records, owner, control, reader):
++        control.published, control.mutation_attempts = [], []
++        control.action_index, control.post_reads, control.reader_calls = 0, 0, 0
++        control.current_frame = 'ready'
++        control.result_mutator, control.on_input_receipt = None, None
++        control.lock_depth, control.lock_acquisitions = 0, 0
++        control.input_locks, control.receipt_locks = [], []
++        submission_mutex = threading.RLock()
++
++        @contextlib.contextmanager
++        def submission_lock():
++            with submission_mutex:
++                control.lock_depth += 1
++                control.lock_acquisitions += 1
++                try:
++                    yield
++                finally:
++                    control.lock_depth -= 1
++
++        control.submission_lock = submission_lock
++        control.validate_actions = lambda actions: [dict(type=action['type'],
++            args=[float(value) for value in action.get('args', [])]) for action in actions]
++        write_json = control.write_json
++
++        def write(path, value):
++            write_json(path, value)
++            request = value.get('request', {}) if isinstance(value, dict) else {}
++            if (Path(path).parent.name == 'request-ledger' and value.get('result') is None
++                    and any(action['type'] not in ('observe', 'wait') for action in request.get('actions', []))):
++                control.receipt_locks.append(control.lock_depth > 0)
++                if control.on_input_receipt is not None:
++                    callback, control.on_input_receipt = control.on_input_receipt, None
++                    callback(request)
++
++        control.write_json = write
++
++        def read(path, force=False, *, scope='full', **unused):
++            control.reader_calls += 1
++            digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
++            return copy.deepcopy(by_digest[digest]['observation'])
++
++        reader.read = read
++
++        def inert(value):
++            if control.lock_depth <= 0:
++                raise AssertionError('Entry publisher ran without its submission lease')
++            actions = copy.deepcopy(value.get('actions', []))
++            mutations = [action for action in actions if action['type'] not in ('observe', 'wait')]
++            control.mutation_attempts.extend(mutations)
++            if mutations:
++                if mutations != [dict(type='scroll', args=[1486., 341.5, -120.])]:
++                    raise AssertionError('task-list fixture received a different physical command')
++                control.action_index += 1
++                control.input_locks.append(control.lock_depth > 0)
++                control.current_frame = 'after'
++            elif control.action_index:
++                control.post_reads += 1
++            frame = frames[control.current_frame]
++            payload, digest = frame['payload'], frame['observation']['snapshot_id']
++            frame_id = uuid.uuid4().hex
++            directory = runtime / 'frames' / (hashlib.sha256(value['id'].encode()).hexdigest() + '-' + frame_id)
++            directory.mkdir(parents=True)
++            for name in ('original.png', 'preview.png'):
++                (directory / name).write_bytes(payload)
++            control.published.append(copy.deepcopy(value))
++            result = dict(id=value['id'], ok=True, completed=actions,
++                input_attempted=bool(mutations), attempted_actions=mutations,
++                offline_fixture_receipt=True,
++                observation=dict(frame_protocol=1, request_id=value['id'], frame_id=frame_id,
++                    captured_at=runner.now(), snapshot=str(directory / 'preview.png'),
++                    original=str(directory / 'original.png'), snapshot_sha256=digest,
++                    original_sha256=digest, snapshot_size=[1920, 1080], original_size=[1920, 1080]))
++            if control.result_mutator is not None:
++                control.result_mutator(value, result)
++            control.write_json(runtime / 'result.json', result)
++
++        control.publish_request = inert
++        # Presence of the actual owner marker makes the original Entry reject
++        # any unguarded physical request; the fixture supplies no bypass flag.
++        control.write_json(runtime / 'runner-owner.json', owner)
++        state = entry.read_json(runtime / 'runner-state.json')
++        state['preparation_stage'] = '1-1'
++        control.write_json(runtime / 'runner-state.json', state)
++        worker = fixture.frame_worker(runtime, records, owner, control, reader)
++        preparation_fixture.runner = runner
++        preparation_fixture.ready_fixture(worker, ROOT)
++        worker.last_preparation_stage = '1-1'
++        worker.profile_wait_id, worker.profile_wait_kind = None, None
++
++        def publish(**changes):
++            worker.state.update(changes)
++            saved = entry.read_json(runtime / 'runner-state.json')
++            saved.update(match_id=worker.active_match_id, preparation_stage='1-1',
++                         decision_request=copy.deepcopy(worker.state.get('decision_request')))
++            control.write_json(runtime / 'runner-state.json', saved)
++
++        worker.publish = publish
++        observed = worker.observe()
++        worker.ask(observed, 'preparation_strategy', '声明前置：当前奖励已全场复核')
++        request = worker.state['decision_request']
++        worker.review_preparation(dict(proof=dict(source='observed_screen', snapshot_id=request['snapshot_id'],
++            evidence_file=request['evidence_file'], resume_epoch=worker.epoch()),
++            value=dict(reviewer='supervising_agent', phase='rewards', stage='1-1', completed=True,
++                all_claimed=True, rescanned_after_claim=True,
++                findings='声明协议前置的空场复核；没有真实领奖或导航输入')))
++        rewards = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'rewards', reader=reader)
++        runner.finish_manual_phase(runtime, owner, control, rewards['checkpoint_id'], [],
++            dict(reviewer='supervising_agent', phase='rewards', stage='1-1', completed=True,
++                all_claimed=True, rescanned_after_claim=True, findings='声明当前空场；沿用既有人工阶段顺序'),
++            reader=reader)
++        # A declared already-open page follows; no navigation input is run.
++        control.current_frame = 'source'
++        checkpoint = runner.begin_manual_phase(runtime, owner, control, 'manual-one', 'startup_guide', reader=reader)
++        observed = worker.observe()
++        worker.state['decision_request'] = None
++        worker.ask(observed, 'unknown_page', '声明当前创业指南任务页的一次受检滚动')
++        request = worker.state['decision_request']
++        reply = {key: request[key] for key in ('request_id', 'snapshot_id', 'resume_epoch')}
++        reply['actions'] = [action_for(request, marked=marked)]
++        control.current_frame = 'current'
++        yield SimpleNamespace(worker=worker, control=control, reader=reader, runtime=runtime,
++            records=records, owner=owner, request=request, reply=reply, checkpoint=checkpoint, frames=frames)
++
++
++def job_kwargs(bundle, *, reply=None, step_id=None):
++    return dict(manual_id='manual-one', step_id=step_id or uuid.uuid4().hex, operation='reviewed_plan',
++        checkpoint_id=bundle.checkpoint['checkpoint_id'], reply=reply or bundle.reply, wait_seconds=0)
++
++
++def manual_job(bundle, *, reply=None):
++    kwargs = job_kwargs(bundle, reply=reply)
++    queued = steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++    if queued['status'] != 'queued':
++        raise AssertionError('new manual step was not queued: ' + repr(queued))
++    if not steps.process(bundle.worker):
++        raise AssertionError('the owning Worker did not consume its manual step')
++    return steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs), kwargs
++
++
++def remember_case(bundle, case, returned, before):
++    EVIDENCE.append(dict(case=case, consumer='existing_manual_step_worker_entry',
++        fixture_scope='native_target_crop_pair_with_declared_complete_frames_and_ocr',
++        status=returned['status'], input_publications=len(bundle.control.mutation_attempts),
++        new_entry_publications=len(bundle.control.published)-before,
++        actual_page=(bundle.worker.last_observation or {}).get('page'),
++        native_page_overwritten=False, real_game_input=False))
++
++
++class TaskScrollConsumerTests(unittest.TestCase):
++    def test_native_pair_scroll_once_verifies_displacement_and_preserves_unknown(self):
++        diagnosis, pixels = native_sources()
++        delta = np.abs(pixels['source'].astype(np.int16)-pixels['actual'].astype(np.int16))
++        self.assertEqual(int(np.max(delta)), diagnosis['max_abs_rgb_difference'])
++        self.assertAlmostEqual(float(np.mean(delta)), diagnosis['mean_abs_rgb_difference'], places=14)
++        self.assertAlmostEqual(float(np.mean(np.any(delta != 0, axis=2))),
++                               diagnosis['changed_pixel_fraction'], places=14)
++        with worker_fixture() as bundle:
++            historic_id = uuid.uuid4().hex
++            historical = dict(schema='startup-guide-navigation/v1', request_id=historic_id,
++                status='pending', outcome='unknown', automatic_phase_completion=False,
++                declaration='Historical unknown-effect fixture; no native historical input receipt claimed.')
++            historical_paths = [bundle.runtime / 'startup-navigation.json',
++                                bundle.records / ('guide-navigation-' + historic_id + '.json')]
++            for path in historical_paths:
++                bundle.control.write_json(path, historical)
++            original_bytes = {path: path.read_bytes() for path in historical_paths}
++            before = len(bundle.control.published)
++            returned, kwargs = manual_job(bundle)
++            self.assertEqual(returned['status'], 'returned', returned)
++            self.assertFalse(returned['pending'], returned)
++            result = returned['result']['task_scroll']
++            self.assertEqual((result['status'], result['outcome']), ('verified', '位移已核实'))
++            self.assertEqual(result['verification_reads'], 0)
++            self.assertFalse(result['automatic_phase_completion'])
++            self.assertEqual(bundle.control.action_index, 1)
++            self.assertEqual(bundle.control.post_reads, 0)
++            self.assertEqual(bundle.control.input_locks, [True])
++            self.assertEqual(bundle.control.receipt_locks, [True])
++            self.assertEqual(len(bundle.control.published)-before, 2)
++            self.assertEqual(bundle.worker.last_observation['page'], 'unknown')
++            self.assertEqual(bundle.worker.preparation_checklist(bundle.worker.last_observation)['phase'], 'startup_guide')
++            self.assertNotIn('startup_guide', bundle.worker.preparation_reviews)
++            self.assertFalse((bundle.runtime / 'runner-battle-approval.json').exists())
++            record_path = Path(result['record_file'])
++            self.assertEqual(record_path, bundle.records / ('task-scroll-' + bundle.request['request_id'] + '.json'))
++            record = entry.read_json(record_path)
++            self.assertEqual(record['input_request_id'], result['input_request_id'])
++            receipt = runner.await_existing_receipt(bundle.runtime, bundle.control, result['input_request_id'], 0)
++            physical = [action for action in receipt['result']['completed'] if action['type'] not in ('observe', 'wait')]
++            self.assertEqual(physical, [dict(type='scroll', args=[1486., 341.5, -120.])])
++            self.assertEqual(receipt['id'], result['input_request_id'])
++            publications, raw = len(bundle.control.published), record_path.read_bytes()
++            repeated = steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++            self.assertEqual(repeated, returned)
++            self.assertFalse(steps.process(bundle.worker))
++            self.assertEqual(len(bundle.control.published), publications)
++            self.assertEqual(record_path.read_bytes(), raw)
++            for path, payload in original_bytes.items():
++                self.assertEqual(path.read_bytes(), payload)
++            remember_case(bundle, '原生低幅目标、声明位移、同一步只查询', returned, before)
++            EVIDENCE.append(dict(case='原生配对与历史未知档案', native_file_sha256=NATIVE_SHA256,
++                native_roi=BOUNDS, max_abs_rgb=int(np.max(delta)), mean_abs_rgb=float(np.mean(delta)),
++                changed_fraction=float(np.mean(np.any(delta != 0, axis=2))),
++                original_full_png_sha256=[diagnosis['source_sha256'], diagnosis['actual_sha256']],
++                original_full_pngs_available=False, declared_shift_y=-80,
++                historical_unknown_records_byte_unchanged=True,
++                verification_reads=0, automatic_phase_completion=False,
++                real_scroll_effect_verified=False, native_ocr_executed=False))
++
++    def test_changed_position_cover_text_and_overlay_refuse_before_input(self):
++        for change in ('move', 'cover', 'text', 'overlay'):
++            with self.subTest(change=change), worker_fixture(before_change=change) as bundle:
++                before = len(bundle.control.published)
++                returned, unused = manual_job(bundle)
++                self.assertEqual(returned['status'], 'refused', returned)
++                self.assertEqual(bundle.control.mutation_attempts, [])
++                self.assertEqual(bundle.control.action_index, 0)
++                self.assertEqual(bundle.worker.last_observation['page'], 'unknown')
++                remember_case(bundle, '输入前拒绝:' + change, returned, before)
++
++    def test_wrong_source_bytes_capture_and_current_frame_refuse_through_consumers(self):
++        for change in ('source_bytes', 'source_capture', 'current_frame'):
++            with self.subTest(change=change), worker_fixture() as bundle:
++                kwargs = job_kwargs(bundle)
++                self.assertEqual(steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)['status'], 'queued')
++                before = len(bundle.control.published)
++                if change == 'source_bytes':
++                    with Path(bundle.request['original_png']).open('ab') as stream:
++                        stream.write(b'declared-wrong-source')
++                elif change == 'source_capture':
++                    capture_id = bundle.request['observation']['capture_request_id']
++                    receipt_path = bundle.runtime / 'request-ledger' / (hashlib.sha256(capture_id.encode()).hexdigest() + '.json')
++                    receipt = entry.read_json(receipt_path)
++                    receipt['result']['observation']['request_id'] = 'wrong-declared-capture'
++                    bundle.control.write_json(receipt_path, receipt)
++                else:
++                    def change_frame(unused_request, result):
++                        result['observation']['frame_id'] = 'f'*32
++                    bundle.control.result_mutator = change_frame
++                self.assertTrue(steps.process(bundle.worker))
++                returned = steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++                self.assertEqual(returned['status'], 'refused', returned)
++                self.assertEqual(bundle.control.mutation_attempts, [])
++                self.assertEqual(bundle.control.action_index, 0)
++                remember_case(bundle, '来源拒绝:' + change, returned, before)
++
++    def test_current_phase_invalidated_after_queue_and_inside_entry_lock_refuses(self):
++        for point in ('after_queue', 'inside_entry_lock', 'checkpoint_inside_entry_lock'):
++            with self.subTest(point=point), worker_fixture() as bundle:
++                kwargs = job_kwargs(bundle)
++                self.assertEqual(steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)['status'], 'queued')
++                before = len(bundle.control.published)
++                invalidations = []
++
++                def invalidate(unused_request=None):
++                    invalidations.append(bundle.control.lock_depth)
++                    if point == 'checkpoint_inside_entry_lock':
++                        path = bundle.runtime / 'manual-results' / (bundle.checkpoint['checkpoint_id'] + '.json')
++                        checkpoint = entry.read_json(path)
++                        checkpoint['phase'] = 'inventory_cleanup'
++                        bundle.control.write_json(path, checkpoint)
++                    else:
++                        bundle.worker.preparation_reviews.clear()
++
++                if point == 'after_queue':
++                    invalidate()
++                else:
++                    bundle.control.on_input_receipt = invalidate
++                self.assertTrue(steps.process(bundle.worker))
++                returned = steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++                self.assertEqual(returned['status'], 'refused', returned)
++                self.assertEqual(bundle.control.mutation_attempts, [])
++                self.assertEqual(bundle.control.action_index, 0)
++                self.assertEqual(len(invalidations), 1)
++                if point != 'after_queue':
++                    self.assertGreater(invalidations[0], 0)
++                    self.assertEqual(bundle.control.receipt_locks, [True])
++                self.assertEqual(bundle.worker.preparation_checklist(bundle.worker.last_observation)['phase'],
++                                 'startup_guide' if point == 'checkpoint_inside_entry_lock' else 'rewards')
++                remember_case(bundle, '当前阶段失效:' + point, returned, before)
++
++    def test_request_and_manual_deadline_crossed_during_final_local_guard_refuse(self):
++        for deadline in ('request', 'manual_step'):
++            with self.subTest(deadline=deadline), worker_fixture() as bundle:
++                expires_at = datetime.now(timezone.utc) + timedelta(seconds=5)
++                if deadline == 'request':
++                    bundle.request['deadline_at'] = expires_at.isoformat()
++                    bundle.worker.publish()
++                kwargs = job_kwargs(bundle)
++                self.assertEqual(steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)['status'], 'queued')
++                if deadline == 'manual_step':
++                    path = bundle.runtime / 'manual-steps' / (kwargs['step_id'] + '.json')
++                    item = entry.read_json(path)
++                    item['expires_at'] = expires_at.isoformat()
++                    bundle.control.write_json(path, item)
++                before = len(bundle.control.published)
++                clock = dict(delta=timedelta(0), advanced=False, guard_calls=0, lock_depth=0)
++                real_monotonic = runner.time.monotonic
++                original_guard = runner.stable_task_list_scroll
++
++                class Clock(datetime):
++                    @classmethod
++                    def now(cls, tz=None):
++                        return datetime.now(tz) + clock['delta']
++
++                def finish_local_guard(*args, **options):
++                    allowed = original_guard(*args, **options)
++                    clock['guard_calls'] += 1
++                    # The real Entry has persisted this still-unpublished
++                    # input receipt and still holds its original lease. Only
++                    # elapsed wall/monotonic time is injected after local IO.
++                    if allowed and bundle.control.receipt_locks and not clock['advanced']:
++                        clock.update(advanced=True, lock_depth=bundle.control.lock_depth,
++                            delta=expires_at-datetime.now(timezone.utc)+timedelta(seconds=1))
++                    return allowed
++
++                with contextlib.ExitStack() as stack:
++                    stack.enter_context(patch.object(runner, 'stable_task_list_scroll', side_effect=finish_local_guard))
++                    stack.enter_context(patch.object(runner.time, 'monotonic',
++                        side_effect=lambda: real_monotonic()+clock['delta'].total_seconds()))
++                    stack.enter_context(patch.object(runner if deadline == 'request' else steps, 'datetime', Clock))
++                    self.assertTrue(steps.process(bundle.worker))
++                returned = steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++                self.assertEqual(returned['status'], 'refused', returned)
++                self.assertTrue(clock['advanced'])
++                self.assertGreater(clock['lock_depth'], 0)
++                self.assertEqual(bundle.control.receipt_locks, [True])
++                self.assertEqual(bundle.control.mutation_attempts, [])
++                self.assertEqual(bundle.control.action_index, 0)
++                result = returned['result']['task_scroll']
++                self.assertEqual((result['status'], result['outcome']), ('refused', '未发布'))
++                remember_case(bundle, '局部复核跨期限:' + deadline, returned, before)
++                EVIDENCE.append(dict(case='最后局部守卫后期限失效', deadline=deadline,
++                    real_local_guard_calls=clock['guard_calls'], elapsed_clock_injected=True,
++                    injected_inside_entry_lock=True, input_publications=0, real_game_input=False))
++
++    def test_unverified_postconditions_return_pending_without_extra_reads_or_replay(self):
++        for change in ('no_motion', 'reverse', 'text', 'overlay'):
++            with self.subTest(change=change), worker_fixture(after_change=change) as bundle:
++                before = len(bundle.control.published)
++                returned, kwargs = manual_job(bundle)
++                self.assertEqual(returned['status'], 'returned', returned)
++                self.assertTrue(returned['pending'], returned)
++                result = returned['result']['task_scroll']
++                self.assertEqual((result['status'], result['outcome']), ('pending', '效果未确认'))
++                self.assertEqual(result['verification_reads'], 0)
++                self.assertFalse(result['automatic_phase_completion'])
++                self.assertEqual(bundle.control.action_index, 1)
++                self.assertEqual(bundle.control.post_reads, 0)
++                self.assertEqual(len(bundle.control.published)-before, 2)
++                raw = Path(result['record_file']).read_bytes()
++                publications = len(bundle.control.published)
++                repeated = steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++                self.assertEqual(repeated, returned)
++                self.assertFalse(steps.process(bundle.worker))
++                self.assertEqual(len(bundle.control.published), publications)
++                self.assertEqual(Path(result['record_file']).read_bytes(), raw)
++                with self.assertRaises(ValueError):
++                    steps.submit(bundle.runtime, bundle.owner, bundle.control, **dict(kwargs, step_id=uuid.uuid4().hex))
++                self.assertEqual(bundle.control.action_index, 1)
++                remember_case(bundle, '动作后效果待核:' + change, returned, before)
++
++    def test_missing_notification_counts_one_readonly_fallback_without_resending_scroll(self):
++        with worker_fixture() as bundle:
++            missing = []
++
++            def remove_input_frame(request, result):
++                if any(action['type'] == 'scroll' for action in request.get('actions', [])):
++                    missing.append(request['id'])
++                    result.pop('observation')
++
++            bundle.control.result_mutator = remove_input_frame
++            before = len(bundle.control.published)
++            returned, kwargs = manual_job(bundle)
++            self.assertEqual(returned['status'], 'returned', returned)
++            self.assertFalse(returned['pending'], returned)
++            result = returned['result']['task_scroll']
++            self.assertEqual((result['status'], result['outcome']), ('verified', '位移已核实'))
++            self.assertEqual(result['verification_reads'], 1)
++            self.assertFalse(result['automatic_phase_completion'])
++            self.assertEqual(missing, [result['input_request_id']])
++            self.assertEqual(bundle.control.action_index, 1)
++            self.assertEqual(bundle.control.post_reads, 1)
++            self.assertEqual(len(bundle.control.published)-before, 3)
++            receipt = runner.await_existing_receipt(bundle.runtime, bundle.control, result['input_request_id'], 0)
++            self.assertNotIn('observation', receipt['result'])
++            self.assertEqual(runner.manual_receipt_state(receipt)['state'], 'completed')
++            actual = bundle.worker.last_observation
++            self.assertNotEqual(actual['capture_request_id'], result['input_request_id'])
++            recovery = runner.await_existing_receipt(bundle.runtime, bundle.control, actual['capture_request_id'], 0)
++            self.assertEqual(recovery['request']['actions'], [dict(type='observe', args=[])])
++            record_path = Path(result['record_file'])
++            publications, raw = len(bundle.control.published), record_path.read_bytes()
++            self.assertEqual(steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs), returned)
++            self.assertFalse(steps.process(bundle.worker))
++            self.assertEqual(len(bundle.control.published), publications)
++            self.assertEqual(record_path.read_bytes(), raw)
++            remember_case(bundle, '通知缺图仅一次计数回补', returned, before)
++            EVIDENCE.append(dict(case='通知缺图回补计数', original_input_request_id=result['input_request_id'],
++                original_delivery='completed', original_notification_image_missing=True,
++                input_publications=1, readonly_fallbacks=1, verification_reads=1,
++                same_step_queried_without_replay=True, real_game_input=False))
++
++    def test_caller_preflight_missing_text_and_outside_point_create_no_job_or_capture(self):
++        for marked in (False, True):
++            for change in ('missing_text', 'point_outside'):
++                with self.subTest(marked=marked, change=change), worker_fixture(marked=marked) as bundle:
++                    reply = copy.deepcopy(bundle.reply)
++                    action = reply['actions'][0]
++                    if change == 'missing_text':
++                        action['target_evidence'].pop('text')
++                    else:
++                        action['args'][0] = BOUNDS[2]
++                    kwargs = job_kwargs(bundle, reply=reply)
++                    before, reads, pauses = len(bundle.control.published), bundle.control.reader_calls, len(bundle.control.pauses)
++                    with self.assertRaises(ValueError):
++                        steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)
++                    self.assertFalse((bundle.runtime / 'manual-steps' / (kwargs['step_id'] + '.json')).exists())
++                    self.assertFalse(steps.process(bundle.worker))
++                    self.assertEqual(len(bundle.control.published), before)
++                    self.assertEqual(bundle.control.reader_calls, reads)
++                    self.assertEqual(len(bundle.control.pauses), pauses)
++                    self.assertEqual(bundle.control.mutation_attempts, [])
++                    self.assertEqual(bundle.worker.state['decision_request']['request_id'], bundle.request['request_id'])
++                    EVIDENCE.append(dict(case='调用端预检:' + change, marked=marked, job_created=False,
++                        new_entry_publications=0, input_publications=0, new_reader_calls=0,
++                        worker_paused=False, real_game_input=False))
++
++    def test_critical_actions_cannot_reuse_task_scroll_marker(self):
++        cases = (dict(type='key', args=[68]),
++                 dict(type='click_point', args=POINT.copy()),
++                 dict(type='click_text', text='出战', exact=True))
++        for critical in cases:
++            with self.subTest(action=critical['type']), worker_fixture() as bundle:
++                kwargs = job_kwargs(bundle)
++                self.assertEqual(steps.submit(bundle.runtime, bundle.owner, bundle.control, **kwargs)['status'], 'queued')
++                mailbox = bundle.runtime / 'manual-steps' / (kwargs['step_id'] + '.json')
++                item = entry.read_json(mailbox)
++                item['payload']['reply']['actions'][0].update(critical)
++                # A corrupted queued action still crosses the real Worker
++                # consumer; no source-code scan stands in for this refusal.
++                bundle.control.write_json(mailbox, item)
++                before = len(bundle.control.published)
++                self.assertTrue(steps.process(bundle.worker))
++                returned = entry.read_json(mailbox)
++                self.assertEqual(returned['status'], 'refused', returned)
++                self.assertEqual(len(bundle.control.published), before)
++                self.assertEqual(bundle.control.mutation_attempts, [])
++                remember_case(bundle, '关键动作标记误用:' + critical['type'], returned, before)
++
++    def test_unmarked_scroll_still_requires_byte_identical_target(self):
++        with worker_fixture(marked=False) as bundle:
++            before = len(bundle.control.published)
++            returned, unused = manual_job(bundle)
++            self.assertEqual(returned['status'], 'refused', returned)
++            self.assertIn('目标ROI实际已变', returned['error'])
++            self.assertEqual(bundle.control.mutation_attempts, [])
++            self.assertEqual(bundle.control.action_index, 0)
++            remember_case(bundle, '普通滚动保持逐字节守卫', returned, before)
