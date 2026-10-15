@@ -1792,5 +1792,53 @@ class RuntimeRootTests(unittest.TestCase):
                 identity.assert_any_call(424242)
 
 
+    def test_strategy_reply_wait_budget_boundary_and_unknown_timestamps(self):
+        checked = runner.datetime.now(runner.timezone.utc)
+        request = {'created_at': (checked - runner.timedelta(seconds=119)).isoformat()}
+        self.assertFalse(runner.strategy_reply_wait_exceeded(request, checked_at=checked))
+        request['created_at'] = (checked - runner.timedelta(seconds=120)).isoformat()
+        self.assertTrue(runner.strategy_reply_wait_exceeded(request, checked_at=checked))
+        self.assertFalse(runner.strategy_reply_wait_exceeded({}, checked_at=checked))
+        self.assertFalse(runner.strategy_reply_wait_exceeded({'created_at': 'invalid'}, checked_at=checked))
+        self.assertFalse(runner.strategy_reply_wait_exceeded(
+            {'created_at': checked.replace(tzinfo=None).isoformat()}, checked_at=checked))
+
+    def test_unanswered_strategy_wait_pauses_without_game_input(self):
+        checked = runner.datetime.now(runner.timezone.utc)
+        request = {'request_id': 'req', 'snapshot_id': 'snap',
+                   'resume_epoch': 'epoch', 'kind': 'preparation_strategy',
+                   'created_at': (checked - runner.timedelta(seconds=121)).isoformat(),
+                   'deadline_at': (checked + runner.timedelta(minutes=5)).isoformat()}
+        with tempfile.TemporaryDirectory(prefix='currency-wars-strategy-timeout-') as temporary:
+            worker = object.__new__(runner.Worker)
+            worker.run = Path(temporary)
+            worker.state = {'decision_request': request}
+            worker.epoch = lambda: 'epoch'
+            worker.consume_manual_results = lambda: False
+            paused, events, executed = [], [], []
+            worker.pause_internal = paused.append
+            worker.log = events.append
+            worker.execute_plan = executed.append
+            worker.publish = lambda **changes: None
+            with patch.object(runner.time, 'sleep', side_effect=AssertionError('no waiting')):
+                self.assertFalse(worker.tick_decision())
+            self.assertEqual(len(paused), 1)
+            self.assertIn('120秒', paused[0])
+            self.assertEqual(events[0]['event'], 'strategy_reply_wait_exceeded')
+            self.assertFalse(events[0]['input_sent'])
+            self.assertEqual(executed, [])
+            self.assertFalse((worker.run / 'decision-reply.json').exists())
+
+            # A reply already present is still subject to the original
+            # request validation, never replaced by the new timeout policy.
+            reply = {'request_id': 'req', 'snapshot_id': 'snap',
+                     'resume_epoch': 'epoch', 'actions': []}
+            (worker.run / 'decision-reply.json').write_text(json.dumps(reply), encoding='utf8')
+            worker.profile_span = lambda *args, **kwargs: contextlib.nullcontext()
+            self.assertTrue(worker.tick_decision())
+            self.assertEqual(executed, [reply])
+            self.assertEqual(len(paused), 1)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
