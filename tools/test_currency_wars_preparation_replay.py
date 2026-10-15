@@ -7,42 +7,68 @@ import test_currency_wars_economy as existing
 
 
 class PreparationReplayTests(TestCase):
-    def test_real_incomplete_joint_model_cannot_spend_complete_or_deploy_even_with_caller_status(self):
+    def test_codex_budget_does_not_depend_on_incomplete_local_model(self):
         with existing.EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
             record['value']['economic_allocation'] = {'schema': 'currency-wars-economic-allocation/v1',
                 'status': 'conditional_joint_decision',
                 'complete_dimensions': {'purchase': True, 'experience': True, 'refresh': True}}
-            worker.accept_economy_plan(record)
-            policy = worker.economic_policy(worker.last_observation)
-            self.assertTrue(policy['available'])
-            self.assertFalse(worker.joint_allocation_complete(policy))
-            self.assertFalse(worker.economy_complete(policy))
-            self.assertFalse(worker.finish_local_economy(worker.last_observation, policy))
-            with self.assertRaises(ValueError):
-                worker.require_economic_action({'type': 'buy_xp'}, worker.last_observation)
+            from unittest.mock import patch
+            with patch.object(worker, 'local_economic_allocation',
+                              side_effect=AssertionError('Codex budget must not call local model')):
+                worker.accept_economy_plan(record)
+                policy = worker.economic_policy(worker.last_observation)
+                self.assertTrue(policy['available'])
+                self.assertEqual(policy['plan_reviewer'], 'supervising_agent')
+                self.assertIsNone(policy['allocation_review'])
+                self.assertFalse(worker.joint_allocation_complete(policy))
+                self.assertFalse(worker.economy_complete(policy))  # XP is still planned.
+                allowed = worker.require_economic_action({'type': 'buy_xp'}, worker.last_observation)
+                self.assertEqual(allowed['kind'], 'experience')
+                self.assertEqual(allowed['cost'], 4)
             with self.assertRaises(ValueError):
                 worker.execute_deployment({'actions': [{'type': 'deploy_unit'}]}, {}, worker.last_observation)
             self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'], 'economy')
             self.assertNotIn('economy', worker.preparation_reviews)
             self.assertEqual(control.action_index, 0)
 
-    def test_each_joint_dimension_current_source_and_status_is_required(self):
-        with existing.EconomyTests().worker(initial=existing.values(level=8, xp=[0, 72])) as (worker, record, control, frames):
-            record['value']['budget']['experience'] = 0
-            worker.accept_economy_plan(record)
-            policy = worker.economic_policy(worker.last_observation)
-            self.assertTrue(worker.economy_complete(policy))
-            for key in ('purchase', 'experience', 'refresh'):
-                altered = copy.deepcopy(policy)
-                altered['allocation_review']['allocation']['complete_dimensions'][key] = False
-                self.assertFalse(worker.economy_complete(altered))
-            for key, value in (('origin', 'supervising_agent'), ('snapshot_id', 'old'), ('request_id', None)):
-                altered = copy.deepcopy(policy)
-                altered['allocation_review'][key] = value
-                self.assertFalse(worker.economy_complete(altered))
+    def test_joint_dimensions_remain_required_for_local_solver_only(self):
+        _, actual, review, unused = existing.SelectedModelContracts().model()
+        policy = {'available': True, 'pending': None, 'actions': [],
+                  'plan_reviewer': 'local_joint_solver',
+                  'experience_resolved': True, 'allocation_review': review,
+                  'observation': {'snapshot_id': actual['snapshot_id'],
+                                  'unknown': [], 'values': {'coins': 66, 'free_refreshes': 0}},
+                  'dependencies': {'experience_allowed': True}}
+        self.assertTrue(runner.Worker.economy_complete(policy))
+        for key in ('purchase', 'experience', 'refresh'):
             altered = copy.deepcopy(policy)
-            altered['allocation_review']['allocation']['status'] = 'incomplete_joint_comparison'
-            self.assertFalse(worker.economy_complete(altered))
+            altered['allocation_review']['allocation']['complete_dimensions'][key] = False
+            self.assertFalse(runner.Worker.economy_complete(altered))
+        for key, value in (('origin', 'supervising_agent'), ('snapshot_id', 'old'), ('request_id', None)):
+            altered = copy.deepcopy(policy)
+            altered['allocation_review'][key] = value
+            self.assertFalse(runner.Worker.economy_complete(altered))
+        altered = copy.deepcopy(policy)
+        altered['allocation_review']['allocation']['status'] = 'incomplete_joint_comparison'
+        self.assertFalse(runner.Worker.economy_complete(altered))
+        altered = copy.deepcopy(policy)
+        altered['plan_reviewer'] = 'unverified'
+        self.assertFalse(runner.Worker.economy_complete(altered))
+
+    def test_codex_zero_budget_can_complete_without_local_solver(self):
+        from unittest.mock import patch
+        with existing.EconomyTests().worker(initial=existing.values(level=8, xp=[0, 72]),
+                                           joint_complete=False) as (worker, record, control, frames):
+            record['value']['budget']['experience'] = 0
+            with patch.object(worker, 'local_economic_allocation',
+                              side_effect=AssertionError('local model was not requested')):
+                worker.accept_economy_plan(record)
+                policy = worker.economic_policy(worker.last_observation)
+                self.assertTrue(worker.economy_complete(policy))
+                self.assertTrue(worker.finish_local_economy(worker.last_observation, policy))
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'],
+                             'lineup_equipment')
+            self.assertEqual(control.action_index, 0)
 
     def test_shop_read_is_native_current_and_precedes_sale_economy_deployment(self):
         with existing.EconomyTests().worker() as (worker, record, control, frames):
