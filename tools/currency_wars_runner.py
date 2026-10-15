@@ -45,9 +45,6 @@ COACHING_POLICY = PROJECT / 'docs' / 'COACHING_POLICY.json'
 SELF = Path(__file__).resolve()
 TERMINAL = {'stopped', 'completed', 'failed'}
 UAC_READY_TIMEOUT_SECONDS = 15 * 60
-# Unanswered strategy calls are not allowed to park the game for 15 minutes.
-# The original request deadline remains the ultimate validity boundary.
-STRATEGY_REPLY_WAIT_SECONDS = 120
 PANELS = [('bonds', '羁绊链路'), ('income', '预期收益'),
           ('promotion', '晋升等级'), ('advantages', '优势布局'),
           ('startup_guide', '创业指南')]
@@ -55,25 +52,6 @@ PANELS = [('bonds', '羁绊链路'), ('income', '预期收益'),
 
 def now():
     return datetime.now(timezone.utc).isoformat()
-
-
-def strategy_reply_wait_exceeded(request, *, checked_at=None):
-    """Bound unanswered strategic waits without changing the request validity deadline.
-
-    Missing or invalid legacy timestamps retain the existing hard-deadline
-    behavior; do not infer a source time or attempt a speculative action.
-    """
-    created = request.get('created_at')
-    if not isinstance(created, str):
-        return False
-    try:
-        start = datetime.fromisoformat(created)
-    except ValueError:
-        return False
-    if start.tzinfo is None:
-        return False
-    current = checked_at if checked_at is not None else datetime.now(timezone.utc)
-    return current - start >= timedelta(seconds=STRATEGY_REPLY_WAIT_SECONDS)
 
 
 def full_observation(observed):
@@ -2026,19 +2004,6 @@ def validate_plan(reply, request, epoch):
             raise ValueError('备战图标检查只接受当前同局单次显式ROOT授权，不附带完成项')
         preparation_inspection_target(actions[0], request)
         return reply
-    if any(isinstance(a, dict) and a.get('type') == 'advance_local_preparation' for a in actions):
-        if (len(actions) != 1 or set(actions[0]) != {'type', 'reason', 'expected_page', 'limits', 'max_deployments'}
-                or actions[0]['expected_page'] != request.get('observation', {}).get('page')
-                or actions[0]['expected_page'] not in ('preparation', 'shop')
-                or request.get('kind') not in ('preparation_strategy', 'shop_strategy')
-                or reply.get('match_id') != request.get('match_id')
-                or reply.get('context_update', {}) != {}
-                or set(reply) - {'request_id', 'snapshot_id', 'resume_epoch', 'match_id', 'actions', 'context_update'}
-                or not isinstance(actions[0]['reason'], str) or not 1 <= len(actions[0]['reason'].strip()) <= 1000
-                or type(actions[0]['max_deployments']) is not int or not 0 <= actions[0]['max_deployments'] <= 10):
-            raise ValueError('本地备战续行须当前节点独立typed授权、经济上限及部署次数，不附带阶段完成声明')
-        economy.validate_macro_limits(actions[0]['limits'])
-        return reply
     if any(isinstance(a, dict) and a.get('type') == 'advance_local_economy_macro' for a in actions):
         if (len(actions) != 1 or set(actions[0]) not in ({'type', 'reason', 'expected_page', 'limits'},
                 {'type', 'reason', 'expected_page', 'limits', 'ranking_policy'})
@@ -3866,8 +3831,6 @@ class Worker:
         physical = [token for token in tokens if token.split(':', 1)[0] in ('click', 'key', 'drag', 'scroll')]
         if not physical:
             return
-        if getattr(self, 'local_preparation_active', None):
-            self.guard_local_preparation(pending_input_id=request_id)
         if getattr(self, 'manual_stage_blocked', None):
             remaining = set(manual_steps.unknown_receipts(self.run, self.c)) & set(self.manual_stage_blocked)
             if remaining:
@@ -4093,9 +4056,6 @@ class Worker:
         captured_stage = battle_stage(request)
         approval = None
         submit_deadline = self.deadline
-        node = getattr(self, 'local_preparation_active', None)
-        if node:
-            submit_deadline = min(submit_deadline, node['monotonic_deadline'])
         macro = getattr(self, 'economy_macro_active', None)
         if macro:
             submit_deadline = min(submit_deadline, macro['monotonic_deadline'])
@@ -5565,9 +5525,6 @@ class Worker:
         original = self.c
         macro = getattr(self, 'economy_macro_active', None)
         lease_deadline = min(self.deadline, macro['monotonic_deadline']) if macro else self.deadline
-        node = getattr(self, 'local_preparation_active', None)
-        if node:
-            lease_deadline = min(lease_deadline, node['monotonic_deadline'])
         if submit_deadline is not None:
             lease_deadline = min(lease_deadline, submit_deadline)
         with entry.submission_lease(original, submit_deadline=lease_deadline,
@@ -6921,185 +6878,6 @@ class Worker:
         macro['record']['accepted_receipts'][item['id']] = manual_steps._digest(redact(item))
         self.save_economic_macro(macro)
 
-    def guard_local_preparation(self, *, pending_input_id=None):
-        """Apply the same node authority to each existing executor publication."""
-        node = self.local_preparation_active
-        request = self.state.get('decision_request') or {}
-        self.source_refresh_guard(request, node['broker_identity'], pending_input_id=pending_input_id)
-        game = {key: (self.c.status().get('game') or {}).get(key) for key in ('pid', 'creation_id', 'hwnd')}
-        actual = self.last_observation or {}
-        if (time.monotonic() >= node['monotonic_deadline']
-                or any(value is None for value in node['game_identity'].values())
-                or game != node['game_identity'] or self.active_match_id != node['authority']['match_id']
-                or self.epoch() != node['authority']['resume_epoch']
-                or canonical_stage(actual.get('fields', {}).get('stage')) != node['authority']['stage']
-                or actual.get('page') not in ('preparation', 'shop')
-                or getattr(self, 'business_needs_review', False)):
-            raise ValueError('本地备战续行节点/身份/控制或整体期限已变，返回ROOT')
-        return request
-
-    def advance_local_preparation(self, reply):
-        """One bounded node authority; native gaps and battle approval return ROOT.
-
-        Local action containers never become decision-reply.json or a human
-        phase review. Fresh requests and existing economic/deployment guards
-        continue to own every input and its independent observable effect.
-        """
-        parent = copy.deepcopy(self.state.get('decision_request') or {})
-        validate_plan(reply, parent, self.epoch())
-        if getattr(self, 'local_preparation_active', None):
-            raise ValueError('本地备战续行已经执行，不重入')
-        broker = self.source_refresh_guard(parent)
-        if manual_steps.unknown_receipts(self.run, self.c):
-            raise ValueError('原输入交付未知，先核原ID，不启动备战续行')
-        action = reply['actions'][0]
-        limits = economy.validate_macro_limits(action['limits'])
-        authority = {'source': 'local_preparation_execution', 'root_request_id': parent['request_id'],
-            'match_id': parent['match_id'], 'stage': canonical_stage(parent['observation']['fields'].get('stage')),
-            'resume_epoch': parent['resume_epoch'], 'snapshot_id': parent['snapshot_id']}
-        if not authority['stage']:
-            raise ValueError('当前备战节点未知，不启动本地续行')
-        path = self.records / ('local-preparation-' + parent['request_id'] + '.json')
-        record = {'schema': 'currency-wars-local-preparation/v1', 'authority': authority,
-            'limits': limits, 'max_deployments': action['max_deployments'], 'deployments_attempted': 0,
-            'deployments_verified': 0, 'navigation_attempts': 0, 'economic_macro_attempted': False, 'root_authorizations': 1,
-            'status': 'active', 'outcome': 'stopped', 'steps': [], 'record_file': str(path)}
-        # Exclusive creation consumes this authority even after an interruption.
-        with path.open('x', encoding='utf-8') as stream:
-            json.dump(record, stream, ensure_ascii=False)
-        status = self.c.status()
-        started = time.monotonic()
-        node = {'authority': authority, 'broker_identity': broker,
-            'game_identity': {key: (status.get('game') or {}).get(key) for key in ('pid', 'creation_id', 'hwnd')},
-            'monotonic_deadline': min(self.deadline, started + limits['max_wall_seconds'],
-                started + (datetime.fromisoformat(parent['deadline_at']) - datetime.now(timezone.utc)).total_seconds())}
-        self.local_preparation_active = node
-        try:
-            for unused in range(12):
-                request = self.guard_local_preparation()
-                actual = self.last_observation
-                phase = self.preparation_checklist(actual)['phase']
-                record['steps'].append({'request_id': request['request_id'], 'snapshot_id': request['snapshot_id'], 'phase': phase})
-                self.c.write_json(path, record)
-                self.publish(local_preparation=copy.deepcopy(record), phase='本地备战续行执行中')
-                if phase == 'rewards':
-                    if actual['page'] == 'shop':
-                        if record['navigation_attempts'] >= limits['max_navigation_clicks']:
-                            record['outcome'] = 'navigation_limit'
-                            break
-                        # The original reward executor may close this store
-                        # once; reserve its navigation before that publication.
-                        record['navigation_attempts'] += 1
-                        self.c.write_json(path, record)
-                    self.advance_rewards(actual)
-                    record['outcome'] = 'rewards_requires_ROOT'
-                    record['missing_information'] = 'full_field_reward_clear_not_native_verified'
-                    break
-                if phase == 'shop_inspection' and actual['page'] == 'preparation':
-                    if record['navigation_attempts'] >= limits['max_navigation_clicks']:
-                        record['outcome'] = 'navigation_limit'
-                        break
-                    record['navigation_attempts'] += 1
-                    self.c.write_json(path, record)
-                    with self.observation_input_lease():
-                        after = self.click_text(actual, '商店', '当前节点授权内先原生完整读五槽商店')
-                    if after.get('page') != 'shop':
-                        record['outcome'] = 'shop_navigation_effect_unproven'
-                        break
-                    self.state['decision_request'] = None
-                    self.ask(after, 'shop_strategy', '本地备战续行读当前完整商店后继续', category='preparation')
-                    continue
-                if phase == 'economy' and not record['economic_macro_attempted']:
-                    if request.get('economic_macro_contract') != economy.MACRO_CONTRACT:
-                        record['outcome'] = 'economic_macro_current_source_unavailable'
-                        break
-                    remaining = int(node['monotonic_deadline'] - time.monotonic())
-                    if remaining < 1:
-                        record['outcome'] = 'node_time_limit'
-                        break
-                    caps = {**limits, 'max_wall_seconds': min(limits['max_wall_seconds'], remaining),
-                        'max_navigation_clicks': limits['max_navigation_clicks'] - record['navigation_attempts']}
-                    record['economic_macro_attempted'] = True
-                    self.c.write_json(path, record)
-                    local_action = {'type': 'advance_local_economy_macro', 'expected_page': actual['page'],
-                        'limits': caps, 'reason': '当前ROOT节点授权内本地连续联合求解与原收据核效'}
-                    local = {key: request[key] for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
-                    local.update(actions=[local_action], context_update={})
-                    result = self.advance_local_economy_macro(local)
-                    record['economic_result'] = {'record_file': result['record_file'], 'outcome': result.get('outcome'),
-                        'navigation_attempts': result.get('navigation_attempts', 0)}
-                    if result.get('outcome') != 'economy_complete':
-                        record['outcome'] = 'economic_execution_requires_ROOT'
-                        break
-                    continue
-                if phase in ('inventory_cleanup', 'lineup_equipment') and actual['page'] == 'shop':
-                    spent_navigation = (record.get('economic_result') or {}).get('navigation_attempts', 0)
-                    if record['navigation_attempts'] + spent_navigation >= limits['max_navigation_clicks']:
-                        record['outcome'] = 'navigation_limit'
-                        break
-                    record['navigation_attempts'] += 1
-                    self.c.write_json(path, record)
-                    with self.observation_input_lease():
-                        after = self.click_text(actual, '收起', '按当前阶段曝光原生阵容；完整库存或部署须新帧重验',
-                            bounds=(1554, 943, 1694, 1020))
-                    if after.get('page') != 'preparation':
-                        record['outcome'] = 'roster_navigation_effect_unproven'
-                        break
-                    self.state['decision_request'] = None
-                    self.ask(after, 'preparation_strategy', '本地备战续行按当前原生阵容重新求解', category='preparation')
-                    continue
-                if phase == 'lineup_equipment' and actual['page'] == 'preparation':
-                    from currency_wars_advisor import advise
-                    from currency_wars_decision import Catalogue
-                    from currency_wars_deployment import propose_deployment
-                    from currency_wars_mcp import Adapter
-                    state = Adapter(project=PROJECT).project_state(copy.deepcopy(self.state))
-                    advice = advise(state, Catalogue(PROJECT / 'data/currency_wars/catalog.sqlite3'), {'economy_model': 'released_prior'})
-                    proposal = propose_deployment(state, advice)
-                    if proposal['status'] != 'proposed':
-                        record['outcome'] = 'lineup_equipment_requires_ROOT'
-                        record['missing_information'] = proposal.get('reason', 'native_gear_and_investments_review_required')
-                        break
-                    if record['deployments_attempted'] >= record['max_deployments']:
-                        record['outcome'] = 'deployment_limit'
-                        break
-                    record['deployments_attempted'] += 1
-                    self.c.write_json(path, record)
-                    local = {key: request[key] for key in ('request_id', 'snapshot_id', 'resume_epoch', 'match_id')}
-                    local.update(actions=proposal['actions'], context_update={})
-                    validate_plan(local, request, self.epoch())
-                    with self.observation_input_lease():
-                        fresh = self.observe(max_attempts=1)
-                        self.guard_local_preparation()
-                        self.execute_deployment(local, request, fresh)
-                    record['deployments_verified'] += 1
-                    continue
-                # None of these phases has a native completion certificate.
-                # A no-target/no-sale/no-item observation cannot close one.
-                record['outcome'] = phase + '_requires_ROOT'
-                record['missing_information'] = {
-                    'rewards': 'full_field_reward_clear_not_native_verified',
-                    'inventory_cleanup': 'native_complete_inventory_overflow_and_sale_decision_required',
-                    'lineup_equipment': 'preparation_roster_view_and_equipment_review_required',
-                    'battle_acceptance': 'ROOT_current_battle_approval_required',
-                    'ready_for_battle': 'ROOT_current_battle_approval_required',
-                    'shop_inspection': 'complete_native_current_shop_required'}.get(phase, 'current_preparation_phase_not_locally_supported')
-                break
-        except (ValueError, RuntimeError, OSError, KeyError, TypeError, TimeoutError) as exc:
-            record['outcome'] = 'execution_requires_ROOT'
-            record['error'] = str(exc)
-        finally:
-            self.local_preparation_active = None
-            record.update(status='consumed', elapsed_seconds=round(time.monotonic()-started, 3))
-            self.c.write_json(path, record)
-            request = self.state.get('decision_request')
-            if request:
-                # Preserve the real current request and any original pending.
-                self.publish(local_preparation=copy.deepcopy(record), phase='等待ROOT复核',
-                    reason='本地备战续行已返回：' + record['outcome'])
-                self.log({'event': 'local_preparation_return', 'record': record})
-        return copy.deepcopy(record)
-
     def advance_local_economy_macro(self, reply):
         """One ROOT authority, fresh local sources and bounded original inputs."""
         started = time.monotonic()
@@ -7118,14 +6896,14 @@ class Worker:
             record = {'schema': economy.MACRO_CONTRACT, 'record_file': str(path), 'request_id': parent['request_id'],
                 'owner': redact(self.owner), 'match_id': self.active_match_id, 'stage': fence['stage'], 'resume_epoch': self.epoch(),
                 'parent': copy.deepcopy(parent),
-                ('local_action' if getattr(self, 'local_preparation_active', None) else 'root_action'): copy.deepcopy(reply['actions'][0]),
+                'root_action': copy.deepcopy(reply['actions'][0]),
                 'status': 'active',
                 'ranking_policy': ranking, 'ranking_policy_sha256': economy.ranking_policy_digest(ranking),
                 'limits': limits, 'economic_attempts': 0, 'navigation_attempts': 0, 'paid_refresh_attempts': 0,
                 'initial_gross_spent': sum(ledger['spent'].values()), 'gross_spent': 0, 'gross_spent_reserved': 0,
                 'effects_verified': 0, 'accepted_receipts': {}, 'children': [], 'publications': [], 'input_resent': False,
-                'root_authorizations': 0 if getattr(self, 'local_preparation_active', None) else 1,
-                'authority': copy.deepcopy((getattr(self, 'local_preparation_active', None) or {}).get('authority')),
+                'root_authorizations': 1,
+                'authority': None,
                 'local_model_calls': 0, 'local_solve_seconds': 0.0}
             remaining = (datetime.fromisoformat(parent['deadline_at']) - datetime.now(timezone.utc)).total_seconds()
             macro = {'parent': parent, 'fence': fence, 'record': record, 'started': started,
@@ -8342,7 +8120,7 @@ class Worker:
                    'allowed_action_types': ['click_text', 'click_point', 'buy_shop', 'buy_xp', 'key', 'drag', 'scroll', 'deploy_unit', 'deploy_occupied_unit', 'equip_inventory_item', 'resolve_equipment_wear', 'review_zero_spend_power', 'review_owned_roster',
                                              'finish_inspection', 'confirm_match_result', 'finish_preparation_review',
                                              'refresh_observation', 'close_shop_for_observation', 'advance_local_economy',
-                                             'advance_local_preparation', 'inspect_preparation_target'],
+                                             'inspect_preparation_target'],
                    'reply_path': str(self.run / 'decision-reply.json')}
         request['roster_read_watermark'] = self.economy_receipt_watermark()
         request['preparation_checklist'] = self.preparation_checklist(observed)
@@ -8697,8 +8475,6 @@ class Worker:
             raise ValueError('当前父经济宏已执行/消费，禁止并发或重放计划')
         if any(isinstance(action, dict) and action.get('type') == 'inspect_preparation_target' for action in actions):
             return self.inspect_preparation_target(reply)
-        if any(isinstance(action, dict) and action.get('type') == 'advance_local_preparation' for action in actions):
-            return self.advance_local_preparation(reply)
         if any(isinstance(action, dict) and action.get('type') == 'advance_local_economy_macro' for action in actions):
             return self.advance_local_economy_macro(reply)
         if any(isinstance(action, dict) and action.get('type') == 'advance_local_economy' for action in actions):
@@ -10289,16 +10065,6 @@ class Worker:
             self.execute_plan(readonly_reply)
             return True
         if self.consume_manual_results():
-            return False
-        # A stuck model/network response must not silently consume an entire
-        # strategy request lease. Existing replies still go through the same
-        # request-bound validation below; no input is generated by this timeout.
-        if not readonly_reply and strategy_reply_wait_exceeded(request):
-            self.log({'event': 'strategy_reply_wait_exceeded',
-                      'request_id': request['request_id'],
-                      'wait_limit_seconds': STRATEGY_REPLY_WAIT_SECONDS,
-                      'input_sent': False})
-            self.pause_internal('策略等待超过120秒且无回复；安全暂停并允许人工接管，不自动修复、重新发布或重发输入')
             return False
         if (request['kind'] == 'business_resume' and not (self.run / 'decision-reply.json').exists()
                 and time.monotonic() >= getattr(self, 'business_refresh_at', 0.)):
