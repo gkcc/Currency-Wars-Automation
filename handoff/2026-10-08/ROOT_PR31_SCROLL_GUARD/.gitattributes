@@ -1,2 +1,0 @@
-# Preserve ROOT's frozen JSON bytes, including its original CRLF endings.
-diagnosis.json -text -diff
