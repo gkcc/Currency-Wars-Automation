@@ -918,6 +918,9 @@ class EconomyTests(TestCase):
                 worker.accept_economy_plan(record)
                 self.assertEqual(worker.economic_policy(worker.last_observation)['plan_reviewer'],
                                  'supervising_agent')
+                # The real Codex review is completed before the Worker
+                # naturally advances the accepted economic budget.
+                worker.state['decision_request'] = None
                 self.assertTrue(worker.advance_economy(worker.last_observation))
             self.assertEqual(control.action_index, 3)
             self.assertEqual(worker.economy_ledger('2-3')['spent']['experience'], 12)
