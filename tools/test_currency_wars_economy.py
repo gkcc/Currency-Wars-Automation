@@ -240,34 +240,31 @@ class SelectedModelContracts(TestCase):
             self.assertFalse(worker.economy_observation(actual)['shop_complete'])
             self.assertEqual(control.action_index, 0)
 
-    def test_accept_budget_keeps_original_nonreentrant_mutex_through_comparison(self):
-        import currency_wars_economic_views as views
+    def test_accept_codex_budget_keeps_original_nonreentrant_mutex_without_model(self):
         import test_currency_wars_submission_queue as queue_fixture
         with EconomyTests().worker(joint_complete=False) as (worker, record, control, frames):
             locking = queue_fixture.transport(worker.run)
             control.submission_lock = locking.submission_lock  # Original O_EXCL implementation.
-            original, request = worker.last_observation, worker.state['decision_request']
-            scope = {'stage': '2-3', 'match_id': worker.active_match_id, 'resume_epoch': worker.epoch()}
-            worker.economic_roster_view = {'observation': copy.deepcopy(original),
-                'png': request['original_png'], 'scope': scope, 'watermark': worker.economy_receipt_watermark()}
-            worker.economic_navigation_receipts = {}
             worker.observe()
             published = len(control.published)
             lock_path = worker.run / 'client-submit.lock'
-            def compose(*args):
+            original_validate = economy.validate_budget
+            def validate_under_lock(*args, **kwargs):
                 self.assertTrue(lock_path.exists())
                 with self.assertRaises(RuntimeError):
                     with locking.submission_lock():
-                        pass  # A competing raw lock cannot enter during this read.
-                return None  # This test does not claim a native roster composition.
-            with patch.object(views, 'compose_view', side_effect=compose):
+                        pass
+                return original_validate(*args, **kwargs)
+            with patch.object(economy, 'validate_budget', side_effect=validate_under_lock), \
+                    patch.object(worker, 'local_economic_allocation',
+                                 side_effect=AssertionError('supervisor budget must not invoke local solver')):
                 worker.accept_economy_plan(record)
             self.assertIs(worker.c, control)
             self.assertFalse(lock_path.exists())
             self.assertEqual(len(control.published), published)
-            self.assertEqual(worker.economy_binding['allocation_review']['origin'], 'local_advisor_recomputation')
+            self.assertIsNone(worker.economy_binding['allocation_review'])
             ledger = copy.deepcopy(worker.economy_ledger('2-3'))
-            with patch.object(views, 'compose_view', side_effect=RuntimeError('declared read failure')):
+            with patch.object(economy, 'validate_budget', side_effect=RuntimeError('declared validation failure')):
                 with self.assertRaises(RuntimeError):
                     worker.accept_economy_plan(record)
             self.assertIs(worker.c, control)
@@ -910,6 +907,26 @@ class EconomyTests(TestCase):
                 with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, '旧帧/页面/节点'):
                     worker.click_text(old, '刷新', '旧文字ROI不可继续输入')
             self.assertEqual(len(control.published), published)
+
+
+    def test_codex_native_budget_executes_three_f_without_local_model(self):
+        transitions = [values(coins=62, xp=[44, 52]), values(coins=58, xp=[48, 52]),
+                       values(coins=54, level=8, xp=[0, 72])]
+        with self.worker(transitions, joint_complete=False) as (worker, record, control, frames):
+            with patch.object(worker, 'local_economic_allocation',
+                              side_effect=AssertionError('a Codex plan is not a local model proposal')):
+                worker.accept_economy_plan(record)
+                self.assertEqual(worker.economic_policy(worker.last_observation)['plan_reviewer'],
+                                 'supervising_agent')
+                # The real Codex review is completed before the Worker
+                # naturally advances the accepted economic budget.
+                worker.state['decision_request'] = None
+                self.assertTrue(worker.advance_economy(worker.last_observation))
+            self.assertEqual(control.action_index, 3)
+            self.assertEqual(worker.economy_ledger('2-3')['spent']['experience'], 12)
+            self.assertIsNone(worker.economy_ledger('2-3')['pending'])
+            self.assertEqual(worker.preparation_checklist(worker.last_observation)['phase'],
+                             'lineup_equipment')
 
     def test_real_worker_plan_command_receipts_three_f_and_durable_actual_spend(self):
         with self.worker([values(coins=62, xp=[44, 52]), values(coins=58, xp=[48, 52]),
