@@ -9,6 +9,7 @@
 - [AGENTS.md](AGENTS.md)：纯截图优先的短执行约定，Codex 操作是用户授权后的可选分支。
 - [带教协议](docs/COACHING.md)：收到截图先形成整队方案，用户按建议操作并在关键变化时补图。
 - [重大决策契约](docs/DECISION_PROTOCOL.md)：带证据的整队决策、重大操作停止条件，以及强度相近时优先开新图鉴的偏好。
+- [只读决策校验](docs/DECISION_GUARD.md)：小青蛙自行执行路线、金币、主C装备边际收益核验；你不需要操作脚本。
 - [进度与成就台账](docs/PROGRESSION_LEDGER.md)：有日期的历史进度与待同步的完整未完成清单，结算和领奖后按事实更新。
 - [极简Windows操作工具](docs/TOOLS.md)：截图、悬停、点击查看、滚动、拖动、键盘；不是旧 Worker/MCP。
 - [实战运营手册](docs/PLAYBOOK.md)：有限卸装、实际配方、整队换阵与失败类型等正确口径。
